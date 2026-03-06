@@ -1,0 +1,21 @@
+services:
+  database:
+    image: postgres:18.3
+    restart: unless-stopped
+    ports:
+      - ${DATABASE_PORT:-5433}:5432
+    volumes:
+      - database_data:/var/lib/postgresql
+    shm_size: 128mb
+    # volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD?Overriding the default database password is mandatory}
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      PGDATA: /var/lib/postgresql/18/docker
+
+volumes:
+  database_data:
