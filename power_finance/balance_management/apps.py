@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class WalletConfig(AppConfig):
+class BalanceManagementConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'wallet'
+    name = 'balance_management'
