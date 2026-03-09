@@ -19,7 +19,7 @@ class Wallet(models.Model):
     balance_amount = models.DecimalField(max_digits=18, decimal_places=2)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
     credit = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(blank=True, null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, related_name='owner')

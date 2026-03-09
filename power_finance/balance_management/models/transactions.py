@@ -2,14 +2,10 @@ from django.db import models
 
 from uuid import uuid4
 
+from django.utils import timezone
+
+from .enums import TransactionType, ExpenseCategory
 from ..models import Wallet, Money
-
-
-class TransactionType(models.TextChoices):
-    EXPENSE = "expense", "Expense",
-    INCOME = 'income', 'Income',
-    ADJUSTMENT = 'adjustment', 'Adjustment',
-    TRANSFER = 'transfer', 'Transfer'
 
 
 class Transaction(models.Model):
@@ -24,8 +20,9 @@ class Transaction(models.Model):
     to_wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, null=True, related_name="to_wallet")
     to_amount = models.DecimalField(max_digits=18, decimal_places=2, null=True)
     description = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    type = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    type = models.CharField(choices=TransactionType, blank=True, null=True)
+    category = models.CharField(choices=ExpenseCategory, default=ExpenseCategory.OTHER)
 
     @property
     def from_money(self):

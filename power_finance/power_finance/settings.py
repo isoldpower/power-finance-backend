@@ -11,7 +11,8 @@ env = environ.Env(
     DEBUG=(bool, True),
     DATABASE_PORT=(str, '5433'),
     DATABASE_USER=(str, 'postgres'),
-    CLERK_CACHE_KEY=(str, 'clerk_cache')
+    CLERK_CACHE_KEY=(str, 'clerk_cache'),
+    API_VERSION=(str, 'v1'),
 )
 env.read_env(ENV_FILE)
 
@@ -25,6 +26,7 @@ RESOLVED_ENV = {
     'CLERK_SECRET_KEY': env('CLERK_SECRET_KEY'),
     'CLERK_API_URL': env('CLERK_API_URL'),
     'CLERK_CACHE_KEY': env('CLERK_CACHE_KEY'),
+    'API_VERSION': env('API_VERSION'),
 }
 
 # Project configuration settings
@@ -45,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
 
     'balance_management.apps.BalanceManagementConfig',
+    'analytics.apps.AnalyticsConfig'
 ]
 
 REST_FRAMEWORK = {
@@ -84,6 +87,7 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "http://localhost:3001",
     "http://localhost:3002",
 ]
 CORS_ALLOW_CREDENTIALS = True
