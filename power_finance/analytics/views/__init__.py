@@ -1,5 +1,4 @@
 from .expenditure_history import ExpenditureAnalyticsView
-from .money_flow import MoneyFlowAnalyticsView
 from .category_based import CategoriesAnalyticsView
 from .balance_history import WalletBalanceHistoryView
 from .spending_history import SpendingHeatmapView

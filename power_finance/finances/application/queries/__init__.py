@@ -1,0 +1,2 @@
+from .get_owned_wallet import GetOwnedWalletQueryHandler
+from .list_owned_wallets import ListOwnedWalletsQueryHandler

@@ -21,6 +21,6 @@ from django.urls import path, include
 api_version = settings.RESOLVED_ENV['API_VERSION']
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path(f'api/{api_version}/', include('balance_management.urls')),
-    path(f'api/{api_version}/analytics/', include('analytics.urls')),
+    path(f'api/{api_version}/', include('finances.urls')),
+    # path(f'api/{api_version}/analytics/', include('analytics.urls')),
 ]

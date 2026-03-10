@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from django.db.models import Sum, Case, When, DecimalField, Q
 from django.db.models.functions import TruncMonth
 
-from balance_management.models import Transaction
+from finances.models import Transaction
 
 
 class ExpenditureAnalyticsView(APIView):

@@ -1,0 +1,1 @@
+from .infrastructure.auth.drf_jwt_authentication import ClerkJWTAuthentication

@@ -1,0 +1,3 @@
+from .soft_delete_wallet import SoftDeleteWalletCommandHandler
+from .create_new_wallet import CreateNewWalletCommandHandler
+from .update_existing_wallet import UpdateExistingWalletCommandHandler

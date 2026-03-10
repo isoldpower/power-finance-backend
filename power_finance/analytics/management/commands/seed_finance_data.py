@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from balance_management.models import Wallet, Transaction, TransactionType, ExpenseCategory, Currency
+from finances.models import Wallet, Transaction, TransactionType, ExpenseCategory, Currency
 
 User = get_user_model()
 

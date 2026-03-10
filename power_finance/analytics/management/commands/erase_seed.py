@@ -1,6 +1,6 @@
 from django.core.management import BaseCommand
 
-from balance_management.models import Wallet, Transaction
+from finances.models import Wallet, Transaction
 
 
 class Command(BaseCommand):
