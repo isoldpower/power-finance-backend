@@ -26,4 +26,4 @@ class WalletModel(models.Model):
 
     def delete(self, *args, **kwargs):
         self.deleted_at = timezone.now()
-        self.save()
+        self.save(update_fields=["deleted_at", "updated_at"])

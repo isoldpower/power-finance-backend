@@ -14,6 +14,10 @@ class WalletRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_user_wallet_for_update(self, wallet_id: UUID, user_id: int) -> Wallet:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_user_wallet_by_id(self, wallet_id: UUID, user_id: int) -> Wallet:
         raise NotImplementedError
 

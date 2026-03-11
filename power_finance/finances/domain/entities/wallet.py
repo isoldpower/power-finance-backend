@@ -3,6 +3,7 @@ from typing import Optional
 from uuid import UUID
 from datetime import datetime
 
+from ..exceptions import CurrencyMismatchException, InsufficientFundsException
 from ..value_objects import Money
 
 
@@ -21,3 +22,17 @@ class Wallet:
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime]
+
+    def deposit_money(self, amount: Money):
+        if amount.currency_code != self.balance.currency_code:
+            raise CurrencyMismatchException(self.balance.currency_code, amount.currency_code)
+
+        self.balance += amount
+
+    def withdraw_money(self, amount: Money):
+        if amount.currency_code != self.balance.currency_code:
+            raise CurrencyMismatchException(self.balance.currency_code, amount.currency_code)
+        if amount.amount < self.balance.amount:
+            raise InsufficientFundsException(amount.amount, self.balance.amount)
+
+        self.balance -= amount

@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 
 from finances.application.interfaces.wallet_repository import WalletRepository
@@ -16,12 +17,26 @@ class DjangoWalletRepository(WalletRepository):
 
         return WalletMapper.to_domain(requested_wallet)
 
-    def soft_delete_wallet(self, wallet_id: UUID, user_id: int) -> Wallet:
-        deleted_wallet: WalletModel = WalletModel.objects.delete(
-            Q(id=wallet_id) & Q(user_id=user_id)
-        )
+    def get_user_wallet_for_update(self, wallet_id: UUID, user_id: int) -> Wallet:
+        requested_wallet: WalletModel = (WalletModel.objects
+            .select_for_update()
+            .get(id=wallet_id, user_id=user_id))
 
-        return WalletMapper.to_domain(deleted_wallet)
+        return WalletMapper.to_domain(requested_wallet)
+
+    def soft_delete_wallet(self, wallet_id: UUID, user_id: int) -> Wallet:
+        try:
+            requested_wallet: WalletModel = WalletModel.objects.get(
+                id=wallet_id,
+                user_id=user_id,
+            )
+        except WalletModel.DoesNotExist:
+            raise ObjectDoesNotExist("Wallet with specified ID does not exist.")
+
+        requested_wallet.delete()
+        requested_wallet.refresh_from_db()
+
+        return WalletMapper.to_domain(requested_wallet)
 
     def create_wallet(self, wallet: Wallet) -> Wallet:
         created_wallet: WalletModel = WalletModel()
@@ -32,7 +47,7 @@ class DjangoWalletRepository(WalletRepository):
         return WalletMapper.to_domain(created_wallet)
 
     def get_wallet_by_id(self, wallet_id: UUID) -> Wallet:
-        requested_wallet = WalletModel.objects.get(id=wallet_id)
+        requested_wallet: WalletModel = WalletModel.objects.get(id=wallet_id)
 
         return WalletMapper.to_domain(requested_wallet)
 
@@ -41,10 +56,11 @@ class DjangoWalletRepository(WalletRepository):
 
         return [WalletMapper.to_domain(wallet) for wallet in user_wallets]
 
-    def save_wallet(self, wallet: Wallet) -> None:
+    def save_wallet(self, wallet: Wallet) -> Wallet:
         requested_wallet = WalletModel.objects.get(id=wallet.id)
         modified_fields = WalletMapper.get_changed_fields(requested_wallet, wallet)
 
         WalletMapper.update_model(requested_wallet, wallet)
 
         requested_wallet.save(update_fields=modified_fields)
+        return WalletMapper.to_domain(requested_wallet)

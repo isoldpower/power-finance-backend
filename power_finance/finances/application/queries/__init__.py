@@ -1,2 +1,5 @@
-from .get_owned_wallet import GetOwnedWalletQueryHandler
-from .list_owned_wallets import ListOwnedWalletsQueryHandler
+from .get_owned_wallet import GetOwnedWalletQueryHandler, GetOwnedWalletQuery
+from .list_owned_wallets import ListOwnedWalletsQueryHandler, ListOwnedWalletsQuery
+
+from .get_transaction import GetTransactionQueryHandler, GetTransactionQuery
+from .list_transactions import ListTransactionsQueryHandler, ListTransactionsQuery

@@ -12,6 +12,7 @@ class WalletMapper:
         ('balance_amount', 'balance.amount'),
         ('currency_id', 'balance.currency_code'),
         ('credit', 'credit'),
+        ('deleted_at', 'deleted_at'),
     ]
 
     @staticmethod
@@ -20,6 +21,10 @@ class WalletMapper:
         for part in path.split("."):
             current = getattr(current, part)
         return current
+
+    @staticmethod
+    def _get_initial_key(path: str):
+        return path.split(".")[0]
 
     @staticmethod
     def to_domain(model: WalletModel) -> Wallet:
@@ -52,9 +57,12 @@ class WalletMapper:
 
     @staticmethod
     def get_changed_fields(model: WalletModel, entity: Wallet) -> list[str]:
-        changed_fields = []
+        changed_fields = ["updated_at"]
         for model_field, entity_field in WalletMapper.WALLET_EDITABLE_MAP:
-            if getattr(model, model_field) != getattr(entity, entity_field):
+            entity_value = WalletMapper._resolve_attr(entity, entity_field)
+            model_value = getattr(model, model_field)
+
+            if model_value != entity_value:
                 changed_fields.append(model_field)
 
         return changed_fields
