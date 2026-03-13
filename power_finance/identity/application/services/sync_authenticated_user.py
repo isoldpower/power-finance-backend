@@ -1,15 +1,15 @@
 from django.contrib.auth.models import User
 
 from identity.application.dto import AuthenticatedPrincipal
-from identity.infrastructure.auth.auth_sdk import AuthSdk
-from identity.infrastructure.auth.clerk_sdk import ClerkSDK
+from identity.infrastructure.auth_integration.auth_sdk import AuthSdk
+from identity.infrastructure.auth_integration.clerk_sdk import ClerkSDK
 from identity.infrastructure.repositories.django_user_repository import DjangoUserRepository
 
 from ..interfaces import UserRepository
 
 
 class SyncAuthenticatedUserService:
-    user_repository: UserRepository = DjangoUserRepository()
+    user_repository: UserRepository
     auth_sdk: AuthSdk
 
     def __init__(

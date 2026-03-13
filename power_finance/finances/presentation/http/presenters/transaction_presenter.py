@@ -1,4 +1,9 @@
-from finances.application.dtos import TransactionDTO, TransactionParticipantDTO
+from finances.application.dtos import (
+    TransactionDTO,
+    TransactionParticipantDTO,
+    TransactionPlainDTO,
+    TransactionParticipantPlainDTO
+)
 from finances.presentation.http.presenters import WalletHttpPresenter
 
 
@@ -11,16 +16,16 @@ class TransactionParticipantHttpPresenter:
         }
 
     @staticmethod
-    def present_preview(transaction: TransactionParticipantDTO) -> dict:
+    def present_preview(transaction: TransactionParticipantPlainDTO) -> dict:
         return {
-            "wallet_id": transaction.wallet.id,
+            "wallet_id": transaction.wallet_id,
             "amount": transaction.amount,
         }
 
 
 class TransactionHttpPresenter:
     @staticmethod
-    def present_meta(transaction: TransactionDTO) -> dict:
+    def present_meta(transaction: TransactionDTO | TransactionPlainDTO) -> dict:
         return {
             "created_at": transaction.created_at,
             "id": transaction.id
@@ -30,18 +35,28 @@ class TransactionHttpPresenter:
     def present_one(transaction: TransactionDTO) -> dict:
         return {
             "id": transaction.id,
-            "from": TransactionParticipantHttpPresenter.present_detailed(transaction.sender),
-            "to": TransactionParticipantHttpPresenter.present_detailed(transaction.receiver),
+            "type": transaction.type,
+            "sender": TransactionParticipantHttpPresenter.present_detailed(
+                transaction.sender
+            ) if transaction.sender else None,
+            "receiver": TransactionParticipantHttpPresenter.present_detailed(
+                transaction.receiver
+            ) if transaction.receiver else None,
             "description": transaction.description,
             "meta": TransactionHttpPresenter.present_meta(transaction),
         }
 
     @staticmethod
-    def present_many(transactions: list[TransactionDTO]) -> list[dict]:
+    def present_many(transactions: list[TransactionPlainDTO]) -> list[dict]:
         return [{
             "id": transaction.id,
-            "from": TransactionParticipantHttpPresenter.present_preview(transaction.sender),
-            "to": TransactionParticipantHttpPresenter.present_preview(transaction.receiver),
+            "type": transaction.type,
+            "sender": TransactionParticipantHttpPresenter.present_preview(
+                transaction.sender
+            ) if transaction.sender else None,
+            "receiver": TransactionParticipantHttpPresenter.present_preview(
+                transaction.receiver
+            ) if transaction.receiver else None,
             "description": transaction.description,
             "meta": TransactionHttpPresenter.present_meta(transaction),
         } for transaction in transactions]

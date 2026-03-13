@@ -1,19 +1,17 @@
 from uuid import UUID
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Q
 
-from finances.application.interfaces.wallet_repository import WalletRepository
-from finances.domain.entities.wallet import Wallet
-from finances.infrastructure.mappers.wallet_mapper import WalletMapper
-from finances.infrastructure.orm.wallet import WalletModel
+from finances.application.interfaces import WalletRepository
+from finances.domain.entities import Wallet
+
+from ..mappers import WalletMapper
+from ..orm import WalletModel
 
 
 class DjangoWalletRepository(WalletRepository):
     def get_user_wallet_by_id(self, wallet_id: UUID, user_id: int) -> Wallet:
-        requested_wallet: WalletModel = WalletModel.objects.get(
-            Q(id=wallet_id) & Q(user_id=user_id)
-        )
+        requested_wallet: WalletModel = WalletModel.objects.get(id=wallet_id, user_id=user_id)
 
         return WalletMapper.to_domain(requested_wallet)
 
@@ -53,6 +51,11 @@ class DjangoWalletRepository(WalletRepository):
 
     def get_user_wallets(self, user_id: int) -> list[Wallet]:
         user_wallets = WalletModel.objects.filter(user_id=user_id).order_by("-created_at", "id")
+
+        return [WalletMapper.to_domain(wallet) for wallet in user_wallets]
+
+    def get_ordered_user_wallets(self, user_id: int) -> list[Wallet]:
+        user_wallets = WalletModel.objects.filter(user_id=user_id).order_by('created_at', 'id')
 
         return [WalletMapper.to_domain(wallet) for wallet in user_wallets]
 

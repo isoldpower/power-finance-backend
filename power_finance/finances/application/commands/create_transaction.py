@@ -5,12 +5,12 @@ from django.db import transaction
 from django.utils import timezone
 
 from finances.infrastructure.repositories import DjangoTransactionRepository, DjangoWalletRepository
-from finances.domain.entities import Transaction, TransactionParticipant, TransactionType, ExpenseCategory
+from finances.domain.entities import Transaction, TransactionParticipant, TransactionType, ExpenseCategory, Wallet
+from finances.domain.services import apply_transaction_to_wallet_balance
 
 from ..dtos import TransactionDTO, TransactionParticipantPlainDTO
 from ..dto_builders import transaction_to_dto
 from ..interfaces import TransactionRepository, WalletRepository
-from ...domain.value_objects import Money
 
 
 @dataclass(frozen=True)
@@ -35,34 +35,29 @@ class CreateTransactionCommandHandler:
         self.transaction_repository = transaction_repository or DjangoTransactionRepository()
         self.wallet_repository = wallet_repository or DjangoWalletRepository()
 
-    def _update_wallet_balances(self, command: CreateTransactionCommand):
-        if command.sender:
-            sender_wallet = self.wallet_repository.get_user_wallet_for_update(
-                command.sender.wallet_id,
-                command.user_id,
-            )
+    def _update_wallet_balances(self, new_transaction: Transaction, user_id: int):
+        participants: list[Wallet | None] = [
+            self.wallet_repository.get_user_wallet_for_update(
+                new_transaction.sender.wallet_id,
+                user_id,
+            ) if new_transaction.sender else None,
+            self.wallet_repository.get_user_wallet_for_update(
+                new_transaction.receiver.wallet_id,
+                user_id,
+            ) if new_transaction.receiver else None,
+        ]
 
-            sender_wallet.withdraw_money(Money(
-                amount=sender_wallet.balance.amount,
-                currency_code=sender_wallet.balance.currency_code
-            ))
-            self.wallet_repository.save_wallet(sender_wallet)
-        if command.receiver:
-            receiver_wallet = self.wallet_repository.get_user_wallet_for_update(
-                command.receiver.wallet_id,
-                command.user_id,
-            )
+        apply_transaction_to_wallet_balance(
+            new_transaction,
+            participants[0],
+            participants[1],
+        )
 
-            receiver_wallet.deposit_money(Money(
-                amount=receiver_wallet.balance.amount,
-                currency_code=receiver_wallet.balance.currency_code
-            ))
-            self.wallet_repository.save_wallet(receiver_wallet)
+        for participant in [participant for participant in participants if participant is not None]:
+            self.wallet_repository.save_wallet(participant)
 
     @transaction.atomic
     def handle(self, command: CreateTransactionCommand) -> TransactionDTO:
-        self._update_wallet_balances(command)
-
         new_transaction = Transaction(
             id=uuid4(),
             sender=TransactionParticipant(
@@ -72,12 +67,14 @@ class CreateTransactionCommandHandler:
             receiver=TransactionParticipant(
                 wallet_id=command.receiver.wallet_id,
                 amount=command.receiver.amount,
-            ),
+            ) if command.receiver else None,
             description=command.description,
             created_at=timezone.now(),
             type=command.type,
             category=command.category
         )
+
+        self._update_wallet_balances(new_transaction, command.user_id)
 
         created_transaction = self.transaction_repository.create_transaction(new_transaction)
         sender_wallet = self.wallet_repository.get_user_wallet_by_id(

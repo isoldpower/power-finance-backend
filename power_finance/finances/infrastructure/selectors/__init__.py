@@ -1,2 +1,7 @@
-from .transaction_selector import TransactionSelector
-from .wallet_selector import WalletSelector
+from .django_wallet_selectors import DjangoWalletSelectorsCollection
+from .django_transactions_selectors import DjangoTransactionSelectorsCollection
+
+__all__ = [
+    "DjangoWalletSelectorsCollection",
+    "DjangoTransactionSelectorsCollection",
+]

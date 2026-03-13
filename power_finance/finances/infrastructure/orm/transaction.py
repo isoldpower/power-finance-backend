@@ -49,8 +49,7 @@ class TransactionModel(models.Model):
     type = models.CharField(choices=TransactionTypeChoices.choices)
     category = models.CharField(
         choices=ExpenseCategoryChoices.choices,
-        default=ExpenseCategory.OTHER,
-        null=False
+        default=ExpenseCategory.OTHER
     )
 
     objects = IgnoreDeletedWallets()

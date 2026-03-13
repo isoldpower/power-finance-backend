@@ -45,9 +45,10 @@ INSTALLED_APPS = [
 
     'corsheaders',
     'rest_framework',
-
-    'finances.apps.FinancesConfig',
-    # 'analytics.apps.AnalyticsConfig'
+    
+    'power_finance',
+    'identity.apps.IdentityConfig',
+    'finances.apps.FinancesConfig'
 ]
 
 REST_FRAMEWORK = {
@@ -55,7 +56,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer'
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'identity.ClerkJWTAuthentication',
+        'identity.authentication.ClerkJWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ],
@@ -127,6 +128,7 @@ CONN_MAX_AGE = 0
 
 MIGRATION_MODULES = {
     "finances": "finances.infrastructure.orm.migrations",
+    "identity": "identity.infrastructure.orm.migrations"
 }
 
 

@@ -16,10 +16,13 @@ class WalletMapper:
     ]
 
     @staticmethod
-    def _resolve_attr(obj, path: str):
+    def _resolve_attr(obj, path: str, replace: bool = False):
         current = obj
         for part in path.split("."):
             current = getattr(current, part)
+            if current is None and replace is False:
+                return None
+
         return current
 
     @staticmethod
@@ -45,12 +48,12 @@ class WalletMapper:
         )
 
     @staticmethod
-    def update_model(model: WalletModel, entity: Wallet) -> WalletModel:
+    def update_model(model: WalletModel, entity: Wallet, replace: bool = False) -> WalletModel:
         for model_field, entity_field in WalletMapper.WALLET_EDITABLE_MAP:
             entity_value = WalletMapper._resolve_attr(entity, entity_field)
             model_value = getattr(model, model_field)
 
-            if model_value != entity_value:
+            if (entity_value is not None or replace) and model_value != entity_value:
                 setattr(model, model_field, entity_value)
 
         return model

@@ -8,7 +8,7 @@ class MessageResultInfo:
 
 class CommonHttpPresenter:
     @staticmethod
-    def present_message_result(info: MessageResultInfo):
+    def present_message_result(info: MessageResultInfo) -> dict[str, str]:
         return {
             'message': info.message
         }

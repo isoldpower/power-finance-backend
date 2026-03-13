@@ -19,6 +19,9 @@ class TransactionMapper:
         current = obj
         for part in path.split("."):
             current = getattr(current, part)
+            if not current:
+                return None
+
         return current
 
     @staticmethod
@@ -49,7 +52,7 @@ class TransactionMapper:
             entity_value = TransactionMapper._resolve_attr(entity, entity_field)
             model_value = getattr(model, model_field)
 
-            if model_value != entity_value:
+            if entity_value and model_value != entity_value:
                 setattr(model, model_field, entity_value)
 
         return model

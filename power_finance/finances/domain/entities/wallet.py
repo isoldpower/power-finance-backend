@@ -32,7 +32,7 @@ class Wallet:
     def withdraw_money(self, amount: Money):
         if amount.currency_code != self.balance.currency_code:
             raise CurrencyMismatchException(self.balance.currency_code, amount.currency_code)
-        if amount.amount < self.balance.amount:
+        if amount.amount > self.balance.amount:
             raise InsufficientFundsException(amount.amount, self.balance.amount)
 
         self.balance -= amount

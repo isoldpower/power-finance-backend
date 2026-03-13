@@ -1,2 +1,6 @@
-from .views import WalletViewSet, TransactionViewSet
-from .pagination import StandardResultsPagination
+from .urls import core_router, analytics_router
+
+__all__ = [
+    'core_router',
+    'analytics_router'
+]

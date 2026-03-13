@@ -35,6 +35,7 @@ class TransactionViewSet(viewsets.ViewSet):
 
             handler = ListTransactionsQueryHandler()
             transactions = handler.handle(list_query)
+
             paginator = self.pagination_class()
             queryset_page = paginator.paginate_queryset(transactions, request)
             payload = TransactionHttpPresenter.present_many(queryset_page)
@@ -77,11 +78,11 @@ class TransactionViewSet(viewsets.ViewSet):
             command = CreateTransactionCommand(
                 user_id=request.user.id,
                 sender=TransactionParticipantPlainDTO(
-                    validated_sender.get("wallet"),
+                    validated_sender.get("wallet_id"),
                     validated_sender.get("amount"),
                 ) if validated_sender else None,
                 receiver=TransactionParticipantPlainDTO(
-                    validated_receiver.get("wallet"),
+                    validated_receiver.get("wallet_id"),
                     validated_receiver.get("amount"),
                 ) if validated_receiver else None,
                 description=validated.get("description"),

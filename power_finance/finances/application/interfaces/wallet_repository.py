@@ -22,6 +22,10 @@ class WalletRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_ordered_user_wallets(self, user_id: int) -> list[Wallet]:
+        raise NotImplementedError()
+
+    @abstractmethod
     def get_user_wallets(self, user_id: int) -> list[Wallet]:
         raise NotImplementedError
 

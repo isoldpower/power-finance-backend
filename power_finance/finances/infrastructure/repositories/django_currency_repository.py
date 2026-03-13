@@ -2,6 +2,7 @@ from django.db.models import Q
 
 from finances.application.interfaces import CurrencyRepository
 from finances.domain.value_objects import Currency
+
 from ..orm import CurrencyModel
 
 

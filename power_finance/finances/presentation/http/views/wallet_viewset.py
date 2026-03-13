@@ -34,8 +34,8 @@ class WalletViewSet(viewsets.ViewSet):
         try:
             query = ListOwnedWalletsQuery(
                 user_id=request.user.id,
-                limit=10,
-                offset=0,
+                limit=request.query_params.get('limit') or 10,
+                offset=request.query_params.get('offset') or 0,
             )
 
             handler = ListOwnedWalletsQueryHandler()
