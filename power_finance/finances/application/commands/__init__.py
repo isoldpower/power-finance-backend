@@ -4,3 +4,21 @@ from .update_existing_wallet import UpdateExistingWalletCommandHandler, UpdateEx
 from .create_transaction import CreateTransactionCommandHandler, CreateTransactionCommand
 from .update_transaction import UpdateTransactionCommandHandler, UpdateTransactionCommand
 from .delete_transaction import DeleteTransactionCommandHandler, DeleteTransactionCommand
+from .create_webhook_endpoint import CreateWebhookEndpointCommandHandler, CreateWebhookEndpointCommand
+
+__all__ = [
+    'CreateWebhookEndpointCommandHandler',
+    'CreateWebhookEndpointCommand',
+    'CreateNewWalletCommandHandler',
+    'CreateNewWalletCommand',
+    'UpdateExistingWalletCommandHandler',
+    'UpdateExistingWalletCommand',
+    'CreateTransactionCommandHandler',
+    'CreateTransactionCommand',
+    'UpdateTransactionCommandHandler',
+    'UpdateTransactionCommand',
+    'DeleteTransactionCommandHandler',
+    'DeleteTransactionCommand',
+    'SoftDeleteWalletCommandHandler',
+    'SoftDeleteWalletCommand',
+]

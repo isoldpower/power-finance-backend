@@ -8,3 +8,6 @@ from .transaction_serializer import (
     CreateTransactionRequestSerializer,
     UpdateTransactionRequestSerializer
 )
+from .webhooks_serializer import (
+    CreateWebhookRequestSerializer
+)

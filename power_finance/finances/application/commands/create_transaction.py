@@ -4,8 +4,17 @@ from uuid import uuid4
 from django.db import transaction
 from django.utils import timezone
 
-from finances.infrastructure.repositories import DjangoTransactionRepository, DjangoWalletRepository
-from finances.domain.entities import Transaction, TransactionParticipant, TransactionType, ExpenseCategory, Wallet
+from finances.infrastructure.repositories import (
+    DjangoTransactionRepository,
+    DjangoWalletRepository
+)
+from finances.domain.entities import (
+    Transaction,
+    TransactionParticipant,
+    TransactionType,
+    ExpenseCategory,
+    Wallet
+)
 from finances.domain.services import apply_transaction_to_wallet_balance
 
 from ..dtos import TransactionDTO, TransactionParticipantPlainDTO
@@ -58,22 +67,13 @@ class CreateTransactionCommandHandler:
 
     @transaction.atomic
     def handle(self, command: CreateTransactionCommand) -> TransactionDTO:
-        new_transaction = Transaction(
-            id=uuid4(),
-            sender=TransactionParticipant(
-                wallet_id=command.sender.wallet_id,
-                amount=command.sender.amount,
-            ) if command.sender else None,
-            receiver=TransactionParticipant(
-                wallet_id=command.receiver.wallet_id,
-                amount=command.receiver.amount,
-            ) if command.receiver else None,
-            description=command.description,
-            created_at=timezone.now(),
-            type=command.type,
-            category=command.category
+        new_transaction = Transaction.create(
+            command.sender,
+            command.receiver,
+            command.description,
+            command.type,
+            command.category,
         )
-
         self._update_wallet_balances(new_transaction, command.user_id)
 
         created_transaction = self.transaction_repository.create_transaction(new_transaction)

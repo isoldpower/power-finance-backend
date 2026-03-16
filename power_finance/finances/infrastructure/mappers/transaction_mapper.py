@@ -1,10 +1,11 @@
 from finances.domain.entities.transaction import Transaction, TransactionParticipant
+from .update_mapper import UpdateMapper
 
 from ..orm import TransactionModel
 
 
 class TransactionMapper:
-    TRANSACTION_EDITABLE_MAP = [
+    TRANSACTION_EDITABLE_MAP: list[tuple[str, str]] = [
         ('send_wallet_id', 'sender.wallet_id'),
         ('send_amount', 'sender.amount'),
         ('receive_wallet_id', 'receiver.wallet_id'),
@@ -15,22 +16,8 @@ class TransactionMapper:
     ]
 
     @staticmethod
-    def _resolve_attr(obj, path: str):
-        current = obj
-        for part in path.split("."):
-            current = getattr(current, part)
-            if not current:
-                return None
-
-        return current
-
-    @staticmethod
-    def _get_initial_key(path: str):
-        return path.split(".")[0]
-
-    @staticmethod
     def to_domain(model: TransactionModel) -> Transaction:
-        return Transaction(
+        return Transaction.from_persistence(
             id=model.id,
             sender=TransactionParticipant(
                 wallet_id=model.send_wallet_id,
@@ -48,23 +35,17 @@ class TransactionMapper:
 
     @staticmethod
     def update_model(model: TransactionModel, entity: Transaction) -> TransactionModel:
-        for model_field, entity_field in TransactionMapper.TRANSACTION_EDITABLE_MAP:
-            entity_value = TransactionMapper._resolve_attr(entity, entity_field)
-            model_value = getattr(model, model_field)
-
-            if entity_value and model_value != entity_value:
-                setattr(model, model_field, entity_value)
-
-        return model
+        return UpdateMapper[TransactionModel, Transaction].update_model(
+            model,
+            entity,
+            TransactionMapper.TRANSACTION_EDITABLE_MAP,
+        )
 
     @staticmethod
     def get_changed_fields(model: TransactionModel, entity: Transaction) -> list[str]:
-        changed_fields = ["updated_at"]
-        for model_field, entity_field in TransactionMapper.TRANSACTION_EDITABLE_MAP:
-            entity_value = TransactionMapper._resolve_attr(entity, entity_field)
-            model_value = getattr(model, model_field)
-
-            if model_value != entity_value:
-                changed_fields.append(model_field)
-
-        return changed_fields
+        return UpdateMapper[TransactionModel, Transaction].get_changed_fields(
+            model,
+            entity,
+            TransactionMapper.TRANSACTION_EDITABLE_MAP,
+            updated_list=["updated_at"]
+        )

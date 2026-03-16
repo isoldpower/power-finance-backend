@@ -1,7 +1,13 @@
-from finances.domain.entities import Transaction, Wallet
+from finances.domain.entities import Transaction, Wallet, Webhook
 
-from .dtos import WalletDTO, TransactionDTO, TransactionParticipantDTO, TransactionPlainDTO, \
-    TransactionParticipantPlainDTO
+from .dtos import (
+    WalletDTO,
+    TransactionDTO,
+    TransactionParticipantDTO,
+    TransactionPlainDTO,
+    TransactionParticipantPlainDTO,
+    WebhookDTO,
+)
 
 
 def wallet_to_dto(wallet: Wallet) -> WalletDTO:
@@ -54,4 +60,15 @@ def transaction_to_plain_dto(
         created_at=transaction.created_at,
         type=transaction.type,
         category=transaction.category,
+    )
+
+def webhook_to_dto(webhook: Webhook) -> WebhookDTO:
+    return WebhookDTO(
+        id=webhook.id,
+        title=webhook.title,
+        url=webhook.url,
+        subscribed_events=webhook.subscribed_events,
+        secret=webhook.secret,
+        created_at=webhook.created_at,
+        updated_at=webhook.updated_at,
     )
