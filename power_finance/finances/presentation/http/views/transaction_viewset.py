@@ -44,6 +44,7 @@ class TransactionViewSet(viewsets.ViewSet):
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to list transactions: {e}",
+                resource_id=None
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -63,6 +64,7 @@ class TransactionViewSet(viewsets.ViewSet):
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to get transaction with ID {pk}: {e}",
+                resource_id=f"{pk}"
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -98,6 +100,7 @@ class TransactionViewSet(viewsets.ViewSet):
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to create transaction: {e}",
+                resource_id=None
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -110,12 +113,16 @@ class TransactionViewSet(viewsets.ViewSet):
             )
             handler = DeleteTransactionCommandHandler()
             transaction = handler.handle(command)
-            payload = TransactionHttpPresenter.present_one(transaction)
+            payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
+                message=f"Deleted transaction with ID {transaction.id}",
+                resource_id=f"{transaction.id}"
+            ))
 
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to delete transaction with ID {pk}: {e}",
+                resource_id=f"{pk}"
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -142,6 +149,7 @@ class TransactionViewSet(viewsets.ViewSet):
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to update transaction with ID {pk}: {e}",
+                resource_id=f"{pk}"
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)

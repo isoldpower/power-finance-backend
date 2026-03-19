@@ -12,6 +12,7 @@ class WebhookHttpPresenter:
             "title": webhook.title,
             "secret": webhook.secret,
             "subscribed": webhook.subscribed_events,
+            "meta": WebhookHttpPresenter.present_meta(webhook)
         }
 
     @staticmethod

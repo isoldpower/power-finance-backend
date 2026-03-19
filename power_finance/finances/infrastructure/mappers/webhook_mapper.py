@@ -38,3 +38,12 @@ class WebhookMapper:
             created_at=model.created_at,
             updated_at=model.updated_at,
         )
+
+    @staticmethod
+    def get_changed_fields(model: WebhookEndpointModel, entity: Webhook) -> list[str]:
+        return UpdateMapper[WebhookEndpointModel, Webhook].get_changed_fields(
+            model,
+            entity,
+            WebhookMapper.WEBHOOK_EDITABLE_MAP,
+            updated_list=["updated_at"]
+        )
