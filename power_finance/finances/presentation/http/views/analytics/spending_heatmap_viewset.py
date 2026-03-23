@@ -7,7 +7,7 @@ from rest_framework.request import Request
 
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
 
-from finances.application.queries import (
+from finances.application.use_cases import (
     GetSpendingHeatmapQueryHandler,
     GetSpendingHeatmapQuery
 )

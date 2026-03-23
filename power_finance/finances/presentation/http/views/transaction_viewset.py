@@ -2,14 +2,14 @@ from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from finances.application.dtos import TransactionParticipantPlainDTO
-from finances.application.queries import (
+from finances.application.dtos import CreateTransactionParticipantDTO
+from finances.application.use_cases import (
     ListTransactionsQuery,
     ListTransactionsQueryHandler,
     GetTransactionQuery,
     GetTransactionQueryHandler,
 )
-from finances.application.commands import (
+from finances.application.use_cases import (
     CreateTransactionCommand,
     CreateTransactionCommandHandler,
     DeleteTransactionCommand,
@@ -79,11 +79,11 @@ class TransactionViewSet(viewsets.ViewSet):
             validated_receiver = validated.get("receiver")
             command = CreateTransactionCommand(
                 user_id=request.user.id,
-                sender=TransactionParticipantPlainDTO(
+                sender=CreateTransactionParticipantDTO(
                     validated_sender.get("wallet_id"),
                     validated_sender.get("amount"),
                 ) if validated_sender else None,
-                receiver=TransactionParticipantPlainDTO(
+                receiver=CreateTransactionParticipantDTO(
                     validated_receiver.get("wallet_id"),
                     validated_receiver.get("amount"),
                 ) if validated_receiver else None,

@@ -2,7 +2,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from finances.application.commands import (
+from finances.application.use_cases import (
     CreateNewWalletCommand,
     CreateNewWalletCommandHandler,
     SoftDeleteWalletCommand,
@@ -10,7 +10,7 @@ from finances.application.commands import (
     UpdateExistingWalletCommand,
     UpdateExistingWalletCommandHandler,
 )
-from finances.application.queries import (
+from finances.application.use_cases import (
     GetOwnedWalletQuery,
     GetOwnedWalletQueryHandler,
     ListOwnedWalletsQuery,

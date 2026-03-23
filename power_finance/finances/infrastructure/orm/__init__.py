@@ -1,7 +1,12 @@
 from .currency import CurrencyModel
 from .wallet import WalletModel
 from .transaction import TransactionModel
-from .webhook import WebhookDeliveryModel, WebhookEndpointModel
+from .webhook import (
+    WebhookDeliveryModel,
+    WebhookEndpointModel,
+    WebhookDeliveryAttemptModel,
+    WebhookDeliveryStatusChoices,
+)
 
 __all__ = [
     'CurrencyModel',
@@ -9,4 +14,6 @@ __all__ = [
     'TransactionModel',
     'WebhookDeliveryModel',
     'WebhookEndpointModel',
+    'WebhookDeliveryAttemptModel',
+    'WebhookDeliveryStatusChoices',
 ]

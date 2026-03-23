@@ -6,7 +6,7 @@ from typing import Any
 
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
 
-from finances.application.queries import (
+from finances.application.use_cases import (
     GetCategoriesAnalyticsQueryHandler,
     GetCategoriesAnalyticsQuery,
 )

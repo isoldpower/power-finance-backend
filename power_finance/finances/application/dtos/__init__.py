@@ -3,14 +3,15 @@ from .transaction_dto import (
     TransactionDTO,
     TransactionParticipantDTO,
     TransactionPlainDTO,
-    TransactionParticipantPlainDTO
+    TransactionParticipantPlainDTO,
+    CreateTransactionParticipantDTO,
 )
 from .money_flow import MoneyFlowResultDTO, MoneyFlowLinkDTO, MoneyFlowNodeDTO
 from .expenditure import ExpenditureAnalyticsResultDTO
 from .spending_heatmap import SpendingHeatmapResultDTO
 from .category import CategoryAnalyticsResultDTO, CategoryAnalyticsItemDTO
 from .balance_history import WalletBalanceHistoryResultDTO, WalletBalanceHistoryItemDTO
-from .webhook_dto import WebhookDTO
+from .webhook_dto import WebhookDTO, WebhookDeliveryAttemptDTO, WebhookDeliveryDTO
 
 __all__ = [
     'WalletDTO',
@@ -28,4 +29,7 @@ __all__ = [
     'WalletBalanceHistoryResultDTO',
     'WalletBalanceHistoryItemDTO',
     'WebhookDTO',
+    'WebhookDeliveryAttemptDTO',
+    'WebhookDeliveryDTO',
+    'CreateTransactionParticipantDTO',
 ]

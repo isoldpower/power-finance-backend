@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import secrets
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -81,6 +83,15 @@ class Webhook:
             created_at=created_at,
             updated_at=updated_at,
         )
+
+    def sign_payload(self, payload: str) -> str:
+        digest = hmac.new(
+            self.secret.encode(),
+            payload.encode(),
+            hashlib.sha256
+        ).hexdigest()
+
+        return f"v1={digest}"
 
     @property
     def secret(self) -> str:

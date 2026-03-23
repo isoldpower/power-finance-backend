@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from typing import Any
 
-from finances.application.commands import (
+from finances.application.use_cases import (
     CreateWebhookEndpointCommandHandler,
     CreateWebhookEndpointCommand,
     DeleteWebhookCommand,
@@ -15,7 +15,7 @@ from finances.application.commands import (
     UpdateWebhookEndpointCommandHandler,
     UpdateWebhookEndpointCommand,
 )
-from finances.application.queries import (
+from finances.application.use_cases import (
     ListWebhooksQueryHandler,
     ListWebhooksQuery,
     GetWebhookQueryHandler,

@@ -1,18 +1,19 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from decimal import Decimal
 from uuid import UUID, uuid4
 
 from django.utils import timezone
 
 from .expense_category import ExpenseCategory
 from .transaction_type import TransactionType
+from ..events import TransactionCreatedEvent, EventCollector, TransactionEventParticipant
+from ..value_objects import Money
 
 
 @dataclass
 class TransactionParticipant:
     wallet_id: UUID
-    amount: Decimal
+    money: Money
 
 
 @dataclass
@@ -29,6 +30,7 @@ class Transaction:
     created_at: datetime
     type: TransactionType
     category: ExpenseCategory
+    _event_collector: EventCollector = field(default_factory=EventCollector)
 
     @classmethod
     def _validate_participants(
@@ -54,27 +56,47 @@ class Transaction:
             description: str,
             type: TransactionType,
             category: ExpenseCategory,
+            event_collector: EventCollector | None = None,
     ):
         try:
             cls._validate_participants(receiver, sender, type)
         except ValueError as e:
             raise ValueError(f'Exception while creating new domain entity: {e}')
 
-        return cls(
+        created_transaction = cls(
             id=uuid4(),
             sender=TransactionParticipant(
                 wallet_id=sender.wallet_id,
-                amount=sender.amount,
+                money=sender.money,
             ) if sender else None,
             receiver=TransactionParticipant(
                 wallet_id=receiver.wallet_id,
-                amount=receiver.amount,
+                money=receiver.money,
             ) if receiver else None,
             description=description,
             created_at=timezone.now(),
             type=type,
-            category=category
+            category=category,
+            _event_collector=event_collector
         )
+
+        created_transaction._event_collector.collect(TransactionCreatedEvent(
+            transaction_id=created_transaction.id,
+            sender=TransactionEventParticipant(
+                wallet_id=sender.wallet_id,
+                amount=created_transaction.sender.money.amount,
+                currency_code=created_transaction.sender.money.currency_code,
+            ) if created_transaction.sender else None,
+            receiver=TransactionEventParticipant(
+                wallet_id=receiver.wallet_id,
+                amount=created_transaction.receiver.money.amount,
+                currency_code=created_transaction.receiver.money.currency_code,
+            ) if created_transaction.receiver else None,
+            description=created_transaction.description,
+            created_at=created_transaction.created_at,
+        ))
+
+        return created_transaction
 
     @classmethod
     def from_persistence(
@@ -96,11 +118,11 @@ class Transaction:
             id=id,
             sender=TransactionParticipant(
                 wallet_id=sender.wallet_id,
-                amount=sender.amount,
+                money=sender.money,
             ) if sender else None,
             receiver=TransactionParticipant(
                 wallet_id=receiver.wallet_id,
-                amount=receiver.amount,
+                money=receiver.money,
             ) if receiver else None,
             description=description,
             created_at=created_at,

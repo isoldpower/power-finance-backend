@@ -7,7 +7,7 @@ from rest_framework.request import Request
 
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
 
-from finances.application.queries.get_money_flow import (
+from finances.application.use_cases import (
     GetMoneyFlowQueryHandler,
     GetMoneyFlowQuery
 )
