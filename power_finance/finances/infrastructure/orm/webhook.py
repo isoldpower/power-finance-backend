@@ -9,6 +9,8 @@ from finances.domain.entities import WebhookType
 
 class WebhookEventChoices(models.TextChoices):
     CREATE_TRANSACTION = WebhookType.TransactionCreate.value, "Transaction Created"
+    UPDATE_TRANSACTION = WebhookType.TransactionUpdate.value, "Transaction Updated"
+    DELETE_TRANSACTION = WebhookType.TransactionDelete.value, "Transaction Deleted"
 
 
 class WebhookEndpointModel(models.Model):
@@ -27,9 +29,9 @@ class WebhookEndpointModel(models.Model):
 
 class WebhookDeliveryStatusChoices(models.TextChoices):
     INITIATED = "initiated", "Initiated"
-    WIP = "wip", "In Progress"
+    RETRY_SCHEDULED = "retry_scheduled", "Retry Scheduled"
     DELIVERED = "delivered", "Delivered"
-    FAILED = "failed", "Failed"
+    FAILED_PERMANENTLY = "failed_permanently", "Failed Permanently"
 
 
 class WebhookDeliveryModel(models.Model):
@@ -45,7 +47,6 @@ class WebhookDeliveryModel(models.Model):
         related_name="deliveries",
     )
     event_id = models.UUIDField()
-    event_type = models.CharField(choices=WebhookEventChoices.choices, max_length=50)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     delivered_at = models.DateTimeField(blank=True, null=True)
@@ -64,7 +65,6 @@ class WebhookDeliveryModel(models.Model):
             models.Index(fields=["status"]),
             models.Index(fields=["event_id"]),
             models.Index(fields=["event_id", "endpoint"]),
-            models.Index(fields=["event_type"]),
         ]
 
 
@@ -92,4 +92,29 @@ class WebhookDeliveryAttemptModel(models.Model):
                 fields=["delivery", "attempt_number"],
                 name="unique_webhook_attempt_delivery_attempt"
             ),
+        ]
+
+
+class WebhookEventSubscriptionModel(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
+    endpoint = models.ForeignKey(
+        WebhookEndpointModel,
+        on_delete=models.CASCADE,
+        related_name="subscriptions",
+    )
+    event_type = models.CharField(choices=WebhookEventChoices.choices, max_length=50)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "finances_webhook_event_subscriptions"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["endpoint", "event_type"],
+                name="unique_webhook_subscription_endpoint_event_type"
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["endpoint"]),
+            models.Index(fields=["event_type"]),
+            models.Index(fields=["endpoint", "event_type"]),
         ]

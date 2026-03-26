@@ -15,7 +15,6 @@ class CreateWebhookEndpointCommand:
     user_id: int
     title: str
     url: str
-    events: list[str]
 
 
 class CreateWebhookEndpointCommandHandler:
@@ -33,7 +32,6 @@ class CreateWebhookEndpointCommandHandler:
             title=command.title,
             url=command.url,
             user_id=command.user_id,
-            subscribed_events=[]
         ))
         database_webhook = self.webhook_repository.create_webhook(domain_webhook)
 

@@ -6,6 +6,7 @@ from .webhook import (
     WebhookEndpointModel,
     WebhookDeliveryAttemptModel,
     WebhookDeliveryStatusChoices,
+    WebhookEventSubscriptionModel,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     'WebhookEndpointModel',
     'WebhookDeliveryAttemptModel',
     'WebhookDeliveryStatusChoices',
+    'WebhookEventSubscriptionModel',
 ]

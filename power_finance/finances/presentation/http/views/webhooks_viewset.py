@@ -14,6 +14,10 @@ from finances.application.use_cases import (
     RotateWebhookSecretCommand,
     UpdateWebhookEndpointCommandHandler,
     UpdateWebhookEndpointCommand,
+    SubscribeToEventCommandHandler,
+    SubscribeToEventCommand,
+    UnsubscribeFromEventCommandHandler,
+    UnsubscribeFromEventCommand,
 )
 from finances.application.use_cases import (
     ListWebhooksQueryHandler,
@@ -28,6 +32,7 @@ from ..serializers import (
     CreateWebhookRequestSerializer,
     UpdateWebhookRequestSerializer,
     RotateWebhookSecretRequestSerializer,
+    SubscribeWebhookToEventRequestSerializer,
 )
 
 
@@ -43,6 +48,8 @@ class WebhooksViewSet(viewsets.ViewSet):
         self.destroy_handler = DeleteWebhookCommandHandler()
         self.rotate_handler = RotateWebhookSecretCommandHandler()
         self.update_handler = UpdateWebhookEndpointCommandHandler()
+        self.subscribe_handler = SubscribeToEventCommandHandler()
+        self.unsubscribe_handler = UnsubscribeFromEventCommandHandler()
 
     def list(self, request: Request) -> Response:
         try:
@@ -92,7 +99,6 @@ class WebhooksViewSet(viewsets.ViewSet):
                 user_id=request.user.id,
                 title=validated_data.get("title"),
                 url=validated_data.get("url"),
-                events=validated_data.get("subscribed"),
             ))
 
             payload = WebhookHttpPresenter.present_one_with_secret(result)
@@ -136,7 +142,6 @@ class WebhooksViewSet(viewsets.ViewSet):
                 user_id=request.user.id,
                 title=validated_data.get("title"),
                 url=validated_data.get("url"),
-                events=validated_data.get("subscribed"),
             ))
 
             payload = WebhookHttpPresenter.present_one(result)
@@ -166,6 +171,59 @@ class WebhooksViewSet(viewsets.ViewSet):
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to rotate the Webhook Endpoint:\n {e}",
                 resource_id=f"{pk}"
+            ))
+
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["post"], url_path="events")
+    def subscribe_to_event(
+            self,
+            request: Request,
+            pk: str | None = None
+    ) -> Response:
+        serializer = SubscribeWebhookToEventRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            subscription = self.subscribe_handler.handle(SubscribeToEventCommand(
+                webhook_id=pk,
+                user_id=request.user.id,
+                event_type=serializer.validated_data.get("event_type"),
+            ))
+
+            payload = WebhookHttpPresenter.present_subscription(subscription)
+            return Response(payload, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
+                message=f"Failed to subscribe to event:\n {e}",
+                resource_id=pk
+            ))
+
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["delete"], url_path=r"events/(?P<subscription_id>[^/.]+)")
+    def unsubscribe_from_event(
+            self,
+            request: Request,
+            pk: str | None = None,
+            subscription_id: str | None = None
+    ) -> Response:
+        try:
+            self.unsubscribe_handler.handle(UnsubscribeFromEventCommand(
+                subscription_id=subscription_id,
+                webhook_id=pk,
+                user_id=request.user.id,
+            ))
+
+            payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
+                message=f"Successfully unsubscribed from event with subscription ID {subscription_id}",
+                resource_id=subscription_id
+            ))
+            return Response(payload, status=status.HTTP_200_OK)
+        except Exception as e:
+            payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
+                message=f"Failed to unsubscribe from event:\n {e}",
+                resource_id=subscription_id
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)

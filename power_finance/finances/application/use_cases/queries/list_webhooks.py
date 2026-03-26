@@ -1,9 +1,7 @@
 from dataclasses import dataclass
-
 from django.core.exceptions import ObjectDoesNotExist
 
 from finances.infrastructure.repositories import DjangoWebhookRepository
-from finances.domain.entities import WebhookType
 
 from ...dto_builders import webhook_to_dto
 from ...dtos import WebhookDTO
@@ -26,9 +24,8 @@ class ListWebhooksQueryHandler:
 
     def handle(self, request: ListWebhooksQuery) -> list[WebhookDTO]:
         try:
-            typed_webhooks = self.webhooks_repository.get_webhooks_by_type(
-                WebhookType.TransactionCreate,
-                request.user_id,
+            typed_webhooks = self.webhooks_repository.get_user_webhooks(
+                user_id=request.user_id,
             )
 
             return [webhook_to_dto(webhook) for webhook in typed_webhooks]

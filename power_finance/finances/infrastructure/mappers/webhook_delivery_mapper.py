@@ -20,7 +20,6 @@ class WebhookDeliveryMapper:
             status=model.status,
             endpoint_id=model.endpoint_id,
             event_id=model.event_id,
-            event_type=model.event_type,
             updated_at=model.updated_at,
             delivered_at=model.delivered_at,
             next_retry_at=model.next_retry_at,

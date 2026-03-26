@@ -71,7 +71,6 @@ def webhook_to_dto(webhook: Webhook) -> WebhookDTO:
         id=webhook.id,
         title=webhook.title,
         url=webhook.url,
-        subscribed_events=webhook.subscribed_events,
         secret=webhook.secret,
         created_at=webhook.created_at,
         updated_at=webhook.updated_at,

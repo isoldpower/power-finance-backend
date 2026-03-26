@@ -7,7 +7,6 @@ from uuid import UUID
 class WebhookDTO:
     id: UUID
     title: str
-    subscribed_events: list[str]
     url: str
     secret: str
     created_at: datetime
@@ -34,7 +33,14 @@ class WebhookDeliveryDTO:
     status: str
     endpoint_id: UUID
     event_id: UUID
-    event_type: str
     updated_at: datetime
     delivered_at: datetime
     next_retry_at: datetime
+
+
+@dataclass
+class WebhookSubscriptionDTO:
+    id: UUID
+    event_type: str
+    endpoint_id: UUID
+    is_active: bool

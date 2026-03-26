@@ -1,7 +1,5 @@
-from django.db import transaction
-
 from finances.domain.entities import WebhookType, Webhook
-from finances.domain.events import TransactionCreatedEvent
+from finances.domain.events import TransactionUpdatedEvent
 from finances.infrastructure.integrations import WebhookDispatcher
 
 from .event_webhook_handler import EventWebhookHandler
@@ -13,9 +11,9 @@ from ..interfaces import (
 )
 
 
-class TransactionCreatedWebhookHandler(EventWebhookHandler):
+class TransactionUpdatedWebhookHandler(EventWebhookHandler):
     _webhook_repository: WebhookRepository
-    _delivery_repository: WebhookDeliveryRepository
+    _wallet_repository: WalletRepository
     _payload_factory: EventPayloadFactory
 
     def __init__(
@@ -27,40 +25,40 @@ class TransactionCreatedWebhookHandler(EventWebhookHandler):
             dispatcher: WebhookDispatcher
     ):
         super().__init__(
-            event_type=WebhookType.TransactionCreate,
+            event_type=WebhookType.TransactionUpdate,
             delivery_repository=delivery_repository,
             dispatcher=dispatcher,
         )
 
+        self._payload_factory = payload_factory
         self._webhook_repository = webhook_repository
         self._wallet_repository = wallet_repository
-        self._payload_factory = payload_factory
 
-    @transaction.atomic
     def _handle_single_endpoint(
             self,
             webhook: Webhook,
-            event: TransactionCreatedEvent
+            event: TransactionUpdatedEvent
     ):
-        request_body = self._payload_factory.from_transaction_created(event)
+        request_body = self._payload_factory.from_transaction_updated(event)
         delivery = self.handle_dispatch_webhook_delivery(
             webhook=webhook,
             event_id=event.event_id
         )
 
         self.handle_webhook_delivery_attempt(
-            webhook=webhook,
+            webhook,
             delivery_id=delivery.id,
             request_body=request_body,
         )
 
-    def __call__(self, event: TransactionCreatedEvent) -> None:
+    def __call__(self, event: TransactionUpdatedEvent) -> None:
         transaction_wallet = self._wallet_repository.get_wallet_by_id(
-            event.sender.wallet_id if event.sender else event.receiver.wallet_id
+            event.current_transaction.sender.wallet_id
+            if event.current_transaction.sender else event.current_transaction.receiver.wallet_id
         )
         webhooks = self._webhook_repository.get_webhooks_by_type(
             user_id=transaction_wallet.user_id,
-            event_type=WebhookType.TransactionCreate
+            event_type=WebhookType.TransactionUpdate
         )
 
         for webhook in webhooks:

@@ -8,7 +8,6 @@ from finances.application.interfaces import (
     CreateWebhookDeliveryData,
     CreateWebhookDeliveryAttemptData,
     FinalizeWebhookDeliveryAttemptData,
-    FinalizeWebhookDeliveryData,
 )
 from finances.application.dtos import WebhookDeliveryAttemptDTO, WebhookDeliveryDTO
 
@@ -36,7 +35,6 @@ class DjangoWebhookDeliveryRepository(WebhookDeliveryRepository):
         created_delivery = WebhookDeliveryModel.objects.create(
             endpoint_id=data.endpoint_id,
             event_id=data.event_id,
-            event_type=data.event_type,
         )
 
         return WebhookDeliveryMapper.delivery_to_dto(created_delivery)
@@ -80,12 +78,12 @@ class DjangoWebhookDeliveryRepository(WebhookDeliveryRepository):
 
     def finalize_delivery(
             self,
-            data: FinalizeWebhookDeliveryData
+            delivery_id: UUID,
     ) -> WebhookDeliveryDTO:
-        delivery = WebhookDeliveryModel.objects.get(id=data.delivery_id)
+        delivery = WebhookDeliveryModel.objects.get(id=delivery_id)
         first_successful_attempt = (WebhookDeliveryAttemptModel.objects
             .filter(
-                delivery_id=data.delivery_id,
+                delivery_id=delivery_id,
                 response_status__isnull=False,
                 response_status__gte=200,
                 response_status__lt=300,
@@ -98,7 +96,7 @@ class DjangoWebhookDeliveryRepository(WebhookDeliveryRepository):
             delivery.delivered_at = first_successful_attempt.finished_at
             delivery.next_retry_at = None
         else:
-            delivery.status = WebhookDeliveryStatusChoices.FAILED
+            delivery.status = WebhookDeliveryStatusChoices.FAILED_PERMANENTLY
             delivery.delivered_at = None
             delivery.next_retry_at = None
 

@@ -3,7 +3,6 @@ from .webhook_delivery_repository import (
     CreateWebhookDeliveryData,
     CreateWebhookDeliveryAttemptData,
     FinalizeWebhookDeliveryAttemptData,
-    FinalizeWebhookDeliveryData,
 )
 from .wallet_repository import WalletRepository
 from .transaction_repository import TransactionRepository
@@ -15,7 +14,6 @@ __all__ = [
     'CreateWebhookDeliveryData',
     'CreateWebhookDeliveryAttemptData',
     'FinalizeWebhookDeliveryAttemptData',
-    'FinalizeWebhookDeliveryData',
     'WalletRepository',
     'TransactionRepository',
     'CurrencyRepository',

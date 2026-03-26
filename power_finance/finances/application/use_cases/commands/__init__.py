@@ -10,6 +10,8 @@ from .delete_webhook import DeleteWebhookCommandHandler, DeleteWebhookCommand
 from .create_webhook_endpoint import CreateWebhookEndpointCommandHandler, CreateWebhookEndpointCommand
 from .rotate_webhook_secret import RotateWebhookSecretCommandHandler, RotateWebhookSecretCommand
 from .update_webhook_endpoint import UpdateWebhookEndpointCommandHandler, UpdateWebhookEndpointCommand
+from .subscribe_to_event import SubscribeToEventCommandHandler, SubscribeToEventCommand
+from .unsubscribe_from_event import UnsubscribeFromEventCommandHandler, UnsubscribeFromEventCommand
 
 __all__ = [
     'CreateWebhookEndpointCommandHandler',
@@ -32,4 +34,8 @@ __all__ = [
     'RotateWebhookSecretCommand',
     'UpdateWebhookEndpointCommandHandler',
     'UpdateWebhookEndpointCommand',
+    'SubscribeToEventCommandHandler',
+    'SubscribeToEventCommand',
+    'UnsubscribeFromEventCommandHandler',
+    'UnsubscribeFromEventCommand',
 ]

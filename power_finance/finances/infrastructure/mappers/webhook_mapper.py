@@ -1,6 +1,8 @@
+from finances.application.dtos import WebhookSubscriptionDTO
 from finances.domain.entities import Webhook
-from finances.infrastructure.mappers.update_mapper import UpdateMapper
-from finances.infrastructure.orm import WebhookEndpointModel
+
+from .update_mapper import UpdateMapper
+from ..orm import WebhookEndpointModel, WebhookEventSubscriptionModel
 
 
 class WebhookMapper:
@@ -34,9 +36,17 @@ class WebhookMapper:
             url=model.url,
             is_active=model.is_active,
             secret=model.secret,
-            subscribed_events=[],
             created_at=model.created_at,
             updated_at=model.updated_at,
+        )
+
+    @staticmethod
+    def subscription_to_dto(model: WebhookEventSubscriptionModel) -> WebhookSubscriptionDTO:
+        return WebhookSubscriptionDTO(
+            id=model.id,
+            event_type=model.event_type,
+            endpoint_id=model.endpoint_id,
+            is_active=model.is_active,
         )
 
     @staticmethod

@@ -5,15 +5,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import uuid4, UUID
 
-from .webhook_type import WebhookType
-
 
 @dataclass
 class WebhookCreateData:
     title: str
     url: str
     user_id: int
-    subscribed_events: list[WebhookType]
 
 
 @dataclass
@@ -26,7 +23,6 @@ class Webhook:
     created_at: datetime
     updated_at: datetime
     _secret: str = field(repr=False)
-    _subscribed_events: list[WebhookType] = field(default_factory=list)
 
     @classmethod
     def _generate_secret(cls) -> str:
@@ -51,7 +47,6 @@ class Webhook:
             title=data.title,
             url=data.url,
             is_active=True,
-            _subscribed_events=data.subscribed_events,
             _secret=cls._generate_secret(),
             created_at=timestamp,
             updated_at=timestamp,
@@ -68,7 +63,6 @@ class Webhook:
         url: str,
         is_active: bool,
         secret: str,
-        subscribed_events: list[WebhookType],
         created_at: datetime,
         updated_at: datetime,
     ):
@@ -79,7 +73,6 @@ class Webhook:
             url=url,
             is_active=is_active,
             _secret=secret,
-            _subscribed_events=subscribed_events,
             created_at=created_at,
             updated_at=updated_at,
         )
@@ -97,10 +90,6 @@ class Webhook:
     def secret(self) -> str:
         return self._secret
 
-    @property
-    def subscribed_events(self) -> list[WebhookType]:
-        return self._subscribed_events
-
     def disable_webhook(self):
         self.is_active = False
 
@@ -109,12 +98,3 @@ class Webhook:
 
     def rotate_secret(self):
         self._secret = self._generate_secret()
-
-    def subscribe(self, event_type: WebhookType):
-        self._subscribed_events.append(event_type)
-
-    def unsubscribe(self, event_type: WebhookType):
-        self._subscribed_events = [
-            event for event in self._subscribed_events
-            if event.value != event_type.value
-        ]

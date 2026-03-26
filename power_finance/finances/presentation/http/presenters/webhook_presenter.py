@@ -1,6 +1,6 @@
 from typing import Any
 
-from finances.application.dtos import WebhookDTO
+from finances.application.dtos import WebhookDTO, WebhookSubscriptionDTO
 
 
 class WebhookHttpPresenter:
@@ -11,7 +11,6 @@ class WebhookHttpPresenter:
             "url": webhook.url,
             "title": webhook.title,
             "secret": webhook.secret,
-            "subscribed": webhook.subscribed_events,
             "meta": WebhookHttpPresenter.present_meta(webhook)
         }
 
@@ -21,7 +20,6 @@ class WebhookHttpPresenter:
             "id": webhook.id,
             "url": webhook.url,
             "title": webhook.title,
-            "subscribed": webhook.subscribed_events,
             "meta": WebhookHttpPresenter.present_meta(webhook)
         }
 
@@ -39,5 +37,12 @@ class WebhookHttpPresenter:
             "id": webhook.id,
             "url": webhook.url,
             "title": webhook.title,
-            "subscribed": webhook.subscribed_events,
         } for webhook in webhooks]
+
+    @staticmethod
+    def present_subscription(subscription: WebhookSubscriptionDTO) -> dict[str, Any]:
+        return {
+            "id": subscription.id,
+            "event_type": subscription.event_type,
+            "is_active": subscription.is_active
+        }

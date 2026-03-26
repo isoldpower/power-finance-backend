@@ -1,18 +1,24 @@
 from dataclasses import dataclass
 
-from finances.domain.events import TransactionCreatedEvent
+from finances.domain.events import (
+    TransactionCreatedEvent,
+    TransactionUpdatedEvent,
+    TransactionDeletedEvent,
+)
 from finances.infrastructure.integrations import WebhookDispatcher
 from finances.infrastructure.messaging import InMemoryEventBus
 
-from .event_handlers import TransactionCreatedWebhookHandler
+from .event_handlers import (
+    TransactionCreatedWebhookHandler,
+    TransactionUpdatedWebhookHandler,
+    TransactionDeletedWebhookHandler,
+)
 from .interfaces import (
     WebhookDeliveryRepository,
-    EventPayloadFactory,
-    EventBus, WalletRepository,
-)
-
-from .interfaces import (
+    WalletRepository,
     WebhookRepository,
+    EventPayloadFactory,
+    EventBus,
 )
 
 
@@ -56,6 +62,20 @@ def initialize_event_bus(
 ) -> EventBus:
     event_bus = InMemoryEventBus()
     event_bus.subscribe(TransactionCreatedEvent, TransactionCreatedWebhookHandler(
+        webhook_repository=webhook_repository,
+        delivery_repository=delivery_repository,
+        wallet_repository=wallet_repository,
+        payload_factory=payload_factory,
+        dispatcher=dispatcher,
+    ))
+    event_bus.subscribe(TransactionUpdatedEvent, TransactionUpdatedWebhookHandler(
+        webhook_repository=webhook_repository,
+        delivery_repository=delivery_repository,
+        wallet_repository=wallet_repository,
+        payload_factory=payload_factory,
+        dispatcher=dispatcher,
+    ))
+    event_bus.subscribe(TransactionDeletedEvent, TransactionDeletedWebhookHandler(
         webhook_repository=webhook_repository,
         delivery_repository=delivery_repository,
         wallet_repository=wallet_repository,

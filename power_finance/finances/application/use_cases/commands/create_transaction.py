@@ -1,7 +1,5 @@
 from dataclasses import dataclass
-from decimal import Decimal
 from typing import Optional
-from uuid import UUID
 
 from django.db import transaction
 
@@ -17,9 +15,9 @@ from finances.domain.entities import (
     Wallet, TransactionParticipant
 )
 from finances.domain.services import apply_transaction_to_wallet_balance
-from finances.domain.events import EventCollector
 
-from ...bootstrap import get_event_bus
+from ..decorators import handle_evently_command
+from ..use_case_base import UseCaseEvently
 from ...dtos import TransactionDTO, CreateTransactionParticipantDTO
 from ...dto_builders import transaction_to_dto
 from ...interfaces import TransactionRepository, WalletRepository
@@ -35,19 +33,19 @@ class CreateTransactionCommand:
     category: Optional[ExpenseCategory]
 
 
-class CreateTransactionCommandHandler:
+class CreateTransactionCommandHandler(UseCaseEvently):
     _transaction_repository: TransactionRepository
     _wallet_repository: WalletRepository
-    _event_collector: EventCollector
 
     def __init__(
         self,
         transaction_repository: TransactionRepository | None = None,
         wallet_repository: WalletRepository | None = None,
     ):
+        super().__init__()
+
         self._transaction_repository = transaction_repository or DjangoTransactionRepository()
         self._wallet_repository = wallet_repository or DjangoWalletRepository()
-        self._event_collector = EventCollector()
 
     def _update_wallet_balances(self, new_transaction: Transaction, user_id: int):
         participants: list[Wallet | None] = [
@@ -70,6 +68,7 @@ class CreateTransactionCommandHandler:
         for participant in [participant for participant in participants if participant is not None]:
             self._wallet_repository.save_wallet(participant)
 
+    @handle_evently_command
     @transaction.atomic
     def handle(self, command: CreateTransactionCommand) -> TransactionDTO:
         sender_wallet = self._wallet_repository.get_user_wallet_by_id(
@@ -99,13 +98,11 @@ class CreateTransactionCommandHandler:
             description=command.description,
             type=command.type,
             category=command.category,
-            event_collector=self._event_collector,
+            event_collector=self.event_collector,
         )
 
         self._update_wallet_balances(new_transaction, command.user_id)
         created_transaction = self._transaction_repository.create_transaction(new_transaction)
-        recorded_events = self._event_collector.pull_events()
-        get_event_bus().publish(recorded_events)
 
         return transaction_to_dto(
             created_transaction,

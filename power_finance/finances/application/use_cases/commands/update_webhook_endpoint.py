@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from uuid import UUID
 from django.db import transaction
 
 from finances.infrastructure.repositories import DjangoWebhookRepository
@@ -15,7 +16,6 @@ class UpdateWebhookEndpointCommand:
     user_id: int
     title: str | None = None
     url: str | None = None
-    events: list[str] | None = None
 
 
 class UpdateWebhookEndpointCommandHandler:
@@ -32,15 +32,13 @@ class UpdateWebhookEndpointCommandHandler:
             webhook.title = command.title
         if command.url is not None:
             webhook.url = command.url
-        # Note: subscribed_events handling is currently minimal in the domain/repo
-        # but we follow the pattern for title and url.
         
         return self.webhook_repository.save_webhook(webhook)
 
     @transaction.atomic
     def handle(self, command: UpdateWebhookEndpointCommand) -> WebhookDTO:
         existing_webhook = self.webhook_repository.get_webhook_by_id(
-            webhook_id=command.webhook_id,
+            webhook_id=UUID(command.webhook_id),
             user_id=command.user_id
         )
         

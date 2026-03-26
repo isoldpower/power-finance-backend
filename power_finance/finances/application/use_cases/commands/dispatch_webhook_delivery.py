@@ -43,4 +43,3 @@ class WebhookDeliveryHandler:
                 payload=delivery.payload,
                 event_type=delivery.event_type,
             ))
-

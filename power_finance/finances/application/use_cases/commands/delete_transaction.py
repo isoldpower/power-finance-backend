@@ -7,6 +7,8 @@ from finances.infrastructure.repositories import DjangoTransactionRepository, Dj
 from finances.domain.entities import Transaction, Wallet
 from finances.domain.services import rollback_transaction_from_wallet_balance
 
+from ..use_case_base import UseCaseEvently
+from ..decorators import handle_evently_command
 from ...dto_builders import transaction_to_dto
 from ...dtos import TransactionDTO
 from ...interfaces import TransactionRepository, WalletRepository
@@ -18,7 +20,7 @@ class DeleteTransactionCommand:
     user_id: int
 
 
-class DeleteTransactionCommandHandler:
+class DeleteTransactionCommandHandler(UseCaseEvently):
     transaction_repository: TransactionRepository
     wallet_repository: WalletRepository
 
@@ -27,6 +29,8 @@ class DeleteTransactionCommandHandler:
         transaction_repository: TransactionRepository | None = None,
         wallet_repository: WalletRepository | None = None
     ):
+        super().__init__()
+
         self.transaction_repository = transaction_repository or DjangoTransactionRepository()
         self.wallet_repository = wallet_repository or DjangoWalletRepository()
 
@@ -39,39 +43,42 @@ class DeleteTransactionCommandHandler:
         except ObjectDoesNotExist:
             return None
 
-    def _rollback_wallet_balances(self, deleted_transaction: Transaction, user_id: int):
-        participants: list[Wallet | None] = [
-            self._safe_get_wallet(deleted_transaction.sender.wallet_id, user_id)
-                if deleted_transaction.sender else None,
-            self._safe_get_wallet(deleted_transaction.receiver.wallet_id, user_id)
-                if deleted_transaction.receiver else None,
-        ]
-
-        rollback_transaction_from_wallet_balance(
-            deleted_transaction,
-            participants[0],
-            participants[1],
+    def _load_affected_wallets(
+        self,
+        cancelled_transaction: Transaction,
+        user_id: int,
+    ) -> tuple[Wallet | None, Wallet | None]:
+        sender_wallet = (
+            self._safe_get_wallet(cancelled_transaction.sender.wallet_id, user_id)
+            if cancelled_transaction.sender else None
+        )
+        receiver_wallet = (
+            self._safe_get_wallet(cancelled_transaction.receiver.wallet_id, user_id)
+            if cancelled_transaction.receiver else None
         )
 
-        for participant in [participant for participant in participants if participant is not None]:
-            self.wallet_repository.save_wallet(participant)
+        return sender_wallet, receiver_wallet
 
+    def _persist_wallets(self, *wallets: Wallet | None) -> None:
+        for wallet in wallets:
+            if wallet is not None:
+                self.wallet_repository.save_wallet(wallet)
+
+    @handle_evently_command
     @transaction.atomic
     def handle(self, command: DeleteTransactionCommand) -> TransactionDTO:
+        transaction_uuid = UUID(command.transaction_id)
         transaction_to_delete = self.transaction_repository.get_user_transaction_by_id(
             user_id=command.user_id,
-            transaction_id=UUID(command.transaction_id),
+            transaction_id=transaction_uuid,
         )
-        self._rollback_wallet_balances(transaction_to_delete, command.user_id)
+        transaction_to_delete.migrate_event_collector(self.event_collector)
+        participants = self._load_affected_wallets(transaction_to_delete, command.user_id)
 
-        deleted_transaction = self.transaction_repository.delete_transaction_by_id(
-            UUID(command.transaction_id),
-        )
-        sender_wallet = self._safe_get_wallet(deleted_transaction.sender.wallet_id, command.user_id)
-        receiver_wallet = self._safe_get_wallet(deleted_transaction.receiver.wallet_id, command.user_id)
+        rollback_transaction_from_wallet_balance(transaction_to_delete, *participants)
+        self._persist_wallets(*participants)
+        transaction_to_delete.confirm_delete()
 
-        return transaction_to_dto(
-            deleted_transaction,
-            sender_wallet,
-            receiver_wallet
-        )
+        deleted_transaction = self.transaction_repository.delete_transaction_by_id(transaction_uuid)
+
+        return transaction_to_dto(deleted_transaction, *participants)

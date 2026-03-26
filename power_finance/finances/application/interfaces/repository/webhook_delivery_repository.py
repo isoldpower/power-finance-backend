@@ -27,11 +27,6 @@ class FinalizeWebhookDeliveryAttemptData:
     error_message: str | None
 
 
-@dataclass(frozen=True)
-class FinalizeWebhookDeliveryData:
-    delivery_id: UUID
-
-
 class WebhookDeliveryRepository(ABC):
     @abstractmethod
     def get_delivery_by_id( self, webhook_id: UUID, event_id: UUID) -> WebhookDeliveryDTO:
@@ -49,5 +44,6 @@ class WebhookDeliveryRepository(ABC):
     def finalize_delivery_attempt(self, data: FinalizeWebhookDeliveryAttemptData) -> WebhookDeliveryAttemptDTO:
         raise NotImplementedError()
 
-    def finalize_delivery(self, data: FinalizeWebhookDeliveryData) -> WebhookDeliveryDTO:
+    @abstractmethod
+    def finalize_delivery(self, delivery_id: UUID) -> WebhookDeliveryDTO:
         raise NotImplementedError()

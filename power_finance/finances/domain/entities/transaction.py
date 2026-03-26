@@ -1,3 +1,4 @@
+import copy
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID, uuid4
@@ -6,7 +7,14 @@ from django.utils import timezone
 
 from .expense_category import ExpenseCategory
 from .transaction_type import TransactionType
-from ..events import TransactionCreatedEvent, EventCollector, TransactionEventParticipant
+from ..events import (
+    EventCollector,
+    TransactionEventParticipant,
+    TransactionCreatedEvent,
+    TransactionUpdatedEvent,
+    TransactionDeletedEvent,
+    UpdateTransactionData,
+)
 from ..value_objects import Money
 
 
@@ -30,7 +38,7 @@ class Transaction:
     created_at: datetime
     type: TransactionType
     category: ExpenseCategory
-    _event_collector: EventCollector = field(default_factory=EventCollector)
+    _event_collector: EventCollector = field(default_factory=EventCollector, compare=False)
 
     @classmethod
     def _validate_participants(
@@ -108,6 +116,7 @@ class Transaction:
             type: TransactionType,
             category: ExpenseCategory,
             created_at: datetime,
+            event_collector: EventCollector | None = None,
     ):
         try:
             cls._validate_participants(receiver, sender, type)
@@ -116,16 +125,60 @@ class Transaction:
 
         return cls(
             id=id,
-            sender=TransactionParticipant(
-                wallet_id=sender.wallet_id,
-                money=sender.money,
-            ) if sender else None,
-            receiver=TransactionParticipant(
-                wallet_id=receiver.wallet_id,
-                money=receiver.money,
-            ) if receiver else None,
+            sender=sender,
+            receiver=receiver,
             description=description,
             created_at=created_at,
             type=type,
-            category=category
+            category=category,
+            _event_collector=event_collector
         )
+
+    def update_fields(
+            self,
+            category: ExpenseCategory | None = None,
+            description: str | None = None,
+    ):
+        old_transaction = copy.deepcopy(self)
+
+        if category is not None:
+            self.category = category
+        if description is not None:
+            self.description = description
+
+        if old_transaction != self:
+            self._event_collector.collect(TransactionUpdatedEvent(
+                transaction_id=old_transaction.id,
+                updated_at=old_transaction.created_at,
+                old_transaction=UpdateTransactionData(
+                    sender=old_transaction.sender,
+                    receiver=old_transaction.receiver,
+                    description=old_transaction.description,
+                    category=old_transaction.category,
+                ),
+                current_transaction=UpdateTransactionData(
+                    sender=self.sender,
+                    receiver=self.receiver,
+                    description=self.description,
+                    category=self.category,
+                )
+            ))
+
+    def migrate_event_collector(
+            self,
+            event_collector: EventCollector
+    ):
+        recorded_events = event_collector.pull_events()
+        for event in recorded_events:
+            event_collector.collect(event)
+
+        self._event_collector = event_collector
+
+    def confirm_delete(self):
+        self._event_collector.collect(TransactionDeletedEvent(
+            transaction_id=self.id,
+            created_at=self.created_at,
+            sender=self.sender,
+            receiver=self.receiver,
+            description=self.description
+        ))
