@@ -24,3 +24,4 @@ static/
 
 # Operating System files
 .DS_Store
+schema.yml

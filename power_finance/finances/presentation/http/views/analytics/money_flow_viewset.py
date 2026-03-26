@@ -1,11 +1,12 @@
-from typing import Any
-
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.request import Request
+from drf_spectacular.utils import extend_schema
+from typing import Any
 
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
+from ...serializers import MoneyFlowAnalyticsSerializer, MessageResponseSerializer
 
 from finances.application.use_cases import (
     GetMoneyFlowQueryHandler,
@@ -15,12 +16,22 @@ from finances.application.use_cases import (
 
 class MoneyFlowAnalyticsView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
+    pagination_class = None
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.query_handler = GetMoneyFlowQueryHandler()
 
-    def list(self, request: Request) -> Response:
+    @extend_schema(
+        operation_id="analytics_money_flow_list",
+        summary="Money flow data",
+        description="Retrieve multi-level money flow data suitable for a Sankey diagram.",
+        responses={
+            200: MoneyFlowAnalyticsSerializer,
+            400: MessageResponseSerializer
+        }
+    )
+    def summary(self, request: Request) -> Response:
         try:
             result = self.query_handler.handle(GetMoneyFlowQuery(
                 user_id=request.user.id

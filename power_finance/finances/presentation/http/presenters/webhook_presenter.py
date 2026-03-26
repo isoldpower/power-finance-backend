@@ -46,3 +46,11 @@ class WebhookHttpPresenter:
             "event_type": subscription.event_type,
             "is_active": subscription.is_active
         }
+
+    @staticmethod
+    def present_subscription_list(subscriptions: list[WebhookSubscriptionDTO]) -> list[dict[str, Any]]:
+        return [{
+            "id": subscription.id,
+            "event_type": subscription.event_type,
+            "is_active": subscription.is_active
+        } for subscription in subscriptions]

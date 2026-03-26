@@ -25,3 +25,5 @@ class FinancesConfig(AppConfig):
             payload_factory=WebhookPayloadFactory(),
             dispatcher=WebhookDispatcher(sender=HttpSender()),
         )
+
+        # End bootstrap
