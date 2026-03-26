@@ -18,7 +18,7 @@ class DjangoWebhookRepository(WebhookRepository):
     ) -> WebhookSubscriptionDTO:
         subscription_object = WebhookEventSubscriptionModel.objects.create(
             endpoint_id=webhook.id,
-            event_type=event_type,
+            event_type=event_type.value,
             is_active=True
         )
 
@@ -34,7 +34,7 @@ class DjangoWebhookRepository(WebhookRepository):
             subscription_object = WebhookEventSubscriptionModel.objects.get(
                 endpoint_id=webhook.id,
                 endpoint__user_id=user_id,
-                event_type=event_type,
+                event_type=event_type.value,
                 is_active=True
             )
         except WebhookEventSubscriptionModel.DoesNotExist:
@@ -98,7 +98,7 @@ class DjangoWebhookRepository(WebhookRepository):
 
     def get_webhooks_by_type(self, event_type: WebhookType, user_id: int) -> list[Webhook]:
         requested_webhooks = (WebhookEndpointModel.objects
-            .filter(subscriptions__event_type=event_type, user_id=user_id)
+            .filter(subscriptions__event_type=event_type.value, user_id=user_id)
             .distinct()
         )
 

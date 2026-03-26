@@ -31,7 +31,7 @@ class HttpSender(NetworkSender):
             return MessageResponse(
                 status_code=500,
                 response_body="Connection refused",
-                response_headers=request_headers,
+                response_headers=None,
                 error_message="Connection refused",
             )
         except requests.exceptions.Timeout:

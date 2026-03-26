@@ -9,7 +9,6 @@ from ...dtos import WebhookDeliveryDTO, WebhookDeliveryAttemptDTO
 class CreateWebhookDeliveryData:
     endpoint_id: UUID
     event_id: UUID
-    event_type: str
 
 
 @dataclass(frozen=True)

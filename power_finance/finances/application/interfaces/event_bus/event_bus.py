@@ -15,3 +15,7 @@ class EventBus(ABC):
     @abstractmethod
     def publish(self, events: list[DomainEvent]) -> None:
         raise NotImplementedError()
+
+    @abstractmethod
+    def subscribe(self, event_type: type[EventType], handler: EventHandler[EventType]) -> None:
+        raise NotImplementedError()

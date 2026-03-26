@@ -1,20 +1,22 @@
 from dataclasses import dataclass
 from typing import Optional
+from uuid import UUID
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
+from finances.domain.services import apply_transaction_to_wallet_balance
 from finances.domain.value_objects import Money
-from finances.infrastructure.repositories import (
-    DjangoTransactionRepository,
-    DjangoWalletRepository
-)
 from finances.domain.entities import (
     Transaction,
     TransactionType,
     ExpenseCategory,
     Wallet, TransactionParticipant
 )
-from finances.domain.services import apply_transaction_to_wallet_balance
+from finances.infrastructure.repositories import (
+    DjangoTransactionRepository,
+    DjangoWalletRepository
+)
 
 from ..decorators import handle_evently_command
 from ..use_case_base import UseCaseEvently
@@ -47,51 +49,58 @@ class CreateTransactionCommandHandler(UseCaseEvently):
         self._transaction_repository = transaction_repository or DjangoTransactionRepository()
         self._wallet_repository = wallet_repository or DjangoWalletRepository()
 
-    def _update_wallet_balances(self, new_transaction: Transaction, user_id: int):
-        participants: list[Wallet | None] = [
-            self._wallet_repository.get_user_wallet_for_update(
-                new_transaction.sender.wallet_id,
+    def _safe_get_wallet(self, wallet_id: UUID, user_id: int) -> Wallet | None:
+        try:
+            return self._wallet_repository.get_user_wallet_for_update(
+                wallet_id,
                 user_id,
-            ) if new_transaction.sender else None,
-            self._wallet_repository.get_user_wallet_for_update(
-                new_transaction.receiver.wallet_id,
-                user_id,
-            ) if new_transaction.receiver else None,
-        ]
+            )
+        except ObjectDoesNotExist:
+            return None
 
-        apply_transaction_to_wallet_balance(
-            new_transaction,
-            participants[0],
-            participants[1],
+    def _load_affected_wallets(
+            self,
+            sender: Optional[CreateTransactionParticipantDTO],
+            receiver: Optional[CreateTransactionParticipantDTO],
+            user_id: int,
+    ) -> tuple[Wallet | None, Wallet | None]:
+        sender_wallet = (
+            self._safe_get_wallet(sender.wallet_id, user_id)
+            if sender else None
+        )
+        receiver_wallet = (
+            self._safe_get_wallet(receiver.wallet_id, user_id)
+            if receiver else None
         )
 
-        for participant in [participant for participant in participants if participant is not None]:
-            self._wallet_repository.save_wallet(participant)
+        return sender_wallet, receiver_wallet
+
+    def _persist_wallets(self, *wallets: Wallet | None) -> None:
+        for wallet in wallets:
+            if wallet is not None:
+                self._wallet_repository.save_wallet(wallet)
 
     @handle_evently_command
     @transaction.atomic
     def handle(self, command: CreateTransactionCommand) -> TransactionDTO:
-        sender_wallet = self._wallet_repository.get_user_wallet_by_id(
-            command.sender.wallet_id,
+        sender_wallet, receiver_wallet = self._load_affected_wallets(
+            command.sender,
+            command.receiver,
             command.user_id,
-        ) if command.sender else None
-        receiver_wallet = self._wallet_repository.get_user_wallet_by_id(
-            command.receiver.wallet_id,
-            command.user_id,
-        ) if command.receiver else None
+        )
 
         new_transaction = Transaction.create(
             sender=TransactionParticipant(
                 wallet_id=sender_wallet.id,
                 money=Money(
-                    amount=command.sender.amount,
+                    amount=sender_wallet.balance.amount,
                     currency_code=sender_wallet.balance.currency_code,
                 )
             ) if (sender_wallet and command.sender) else None,
             receiver=TransactionParticipant(
                 wallet_id=receiver_wallet.id,
                 money=Money(
-                    amount=command.receiver.amount,
+                    amount=receiver_wallet.balance.amount,
                     currency_code=receiver_wallet.balance.currency_code,
                 )
             ) if (receiver_wallet and command.receiver) else None,
@@ -101,8 +110,9 @@ class CreateTransactionCommandHandler(UseCaseEvently):
             event_collector=self.event_collector,
         )
 
-        self._update_wallet_balances(new_transaction, command.user_id)
+        apply_transaction_to_wallet_balance(new_transaction, sender_wallet, receiver_wallet)
         created_transaction = self._transaction_repository.create_transaction(new_transaction)
+        self._persist_wallets(sender_wallet, receiver_wallet)
 
         return transaction_to_dto(
             created_transaction,

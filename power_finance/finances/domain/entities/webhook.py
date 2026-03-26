@@ -2,8 +2,10 @@ import hashlib
 import hmac
 import secrets
 from dataclasses import dataclass, field
+from django.utils import timezone
 from datetime import datetime
 from uuid import uuid4, UUID
+
 
 
 @dataclass
@@ -32,7 +34,7 @@ class Webhook:
     def create(cls, data: WebhookCreateData) -> Webhook:
         title = data.title.strip()
         url = data.url.strip()
-        timestamp = datetime.now()
+        timestamp = timezone.now()
 
         if not title:
             raise ValueError("Webhook title cannot be empty")

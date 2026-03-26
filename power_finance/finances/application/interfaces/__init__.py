@@ -7,15 +7,15 @@ from .repository import *
 from .selector_collections import *
 
 __all__ = [
-    event_bus.__all__,
-    repository.__all__,
-    selector_collections.__all__,
-
-    'EventBus',
-    'EventHandler',
     'WebhookMessageSender',
     'WebhookMessage',
     'EventPayloadFactory',
     'NetworkSender',
     'MessageResponse',
 ]
+
+__all__.extend([
+    event_bus.__all__,
+    repository.__all__,
+    selector_collections.__all__,
+])

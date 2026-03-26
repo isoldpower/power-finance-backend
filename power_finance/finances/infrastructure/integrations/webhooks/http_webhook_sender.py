@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 
 from finances.application.interfaces import NetworkSender, MessageResponse
@@ -29,7 +30,9 @@ class WebhookDispatcher:
         request_headers: dict = {
             'Content-Type': 'application/json',
             'X-Webhook-Event': event_type,
-            'X-Webhook-Encoded': webhook.sign_payload(str(payload))
+            'X-Webhook-Encoded': webhook.sign_payload(
+                json.dumps(obj=payload, sort_keys=True)
+            )
         }
 
         return RequestStamp(

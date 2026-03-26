@@ -29,7 +29,7 @@ class UpdateMapper(Generic[TModel, TEntity]):
             replace: bool = False
     ) -> TModel:
         for model_field, entity_field in update_fields:
-            entity_value = UpdateMapper._resolve_attr(entity, entity_field)
+            entity_value = UpdateMapper._resolve_attr(entity, entity_field, replace)
             model_value = getattr(model, model_field)
 
             if (entity_value is not None or replace) and model_value != entity_value:

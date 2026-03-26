@@ -5,8 +5,8 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class MessageResponse:
     status_code: int
-    response_body: str
-    response_headers: dict
+    response_body: str | None
+    response_headers: dict | None
     error_message: str | None
 
 

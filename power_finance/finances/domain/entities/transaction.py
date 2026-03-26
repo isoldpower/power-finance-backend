@@ -85,7 +85,7 @@ class Transaction:
             created_at=timezone.now(),
             type=type,
             category=category,
-            _event_collector=event_collector
+            _event_collector=event_collector or EventCollector(),
         )
 
         created_transaction._event_collector.collect(TransactionCreatedEvent(
@@ -131,7 +131,7 @@ class Transaction:
             created_at=created_at,
             type=type,
             category=category,
-            _event_collector=event_collector
+            _event_collector=event_collector or EventCollector(),
         )
 
     def update_fields(
@@ -139,6 +139,7 @@ class Transaction:
             category: ExpenseCategory | None = None,
             description: str | None = None,
     ):
+        timestamp = timezone.now()
         old_transaction = copy.deepcopy(self)
 
         if category is not None:
@@ -149,18 +150,26 @@ class Transaction:
         if old_transaction != self:
             self._event_collector.collect(TransactionUpdatedEvent(
                 transaction_id=old_transaction.id,
-                updated_at=old_transaction.created_at,
+                updated_at=timestamp,
                 old_transaction=UpdateTransactionData(
-                    sender=old_transaction.sender,
-                    receiver=old_transaction.receiver,
+                    sender=TransactionEventParticipant(
+                        wallet_id=old_transaction.sender.wallet_id,
+                        currency_code=old_transaction.sender.money.currency_code,
+                        amount=old_transaction.sender.money.amount,
+                    ) if old_transaction.sender else None,
+                    receiver=TransactionEventParticipant(
+                        wallet_id=old_transaction.receiver.wallet_id,
+                        currency_code=old_transaction.receiver.money.currency_code,
+                        amount=old_transaction.receiver.money.amount,
+                    ) if old_transaction.receiver else None,
                     description=old_transaction.description,
-                    category=old_transaction.category,
+                    category=old_transaction.category.value,
                 ),
                 current_transaction=UpdateTransactionData(
                     sender=self.sender,
                     receiver=self.receiver,
                     description=self.description,
-                    category=self.category,
+                    category=self.category.value,
                 )
             ))
 
@@ -168,7 +177,7 @@ class Transaction:
             self,
             event_collector: EventCollector
     ):
-        recorded_events = event_collector.pull_events()
+        recorded_events = self._event_collector.pull_events()
         for event in recorded_events:
             event_collector.collect(event)
 

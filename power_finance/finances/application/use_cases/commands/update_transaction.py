@@ -42,8 +42,8 @@ class UpdateTransactionCommandHandler(UseCaseEvently):
         current_transaction.migrate_event_collector(self.event_collector)
 
         current_transaction.update_fields(
-            description=current_transaction.description,
-            category=current_transaction.category,
+            description=command.description,
+            category=command.category,
         )
         updated_transaction = self._transaction_repository.save_transaction(current_transaction)
 

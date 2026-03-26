@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 
@@ -20,9 +21,9 @@ class WebhookDeliveryAttemptDTO:
     attempt_number: int
     request_headers: dict
     request_body: dict
-    response_status: int
-    response_body: str
-    error_message: str
+    response_status: int | None
+    response_body: str | None
+    error_message: str | None
     started_at: datetime
     finished_at: datetime
 
@@ -33,9 +34,9 @@ class WebhookDeliveryDTO:
     status: str
     endpoint_id: UUID
     event_id: UUID
-    updated_at: datetime
-    delivered_at: datetime
-    next_retry_at: datetime
+    updated_at: Optional[datetime]
+    delivered_at: Optional[datetime]
+    next_retry_at: Optional[datetime]
 
 
 @dataclass
