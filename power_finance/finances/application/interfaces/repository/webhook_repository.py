@@ -11,6 +11,10 @@ class WebhookRepository(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    def get_subscriptions_by_webhook_id(self, webhook_id: UUID, user_id: int) -> list[WebhookSubscriptionDTO]:
+        raise NotImplementedError()
+
+    @abstractmethod
     def create_webhook(self, webhook: Webhook) -> Webhook:
         raise NotImplementedError()
 

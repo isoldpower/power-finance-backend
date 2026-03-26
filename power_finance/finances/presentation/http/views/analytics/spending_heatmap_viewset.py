@@ -1,11 +1,12 @@
-from typing import Any
-
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.request import Request
+from drf_spectacular.utils import extend_schema
+from typing import Any
 
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
+from ...serializers import SpendingHeatmapSerializer
 
 from finances.application.use_cases import (
     GetSpendingHeatmapQueryHandler,
@@ -15,11 +16,20 @@ from finances.application.use_cases import (
 
 class SpendingHeatmapView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
+    pagination_class = None
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.query_handler = GetSpendingHeatmapQueryHandler()
 
+    @extend_schema(
+        operation_id="analytics_spending_heatmap_list",
+        summary="Spending heatmap data",
+        description="Retrieve spending data mapped by date/time to generate a heatmap.",
+        responses={
+            200: SpendingHeatmapSerializer,
+        }
+    )
     def list(self, request: Request) -> Response:
         try:
             result = self.query_handler.handle(GetSpendingHeatmapQuery(

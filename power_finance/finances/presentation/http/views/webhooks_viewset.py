@@ -3,6 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.request import Request
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 from typing import Any
 
 from finances.application.use_cases import (
@@ -24,6 +26,8 @@ from finances.application.use_cases import (
     ListWebhooksQuery,
     GetWebhookQueryHandler,
     GetWebhookQuery,
+    GetWebhookSubscriptionsQueryHandler,
+    GetWebhookSubscriptionsQuery,
 )
 
 from ..pagination import StandardResultsPagination
@@ -33,6 +37,11 @@ from ..serializers import (
     UpdateWebhookRequestSerializer,
     RotateWebhookSecretRequestSerializer,
     SubscribeWebhookToEventRequestSerializer,
+    WebhookResponseSerializer,
+    WebhookWithSecretResponseSerializer,
+    WebhookSimpleResponseSerializer,
+    WebhookSubscriptionResponseSerializer,
+    MessageResponseSerializer,
 )
 
 
@@ -50,7 +59,21 @@ class WebhooksViewSet(viewsets.ViewSet):
         self.update_handler = UpdateWebhookEndpointCommandHandler()
         self.subscribe_handler = SubscribeToEventCommandHandler()
         self.unsubscribe_handler = UnsubscribeFromEventCommandHandler()
+        self.list_events_query = GetWebhookSubscriptionsQueryHandler()
 
+    @extend_schema(
+        operation_id="webhooks_list",
+        summary="List webhooks",
+        description="Retrieve a paginated list of your webhook endpoints.",
+        parameters=[
+            OpenApiParameter('limit', type=int, description='Number of results to return per page.'),
+            OpenApiParameter('offset', type=int, description='The initial index from which to return the results.'),
+        ],
+        responses={
+            206: WebhookSimpleResponseSerializer(many=True),
+            400: MessageResponseSerializer
+        }
+    )
     def list(self, request: Request) -> Response:
         try:
             requested_hooks = self.list_query.handle(ListWebhooksQuery(
@@ -72,6 +95,18 @@ class WebhooksViewSet(viewsets.ViewSet):
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        operation_id="webhooks_retrieve",
+        summary="Get webhook details",
+        description="Retrieve detailed information about a specific webhook endpoint.",
+        parameters=[
+            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID")
+        ],
+        responses={
+            200: WebhookResponseSerializer,
+            400: MessageResponseSerializer
+        }
+    )
     def retrieve(self, request: Request, pk: str) -> Response:
         try:
             requested_hook = self.retrieve_query.handle(GetWebhookQuery(
@@ -89,6 +124,16 @@ class WebhooksViewSet(viewsets.ViewSet):
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        operation_id="webhooks_create",
+        summary="Create a new webhook",
+        description="Register a new webhook endpoint. The secret will be returned only once.",
+        request=CreateWebhookRequestSerializer,
+        responses={
+            201: WebhookWithSecretResponseSerializer,
+            400: MessageResponseSerializer
+        }
+    )
     def create(self, request: Request) -> Response:
         serializer = CreateWebhookRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -111,6 +156,18 @@ class WebhooksViewSet(viewsets.ViewSet):
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        operation_id="webhooks_delete",
+        summary="Delete a webhook",
+        description="Delete a specific webhook endpoint.",
+        parameters=[
+            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID")
+        ],
+        responses={
+            200: MessageResponseSerializer,
+            400: MessageResponseSerializer
+        }
+    )
     def destroy(self, request: Request, pk: str | None = None) -> Response:
         try:
             deleted_hook = self.destroy_handler.handle(DeleteWebhookCommand(
@@ -131,6 +188,19 @@ class WebhooksViewSet(viewsets.ViewSet):
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
         
+    @extend_schema(
+        operation_id="webhooks_partial_update",
+        summary="Update a webhook",
+        description="Update the title or URL of an existing webhook endpoint.",
+        parameters=[
+            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID")
+        ],
+        request=UpdateWebhookRequestSerializer,
+        responses={
+            200: WebhookResponseSerializer,
+            400: MessageResponseSerializer
+        }
+    )
     def partial_update(self, request: Request, pk: str | None = None) -> Response:
         serializer = UpdateWebhookRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -154,6 +224,19 @@ class WebhooksViewSet(viewsets.ViewSet):
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
         
+    @extend_schema(
+        operation_id="webhooks_rotate_secret",
+        summary="Rotate webhook secret",
+        description="Rotate the signing secret for this webhook endpoint.",
+        parameters=[
+            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID")
+        ],
+        request=RotateWebhookSecretRequestSerializer,
+        responses={
+            200: WebhookWithSecretResponseSerializer,
+            400: MessageResponseSerializer
+        }
+    )
     @action(detail=True, methods=["post"], url_path="rotate")
     def rotate_secret(self, request: Request, pk: str | None = None) -> Response:
         serializer = RotateWebhookSecretRequestSerializer(data=request.data)
@@ -175,12 +258,60 @@ class WebhooksViewSet(viewsets.ViewSet):
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=True, methods=["post"], url_path="events")
-    def subscribe_to_event(
+    @extend_schema(
+        methods=["POST"],
+        operation_id="webhooks_subscribe",
+        summary="Subscribe to event",
+        description="Subscribe a webhook to a specific event type.",
+        parameters=[
+            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID")
+        ],
+        request=SubscribeWebhookToEventRequestSerializer,
+        responses={
+            201: WebhookSubscriptionResponseSerializer,
+            400: MessageResponseSerializer
+        }
+    )
+    @extend_schema(
+        methods=["GET"],
+        operation_id="webhooks_list_subscriptions",
+        summary="List event subscriptions",
+        description="List all active event subscriptions for a specific webhook.",
+        parameters=[
+            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID")
+        ],
+        responses={
+            200: WebhookSubscriptionResponseSerializer(many=True),
+            400: MessageResponseSerializer
+        }
+    )
+    @action(detail=True, methods=["get", "post"], url_path="events")
+    def events(
             self,
             request: Request,
             pk: str | None = None
     ) -> Response:
+        if request.method == "POST":
+            return self._subscribe_to_event(request, pk)
+        else:
+            return self._list_events(request, pk)
+
+    def _list_events(self, request: Request, pk: str | None) -> Response:
+        try:
+            subscriptions = self.list_events_query.handle(GetWebhookSubscriptionsQuery(
+                webhook_id=pk,
+                user_id=request.user.id,
+            ))
+            payload = WebhookHttpPresenter.present_subscription_list(subscriptions)
+            return Response(payload, status=status.HTTP_200_OK)
+        except Exception as e:
+            payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
+                message=f"Failed to list event subscriptions:\n {e}",
+                resource_id=pk
+            ))
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    def _subscribe_to_event(self, request: Request, pk: str | None) -> Response:
         serializer = SubscribeWebhookToEventRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -201,6 +332,19 @@ class WebhooksViewSet(viewsets.ViewSet):
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        operation_id="webhooks_unsubscribe",
+        summary="Unsubscribe from event",
+        description="Remove an event subscription from a webhook.",
+        parameters=[
+            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID"),
+            OpenApiParameter('subscription_id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Subscription ID")
+        ],
+        responses={
+            200: MessageResponseSerializer,
+            400: MessageResponseSerializer
+        }
+    )
     @action(detail=True, methods=["delete"], url_path=r"events/(?P<subscription_id>[^/.]+)")
     def unsubscribe_from_event(
             self,

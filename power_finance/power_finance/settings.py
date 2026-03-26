@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 
     'corsheaders',
     'rest_framework',
+    'drf_spectacular',
     
     'power_finance',
     'identity.apps.IdentityConfig',
@@ -73,6 +74,25 @@ REST_FRAMEWORK = {
         'anon': '100/day',
         'user': '1000/day'
     },
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Power Finance API',
+    'DESCRIPTION': 'API documentation for Power Finance',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'APPEND_COMPONENTS': {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    },
+    'SECURITY': [{"bearerAuth": []}]
 }
 
 MIDDLEWARE = [

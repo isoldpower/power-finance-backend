@@ -1,0 +1,1578 @@
+openapi: 3.0.3
+info:
+  title: Power Finance API
+  version: 1.0.0
+  description: API documentation for Power Finance
+paths:
+  /api/v1/analytics/categories/:
+    get:
+      operationId: analytics_categories_list
+      description: Get an overview of how funds are distributed across different spending
+        categories.
+      summary: Categories spending analytics
+      tags:
+      - analytics
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryAnalytics'
+          description: ''
+  /api/v1/analytics/expenditure/:
+    get:
+      operationId: analytics_expenditures_list
+      description: Get an overview of expenditures over time, grouped by categories.
+      summary: Expenditures over time
+      tags:
+      - analytics
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExpenditureAnalytics'
+          description: ''
+  /api/v1/analytics/money-flow/:
+    get:
+      operationId: analytics_money_flow_list
+      description: Retrieve multi-level money flow data suitable for a Sankey diagram.
+      summary: Money flow data
+      tags:
+      - analytics
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MoneyFlowAnalytics'
+          description: ''
+  /api/v1/analytics/spending-heatmap/:
+    get:
+      operationId: analytics_spending_heatmap_list
+      description: Retrieve spending data mapped by date/time to generate a heatmap.
+      summary: Spending heatmap data
+      tags:
+      - analytics
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SpendingHeatmap'
+          description: ''
+  /api/v1/analytics/wallet-history/{id}/:
+    get:
+      operationId: analytics_wallet_balance_history_retrieve
+      description: Retrieve historical balance measurements for a specific wallet.
+      summary: Wallet balance history
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Wallet ID
+        required: true
+      tags:
+      - analytics
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletBalanceHistory'
+          description: ''
+  /api/v1/transactions/:
+    get:
+      operationId: transactions_list
+      description: Retrieve a paginated list of your transactions.
+      summary: List transactions
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Number of results to return per page.
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        description: The initial index from which to return the results.
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - transactions
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTransactionPreviewResponseList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+    post:
+      operationId: transactions_create
+      description: Create a new income, expense, or transfer transaction.
+      summary: Create a new transaction
+      tags:
+      - transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequestRequest'
+        required: true
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+  /api/v1/transactions/{id}/:
+    get:
+      operationId: transactions_retrieve
+      description: Retrieve detailed information about a specific transaction.
+      summary: Get transaction details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Transaction ID
+        required: true
+      tags:
+      - transactions
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+    patch:
+      operationId: transactions_partial_update
+      description: Update description, category, or type of an existing transaction.
+      summary: Update a transaction
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Transaction ID
+        required: true
+      tags:
+      - transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateTransactionRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateTransactionRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateTransactionRequestRequest'
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+    delete:
+      operationId: transactions_delete
+      description: Delete a specific transaction.
+      summary: Delete a transaction
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Transaction ID
+        required: true
+      tags:
+      - transactions
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+  /api/v1/wallets/:
+    get:
+      operationId: wallets_list
+      description: Retrieve a paginated list of your wallets.
+      summary: List wallets
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Number of results to return per page.
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        description: The initial index from which to return the results.
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - wallets
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWalletResponseList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+    post:
+      operationId: wallets_create
+      description: Create a new wallet for tracking funds.
+      summary: Create a new wallet
+      tags:
+      - wallets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWalletRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateWalletRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateWalletRequestRequest'
+        required: true
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+  /api/v1/wallets/{id}/:
+    get:
+      operationId: wallets_retrieve
+      description: Retrieve detailed information about a specific wallet.
+      summary: Get wallet details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Wallet ID
+        required: true
+      tags:
+      - wallets
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+    put:
+      operationId: wallets_replace
+      description: Replace an existing wallet comprehensively.
+      summary: Replace a wallet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Wallet ID
+        required: true
+      tags:
+      - wallets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceWalletRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReplaceWalletRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReplaceWalletRequestRequest'
+        required: true
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+    patch:
+      operationId: wallets_partial_update
+      description: Update specific fields of an existing wallet.
+      summary: Update a wallet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Wallet ID
+        required: true
+      tags:
+      - wallets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWalletRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWalletRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWalletRequestRequest'
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+    delete:
+      operationId: wallets_delete
+      description: Soft delete a specific wallet.
+      summary: Delete a wallet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Wallet ID
+        required: true
+      tags:
+      - wallets
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+  /api/v1/webhooks/:
+    get:
+      operationId: webhooks_list
+      description: Retrieve a paginated list of your webhook endpoints.
+      summary: List webhooks
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Number of results to return per page.
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        description: The initial index from which to return the results.
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - webhooks
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '206':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWebhookSimpleResponseList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+    post:
+      operationId: webhooks_create
+      description: Register a new webhook endpoint. The secret will be returned only
+        once.
+      summary: Create a new webhook
+      tags:
+      - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequestRequest'
+        required: true
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookWithSecretResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+  /api/v1/webhooks/{id}/:
+    get:
+      operationId: webhooks_retrieve
+      description: Retrieve detailed information about a specific webhook endpoint.
+      summary: Get webhook details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      tags:
+      - webhooks
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+    patch:
+      operationId: webhooks_partial_update
+      description: Update the title or URL of an existing webhook endpoint.
+      summary: Update a webhook
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      tags:
+      - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWebhookRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWebhookRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWebhookRequestRequest'
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+    delete:
+      operationId: webhooks_delete
+      description: Delete a specific webhook endpoint.
+      summary: Delete a webhook
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      tags:
+      - webhooks
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+  /api/v1/webhooks/{id}/events/:
+    get:
+      operationId: webhooks_list_subscriptions
+      description: List all active event subscriptions for a specific webhook.
+      summary: List event subscriptions
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - webhooks
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWebhookSubscriptionResponseList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+    post:
+      operationId: webhooks_subscribe
+      description: Subscribe a webhook to a specific event type.
+      summary: Subscribe to event
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      tags:
+      - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscribeWebhookToEventRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscribeWebhookToEventRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscribeWebhookToEventRequestRequest'
+        required: true
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSubscriptionResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+  /api/v1/webhooks/{id}/events/{subscription_id}/:
+    delete:
+      operationId: webhooks_unsubscribe
+      description: Remove an event subscription from a webhook.
+      summary: Unsubscribe from event
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      - in: path
+        name: subscription_id
+        schema:
+          type: string
+          format: uuid
+        description: Subscription ID
+        required: true
+      tags:
+      - webhooks
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+  /api/v1/webhooks/{id}/rotate/:
+    post:
+      operationId: webhooks_rotate_secret
+      description: Rotate the signing secret for this webhook endpoint.
+      summary: Rotate webhook secret
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      tags:
+      - webhooks
+      security:
+      - ClerkJWTAuthentication: []
+      - cookieAuth: []
+      - basicAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookWithSecretResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+components:
+  schemas:
+    CategoryAnalytics:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryAnalyticsItem'
+          description: List of category spending items
+        metadata:
+          type: object
+          additionalProperties: {}
+          description: Additional analytical metadata
+      required:
+      - data
+      - metadata
+    CategoryAnalyticsItem:
+      type: object
+      properties:
+        category:
+          type: string
+          description: Name of the spending category
+        amount:
+          type: number
+          format: double
+          description: Total amount spent in this category
+      required:
+      - amount
+      - category
+    CreateTransactionRequestRequest:
+      type: object
+      properties:
+        sender:
+          $ref: '#/components/schemas/TransactionParticipantFieldRequest'
+        receiver:
+          $ref: '#/components/schemas/TransactionParticipantFieldRequest'
+        description:
+          type: string
+        type:
+          type: string
+          minLength: 1
+        category:
+          type: string
+          minLength: 1
+      required:
+      - type
+    CreateWalletRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        credit:
+          type: boolean
+        balance:
+          $ref: '#/components/schemas/MoneyFieldRequest'
+      required:
+      - balance
+      - credit
+      - name
+    CreateWebhookRequestRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        url:
+          type: string
+          format: uri
+          minLength: 1
+      required:
+      - title
+      - url
+    ExpenditureAnalytics:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: number
+              format: double
+          description: Nested dictionary containing expenditure data over time
+        metadata:
+          type: object
+          additionalProperties: {}
+          description: Additional analytical metadata
+      required:
+      - data
+      - metadata
+    MessageMeta:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+          description: Resource ID related to the message
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Human-readable status or error message
+        meta:
+          allOf:
+          - $ref: '#/components/schemas/MessageMeta'
+          description: Additional metadata
+      required:
+      - message
+      - meta
+    MoneyFieldRequest:
+      type: object
+      description: 'Handles nested { "amount": "123.45", "currency": "USD" } in ISO
+        4217 codes'
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,2})?$
+        currency:
+          type: string
+          minLength: 1
+          maxLength: 3
+      required:
+      - amount
+      - currency
+    MoneyFlowAnalytics:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/MoneyFlowData'
+        metadata:
+          type: object
+          additionalProperties: {}
+          description: Additional analytical metadata
+      required:
+      - data
+      - metadata
+    MoneyFlowData:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/MoneyFlowNode'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/MoneyFlowLink'
+      required:
+      - links
+      - nodes
+    MoneyFlowLink:
+      type: object
+      properties:
+        source:
+          type: string
+          description: Source node name
+        target:
+          type: string
+          description: Target node name
+        value:
+          type: number
+          format: double
+          description: Value of the link (amount transferred)
+      required:
+      - source
+      - target
+      - value
+    MoneyFlowNode:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the node (e.g., wallet or category)
+        level:
+          type: integer
+          description: Hierarchical level of the node
+      required:
+      - level
+      - name
+    PaginatedTransactionPreviewResponseList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionPreviewResponse'
+        meta:
+          type: object
+          properties:
+            limit:
+              type: integer
+              example: 10
+              description: Maximum number of items returned.
+            offset:
+              type: integer
+              example: 0
+              description: Number of items skipped.
+            total:
+              type: integer
+              example: 100
+              description: Total number of items available.
+          required:
+          - limit
+          - offset
+          - total
+          description: Pagination metadata.
+      required:
+      - data
+      - meta
+    PaginatedWalletResponseList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WalletResponse'
+        meta:
+          type: object
+          properties:
+            limit:
+              type: integer
+              example: 10
+              description: Maximum number of items returned.
+            offset:
+              type: integer
+              example: 0
+              description: Number of items skipped.
+            total:
+              type: integer
+              example: 100
+              description: Total number of items available.
+          required:
+          - limit
+          - offset
+          - total
+          description: Pagination metadata.
+      required:
+      - data
+      - meta
+    PaginatedWebhookSimpleResponseList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookSimpleResponse'
+        meta:
+          type: object
+          properties:
+            limit:
+              type: integer
+              example: 10
+              description: Maximum number of items returned.
+            offset:
+              type: integer
+              example: 0
+              description: Number of items skipped.
+            total:
+              type: integer
+              example: 100
+              description: Total number of items available.
+          required:
+          - limit
+          - offset
+          - total
+          description: Pagination metadata.
+      required:
+      - data
+      - meta
+    PaginatedWebhookSubscriptionResponseList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookSubscriptionResponse'
+        meta:
+          type: object
+          properties:
+            limit:
+              type: integer
+              example: 10
+              description: Maximum number of items returned.
+            offset:
+              type: integer
+              example: 0
+              description: Number of items skipped.
+            total:
+              type: integer
+              example: 100
+              description: Total number of items available.
+          required:
+          - limit
+          - offset
+          - total
+          description: Pagination metadata.
+      required:
+      - data
+      - meta
+    PatchedUpdateTransactionRequestRequest:
+      type: object
+      properties:
+        description:
+          type: string
+          minLength: 1
+        category:
+          type: string
+          minLength: 1
+        type:
+          type: string
+          minLength: 1
+    PatchedUpdateWalletRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        credit:
+          type: boolean
+        balance:
+          $ref: '#/components/schemas/MoneyFieldRequest'
+    PatchedUpdateWebhookRequestRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        url:
+          type: string
+          format: uri
+          minLength: 1
+    ReplaceWalletRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        credit:
+          type: boolean
+        balance:
+          $ref: '#/components/schemas/MoneyFieldRequest'
+      required:
+      - balance
+      - credit
+      - name
+    SpendingHeatmap:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties:
+            type: number
+            format: double
+          description: Dictionary mapping date/time keys to spending values
+        metadata:
+          type: object
+          additionalProperties: {}
+          description: Additional analytical metadata
+      required:
+      - data
+      - metadata
+    SubscribeWebhookToEventRequestRequest:
+      type: object
+      properties:
+        event_type:
+          type: string
+          minLength: 1
+          maxLength: 50
+      required:
+      - event_type
+    TransactionMeta:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Transaction ID
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+      required:
+      - created_at
+      - id
+    TransactionParticipantDetailed:
+      type: object
+      properties:
+        wallet:
+          $ref: '#/components/schemas/WalletResponse'
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,2})?$
+      required:
+      - amount
+      - wallet
+    TransactionParticipantFieldRequest:
+      type: object
+      properties:
+        wallet_id:
+          type: string
+          format: uuid
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,2})?$
+      required:
+      - amount
+      - wallet_id
+    TransactionParticipantPreview:
+      type: object
+      properties:
+        wallet_id:
+          type: string
+          format: uuid
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,2})?$
+      required:
+      - amount
+      - wallet_id
+    TransactionPreviewResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Transaction ID
+        type:
+          type: string
+          description: Transaction type
+        sender:
+          allOf:
+          - $ref: '#/components/schemas/TransactionParticipantPreview'
+          nullable: true
+        receiver:
+          allOf:
+          - $ref: '#/components/schemas/TransactionParticipantPreview'
+          nullable: true
+        description:
+          type: string
+        meta:
+          $ref: '#/components/schemas/TransactionMeta'
+      required:
+      - description
+      - id
+      - meta
+      - receiver
+      - sender
+      - type
+    TransactionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Transaction ID
+        type:
+          type: string
+          description: Transaction type
+        sender:
+          allOf:
+          - $ref: '#/components/schemas/TransactionParticipantDetailed'
+          nullable: true
+        receiver:
+          allOf:
+          - $ref: '#/components/schemas/TransactionParticipantDetailed'
+          nullable: true
+        description:
+          type: string
+        meta:
+          $ref: '#/components/schemas/TransactionMeta'
+      required:
+      - description
+      - id
+      - meta
+      - receiver
+      - sender
+      - type
+    WalletBalanceHistory:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WalletBalanceHistoryItem'
+          description: List of balance records over time
+        metadata:
+          type: object
+          additionalProperties: {}
+          description: Additional analytical metadata
+      required:
+      - data
+      - metadata
+    WalletBalanceHistoryItem:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          description: The date of the balance record
+        balance:
+          type: number
+          format: double
+          description: The wallet balance on this date
+      required:
+      - balance
+      - date
+    WalletBalanceResponse:
+      type: object
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,16}(?:\.\d{0,2})?$
+          description: Current balance amount
+        currency:
+          type: string
+          description: Currency code
+      required:
+      - amount
+      - currency
+    WalletMetaResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Wallet ID
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+      required:
+      - created_at
+      - id
+      - updated_at
+    WalletResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the wallet
+        name:
+          type: string
+          description: Name of the wallet
+        credit:
+          type: boolean
+          description: Credit status of the wallet
+        balance:
+          allOf:
+          - $ref: '#/components/schemas/WalletBalanceResponse'
+          description: Current balance details
+        meta:
+          allOf:
+          - $ref: '#/components/schemas/WalletMetaResponse'
+          description: Wallet metadata
+      required:
+      - balance
+      - credit
+      - id
+      - meta
+      - name
+    WebhookMetaResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Webhook ID
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+      required:
+      - created_at
+      - id
+      - updated_at
+    WebhookResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Webhook UUID
+        url:
+          type: string
+          format: uri
+          description: Target URL
+        title:
+          type: string
+          description: Webhook title
+        meta:
+          allOf:
+          - $ref: '#/components/schemas/WebhookMetaResponse'
+          description: Webhook metadata
+      required:
+      - id
+      - meta
+      - title
+      - url
+    WebhookSimpleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Webhook UUID
+        url:
+          type: string
+          format: uri
+          description: Target URL
+        title:
+          type: string
+          description: Webhook title
+      required:
+      - id
+      - title
+      - url
+    WebhookSubscriptionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Subscription ID
+        event_type:
+          type: string
+          description: Event type subscribed to
+        is_active:
+          type: boolean
+          description: Activity status
+      required:
+      - event_type
+      - id
+      - is_active
+    WebhookWithSecretResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Webhook UUID
+        url:
+          type: string
+          format: uri
+          description: Target URL
+        title:
+          type: string
+          description: Webhook title
+        meta:
+          allOf:
+          - $ref: '#/components/schemas/WebhookMetaResponse'
+          description: Webhook metadata
+        secret:
+          type: string
+          description: The signing secret (only shown on creation or rotation)
+      required:
+      - id
+      - meta
+      - secret
+      - title
+      - url
+  securitySchemes:
+    ClerkJWTAuthentication:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    basicAuth:
+      type: http
+      scheme: basic
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

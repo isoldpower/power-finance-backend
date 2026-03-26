@@ -12,6 +12,7 @@ from .get_money_flow import GetMoneyFlowQueryHandler, GetMoneyFlowQuery
 from .get_wallet_balance_history import GetWalletBalanceHistoryQueryHandler, GetWalletBalanceHistoryQuery
 from .list_webhooks import ListWebhooksQueryHandler, ListWebhooksQuery
 from .get_webhook import GetWebhookQueryHandler, GetWebhookQuery
+from .get_webhook_subscriptions import GetWebhookSubscriptionsQueryHandler, GetWebhookSubscriptionsQuery
 
 __all__ = [
     'GetOwnedWalletQueryHandler',
@@ -36,4 +37,6 @@ __all__ = [
     'ListWebhooksQuery',
     'GetWebhookQueryHandler',
     'GetWebhookQuery',
+    'GetWebhookSubscriptionsQueryHandler',
+    'GetWebhookSubscriptionsQuery',
 ]

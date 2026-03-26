@@ -1,6 +1,8 @@
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 
 from finances.application.dtos import CreateTransactionParticipantDTO
 from finances.application.use_cases import (
@@ -20,13 +22,32 @@ from finances.application.use_cases import (
 
 from ..pagination import StandardResultsPagination
 from ..presenters import TransactionHttpPresenter, CommonHttpPresenter, MessageResultInfo
-from ..serializers import CreateTransactionRequestSerializer, UpdateTransactionRequestSerializer
+from ..serializers import (
+    CreateTransactionRequestSerializer,
+    UpdateTransactionRequestSerializer,
+    TransactionResponseSerializer,
+    TransactionPreviewResponseSerializer,
+    MessageResponseSerializer,
+)
 
 
 class TransactionViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsPagination
 
+    @extend_schema(
+        operation_id="transactions_list",
+        summary="List transactions",
+        description="Retrieve a paginated list of your transactions.",
+        parameters=[
+            OpenApiParameter('limit', type=int, description='Number of results to return per page.'),
+            OpenApiParameter('offset', type=int, description='The initial index from which to return the results.'),
+        ],
+        responses={
+            200: TransactionPreviewResponseSerializer(many=True),
+            400: MessageResponseSerializer
+        }
+    )
     def list(self, request):
         try:
             list_query = ListTransactionsQuery(
@@ -49,6 +70,18 @@ class TransactionViewSet(viewsets.ViewSet):
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        operation_id="transactions_retrieve",
+        summary="Get transaction details",
+        description="Retrieve detailed information about a specific transaction.",
+        parameters=[
+            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Transaction ID")
+        ],
+        responses={
+            200: TransactionResponseSerializer,
+            400: MessageResponseSerializer
+        }
+    )
     def retrieve(self, request, pk=None):
         try:
             get_query = GetTransactionQuery(
@@ -69,6 +102,16 @@ class TransactionViewSet(viewsets.ViewSet):
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        operation_id="transactions_create",
+        summary="Create a new transaction",
+        description="Create a new income, expense, or transfer transaction.",
+        request=CreateTransactionRequestSerializer,
+        responses={
+            201: TransactionResponseSerializer,
+            400: MessageResponseSerializer
+        }
+    )
     def create(self, request):
         serializer = CreateTransactionRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -105,6 +148,18 @@ class TransactionViewSet(viewsets.ViewSet):
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        operation_id="transactions_delete",
+        summary="Delete a transaction",
+        description="Delete a specific transaction.",
+        parameters=[
+            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Transaction ID")
+        ],
+        responses={
+            200: MessageResponseSerializer,
+            400: MessageResponseSerializer
+        }
+    )
     def destroy(self, request, pk=None):
         try:
             command = DeleteTransactionCommand(
@@ -127,6 +182,19 @@ class TransactionViewSet(viewsets.ViewSet):
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        operation_id="transactions_partial_update",
+        summary="Update a transaction",
+        description="Update description, category, or type of an existing transaction.",
+        parameters=[
+            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Transaction ID")
+        ],
+        request=UpdateTransactionRequestSerializer,
+        responses={
+            200: TransactionResponseSerializer,
+            400: MessageResponseSerializer
+        }
+    )
     def partial_update(self, request, pk=None):
         serializer = UpdateTransactionRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

@@ -2,23 +2,34 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.request import Request
+from drf_spectacular.utils import extend_schema
 from typing import Any
-
-from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
 
 from finances.application.use_cases import (
     GetCategoriesAnalyticsQueryHandler,
     GetCategoriesAnalyticsQuery,
 )
 
+from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
+from ...serializers import CategoryAnalyticsSerializer
+
 
 class CategoriesAnalyticsView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
+    pagination_class = None
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.query_handler = GetCategoriesAnalyticsQueryHandler()
 
+    @extend_schema(
+        operation_id="analytics_categories_list",
+        summary="Categories spending analytics",
+        description="Get an overview of how funds are distributed across different spending categories.",
+        responses={
+            200: CategoryAnalyticsSerializer,
+        }
+    )
     def list(self, request: Request) -> Response:
         try:
             result = self.query_handler.handle(GetCategoriesAnalyticsQuery(

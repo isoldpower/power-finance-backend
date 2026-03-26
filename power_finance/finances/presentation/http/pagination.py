@@ -17,3 +17,34 @@ class StandardResultsPagination(PageNumberPagination):
                 'total': self.page.paginator.count,
             }
         })
+
+    def get_paginated_response_schema(self, schema):
+        return {
+            'type': 'object',
+            'properties': {
+                'data': schema,
+                'meta': {
+                    'type': 'object',
+                    'properties': {
+                        'limit': {
+                            'type': 'integer',
+                            'example': 10,
+                            'description': 'Maximum number of items returned.'
+                        },
+                        'offset': {
+                            'type': 'integer',
+                            'example': 0,
+                            'description': 'Number of items skipped.'
+                        },
+                        'total': {
+                            'type': 'integer',
+                            'example': 100,
+                            'description': 'Total number of items available.'
+                        },
+                    },
+                    'required': ['limit', 'offset', 'total'],
+                    'description': 'Pagination metadata.'
+                }
+            },
+            'required': ['data', 'meta']
+        }

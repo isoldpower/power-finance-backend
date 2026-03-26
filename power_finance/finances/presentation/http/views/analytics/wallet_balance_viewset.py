@@ -1,26 +1,43 @@
-from typing import Any
-
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.request import Request
-
-from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+from typing import Any
 
 from finances.application.use_cases import (
     GetWalletBalanceHistoryQueryHandler,
     GetWalletBalanceHistoryQuery,
 )
 
+from ...serializers import WalletBalanceHistorySerializer
+from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
+
 
 class WalletBalanceHistoryView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
+    pagination_class = None
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.query_handler = GetWalletBalanceHistoryQueryHandler()
 
+    @extend_schema(
+        operation_id="analytics_wallet_balance_history_retrieve",
+        summary="Wallet balance history",
+        description="Retrieve historical balance measurements for a specific wallet.",
+        parameters=[OpenApiParameter(
+            'id',
+            type=OpenApiTypes.UUID,
+            location=OpenApiParameter.PATH,
+            description="Wallet ID"
+        )],
+        responses={
+            200: WalletBalanceHistorySerializer,
+        }
+    )
     def retrieve(self, request: Request, pk=None) -> Response:
         try:
             result = self.query_handler.handle(GetWalletBalanceHistoryQuery(
