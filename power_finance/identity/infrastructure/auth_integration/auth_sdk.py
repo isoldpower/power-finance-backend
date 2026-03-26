@@ -15,7 +15,7 @@ class AuthSdk(ABC):
             tuple[dict, bool] where first argument is user's information and second argument is whether
             user was authenticated
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @abstractmethod
     def get_jwks(self) -> dict:
@@ -25,4 +25,4 @@ class AuthSdk(ABC):
         Returns:
             dict representing user's JWKS to decode user info from Provider's service
         """
-        raise NotImplementedError
+        raise NotImplementedError()

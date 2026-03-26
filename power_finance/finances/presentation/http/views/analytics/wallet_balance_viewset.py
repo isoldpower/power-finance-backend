@@ -8,7 +8,7 @@ from rest_framework.request import Request
 
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
 
-from finances.application.queries import (
+from finances.application.use_cases import (
     GetWalletBalanceHistoryQueryHandler,
     GetWalletBalanceHistoryQuery,
 )
@@ -41,7 +41,8 @@ class WalletBalanceHistoryView(viewsets.ViewSet):
             return Response(status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
-                message=f"Failed to get wallet balance history: {e}"
+                message=f"Failed to get wallet balance history: {e}",
+                resource_id=f"{pk}"
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)

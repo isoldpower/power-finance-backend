@@ -9,14 +9,22 @@ from finances.domain.entities import TransactionType, ExpenseCategory
 
 
 @dataclass(frozen=True)
+class CreateTransactionParticipantDTO:
+    wallet_id: UUID
+    amount: Decimal
+
+
+@dataclass(frozen=True)
 class TransactionParticipantDTO:
     wallet: WalletDTO
+    currency_code: str
     amount: Decimal
 
 
 @dataclass(frozen=True)
 class TransactionParticipantPlainDTO:
     wallet_id: UUID
+    currency_code: str
     amount: Decimal
 
 

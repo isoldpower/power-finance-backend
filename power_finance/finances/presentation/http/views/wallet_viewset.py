@@ -2,7 +2,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from finances.application.commands import (
+from finances.application.use_cases import (
     CreateNewWalletCommand,
     CreateNewWalletCommandHandler,
     SoftDeleteWalletCommand,
@@ -10,7 +10,7 @@ from finances.application.commands import (
     UpdateExistingWalletCommand,
     UpdateExistingWalletCommandHandler,
 )
-from finances.application.queries import (
+from finances.application.use_cases import (
     GetOwnedWalletQuery,
     GetOwnedWalletQueryHandler,
     ListOwnedWalletsQuery,
@@ -48,6 +48,7 @@ class WalletViewSet(viewsets.ViewSet):
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to list owned wallets: {e}",
+                resource_id=None
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -67,6 +68,7 @@ class WalletViewSet(viewsets.ViewSet):
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to retrieve wallet with ID {pk}: {e}",
+                resource_id=f"{pk}"
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -94,6 +96,7 @@ class WalletViewSet(viewsets.ViewSet):
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to create new wallet: {e}",
+                resource_id=None
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -122,6 +125,7 @@ class WalletViewSet(viewsets.ViewSet):
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to update wallet with ID {pk}: {e}",
+                resource_id=f"{pk}"
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -150,6 +154,7 @@ class WalletViewSet(viewsets.ViewSet):
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to update wallet with ID {pk}: {e}",
+                resource_id=f"{pk}"
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -165,12 +170,14 @@ class WalletViewSet(viewsets.ViewSet):
             wallet = handler.handle(command)
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Successfully deleted wallet with ID {wallet.id}",
+                resource_id=f"{pk}"
             ))
 
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to delete wallet with ID {pk}: {e}",
+                resource_id=f"{pk}"
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)

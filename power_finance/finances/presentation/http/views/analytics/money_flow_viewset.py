@@ -7,7 +7,7 @@ from rest_framework.request import Request
 
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
 
-from finances.application.queries.get_money_flow import (
+from finances.application.use_cases import (
     GetMoneyFlowQueryHandler,
     GetMoneyFlowQuery
 )
@@ -38,7 +38,8 @@ class MoneyFlowAnalyticsView(viewsets.ViewSet):
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
-                message=f"Failed to get money flow analytics: {e}"
+                message=f"Failed to get money flow analytics: {e}",
+                resource_id=None
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)

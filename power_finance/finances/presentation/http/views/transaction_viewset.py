@@ -2,14 +2,14 @@ from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from finances.application.dtos import TransactionParticipantPlainDTO
-from finances.application.queries import (
+from finances.application.dtos import CreateTransactionParticipantDTO
+from finances.application.use_cases import (
     ListTransactionsQuery,
     ListTransactionsQueryHandler,
     GetTransactionQuery,
     GetTransactionQueryHandler,
 )
-from finances.application.commands import (
+from finances.application.use_cases import (
     CreateTransactionCommand,
     CreateTransactionCommandHandler,
     DeleteTransactionCommand,
@@ -44,6 +44,7 @@ class TransactionViewSet(viewsets.ViewSet):
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to list transactions: {e}",
+                resource_id=None
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -63,6 +64,7 @@ class TransactionViewSet(viewsets.ViewSet):
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to get transaction with ID {pk}: {e}",
+                resource_id=f"{pk}"
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -77,11 +79,11 @@ class TransactionViewSet(viewsets.ViewSet):
             validated_receiver = validated.get("receiver")
             command = CreateTransactionCommand(
                 user_id=request.user.id,
-                sender=TransactionParticipantPlainDTO(
+                sender=CreateTransactionParticipantDTO(
                     validated_sender.get("wallet_id"),
                     validated_sender.get("amount"),
                 ) if validated_sender else None,
-                receiver=TransactionParticipantPlainDTO(
+                receiver=CreateTransactionParticipantDTO(
                     validated_receiver.get("wallet_id"),
                     validated_receiver.get("amount"),
                 ) if validated_receiver else None,
@@ -98,6 +100,7 @@ class TransactionViewSet(viewsets.ViewSet):
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to create transaction: {e}",
+                resource_id=None
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -110,12 +113,16 @@ class TransactionViewSet(viewsets.ViewSet):
             )
             handler = DeleteTransactionCommandHandler()
             transaction = handler.handle(command)
-            payload = TransactionHttpPresenter.present_one(transaction)
+            payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
+                message=f"Deleted transaction with ID {transaction.id}",
+                resource_id=f"{transaction.id}"
+            ))
 
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to delete transaction with ID {pk}: {e}",
+                resource_id=f"{pk}"
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
@@ -142,6 +149,7 @@ class TransactionViewSet(viewsets.ViewSet):
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to update transaction with ID {pk}: {e}",
+                resource_id=f"{pk}"
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)

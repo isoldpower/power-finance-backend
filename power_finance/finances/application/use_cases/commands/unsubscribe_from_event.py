@@ -1,0 +1,33 @@
+from dataclasses import dataclass
+from uuid import UUID
+from django.db import transaction
+
+from finances.infrastructure.repositories import DjangoWebhookRepository
+
+from ...dtos import WebhookSubscriptionDTO
+from ...interfaces import WebhookRepository
+
+
+@dataclass
+class UnsubscribeFromEventCommand:
+    subscription_id: str
+    webhook_id: str
+    user_id: int
+
+
+class UnsubscribeFromEventCommandHandler:
+    webhook_repository: WebhookRepository
+
+    def __init__(
+            self,
+            webhook_repository: WebhookRepository | None = None,
+    ):
+        self.webhook_repository = webhook_repository or DjangoWebhookRepository()
+
+    @transaction.atomic
+    def handle(self, command: UnsubscribeFromEventCommand) -> WebhookSubscriptionDTO:
+        return self.webhook_repository.unsubscribe_webhook_by_id(
+            subscription_id=UUID(command.subscription_id),
+            webhook_id=UUID(command.webhook_id),
+            user_id=command.user_id
+        )
