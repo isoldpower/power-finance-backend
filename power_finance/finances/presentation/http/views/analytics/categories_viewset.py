@@ -11,7 +11,7 @@ from finances.application.use_cases import (
 )
 
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
-from ...serializers import CategoryAnalyticsSerializer
+from ...serializers import CategoryAnalyticsSerializer, MessageResponseSerializer
 
 
 class CategoriesAnalyticsView(viewsets.ViewSet):
@@ -28,6 +28,7 @@ class CategoriesAnalyticsView(viewsets.ViewSet):
         description="Get an overview of how funds are distributed across different spending categories.",
         responses={
             200: CategoryAnalyticsSerializer,
+            400: MessageResponseSerializer
         }
     )
     def summary(self, request: Request) -> Response:

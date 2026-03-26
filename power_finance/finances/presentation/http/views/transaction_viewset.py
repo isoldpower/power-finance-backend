@@ -39,10 +39,6 @@ class TransactionViewSet(viewsets.ViewSet):
         operation_id="transactions_list",
         summary="List transactions",
         description="Retrieve a paginated list of your transactions.",
-        parameters=[
-            OpenApiParameter('limit', type=int, description='Number of results to return per page.'),
-            OpenApiParameter('offset', type=int, description='The initial index from which to return the results.'),
-        ],
         responses={
             200: TransactionPreviewResponseSerializer(many=True),
             400: MessageResponseSerializer

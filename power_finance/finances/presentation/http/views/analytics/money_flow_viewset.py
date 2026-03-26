@@ -6,7 +6,7 @@ from drf_spectacular.utils import extend_schema
 from typing import Any
 
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
-from ...serializers import MoneyFlowAnalyticsSerializer
+from ...serializers import MoneyFlowAnalyticsSerializer, MessageResponseSerializer
 
 from finances.application.use_cases import (
     GetMoneyFlowQueryHandler,
@@ -28,6 +28,7 @@ class MoneyFlowAnalyticsView(viewsets.ViewSet):
         description="Retrieve multi-level money flow data suitable for a Sankey diagram.",
         responses={
             200: MoneyFlowAnalyticsSerializer,
+            400: MessageResponseSerializer
         }
     )
     def summary(self, request: Request) -> Response:

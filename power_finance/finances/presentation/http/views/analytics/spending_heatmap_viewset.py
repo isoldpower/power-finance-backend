@@ -6,7 +6,7 @@ from drf_spectacular.utils import extend_schema
 from typing import Any
 
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
-from ...serializers import SpendingHeatmapSerializer
+from ...serializers import SpendingHeatmapSerializer, MessageResponseSerializer
 
 from finances.application.use_cases import (
     GetSpendingHeatmapQueryHandler,
@@ -28,6 +28,7 @@ class SpendingHeatmapView(viewsets.ViewSet):
         description="Retrieve spending data mapped by date/time to generate a heatmap.",
         responses={
             200: SpendingHeatmapSerializer,
+            400: MessageResponseSerializer
         }
     )
     def summary(self, request: Request) -> Response:

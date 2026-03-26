@@ -81,8 +81,18 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'Power Finance API',
     'DESCRIPTION': 'API documentation for Power Finance',
     'VERSION': '1.0.0',
+    'SCHEMA_PATH_PREFIX': r'/api/v[0-9]+/',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
+    'SWAGGER_UI_SETTINGS': """{
+        deepLinking: true,
+        urls: [{url: '/api/schema/', name: 'v1'}],
+        layout: 'StandaloneLayout',
+        presets: [
+            SwaggerUIBundle.presets.apis,
+            SwaggerUIStandalonePreset
+        ],
+    }""",
     'APPEND_COMPONENTS': {
         "securitySchemes": {
             "bearerAuth": {

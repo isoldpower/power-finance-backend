@@ -6,7 +6,4 @@ class IdentityConfig(AppConfig):
     name = 'identity'
 
     def ready(self) -> None:
-        try:
-            import identity.infrastructure.auth_integration.spectacular_extensions
-        except ImportError:
-            pass
+        import identity.infrastructure.auth_integration.spectacular_extensions

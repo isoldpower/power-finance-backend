@@ -10,6 +10,7 @@ class PaginationMetaSerializer(serializers.Serializer):
 class MessageMetaSerializer(serializers.Serializer):
     id = serializers.CharField(required=False, allow_null=True, help_text="Resource ID related to the message")
 
+
 class MessageResponseSerializer(serializers.Serializer):
     message = serializers.CharField(help_text="Human-readable status or error message")
     meta = MessageMetaSerializer(help_text="Additional metadata")

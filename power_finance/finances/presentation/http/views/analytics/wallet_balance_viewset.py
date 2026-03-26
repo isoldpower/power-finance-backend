@@ -1,10 +1,10 @@
-from django.core.exceptions import ObjectDoesNotExist
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.request import Request
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
+from django.core.exceptions import ObjectDoesNotExist
 from typing import Any
 
 from finances.application.use_cases import (
@@ -12,7 +12,7 @@ from finances.application.use_cases import (
     GetWalletBalanceHistoryQuery,
 )
 
-from ...serializers import WalletBalanceHistorySerializer
+from ...serializers import WalletBalanceHistorySerializer, MessageResponseSerializer
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
 
 
@@ -36,6 +36,8 @@ class WalletBalanceHistoryView(viewsets.ViewSet):
         )],
         responses={
             200: WalletBalanceHistorySerializer,
+            400: MessageResponseSerializer,
+            404: serializers.Serializer
         }
     )
     def retrieve(self, request: Request, pk=None) -> Response:

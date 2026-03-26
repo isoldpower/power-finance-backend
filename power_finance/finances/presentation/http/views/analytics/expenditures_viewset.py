@@ -11,7 +11,7 @@ from finances.application.use_cases import (
 )
 
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
-from ...serializers import ExpenditureAnalyticsSerializer
+from ...serializers import ExpenditureAnalyticsSerializer, MessageResponseSerializer
 
 
 class ExpenditureAnalyticsView(viewsets.ViewSet):
@@ -28,6 +28,7 @@ class ExpenditureAnalyticsView(viewsets.ViewSet):
         description="Get an overview of expenditures over time, grouped by categories.",
         responses={
             200: ExpenditureAnalyticsSerializer,
+            400: MessageResponseSerializer
         }
     )
     def summary(self, request: Request) -> Response:

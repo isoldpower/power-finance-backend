@@ -65,10 +65,6 @@ class WebhooksViewSet(viewsets.ViewSet):
         operation_id="webhooks_list",
         summary="List webhooks",
         description="Retrieve a paginated list of your webhook endpoints.",
-        parameters=[
-            OpenApiParameter('limit', type=int, description='Number of results to return per page.'),
-            OpenApiParameter('offset', type=int, description='The initial index from which to return the results.'),
-        ],
         responses={
             206: WebhookSimpleResponseSerializer(many=True),
             400: MessageResponseSerializer

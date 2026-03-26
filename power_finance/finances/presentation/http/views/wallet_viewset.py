@@ -38,10 +38,6 @@ class WalletViewSet(viewsets.ViewSet):
         operation_id="wallets_list",
         summary="List wallets",
         description="Retrieve a paginated list of your wallets.",
-        parameters=[
-            OpenApiParameter('limit', type=int, description='Number of results to return per page.'),
-            OpenApiParameter('offset', type=int, description='The initial index from which to return the results.'),
-        ],
         responses={
             200: WalletResponseSerializer(many=True),
             400: MessageResponseSerializer
@@ -51,8 +47,8 @@ class WalletViewSet(viewsets.ViewSet):
         try:
             query = ListOwnedWalletsQuery(
                 user_id=request.user.id,
-                limit=request.query_params.get('limit') or 10,
-                offset=request.query_params.get('offset') or 0,
+                limit=None,
+                offset=None,
             )
 
             handler = ListOwnedWalletsQueryHandler()

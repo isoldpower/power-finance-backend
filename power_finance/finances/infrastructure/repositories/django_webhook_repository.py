@@ -10,7 +10,7 @@ from ..orm import WebhookEndpointModel, WebhookEventSubscriptionModel
 
 
 class DjangoWebhookRepository(WebhookRepository):
-    def get_subscriptions_by_webhook_id(self, webhook_id: str | UUID, user_id: int) -> list[WebhookSubscriptionDTO]:
+    def get_subscriptions_by_webhook_id(self, webhook_id: UUID, user_id: int) -> list[WebhookSubscriptionDTO]:
         subscriptions = WebhookEventSubscriptionModel.objects.filter(
             endpoint_id=webhook_id,
             endpoint__user_id=user_id,
