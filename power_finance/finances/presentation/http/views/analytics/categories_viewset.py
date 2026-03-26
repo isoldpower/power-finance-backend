@@ -30,7 +30,7 @@ class CategoriesAnalyticsView(viewsets.ViewSet):
             200: CategoryAnalyticsSerializer,
         }
     )
-    def list(self, request: Request) -> Response:
+    def summary(self, request: Request) -> Response:
         try:
             result = self.query_handler.handle(GetCategoriesAnalyticsQuery(
                 user_id=request.user.id

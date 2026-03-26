@@ -30,7 +30,7 @@ class MoneyFlowAnalyticsView(viewsets.ViewSet):
             200: MoneyFlowAnalyticsSerializer,
         }
     )
-    def list(self, request: Request) -> Response:
+    def summary(self, request: Request) -> Response:
         try:
             result = self.query_handler.handle(GetMoneyFlowQuery(
                 user_id=request.user.id

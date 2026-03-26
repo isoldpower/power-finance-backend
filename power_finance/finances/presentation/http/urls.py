@@ -19,8 +19,13 @@ core_router.register(r'transactions', TransactionViewSet, basename='transaction'
 core_router.register(r'webhooks', WebhooksViewSet, basename='webhook')
 # Analytics routes
 analytics_router = DefaultRouter()
-analytics_router.register(r'categories', CategoriesAnalyticsView, basename='category-analytics')
-analytics_router.register(r'money-flow', MoneyFlowAnalyticsView, basename='money-flow-analytics')
-analytics_router.register(r'expenditure', ExpenditureAnalyticsView, basename='expenditure-analytics')
-analytics_router.register(r'spending-heatmap', SpendingHeatmapView, basename='spending-heatmap-analytics')
 analytics_router.register(r'wallet-history', WalletBalanceHistoryView, basename='wallet-history-analytics')
+
+from django.urls import path
+
+analytics_urls = [
+    path('categories/', CategoriesAnalyticsView.as_view({'get': 'summary'}), name='category-analytics'),
+    path('money-flow/', MoneyFlowAnalyticsView.as_view({'get': 'summary'}), name='money-flow-analytics'),
+    path('expenditure/', ExpenditureAnalyticsView.as_view({'get': 'summary'}), name='expenditure-analytics'),
+    path('spending-heatmap/', SpendingHeatmapView.as_view({'get': 'summary'}), name='spending-heatmap-analytics'),
+]

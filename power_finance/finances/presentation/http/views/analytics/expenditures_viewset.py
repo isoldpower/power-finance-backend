@@ -30,7 +30,7 @@ class ExpenditureAnalyticsView(viewsets.ViewSet):
             200: ExpenditureAnalyticsSerializer,
         }
     )
-    def list(self, request: Request) -> Response:
+    def summary(self, request: Request) -> Response:
         try:
             result = self.query_handler.handle(GetExpenditureAnalyticsQuery(
                 user_id=request.user.id

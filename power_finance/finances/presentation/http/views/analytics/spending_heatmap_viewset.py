@@ -30,7 +30,7 @@ class SpendingHeatmapView(viewsets.ViewSet):
             200: SpendingHeatmapSerializer,
         }
     )
-    def list(self, request: Request) -> Response:
+    def summary(self, request: Request) -> Response:
         try:
             result = self.query_handler.handle(GetSpendingHeatmapQuery(
                 user_id=request.user.id

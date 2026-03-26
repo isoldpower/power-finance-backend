@@ -22,9 +22,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/CategoryAnalytics'
+                $ref: '#/components/schemas/CategoryAnalytics'
           description: ''
   /api/v1/analytics/expenditure/:
     get:
@@ -43,9 +41,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ExpenditureAnalytics'
+                $ref: '#/components/schemas/ExpenditureAnalytics'
           description: ''
   /api/v1/analytics/money-flow/:
     get:
@@ -64,9 +60,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MoneyFlowAnalytics'
+                $ref: '#/components/schemas/MoneyFlowAnalytics'
           description: ''
   /api/v1/analytics/spending-heatmap/:
     get:
@@ -85,9 +79,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SpendingHeatmap'
+                $ref: '#/components/schemas/SpendingHeatmap'
           description: ''
   /api/v1/analytics/wallet-history/{id}/:
     get:
