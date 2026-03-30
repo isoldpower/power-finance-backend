@@ -20,6 +20,8 @@ from finances.application.use_cases import (
     SubscribeToEventCommand,
     UnsubscribeFromEventCommandHandler,
     UnsubscribeFromEventCommand,
+    ListFilteredWebhooksQuery,
+    ListFilteredWebhooksQueryHandler,
 )
 from finances.application.use_cases import (
     ListWebhooksQueryHandler,
@@ -29,6 +31,7 @@ from finances.application.use_cases import (
     GetWebhookSubscriptionsQueryHandler,
     GetWebhookSubscriptionsQuery,
 )
+from finances.domain.services.filter_parser.exceptions import FilterParseError
 
 from ..pagination import StandardResultsPagination
 from ..presenters import CommonHttpPresenter, MessageResultInfo, WebhookHttpPresenter
@@ -42,6 +45,7 @@ from ..serializers import (
     WebhookSimpleResponseSerializer,
     WebhookSubscriptionResponseSerializer,
     MessageResponseSerializer,
+    FilterWebhooksRequestSerializer,
 )
 
 
@@ -51,6 +55,7 @@ class WebhooksViewSet(viewsets.ViewSet):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+
         self.list_query = ListWebhooksQueryHandler()
         self.retrieve_query = GetWebhookQueryHandler()
         self.creation_handler = CreateWebhookEndpointCommandHandler()
@@ -60,6 +65,7 @@ class WebhooksViewSet(viewsets.ViewSet):
         self.subscribe_handler = SubscribeToEventCommandHandler()
         self.unsubscribe_handler = UnsubscribeFromEventCommandHandler()
         self.list_events_query = GetWebhookSubscriptionsQueryHandler()
+        self.list_filtered_query = ListFilteredWebhooksQueryHandler()
 
     @extend_schema(
         operation_id="webhooks_list",
@@ -96,7 +102,12 @@ class WebhooksViewSet(viewsets.ViewSet):
         summary="Get webhook details",
         description="Retrieve detailed information about a specific webhook endpoint.",
         parameters=[
-            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID")
+            OpenApiParameter(
+                'id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Webhook ID"
+            )
         ],
         responses={
             200: WebhookResponseSerializer,
@@ -157,7 +168,12 @@ class WebhooksViewSet(viewsets.ViewSet):
         summary="Delete a webhook",
         description="Delete a specific webhook endpoint.",
         parameters=[
-            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID")
+            OpenApiParameter(
+                'id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Webhook ID"
+            )
         ],
         responses={
             200: MessageResponseSerializer,
@@ -183,13 +199,18 @@ class WebhooksViewSet(viewsets.ViewSet):
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
-        
+
     @extend_schema(
         operation_id="webhooks_partial_update",
         summary="Update a webhook",
         description="Update the title or URL of an existing webhook endpoint.",
         parameters=[
-            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID")
+            OpenApiParameter(
+                'id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Webhook ID"
+            )
         ],
         request=UpdateWebhookRequestSerializer,
         responses={
@@ -225,7 +246,12 @@ class WebhooksViewSet(viewsets.ViewSet):
         summary="Rotate webhook secret",
         description="Rotate the signing secret for this webhook endpoint.",
         parameters=[
-            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID")
+            OpenApiParameter(
+                'id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Webhook ID"
+            )
         ],
         request=RotateWebhookSecretRequestSerializer,
         responses={
@@ -256,11 +282,64 @@ class WebhooksViewSet(viewsets.ViewSet):
 
     @extend_schema(
         methods=["POST"],
+        operation_id="webhooks_search",
+        summary="Search webhooks with filters",
+        description="Retrieve a list of webhooks by applying a filter tree passed in the request body. "
+                    "Supports complex logic with 'and'/'or' groups and various field operators.",
+        request=FilterWebhooksRequestSerializer,
+        responses={
+            200: WebhookSimpleResponseSerializer(many=True),
+            400: MessageResponseSerializer,
+            500: MessageResponseSerializer
+        }
+    )
+    @action(detail=False, methods=["post"], url_path="search")
+    def search_filtered_webhooks(
+            self,
+            request: Request
+    ) -> Response:
+        serializer = FilterWebhooksRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            validated_data = serializer.validated_data
+            filtered_webhooks = self.list_filtered_query.handle(ListFilteredWebhooksQuery(
+                user_id=request.user.id,
+                filter_body=validated_data.get("filter_body"),
+            ))
+
+            paginator = self.pagination_class()
+            paginated_response = paginator.paginate_queryset(filtered_webhooks, request, view=self)
+            payload = WebhookHttpPresenter.present_many(paginated_response)
+
+            return paginator.get_paginated_response(payload)
+        except FilterParseError as e:
+            payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
+                message=f"Error occurred while resolving the passed filtration tree:\n {e}",
+                resource_id=None
+            ))
+
+            return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
+                message=f"Failed to get filtered webhooks with passed filters:\n {e}",
+                resource_id=None
+            ))
+
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        methods=["POST"],
         operation_id="webhooks_subscribe",
         summary="Subscribe to event",
         description="Subscribe a webhook to a specific event type.",
         parameters=[
-            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID")
+            OpenApiParameter(
+                'id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Webhook ID"
+            )
         ],
         request=SubscribeWebhookToEventRequestSerializer,
         responses={
@@ -274,7 +353,12 @@ class WebhooksViewSet(viewsets.ViewSet):
         summary="List event subscriptions",
         description="List all active event subscriptions for a specific webhook.",
         parameters=[
-            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID")
+            OpenApiParameter(
+                'id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Webhook ID"
+            )
         ],
         responses={
             200: WebhookSubscriptionResponseSerializer(many=True),
@@ -298,8 +382,12 @@ class WebhooksViewSet(viewsets.ViewSet):
                 webhook_id=pk,
                 user_id=request.user.id,
             ))
-            payload = WebhookHttpPresenter.present_subscription_list(subscriptions)
-            return Response(payload, status=status.HTTP_200_OK)
+
+            paginator = self.pagination_class()
+            paginated_response = paginator.paginate_queryset(subscriptions, request, view=self)
+            payload = WebhookHttpPresenter.present_subscription_list(paginated_response)
+
+            return paginator.get_paginated_response(payload)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to list event subscriptions:\n {e}",
@@ -333,8 +421,18 @@ class WebhooksViewSet(viewsets.ViewSet):
         summary="Unsubscribe from event",
         description="Remove an event subscription from a webhook.",
         parameters=[
-            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Webhook ID"),
-            OpenApiParameter('subscription_id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Subscription ID")
+            OpenApiParameter(
+                'id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Webhook ID"
+            ),
+            OpenApiParameter(
+                'subscription_id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Subscription ID"
+            )
         ],
         responses={
             200: MessageResponseSerializer,

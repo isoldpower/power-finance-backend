@@ -21,6 +21,7 @@ from .webhooks_serializer import (
     WebhookWithSecretResponseSerializer,
     WebhookSimpleResponseSerializer,
     WebhookSubscriptionResponseSerializer,
+    FilterWebhooksRequestSerializer
 )
 from .analytics_serializer import (
     CategoryAnalyticsSerializer,
@@ -48,6 +49,7 @@ __all__ = [
     'WebhookWithSecretResponseSerializer',
     'WebhookSimpleResponseSerializer',
     'WebhookSubscriptionResponseSerializer',
+    'FilterWebhooksRequestSerializer',
     'CategoryAnalyticsSerializer',
     'ExpenditureAnalyticsSerializer',
     'SpendingHeatmapSerializer',

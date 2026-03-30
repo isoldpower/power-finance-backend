@@ -13,6 +13,7 @@ from .get_wallet_balance_history import GetWalletBalanceHistoryQueryHandler, Get
 from .list_webhooks import ListWebhooksQueryHandler, ListWebhooksQuery
 from .get_webhook import GetWebhookQueryHandler, GetWebhookQuery
 from .get_webhook_subscriptions import GetWebhookSubscriptionsQueryHandler, GetWebhookSubscriptionsQuery
+from .list_filtered_webhooks import ListFilteredWebhooksQueryHandler, ListFilteredWebhooksQuery
 
 __all__ = [
     'GetOwnedWalletQueryHandler',
@@ -39,4 +40,6 @@ __all__ = [
     'GetWebhookQuery',
     'GetWebhookSubscriptionsQueryHandler',
     'GetWebhookSubscriptionsQuery',
+    'ListFilteredWebhooksQueryHandler',
+    'ListFilteredWebhooksQuery',
 ]
