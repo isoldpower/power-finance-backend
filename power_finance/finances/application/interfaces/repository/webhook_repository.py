@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from finances.domain.entities import Webhook, WebhookType
+from finances.domain.entities import Webhook, WebhookType, ResolvedFilterTree
 from finances.application.dtos import WebhookSubscriptionDTO
 
 
@@ -68,4 +68,8 @@ class WebhookRepository(ABC):
 
     @abstractmethod
     def save_webhook(self, webhook: Webhook) -> Webhook:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def list_webhooks_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Webhook]:
         raise NotImplementedError()

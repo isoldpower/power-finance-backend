@@ -5,8 +5,7 @@ from django.utils import timezone
 from .object_managers import IgnoreDeletedWallets
 from .wallet import WalletModel
 
-from finances.domain.entities.transaction_type import TransactionType
-from finances.domain.entities.expense_category import ExpenseCategory
+from finances.domain.entities import TransactionType, ExpenseCategory
 
 
 class TransactionTypeChoices(models.TextChoices):

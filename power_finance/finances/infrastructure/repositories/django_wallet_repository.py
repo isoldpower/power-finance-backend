@@ -1,9 +1,10 @@
 from uuid import UUID
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 
 from finances.application.interfaces import WalletRepository
-from finances.domain.entities import Wallet
+from finances.domain.entities import Wallet, ResolvedFilterTree
 
 from ..mappers import WalletMapper
 from ..orm import WalletModel
@@ -67,3 +68,10 @@ class DjangoWalletRepository(WalletRepository):
 
         requested_wallet.save(update_fields=modified_fields)
         return WalletMapper.to_domain(requested_wallet)
+
+    def list_wallets_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Wallet]:
+        filtered_wallets = (WalletModel.objects
+                             .filter(Q(user_id=user_id) & tree.query)
+                             .distinct())
+
+        return [WalletMapper.to_domain(wallet) for wallet in filtered_wallets]

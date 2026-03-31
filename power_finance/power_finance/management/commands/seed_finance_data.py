@@ -5,11 +5,8 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from finances.infrastructure.orm.wallet import WalletModel
-from finances.infrastructure.orm.transaction import TransactionModel
-from finances.infrastructure.orm.currency import CurrencyModel
-from finances.domain.entities.transaction_type import TransactionType
-from finances.domain.entities.expense_category import ExpenseCategory
+from finances.infrastructure.orm import WalletModel, TransactionModel, CurrencyModel
+from finances.domain.entities import TransactionType, ExpenseCategory
 
 User = get_user_model()
 

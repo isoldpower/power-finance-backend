@@ -1,6 +1,6 @@
-from finances.domain.entities.wallet import Wallet
+from finances.domain.entities import Wallet
 from finances.domain.value_objects import Money
-from finances.infrastructure.orm.wallet import WalletModel
+from finances.infrastructure.orm import WalletModel
 
 from .currency_mapper import CurrencyMapper
 from .update_mapper import UpdateMapper

@@ -1,9 +1,10 @@
 from uuid import UUID
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 
 from finances.application.interfaces import WebhookRepository
 from finances.application.dtos import WebhookSubscriptionDTO
-from finances.domain.entities import WebhookType, Webhook
+from finances.domain.entities import WebhookType, Webhook, ResolvedFilterTree
 
 from ..mappers import WebhookMapper
 from ..orm import WebhookEndpointModel, WebhookEventSubscriptionModel
@@ -146,3 +147,9 @@ class DjangoWebhookRepository(WebhookRepository):
         webhook_model.save(update_fields=updated_fields)
         return WebhookMapper.to_domain(webhook_model)
 
+    def list_webhooks_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Webhook]:
+        filtered_webhooks = (WebhookEndpointModel.objects
+                             .filter(Q(user_id=user_id) & tree.query)
+                             .distinct())
+
+        return [WebhookMapper.to_domain(webhook) for webhook in filtered_webhooks]

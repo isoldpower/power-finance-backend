@@ -1,4 +1,5 @@
 from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -10,7 +11,10 @@ from finances.application.use_cases import (
     ListTransactionsQueryHandler,
     GetTransactionQuery,
     GetTransactionQueryHandler,
+    ListFilteredTransactionsQuery,
+    ListFilteredTransactionsQueryHandler,
 )
+from finances.domain.exceptions import FilterParseError
 from finances.application.use_cases import (
     CreateTransactionCommand,
     CreateTransactionCommandHandler,
@@ -28,6 +32,7 @@ from ..serializers import (
     TransactionResponseSerializer,
     TransactionPreviewResponseSerializer,
     MessageResponseSerializer,
+    FilterTransactionsRequestSerializer,
 )
 
 
@@ -217,3 +222,49 @@ class TransactionViewSet(viewsets.ViewSet):
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        methods=["POST"],
+        operation_id="transactions_search",
+        summary="Search transactions with filters",
+        description="Retrieve a list of transactions by applying a filter tree passed in the request body.",
+        request=FilterTransactionsRequestSerializer,
+        responses={
+            200: TransactionPreviewResponseSerializer(many=True),
+            400: MessageResponseSerializer,
+            500: MessageResponseSerializer
+        }
+    )
+    @action(detail=False, methods=["post"], url_path="search")
+    def search_filtered_transactions(self, request):
+        serializer = FilterTransactionsRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            validated_data = serializer.validated_data
+            query = ListFilteredTransactionsQuery(
+                user_id=request.user.id,
+                filter_body=validated_data.get("filter_body"),
+            )
+            handler = ListFilteredTransactionsQueryHandler()
+            filtered_transactions = handler.handle(query)
+
+            paginator = self.pagination_class()
+            paginated_response = paginator.paginate_queryset(filtered_transactions, request, view=self)
+            payload = TransactionHttpPresenter.present_many(paginated_response)
+
+            return paginator.get_paginated_response(payload)
+        except FilterParseError as e:
+            payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
+                message=f"Error occurred while resolving the passed filtration tree:\n {e}",
+                resource_id=None
+            ))
+
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
+                message=f"Failed to get filtered transactions with passed filters:\n {e}",
+                resource_id=None
+            ))
+
+            return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

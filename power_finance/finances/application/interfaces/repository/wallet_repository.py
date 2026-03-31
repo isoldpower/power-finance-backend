@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from finances.domain.entities.wallet import Wallet
+from finances.domain.entities import Wallet, ResolvedFilterTree
 
 
 class WalletRepository(ABC):
@@ -35,4 +35,8 @@ class WalletRepository(ABC):
 
     @abstractmethod
     def soft_delete_wallet(self, wallet_id: UUID, user_id: int) -> Wallet:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def list_wallets_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Wallet]:
         raise NotImplementedError()

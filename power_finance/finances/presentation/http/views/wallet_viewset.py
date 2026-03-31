@@ -1,4 +1,5 @@
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -17,7 +18,10 @@ from finances.application.use_cases import (
     GetOwnedWalletQueryHandler,
     ListOwnedWalletsQuery,
     ListOwnedWalletsQueryHandler,
+    ListFilteredWalletsQuery,
+    ListFilteredWalletsQueryHandler,
 )
+from finances.domain.exceptions import FilterParseError
 
 from ..serializers import (
     CreateWalletRequestSerializer,
@@ -25,6 +29,7 @@ from ..serializers import (
     ReplaceWalletRequestSerializer,
     WalletResponseSerializer,
     MessageResponseSerializer,
+    FilterWalletsRequestSerializer,
 )
 from ..presenters import WalletHttpPresenter, CommonHttpPresenter, MessageResultInfo
 from ..pagination import StandardResultsPagination
@@ -256,3 +261,49 @@ class WalletViewSet(viewsets.ViewSet):
             ))
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        methods=["POST"],
+        operation_id="wallets_search",
+        summary="Search wallets with filters",
+        description="Retrieve a list of wallets by applying a filter tree passed in the request body.",
+        request=FilterWalletsRequestSerializer,
+        responses={
+            200: WalletResponseSerializer(many=True),
+            400: MessageResponseSerializer,
+            500: MessageResponseSerializer
+        }
+    )
+    @action(detail=False, methods=["post"], url_path="search")
+    def search_filtered_wallets(self, request):
+        serializer = FilterWalletsRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            validated_data = serializer.validated_data
+            query = ListFilteredWalletsQuery(
+                user_id=request.user.id,
+                filter_body=validated_data.get("filter_body"),
+            )
+            handler = ListFilteredWalletsQueryHandler()
+            filtered_wallets = handler.handle(query)
+
+            paginator = self.pagination_class()
+            paginated_response = paginator.paginate_queryset(filtered_wallets, request, view=self)
+            payload = WalletHttpPresenter.present_many(paginated_response)
+
+            return paginator.get_paginated_response(payload)
+        except FilterParseError as e:
+            payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
+                message=f"Error occurred while resolving the passed filtration tree:\n {e}",
+                resource_id=None
+            ))
+
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
+                message=f"Failed to get filtered wallets with passed filters:\n {e}",
+                resource_id=None
+            ))
+
+            return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

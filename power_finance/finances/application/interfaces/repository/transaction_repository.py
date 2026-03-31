@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from finances.domain.entities import Transaction
+from finances.domain.entities import Transaction, ResolvedFilterTree
 
 
 class TransactionRepository(ABC):
@@ -23,4 +23,8 @@ class TransactionRepository(ABC):
 
     @abstractmethod
     def delete_transaction_by_id(self, transaction_id: UUID) -> Transaction:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def list_transactions_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Transaction]:
         raise NotImplementedError()
