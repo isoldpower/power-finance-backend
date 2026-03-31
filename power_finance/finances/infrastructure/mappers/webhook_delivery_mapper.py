@@ -1,6 +1,7 @@
 from finances.application.dtos import WebhookDeliveryDTO, WebhookDeliveryAttemptDTO
-from finances.infrastructure.mappers.update_mapper import UpdateMapper
 from finances.infrastructure.orm import WebhookDeliveryModel, WebhookDeliveryAttemptModel
+
+from .update_mapper import UpdateMapper
 
 
 class WebhookDeliveryMapper:

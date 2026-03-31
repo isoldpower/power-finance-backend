@@ -1,12 +1,11 @@
 from typing import Any
 
-from ....entities import GroupOperator
-from ..exceptions import InvalidGroupingError
 from ..abstraction import TreeNode
 from .abstraction import GroupTreeNode, FilterGroupTreeNode, GroupNodeBuilder
 from .and_group import AndGroupTreeNode, FilterAndGroupTreeNode
 from .or_group import OrGroupTreeNode, FilterOrGroupTreeNode
-
+from ....entities import GroupOperator
+from ....exceptions import InvalidGroupingError
 
 
 class StandardGroupNodeBuilder(GroupNodeBuilder):

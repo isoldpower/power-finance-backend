@@ -2,7 +2,7 @@ from typing import Callable
 
 from django.core.cache import cache, BaseCache
 
-from .cache_storage import CacheStorage
+from identity.application.interfaces import CacheStorage
 
 
 class DjangoCacheStorage(CacheStorage):

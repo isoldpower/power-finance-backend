@@ -31,7 +31,7 @@ from finances.application.use_cases import (
     GetWebhookSubscriptionsQueryHandler,
     GetWebhookSubscriptionsQuery,
 )
-from finances.domain.services.filter_parser.exceptions import FilterParseError
+from finances.domain.exceptions import FilterParseError
 
 from ..pagination import StandardResultsPagination
 from ..presenters import CommonHttpPresenter, MessageResultInfo, WebhookHttpPresenter

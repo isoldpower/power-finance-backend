@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from finances.domain.entities.webhook import Webhook
+from finances.domain.entities import Webhook
 
 
 @dataclass(frozen=True)

@@ -1,9 +1,18 @@
 from abc import ABC, abstractmethod
 
-from identity.application.dto import ExternalUserInfo
+from identity.application.dtos import ExternalUserInfo
 
 
-class AuthSdk(ABC):
+class ExternalAuth(ABC):
+    @abstractmethod
+    def resolve_auth_token(self, received_header: str) -> str | None:
+        """
+        Parses authorization header into final token view
+        :param received_header: Authorization token header attached to the request
+        :return: Raw authorization token
+        """
+        raise NotImplementedError()
+
     @abstractmethod
     def fetch_user_info(self, user_id: str) -> ExternalUserInfo | None:
         """

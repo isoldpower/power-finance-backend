@@ -1,8 +1,8 @@
 from django.db.models import Q
 
-from ....entities import FieldFilter, ComparisonOperator
-from ..exceptions import PolicyViolationError
 from .abstraction import LeafTreeNode, FilterLeafTreeNode
+from ....exceptions import PolicyViolationError
+from ....entities import FieldFilter, ComparisonOperator
 
 
 class GreaterEqualLeafTreeNode(LeafTreeNode):

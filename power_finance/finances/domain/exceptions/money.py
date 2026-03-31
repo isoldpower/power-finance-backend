@@ -1,4 +1,6 @@
 from decimal import Decimal
+
+
 class UnsupportedCurrencyError(Exception):
     """Raised when the currency that was requested does not exist or is not supported"""
 

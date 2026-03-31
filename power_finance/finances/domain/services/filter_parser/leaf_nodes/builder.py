@@ -1,7 +1,5 @@
 from typing import Any
 
-from ....entities import FieldFilter, FilterPolicy
-from ..exceptions import InvalidOperationError, PolicyViolationError
 from .abstraction import LeafTreeNode, LeafNodeBuilder, FilterLeafTreeNode
 from .less_leaf import LessLeafTreeNode, FilterLessLeafTreeNode
 from .equal_leaf import EqualLeafTreeNode, FilterEqualLeafTreeNode
@@ -12,6 +10,8 @@ from .greater_equal_leaf import GreaterEqualLeafTreeNode, FilterGreaterEqualLeaf
 from .less_equal_leaf import LessEqualLeafTreeNode, FilterLessEqualLeafTreeNode
 from .greater_leaf import GreaterLeafTreeNode, FilterGreaterLeafTreeNode
 from .in_leaf import InLeafTreeNode, FilterInLeafTreeNode
+from ....entities import FieldFilter, FilterPolicy
+from ....exceptions import InvalidOperationError, PolicyViolationError
 
 
 class StandardLeafTreeNodeBuilder(LeafNodeBuilder):

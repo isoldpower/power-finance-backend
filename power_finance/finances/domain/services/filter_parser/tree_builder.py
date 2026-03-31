@@ -1,9 +1,9 @@
 from typing import Any, Optional
 
 from .abstraction import TreeNode
-from .exceptions import InvalidOperationError
 from .group_nodes import GroupNodeBuilder, FilterGroupNodeBuilder, StandardGroupNodeBuilder
 from .leaf_nodes import LeafNodeBuilder, FilterLeafNodeBuilder, StandardLeafTreeNodeBuilder
+from ...exceptions import InvalidOperationError
 from ...entities import FieldFilter, ComparisonOperator, FilterPolicy
 
 

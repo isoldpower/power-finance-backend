@@ -1,11 +1,10 @@
 from uuid import UUID
-from datetime import datetime
 from dataclasses import dataclass
 from typing import Any
 
 from django.core.exceptions import ObjectDoesNotExist
 
-from finances.domain.entities.filter import (
+from finances.domain.entities import (
     FilterPolicy, 
     ResolvedFilterTree, 
     FilterFieldPolicy,

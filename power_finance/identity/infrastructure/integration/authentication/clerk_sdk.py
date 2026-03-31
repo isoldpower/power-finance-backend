@@ -2,28 +2,39 @@ import datetime
 import pytz
 import requests
 
-from django.conf import settings
 from rest_framework.exceptions import AuthenticationFailed
 
-from identity.application.dto import ExternalUserInfo
-from identity.infrastructure.auth_integration.auth_sdk import AuthSdk
-from ..cache import CacheStorage, DjangoCacheStorage
+from identity.application.dtos import ExternalUserInfo
+from identity.application.interfaces import ExternalAuth, CacheStorage
 
 
-class ClerkSDK(AuthSdk):
+class ClerkAuth(ExternalAuth):
     def __init__(
         self,
-        cache_storage: CacheStorage | None = None,
-        issuer_url: str | None = None,
-        secret_key: str | None = None,
-        api_base_url: str | None = None,
+        cache_storage: CacheStorage,
+        issuer_url: str,
+        secret_key: str,
+        api_base_url: str,
     ):
-        resolved_env = settings.RESOLVED_ENV
+        self._issuer_url = issuer_url
+        self._secret_key = secret_key
+        self._api_base_url = api_base_url
+        self._cache = cache_storage
 
-        self._issuer_url = issuer_url or resolved_env["CLERK_API_URL"]
-        self._secret_key = secret_key or resolved_env["CLERK_SECRET_KEY"]
-        self._api_base_url = api_base_url or "https://api.clerk.com/v1"
-        self._cache = cache_storage or DjangoCacheStorage(resolved_env["CLERK_CACHE_KEY"])
+    def _get_jwks_from_api(self) -> dict:
+        try:
+            response = requests.get(
+                f"{self._issuer_url}/.well-known/jwks.json",
+                headers={"Authorization": f"Bearer {self._secret_key}"},
+                timeout=10,
+            )
+        except requests.RequestException as exc:
+            raise AuthenticationFailed(f"Failed to fetch JWKS from Clerk: {exc}") from exc
+
+        if response.status_code != 200:
+            raise AuthenticationFailed("Failed to fetch JWKS from Clerk.")
+
+        return response.json()
 
     def fetch_user_info(self, user_id: str) -> ExternalUserInfo | None:
         try:
@@ -70,17 +81,12 @@ class ClerkSDK(AuthSdk):
         except Exception as exc:
             raise AuthenticationFailed(f"Failed to fetch Clerk JWKS: {exc}") from exc
 
-    def _get_jwks_from_api(self) -> dict:
-        try:
-            response = requests.get(
-                f"{self._issuer_url}/.well-known/jwks.json",
-                headers={"Authorization": f"Bearer {self._secret_key}"},
-                timeout=10,
-            )
-        except requests.RequestException as exc:
-            raise AuthenticationFailed(f"Failed to fetch JWKS from Clerk: {exc}") from exc
+    def resolve_auth_token(self, received_header: str) -> str | None:
+        if not received_header:
+            return None
 
-        if response.status_code != 200:
-            raise AuthenticationFailed("Failed to fetch JWKS from Clerk.")
-
-        return response.json()
+        parts = received_header.split(" ")
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            raise AuthenticationFailed("Authorization token format is invalid. Expected Bearer token.")
+        else:
+            return parts[1]

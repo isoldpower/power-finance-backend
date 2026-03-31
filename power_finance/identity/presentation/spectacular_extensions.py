@@ -1,5 +1,7 @@
 from drf_spectacular.extensions import OpenApiAuthenticationExtension
-from identity.infrastructure.auth_integration.drf_jwt_authentication import ClerkJWTAuthentication
+
+from .jwt_authentication import ClerkJWTAuthentication
+
 
 class ClerkJWTAuthenticationScheme(OpenApiAuthenticationExtension):
     target_class = ClerkJWTAuthentication

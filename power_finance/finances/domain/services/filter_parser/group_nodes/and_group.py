@@ -3,9 +3,9 @@ from operator import and_
 
 from django.db.models import Q
 
-from ....entities import GroupOperator
-from ..exceptions import InvalidStructureError
 from .abstraction import GroupTreeNode, FilterGroupTreeNode
+from ....entities import GroupOperator
+from ....exceptions import InvalidStructureError
 
 
 class AndGroupTreeNode(GroupTreeNode):

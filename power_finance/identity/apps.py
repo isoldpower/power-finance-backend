@@ -6,4 +6,4 @@ class IdentityConfig(AppConfig):
     name = 'identity'
 
     def ready(self) -> None:
-        import identity.infrastructure.auth_integration.spectacular_extensions
+        import identity.presentation.spectacular_extensions

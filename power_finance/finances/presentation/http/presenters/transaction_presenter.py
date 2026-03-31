@@ -4,7 +4,7 @@ from finances.application.dtos import (
     TransactionPlainDTO,
     TransactionParticipantPlainDTO
 )
-from finances.presentation.http.presenters import WalletHttpPresenter
+from .wallet_presenter import WalletHttpPresenter
 
 
 class TransactionParticipantHttpPresenter:

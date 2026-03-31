@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 from django.test import SimpleTestCase
 from django.db.models import Q
 
-from finances.application.use_cases.queries.list_filtered_webhooks import (
+from finances.application.use_cases import (
     ListFilteredWebhooksQueryHandler, 
     ListFilteredWebhooksQuery
 )

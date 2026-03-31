@@ -14,10 +14,12 @@ Attack vectors tested:
 from django.test import SimpleTestCase
 from django.db.models import Q
 
-from finances.domain.entities import FilterPolicy, FilterFieldPolicy
-from finances.domain.services.filter_parser import FilterTree
-from finances.domain.services.filter_parser.exceptions import (
-    PolicyViolationError, InvalidOperationError, FilterParseError,
+from ..filter_tree import FilterTree
+from ....entities import FilterPolicy, FilterFieldPolicy
+from ....exceptions import (
+    PolicyViolationError,
+    InvalidOperationError,
+    FilterParseError,
     InvalidGroupingError,
 )
 

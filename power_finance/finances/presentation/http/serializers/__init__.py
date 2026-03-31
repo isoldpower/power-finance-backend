@@ -1,29 +1,27 @@
 from .money_field_serializer import MoneyField
 from .common_serializer import MessageResponseSerializer
-from .wallet_serializer import (
+from .request import (
     CreateWalletRequestSerializer,
     UpdateWalletRequestSerializer,
     ReplaceWalletRequestSerializer,
-    WalletResponseSerializer,
-)
-from .transaction_serializer import (
     CreateTransactionRequestSerializer,
     UpdateTransactionRequestSerializer,
-    TransactionResponseSerializer,
-    TransactionPreviewResponseSerializer,
-)
-from .webhooks_serializer import (
     CreateWebhookRequestSerializer,
     RotateWebhookSecretRequestSerializer,
     UpdateWebhookRequestSerializer,
     SubscribeWebhookToEventRequestSerializer,
+    FilterWebhooksRequestSerializer,
+    FilterWalletsRequestSerializer,
+    FilterTransactionsRequestSerializer,
+)
+from .response import (
+    WalletResponseSerializer,
+    TransactionResponseSerializer,
+    TransactionPreviewResponseSerializer,
     WebhookResponseSerializer,
     WebhookWithSecretResponseSerializer,
     WebhookSimpleResponseSerializer,
     WebhookSubscriptionResponseSerializer,
-    FilterWebhooksRequestSerializer
-)
-from .analytics_serializer import (
     CategoryAnalyticsSerializer,
     ExpenditureAnalyticsSerializer,
     SpendingHeatmapSerializer,
@@ -56,4 +54,6 @@ __all__ = [
     'WalletBalanceHistorySerializer',
     'MoneyFlowAnalyticsSerializer',
     'MessageResponseSerializer',
+    'FilterWalletsRequestSerializer',
+    'FilterTransactionsRequestSerializer'
 ]
