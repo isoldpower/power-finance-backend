@@ -56,13 +56,12 @@ class TestListFilteredWebhooksQueryHandler(SimpleTestCase):
             user_id=1,
             filter_body={"field_name": "malicious", "operator": "eq", "value": "hacked"}
         )
-        
-        self.handler.handle(query)
-        
-        args, _ = self.repo.list_webhooks_with_filters.call_args
-        tree = args[0]
-        # resolve_filter_query returns empty Q on error (policy violation)
-        self.assertEqual(tree.query, Q())
+
+        # Unknown/malicious fields should cause a parse/policy error, and the
+        # handler should propagate that error without calling the repository.
+        with self.assertRaises(Exception):
+            self.handler.handle(query)
+        self.repo.list_webhooks_with_filters.assert_not_called()
 
     def test_uuid_field_policy(self):
         uuid_val = "550e8400-e29b-41d4-a716-446655440000"

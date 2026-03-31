@@ -11,7 +11,6 @@ from identity.application.interfaces import ExternalAuth, CacheStorage
 class ClerkAuth(ExternalAuth):
     def __init__(
         self,
-        cache_storage: CacheStorage,
         issuer_url: str,
         secret_key: str,
         api_base_url: str,
@@ -19,7 +18,6 @@ class ClerkAuth(ExternalAuth):
         self._issuer_url = issuer_url
         self._secret_key = secret_key
         self._api_base_url = api_base_url
-        self._cache = cache_storage
 
     def _get_jwks_from_api(self) -> dict:
         try:
@@ -77,9 +75,18 @@ class ClerkAuth(ExternalAuth):
 
     def get_jwks(self) -> dict:
         try:
-            return self._cache.get_data(self._get_jwks_from_api)
-        except Exception as exc:
-            raise AuthenticationFailed(f"Failed to fetch Clerk JWKS: {exc}") from exc
+            response = requests.get(
+                f"{self._issuer_url}/.well-known/jwks.json",
+                headers={"Authorization": f"Bearer {self._secret_key}"},
+                timeout=10,
+            )
+        except requests.RequestException as exc:
+            raise AuthenticationFailed(f"Failed to fetch JWKS from Clerk: {exc}") from exc
+
+        if response.status_code != 200:
+            raise AuthenticationFailed("Failed to fetch JWKS from Clerk.")
+
+        return response.json()
 
     def resolve_auth_token(self, received_header: str) -> str | None:
         if not received_header:

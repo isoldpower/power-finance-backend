@@ -260,11 +260,11 @@ class TransactionViewSet(viewsets.ViewSet):
                 resource_id=None
             ))
 
-            return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to get filtered transactions with passed filters:\n {e}",
                 resource_id=None
             ))
 
-            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+            return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

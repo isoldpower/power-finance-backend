@@ -15,8 +15,12 @@ class UpdateMapper(Generic[TModel, TEntity]):
     def _resolve_attr(obj, path: str, replace: bool = False):
         current = obj
         for part in path.split("."):
+            if current is None:
+                return None
+
             current = getattr(current, part)
-            if current is None and replace is False:
+
+            if current is None and not replace:
                 return None
 
         return current
@@ -42,7 +46,8 @@ class UpdateMapper(Generic[TModel, TEntity]):
             model: TModel,
             entity: TEntity,
             update_fields: list[tuple[str, str]],
-            updated_list=None
+            updated_list=None,
+            replace: bool = False
     ) -> list[str]:
         if updated_list is None:
             updated_list = []
@@ -50,6 +55,9 @@ class UpdateMapper(Generic[TModel, TEntity]):
         for model_field, entity_field in update_fields:
             entity_value = UpdateMapper._resolve_attr(entity, entity_field)
             model_value = getattr(model, model_field)
+
+            if entity_value is None and not replace:
+                continue
 
             if model_value != entity_value:
                 updated_list.append(model_field)

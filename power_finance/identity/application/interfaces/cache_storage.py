@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, TypeVar
 
+
+TValue = TypeVar("TValue", bound=object)
 
 class CacheStorage(ABC):
     @abstractmethod
-    def get_data(self, callback: Callable[[], dict]) -> dict:
+    def get_data(self, callback: Callable[[], TValue], key: str | None = None) -> TValue:
         raise NotImplementedError()

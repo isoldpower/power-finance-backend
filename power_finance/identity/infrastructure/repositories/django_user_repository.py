@@ -16,9 +16,10 @@ class DjangoUserRepository(UserRepository):
         updated_user: User = User.objects.get(username=user.id)
         modified_fields = UserMapper.get_changed_fields(updated_user, user)
 
-        UserMapper.update_model(updated_user, user)
+        if len(modified_fields) > 0:
+            UserMapper.update_model(updated_user, user)
+            updated_user.save(update_fields=modified_fields)
 
-        updated_user.save(update_fields=modified_fields)
         return UserMapper.to_domain(updated_user)
 
     def get_user_raw(self, user: UserEntity) -> User:
