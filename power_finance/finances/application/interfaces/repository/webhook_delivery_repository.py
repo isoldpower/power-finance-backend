@@ -28,7 +28,7 @@ class FinalizeWebhookDeliveryAttemptData:
 
 class WebhookDeliveryRepository(ABC):
     @abstractmethod
-    def get_delivery_by_id( self, webhook_id: UUID, event_id: UUID) -> WebhookDeliveryDTO:
+    def get_delivery_by_id(self, webhook_id: UUID, event_id: UUID, user_id: int) -> WebhookDeliveryDTO:
         raise NotImplementedError()
 
     @abstractmethod

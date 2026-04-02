@@ -3,6 +3,7 @@ from .currency_mapper import CurrencyMapper
 from .transaction_mapper import TransactionMapper
 from .webhook_mapper import WebhookMapper
 from .webhook_delivery_mapper import WebhookDeliveryMapper
+from .notification_mapper import NotificationMapper
 from .update_mapper import UpdateMapper
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     'WebhookMapper',
     'WebhookDeliveryMapper',
     'UpdateMapper',
+    'NotificationMapper',
 ]

@@ -3,13 +3,16 @@ from django.db import transaction
 
 from finances.domain.entities import Webhook, WebhookType
 from finances.infrastructure.integrations import WebhookDispatcher
+from finances.domain.events import EventCollector, WebhookDeliveryStatusChangedEvent, WebhookDeliveryStatus
 
 from ..dtos import WebhookDeliveryDTO
 from ..interfaces import (
     WebhookDeliveryRepository,
     CreateWebhookDeliveryData,
     CreateWebhookDeliveryAttemptData,
-    FinalizeWebhookDeliveryAttemptData, MessageResponse,
+    FinalizeWebhookDeliveryAttemptData,
+    MessageResponse,
+    EventBus,
 )
 
 
@@ -18,11 +21,14 @@ class EventWebhookHandler:
             self,
             event_type: WebhookType,
             delivery_repository: WebhookDeliveryRepository,
-            dispatcher: WebhookDispatcher
+            dispatcher: WebhookDispatcher,
+            event_bus: EventBus,
     ):
+        self._event_bus = event_bus
         self._delivery_repository = delivery_repository
         self._dispatcher = dispatcher
         self._event_type = event_type
+        self._event_collector = EventCollector()
 
     @transaction.atomic
     def handle_dispatch_webhook_delivery(
@@ -77,3 +83,14 @@ class EventWebhookHandler:
                 error_message=dispatch_result.error_message,
             ))
             self._delivery_repository.finalize_delivery(delivery_id=delivery_id)
+            self._event_collector.collect(WebhookDeliveryStatusChangedEvent(
+                delivery_id=delivery_id,
+                endpoint_id=webhook.id,
+                user_id=webhook.user_id,
+                status=(WebhookDeliveryStatus.SUCCESS
+                        if (200 <= dispatch_result.status_code < 300) else WebhookDeliveryStatus.FAILED),
+                attempt_number=delivery_attempt.attempt_number,
+            ))
+
+        recorded_events = self._event_collector.pull_events()
+        self._event_bus.publish(recorded_events)

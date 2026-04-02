@@ -4,6 +4,7 @@ from finances.domain.events import (
     TransactionCreatedEvent,
     TransactionUpdatedEvent,
     TransactionDeletedEvent,
+    WebhookDeliveryStatusChangedEvent,
 )
 from finances.infrastructure.integrations import WebhookDispatcher
 from finances.infrastructure.messaging import InMemoryEventBus
@@ -12,6 +13,7 @@ from .event_handlers import (
     TransactionCreatedWebhookHandler,
     TransactionUpdatedWebhookHandler,
     TransactionDeletedWebhookHandler,
+    WebhookDeliveryNotificationHandler,
 )
 from .interfaces import (
     WebhookDeliveryRepository,
@@ -19,6 +21,9 @@ from .interfaces import (
     WebhookRepository,
     EventPayloadFactory,
     EventBus,
+    NotificationPublisher,
+    NotificationRepository,
+    NotificationBroker,
 )
 
 
@@ -26,6 +31,7 @@ from .interfaces import (
 class ApplicationState:
     initialized: bool = False
     event_bus: EventBus | None = None
+    broker: NotificationBroker | None = None
 
 
 application: ApplicationState | None = None
@@ -36,6 +42,9 @@ def bootstrap_application(
         wallet_repository: WalletRepository,
         payload_factory: EventPayloadFactory,
         dispatcher: WebhookDispatcher,
+        notification_broker: NotificationBroker,
+        notification_publisher: NotificationPublisher,
+        notification_repository: NotificationRepository,
 ):
     global application
 
@@ -44,12 +53,15 @@ def bootstrap_application(
 
     application = ApplicationState(
         initialized=True,
+        broker=notification_broker,
         event_bus = initialize_event_bus(
             webhook_repository=webhook_repository,
             delivery_repository=delivery_repository,
             wallet_repository=wallet_repository,
             payload_factory=payload_factory,
             dispatcher=dispatcher,
+            notification_publisher=notification_publisher,
+            notification_repository=notification_repository,
         )
     )
 
@@ -59,6 +71,8 @@ def initialize_event_bus(
         wallet_repository: WalletRepository,
         payload_factory: EventPayloadFactory,
         dispatcher: WebhookDispatcher,
+        notification_publisher: NotificationPublisher,
+        notification_repository: NotificationRepository,
 ) -> EventBus:
     event_bus = InMemoryEventBus()
     event_bus.subscribe(TransactionCreatedEvent, TransactionCreatedWebhookHandler(
@@ -67,6 +81,7 @@ def initialize_event_bus(
         wallet_repository=wallet_repository,
         payload_factory=payload_factory,
         dispatcher=dispatcher,
+        event_bus=event_bus,
     ))
     event_bus.subscribe(TransactionUpdatedEvent, TransactionUpdatedWebhookHandler(
         webhook_repository=webhook_repository,
@@ -74,6 +89,7 @@ def initialize_event_bus(
         wallet_repository=wallet_repository,
         payload_factory=payload_factory,
         dispatcher=dispatcher,
+        event_bus=event_bus,
     ))
     event_bus.subscribe(TransactionDeletedEvent, TransactionDeletedWebhookHandler(
         webhook_repository=webhook_repository,
@@ -81,6 +97,14 @@ def initialize_event_bus(
         wallet_repository=wallet_repository,
         payload_factory=payload_factory,
         dispatcher=dispatcher,
+        event_bus=event_bus,
+    ))
+    event_bus.subscribe(WebhookDeliveryStatusChangedEvent, WebhookDeliveryNotificationHandler(
+        notification_repository=notification_repository,
+        delivery_repository=delivery_repository,
+        webhook_repository=webhook_repository,
+        payload_factory=payload_factory,
+        notification_publisher=notification_publisher,
     ))
 
     return event_bus

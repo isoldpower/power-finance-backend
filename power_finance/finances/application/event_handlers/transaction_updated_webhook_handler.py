@@ -8,6 +8,7 @@ from ..interfaces import (
     WalletRepository,
     WebhookDeliveryRepository,
     EventPayloadFactory,
+    EventBus,
 )
 
 
@@ -22,12 +23,14 @@ class TransactionUpdatedWebhookHandler(EventWebhookHandler):
             delivery_repository: WebhookDeliveryRepository,
             wallet_repository: WalletRepository,
             payload_factory: EventPayloadFactory,
-            dispatcher: WebhookDispatcher
+            dispatcher: WebhookDispatcher,
+            event_bus: EventBus,
     ):
         super().__init__(
             event_type=WebhookType.TransactionUpdate,
             delivery_repository=delivery_repository,
             dispatcher=dispatcher,
+            event_bus=event_bus,
         )
 
         self._payload_factory = payload_factory

@@ -17,13 +17,21 @@ class FinancesConfig(AppConfig):
             DjangoWebhookDeliveryRepository,
             DjangoWalletRepository,
         )
+        from finances.infrastructure.messaging import (
+            InMemorySseNotificationPublisher,
+            InMemoryNotificationBroker
+        )
+        from finances.infrastructure.repositories import DjangoNotificationRepository
 
+        http_sender = HttpSender()
+        notification_broker = InMemoryNotificationBroker()
         bootstrap_application(
             delivery_repository=DjangoWebhookDeliveryRepository(),
             webhook_repository=DjangoWebhookRepository(),
             wallet_repository=DjangoWalletRepository(),
             payload_factory=WebhookPayloadFactory(),
-            dispatcher=WebhookDispatcher(sender=HttpSender()),
+            dispatcher=WebhookDispatcher(sender=http_sender),
+            notification_repository=DjangoNotificationRepository(),
+            notification_publisher=InMemorySseNotificationPublisher(broker=notification_broker),
+            notification_broker=notification_broker,
         )
-
-        # End bootstrap

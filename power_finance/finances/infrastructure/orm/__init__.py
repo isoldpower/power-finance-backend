@@ -8,6 +8,7 @@ from .webhook import (
     WebhookDeliveryStatusChoices,
     WebhookEventSubscriptionModel,
 )
+from .notification import NotificationModel
 
 __all__ = [
     'CurrencyModel',
@@ -18,4 +19,5 @@ __all__ = [
     'WebhookDeliveryAttemptModel',
     'WebhookDeliveryStatusChoices',
     'WebhookEventSubscriptionModel',
+    'NotificationModel',
 ]

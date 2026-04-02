@@ -14,6 +14,7 @@ from .filtering import (
     ResolvedFilterTree,
     TypeValidatorBuilder,
 )
+from .notification import Notification
 
 __all__ = [
     'Wallet',
@@ -32,4 +33,5 @@ __all__ = [
     'FilterFieldPolicy',
     'ResolvedFilterTree',
     'TypeValidatorBuilder',
+    'Notification',
 ]

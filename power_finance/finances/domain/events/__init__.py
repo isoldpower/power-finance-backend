@@ -6,6 +6,10 @@ from .transaction_events import (
     TransactionUpdatedEvent,
     UpdateTransactionData,
 )
+from .webhook_delivery_status_changed import (
+    WebhookDeliveryStatusChangedEvent,
+    WebhookDeliveryStatus,
+)
 from .events_collector import EventCollector
 
 __all__ = [
@@ -16,4 +20,6 @@ __all__ = [
     'UpdateTransactionData',
     'DomainEvent',
     'EventCollector',
+    'WebhookDeliveryStatusChangedEvent',
+    'WebhookDeliveryStatus',
 ]

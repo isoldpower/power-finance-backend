@@ -1,7 +1,7 @@
 from django.db import transaction
 
 from finances.domain.entities import WebhookType, Webhook
-from finances.domain.events import TransactionCreatedEvent
+from finances.domain.events import TransactionCreatedEvent, EventCollector
 from finances.infrastructure.integrations import WebhookDispatcher
 
 from .event_webhook_handler import EventWebhookHandler
@@ -10,6 +10,7 @@ from ..interfaces import (
     WalletRepository,
     WebhookDeliveryRepository,
     EventPayloadFactory,
+    EventBus,
 )
 
 
@@ -24,12 +25,14 @@ class TransactionCreatedWebhookHandler(EventWebhookHandler):
             delivery_repository: WebhookDeliveryRepository,
             wallet_repository: WalletRepository,
             payload_factory: EventPayloadFactory,
-            dispatcher: WebhookDispatcher
+            dispatcher: WebhookDispatcher,
+            event_bus: EventBus,
     ):
         super().__init__(
             event_type=WebhookType.TransactionCreate,
             delivery_repository=delivery_repository,
             dispatcher=dispatcher,
+            event_bus=event_bus,
         )
 
         self._webhook_repository = webhook_repository
