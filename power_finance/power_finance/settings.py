@@ -27,6 +27,7 @@ RESOLVED_ENV = {
     'CLERK_API_URL': env('CLERK_API_URL'),
     'CLERK_CACHE_KEY': env('CLERK_CACHE_KEY'),
     'API_VERSION': env('API_VERSION'),
+    'REDIS_URL': env('REDIS_URL'),
 }
 
 # Project configuration settings

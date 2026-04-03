@@ -1,43 +1,26 @@
 from uuid import uuid4
-from dataclasses import asdict
 from queue import Empty
 
 from .format_sse import format_sse
 
-from finances.application.interfaces import NotificationBroker
+from finances.application.interfaces import NotificationChannel
 
 
-def listen_notifications(broker: NotificationBroker, user_id: int):
-    subscription = broker.subscribe(user_id)
-
+def get_latest_message(channel: NotificationChannel) -> tuple[str | None, str]:
     try:
-        yield format_sse(
-            event="connected",
+        notification_payload = channel.get(timeout=15, block=True)
+        notification_id = str(notification_payload.get("id"))
+        return (notification_id, format_sse(
+            event="notification",
+            event_id=notification_id,
+            data=notification_payload,
+        ))
+    except Empty:
+        return (None, format_sse(
+            event="ping",
             event_id=str(uuid4()),
             data={
                 "ok": True,
-                "message": "SSE connection established."
-            },
-        )
-
-        while True:
-            try:
-                notification_payload = subscription.get(timeout=15, block=True)
-                yield format_sse(
-                    event="notification",
-                    event_id=str(notification_payload.get("id")),
-                    data=notification_payload,
-                )
-            except Empty:
-                yield format_sse(
-                    event="ping",
-                    event_id=str(uuid4()),
-                    data={
-                        "ok": True,
-                        "message": "Connection keep-alive."
-                    }
-                )
-    except GeneratorExit:
-        pass
-    finally:
-        broker.unsubscribe(user_id, subscription)
+                "message": "Connection keep-alive."
+            }
+        ))

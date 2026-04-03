@@ -13,6 +13,7 @@ from .request import (
     FilterWebhooksRequestSerializer,
     FilterWalletsRequestSerializer,
     FilterTransactionsRequestSerializer,
+    BatchAcknowledgeRequestSerializer,
 )
 from .response import (
     WalletResponseSerializer,
@@ -27,6 +28,7 @@ from .response import (
     SpendingHeatmapSerializer,
     WalletBalanceHistorySerializer,
     MoneyFlowAnalyticsSerializer,
+    NotificationResponseSerializer,
 )
 
 __all__ = [
@@ -55,5 +57,7 @@ __all__ = [
     'MoneyFlowAnalyticsSerializer',
     'MessageResponseSerializer',
     'FilterWalletsRequestSerializer',
-    'FilterTransactionsRequestSerializer'
+    'FilterTransactionsRequestSerializer',
+    'BatchAcknowledgeRequestSerializer',
+    'NotificationResponseSerializer',
 ]

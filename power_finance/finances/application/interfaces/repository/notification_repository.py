@@ -10,5 +10,20 @@ class NotificationRepository(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    def get_notifications_by_user_id(self, user_id: int) -> list[Notification]:
+        raise NotImplementedError()
+
+    @abstractmethod
     def create_notification(self, entity: Notification) -> Notification:
         raise NotImplementedError()
+
+    @abstractmethod
+    def mark_notification_delivered(self, notification_id: UUID) -> Notification:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def mark_notifications_delivered(self, notification_ids: list[UUID] | str, user_id: int) -> list[Notification]:
+        raise NotImplementedError()
+
+
+

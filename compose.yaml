@@ -16,6 +16,17 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD?Overriding the default database password is mandatory}
       POSTGRES_USER: ${DATABASE_USER:-postgres}
       PGDATA: /var/lib/postgresql/18/docker
+  redis:
+    image: redis:8.6-alpine
+    restart: unless-stopped
+    ports:
+      - ${REDIS_PORT:-6380}:6379
+    volumes:
+      - redis_data:/data
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD?Overriding the default redis password is mandatory}
+    command: /bin/sh -c 'redis-server --save 60 1 --loglevel warning --requirepass "$REDIS_PASSWORD"'
 
 volumes:
   database_data:
+  redis_data:

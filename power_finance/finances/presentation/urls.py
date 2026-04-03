@@ -10,9 +10,7 @@ from .http import (
     ExpenditureAnalyticsView,
     WalletBalanceHistoryView,
     SpendingHeatmapView,
-)
-from .sse import (
-    notifications_stream_view,
+    NotificationViewSet,
 )
 
 
@@ -21,6 +19,7 @@ core_router = DefaultRouter()
 core_router.register(r'wallets', WalletViewSet, basename='wallet')
 core_router.register(r'transactions', TransactionViewSet, basename='transaction')
 core_router.register(r'webhooks', WebhooksViewSet, basename='webhook')
+core_router.register(r'notifications', NotificationViewSet, basename='notification')
 
 # Analytics routes
 analytics_urls = [
@@ -32,6 +31,4 @@ analytics_urls = [
 ]
 
 # General routes
-general_urls = [
-    path("notifications/stream", notifications_stream_view, name="notifications-stream"),
-]
+general_urls = []

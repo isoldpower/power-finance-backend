@@ -12,6 +12,14 @@ from .rotate_webhook_secret import RotateWebhookSecretCommandHandler, RotateWebh
 from .update_webhook_endpoint import UpdateWebhookEndpointCommandHandler, UpdateWebhookEndpointCommand
 from .subscribe_to_event import SubscribeToEventCommandHandler, SubscribeToEventCommand
 from .unsubscribe_from_event import UnsubscribeFromEventCommandHandler, UnsubscribeFromEventCommand
+from .open_notifications_connection import OpenNotificationsConnectionHandler, OpenNotificationsConnection
+from .acknowledge_notification import (
+    AcknowledgeNotificationCommandHandler,
+    AcknowledgeNotificationCommand,
+    BatchAcknowledgeNotificationCommandHandler,
+    BatchAcknowledgeNotificationCommand,
+)
+
 
 __all__ = [
     'CreateWebhookEndpointCommandHandler',
@@ -38,4 +46,10 @@ __all__ = [
     'SubscribeToEventCommand',
     'UnsubscribeFromEventCommandHandler',
     'UnsubscribeFromEventCommand',
+    'OpenNotificationsConnectionHandler',
+    'OpenNotificationsConnection',
+    'AcknowledgeNotificationCommandHandler',
+    'AcknowledgeNotificationCommand',
+    'BatchAcknowledgeNotificationCommandHandler',
+    'BatchAcknowledgeNotificationCommand',
 ]

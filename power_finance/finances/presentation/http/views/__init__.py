@@ -8,6 +8,7 @@ from .analytics import (
 from .wallet_viewset import WalletViewSet
 from .transaction_viewset import TransactionViewSet
 from .webhooks_viewset import WebhooksViewSet
+from .notification_views import NotificationViewSet
 
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     'CategoriesAnalyticsView',
     'MoneyFlowAnalyticsView',
     'WalletBalanceHistoryView',
-    'WebhooksViewSet'
+    'WebhooksViewSet',
+    'NotificationViewSet',
 ]

@@ -13,6 +13,7 @@ class NotificationModel(models.Model):
     is_read = models.BooleanField(default=False)
     payload = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(default=timezone.now, editable=False)
+    received_at = models.DateTimeField(editable=False, null=True, blank=True)
 
     class Meta:
         db_table = "finances_notifications"

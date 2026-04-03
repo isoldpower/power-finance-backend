@@ -12,15 +12,6 @@ class NotificationChannel(ABC):
     ) -> dict:
         raise NotImplementedError()
 
-    @abstractmethod
-    def put(
-            self,
-            item: dict,
-            block: bool = True,
-            timeout: float | None = None
-    ) -> None:
-        raise NotImplementedError()
-
 
 class NotificationBroker(ABC):
     @abstractmethod

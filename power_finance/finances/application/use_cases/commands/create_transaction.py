@@ -93,14 +93,14 @@ class CreateTransactionCommandHandler(UseCaseEvently):
             sender=TransactionParticipant(
                 wallet_id=sender_wallet.id,
                 money=Money(
-                    amount=sender_wallet.balance.amount,
+                    amount=command.sender.amount,
                     currency_code=sender_wallet.balance.currency_code,
                 )
             ) if (sender_wallet and command.sender) else None,
             receiver=TransactionParticipant(
                 wallet_id=receiver_wallet.id,
                 money=Money(
-                    amount=receiver_wallet.balance.amount,
+                    amount=command.receiver.amount,
                     currency_code=receiver_wallet.balance.currency_code,
                 )
             ) if (receiver_wallet and command.receiver) else None,

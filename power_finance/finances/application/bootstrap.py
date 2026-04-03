@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from redis import Redis
 
 from finances.domain.events import (
     TransactionCreatedEvent,
@@ -32,6 +33,7 @@ class ApplicationState:
     initialized: bool = False
     event_bus: EventBus | None = None
     broker: NotificationBroker | None = None
+    redis: Redis | None = None
 
 
 application: ApplicationState | None = None
@@ -42,6 +44,7 @@ def bootstrap_application(
         wallet_repository: WalletRepository,
         payload_factory: EventPayloadFactory,
         dispatcher: WebhookDispatcher,
+        redis: Redis,
         notification_broker: NotificationBroker,
         notification_publisher: NotificationPublisher,
         notification_repository: NotificationRepository,
@@ -53,6 +56,7 @@ def bootstrap_application(
 
     application = ApplicationState(
         initialized=True,
+        redis=redis,
         broker=notification_broker,
         event_bus = initialize_event_bus(
             webhook_repository=webhook_repository,
