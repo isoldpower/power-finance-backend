@@ -7,6 +7,7 @@ from .webhook import (
     WebhookDeliveryAttemptModel,
     WebhookDeliveryStatusChoices,
     WebhookEventSubscriptionModel,
+    WebhookPayloadModel
 )
 from .notification import NotificationModel
 
@@ -16,6 +17,7 @@ __all__ = [
     'TransactionModel',
     'WebhookDeliveryModel',
     'WebhookEndpointModel',
+    'WebhookPayloadModel',
     'WebhookDeliveryAttemptModel',
     'WebhookDeliveryStatusChoices',
     'WebhookEventSubscriptionModel',

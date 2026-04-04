@@ -8,7 +8,9 @@ ENV_FILE = str(ROOT_DIR.joinpath('.env'))
 
 # Define defaults for environment variables
 env = environ.Env(
+    APP_NAME=(str, 'power_finance'),
     DEBUG=(bool, True),
+    DATABASE_HOST=(str, 'localhost'),
     DATABASE_PORT=(str, '5433'),
     DATABASE_USER=(str, 'postgres'),
     CLERK_CACHE_KEY=(str, 'clerk_cache'),
@@ -18,8 +20,10 @@ env.read_env(ENV_FILE)
 
 # List all environment variables
 RESOLVED_ENV = {
+    'APP_NAME': env('APP_NAME'),
     'DEBUG': env('DEBUG'),
     'DATABASE_PASSWORD': env('DATABASE_PASSWORD'),
+    'DATABASE_HOST': env('DATABASE_HOST'),
     'DATABASE_PORT': env('DATABASE_PORT'),
     'DATABASE_USER': env('DATABASE_USER'),
     'SECRET_KEY': env('SECRET_KEY'),
@@ -28,6 +32,8 @@ RESOLVED_ENV = {
     'CLERK_CACHE_KEY': env('CLERK_CACHE_KEY'),
     'API_VERSION': env('API_VERSION'),
     'REDIS_URL': env('REDIS_URL'),
+    'CELERY_BROKER_URL': env('CELERY_BROKER_URL'),
+    'CELERY_RESULT_BACKEND': env('CELERY_RESULT_BACKEND'),
 }
 
 # Project configuration settings
@@ -148,7 +154,7 @@ DATABASES = {
         'NAME': RESOLVED_ENV['DATABASE_USER'],
         'USER': RESOLVED_ENV['DATABASE_USER'],
         'PASSWORD': RESOLVED_ENV['DATABASE_PASSWORD'],
-        'HOST': 'localhost',
+        'HOST': RESOLVED_ENV['DATABASE_HOST'],
         'PORT': RESOLVED_ENV['DATABASE_PORT'],
         'OPTIONS': {
             'pool': True

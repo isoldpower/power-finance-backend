@@ -4,6 +4,7 @@ from .transaction_mapper import TransactionMapper
 from .webhook_mapper import WebhookMapper
 from .webhook_delivery_mapper import WebhookDeliveryMapper
 from .notification_mapper import NotificationMapper
+from .webhook_payload_mapper import WebhookPayloadMapper
 from .update_mapper import UpdateMapper
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     'WebhookDeliveryMapper',
     'UpdateMapper',
     'NotificationMapper',
+    'WebhookPayloadMapper',
 ]

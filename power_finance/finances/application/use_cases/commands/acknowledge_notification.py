@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from uuid import UUID
-
 from django.core.exceptions import ObjectDoesNotExist
 
-from finances.application.interfaces import NotificationRepository
 from finances.domain.entities import Notification
-from finances.infrastructure.repositories import DjangoNotificationRepository
+
+from ...bootstrap import get_repository_registry
+from ...interfaces import NotificationRepository
 
 
 @dataclass(frozen=True)
@@ -19,7 +19,8 @@ class AcknowledgeNotificationCommandHandler:
             self,
             notification_repository: NotificationRepository | None = None,
     ) -> None:
-        self._notification_repository = notification_repository or DjangoNotificationRepository()
+        registry = get_repository_registry()
+        self._notification_repository = notification_repository or registry.notification_repository
 
     def handle(self, command: AcknowledgeNotificationCommand) -> Notification:
         try:
@@ -44,13 +45,13 @@ class BatchAcknowledgeNotificationCommandHandler:
             self,
             notification_repository: NotificationRepository | None = None,
     ) -> None:
-        self._notification_repository = notification_repository or DjangoNotificationRepository()
+        registry = get_repository_registry()
+        self._notification_repository = notification_repository or registry.notification_repository
 
     def handle(self, command: BatchAcknowledgeNotificationCommand) -> list[str]:
         read_notifications = self._notification_repository.mark_notifications_delivered(
             command.notification_ids,
             command.user_id,
         )
-        print('1', read_notifications)
 
         return [str(notification.id) for notification in read_notifications]

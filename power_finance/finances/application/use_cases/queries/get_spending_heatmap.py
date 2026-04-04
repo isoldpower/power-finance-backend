@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
-from finances.infrastructure.selectors import DjangoTransactionSelectorsCollection
-
+from ...bootstrap import get_repository_registry
 from ...dtos import SpendingHeatmapResultDTO
 from ...interfaces import TransactionSelectorsCollection
 
@@ -17,7 +16,8 @@ class GetSpendingHeatmapQueryHandler:
         self,
         transaction_selectors: TransactionSelectorsCollection | None = None,
     ) -> None:
-        self.transaction_selectors = transaction_selectors or DjangoTransactionSelectorsCollection()
+        registry = get_repository_registry()
+        self.transaction_selectors = transaction_selectors or registry.transaction_selectors
 
     def handle(self, query: GetSpendingHeatmapQuery) -> SpendingHeatmapResultDTO:
         rows = self.transaction_selectors.get_daily_spending(user_id=query.user_id)

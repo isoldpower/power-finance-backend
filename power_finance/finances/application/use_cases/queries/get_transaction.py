@@ -1,12 +1,10 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+from ...bootstrap import get_repository_registry
 from ...dto_builders import transaction_to_dto
 from ...dtos import TransactionDTO
 from ...interfaces import TransactionRepository, WalletRepository
-
-from finances.infrastructure.repositories import DjangoTransactionRepository
-from finances.infrastructure.repositories import DjangoWalletRepository
 
 
 @dataclass(frozen=True)
@@ -24,8 +22,9 @@ class GetTransactionQueryHandler:
         transaction_repository: TransactionRepository | None = None,
         wallet_repository: WalletRepository | None = None
     ):
-        self.transaction_repository = transaction_repository or DjangoTransactionRepository()
-        self.wallet_repository = wallet_repository or DjangoWalletRepository()
+        registry = get_repository_registry()
+        self.transaction_repository = transaction_repository or registry.transaction_repository
+        self.wallet_repository = wallet_repository or registry.wallet_repository
 
     def handle(self, query: GetTransactionQuery) -> TransactionDTO:
         requested_transaction = self.transaction_repository.get_user_transaction_by_id(

@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
-from finances.infrastructure.repositories import DjangoTransactionRepository
-
+from ...bootstrap import get_repository_registry
 from ...dto_builders import transaction_to_plain_dto
 from ...dtos import TransactionPlainDTO
 from ...interfaces import TransactionRepository
@@ -19,7 +18,8 @@ class ListTransactionsQueryHandler:
         self,
         transaction_repository: TransactionRepository | None = None
     ) -> None:
-        self.transaction_repository = transaction_repository or DjangoTransactionRepository()
+        registry = get_repository_registry()
+        self.transaction_repository = transaction_repository or registry.transaction_repository
 
     def handle(self, query: ListTransactionsQuery) -> list[TransactionPlainDTO]:
         transactions = self.transaction_repository.get_user_transactions(query.user_id)

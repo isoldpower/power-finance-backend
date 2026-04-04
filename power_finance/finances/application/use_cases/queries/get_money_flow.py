@@ -1,12 +1,9 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from finances.infrastructure.selectors import (
-    DjangoWalletSelectorsCollection,
-    DjangoTransactionSelectorsCollection,
-)
 from finances.domain.entities import Wallet
 
+from ...bootstrap import get_repository_registry
 from ...dtos import (
     MoneyFlowResultDTO,
     MoneyFlowNodeDTO,
@@ -32,8 +29,9 @@ class GetMoneyFlowQueryHandler:
         wallet_selector: WalletSelectorsCollection | None = None,
         transaction_selector: TransactionSelectorsCollection | None = None,
     ) -> None:
-        self.wallet_selector = wallet_selector or DjangoWalletSelectorsCollection()
-        self.transaction_selector = transaction_selector or DjangoTransactionSelectorsCollection()
+        registry = get_repository_registry()
+        self.wallet_selector = wallet_selector or registry.wallet_selectors
+        self.transaction_selector = transaction_selector or registry.transaction_selectors
 
     def _build_links_list(
         self,

@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from django.core.exceptions import ObjectDoesNotExist
 
-from finances.infrastructure.repositories import DjangoWebhookRepository
-
+from ...bootstrap import get_repository_registry
 from ...dto_builders import webhook_to_dto
 from ...dtos import WebhookDTO
 from ...interfaces import WebhookRepository
@@ -20,7 +19,8 @@ class ListWebhooksQueryHandler:
             self,
             webhooks_repository: WebhookRepository | None = None,
     ) -> None:
-        self.webhooks_repository = webhooks_repository or DjangoWebhookRepository()
+        registry = get_repository_registry()
+        self.webhooks_repository = webhooks_repository or registry.webhook_repository
 
     def handle(self, request: ListWebhooksQuery) -> list[WebhookDTO]:
         try:

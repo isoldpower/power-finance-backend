@@ -6,9 +6,10 @@ from .domain_event import DomainEvent
 
 
 class WebhookDeliveryStatus(str, Enum):
-    SUCCESS = "SUCCESS"
-    FAILED = "FAILED"
-    RETRY = "RETRY"
+    SUCCESS = "success"
+    FAILED = "failed"
+    RETRY_SCHEDULED = "retry_scheduled"
+    IN_PROGRESS = "in_progress"
 
 
 @dataclass(frozen=True)
@@ -17,4 +18,3 @@ class WebhookDeliveryStatusChangedEvent(DomainEvent):
     endpoint_id: UUID
     user_id: int
     status: WebhookDeliveryStatus
-    attempt_number: int

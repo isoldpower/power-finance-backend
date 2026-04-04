@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from finances.infrastructure.repositories import DjangoWalletRepository
-
+from ...bootstrap import get_repository_registry
 from ...dto_builders import wallet_to_dto
 from ...dtos import WalletDTO
 from ...interfaces import WalletRepository
@@ -22,7 +21,8 @@ class ListOwnedWalletsQueryHandler:
             self,
             wallet_repository: WalletRepository | None = None
     ):
-        self.wallet_repository = wallet_repository or DjangoWalletRepository()
+        registry = get_repository_registry()
+        self.wallet_repository = wallet_repository or registry.wallet_repository
 
     def handle(self, query: ListOwnedWalletsQuery) -> list[WalletDTO]:
         user_wallets = self.wallet_repository.get_user_wallets(query.user_id)

@@ -1,17 +1,16 @@
-from uuid import UUID
 from dataclasses import dataclass
 from typing import Any
-from decimal import Decimal
 
 from finances.domain.entities import (
     FilterPolicy, 
     ResolvedFilterTree, 
     FilterFieldPolicy,
-    ComparisonOperator
+    ComparisonOperator,
+    TypeVariant,
 )
 from finances.domain.services import resolve_filter_query
-from finances.infrastructure.repositories import DjangoWalletRepository
 
+from ...bootstrap import get_repository_registry
 from ...dto_builders import wallet_to_dto
 from ...dtos import WalletDTO
 from ...interfaces import WalletRepository
@@ -30,7 +29,7 @@ class ListFilteredWalletsQueryHandler:
             request_name="id",
             model_lookup="id",
             allowed_operators={ComparisonOperator.Equal},
-            value_type=UUID,
+            value_type=TypeVariant.UUID,
         ),
         "name": FilterFieldPolicy(
             request_name="name",
@@ -40,13 +39,13 @@ class ListFilteredWalletsQueryHandler:
                 ComparisonOperator.Contains,
                 ComparisonOperator.IContains,
             },
-            value_type=str,
+            value_type=TypeVariant.STRING,
         ),
         "credit": FilterFieldPolicy(
             request_name="credit",
             model_lookup="credit",
             allowed_operators={ComparisonOperator.Equal},
-            value_type=bool,
+            value_type=TypeVariant.BOOLEAN,
         ),
         "amount": FilterFieldPolicy(
             request_name="amount",
@@ -58,13 +57,13 @@ class ListFilteredWalletsQueryHandler:
                 ComparisonOperator.Greater,
                 ComparisonOperator.Less,
             },
-            value_type=float,  # Note: JSON decodes to float, which ORM handles against Decimal fields usually
+            value_type=TypeVariant.FLOAT,
         ),
         "currency_code": FilterFieldPolicy(
             request_name="currency_code",
             model_lookup="currency_id",
             allowed_operators={ComparisonOperator.Equal},
-            value_type=str,
+            value_type=TypeVariant.STRING,
         ),
         "created_at": FilterFieldPolicy(
             request_name="created_at",
@@ -76,7 +75,7 @@ class ListFilteredWalletsQueryHandler:
                 ComparisonOperator.Greater,
                 ComparisonOperator.Less,
             },
-            value_type=str,
+            value_type=TypeVariant.DATETIME,
         ),
     }
 
@@ -84,7 +83,8 @@ class ListFilteredWalletsQueryHandler:
             self,
             wallet_repository: WalletRepository | None = None,
     ) -> None:
-        self.wallet_repository = wallet_repository or DjangoWalletRepository()
+        registry = get_repository_registry()
+        self.wallet_repository = wallet_repository or registry.wallet_repository
 
     def handle(self, request: ListFilteredWalletsQuery) -> list[WalletDTO]:
         try:

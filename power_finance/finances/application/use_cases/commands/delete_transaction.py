@@ -1,14 +1,13 @@
 from dataclasses import dataclass
 from uuid import UUID
-from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 
-from finances.infrastructure.repositories import DjangoTransactionRepository, DjangoWalletRepository
 from finances.domain.entities import Transaction, Wallet
 from finances.domain.services import rollback_transaction_from_wallet_balance
 
 from ..use_case_base import UseCaseEvently
-from ..decorators import handle_evently_command
+from ..decorators import atomic_evently_command
+from ...bootstrap import get_repository_registry
 from ...dto_builders import transaction_to_dto
 from ...dtos import TransactionDTO
 from ...interfaces import TransactionRepository, WalletRepository
@@ -30,9 +29,10 @@ class DeleteTransactionCommandHandler(UseCaseEvently):
         wallet_repository: WalletRepository | None = None
     ):
         super().__init__()
+        registry = get_repository_registry()
 
-        self.transaction_repository = transaction_repository or DjangoTransactionRepository()
-        self.wallet_repository = wallet_repository or DjangoWalletRepository()
+        self.transaction_repository = transaction_repository or registry.transaction_repository
+        self.wallet_repository = wallet_repository or registry.wallet_repository
 
     def _safe_get_wallet(self, wallet_id: UUID, user_id: int) -> Wallet | None:
         try:
@@ -64,8 +64,7 @@ class DeleteTransactionCommandHandler(UseCaseEvently):
             if wallet is not None:
                 self.wallet_repository.save_wallet(wallet)
 
-    @handle_evently_command
-    @transaction.atomic
+    @atomic_evently_command()
     def handle(self, command: DeleteTransactionCommand) -> TransactionDTO:
         transaction_uuid = UUID(command.transaction_id)
         transaction_to_delete = self.transaction_repository.get_user_transaction_by_id(

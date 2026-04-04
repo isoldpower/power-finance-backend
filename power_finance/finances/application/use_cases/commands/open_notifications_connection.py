@@ -1,10 +1,9 @@
 from dataclasses import dataclass
-from uuid import uuid4, UUID
+from uuid import uuid4
 
 from finances.domain.services import format_sse, get_latest_message
-from finances.infrastructure.repositories import DjangoNotificationRepository
 
-from ...interfaces import NotificationBroker, NotificationRepository
+from ...interfaces import NotificationBroker
 
 
 @dataclass(frozen=True)

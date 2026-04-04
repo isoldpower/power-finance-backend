@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from uuid import UUID
 from django.db import transaction
 
-from finances.infrastructure.repositories import DjangoWalletRepository, DjangoCurrencyRepository
 from finances.domain.value_objects import Money
 from finances.domain.entities import Wallet
 from finances.domain.exceptions import UnsupportedCurrencyError
 
+from ...bootstrap import get_repository_registry
 from ...dto_builders import wallet_to_dto
 from ...dtos import WalletDTO
 from ...interfaces import WalletRepository, CurrencyRepository
@@ -31,8 +31,9 @@ class UpdateExistingWalletCommandHandler:
         wallet_repository: WalletRepository | None = None,
         currency_repository: CurrencyRepository | None = None,
     ):
-        self.wallet_repository = wallet_repository or DjangoWalletRepository()
-        self.currency_repository = currency_repository or DjangoCurrencyRepository()
+        registry = get_repository_registry()
+        self.wallet_repository = wallet_repository or registry.wallet_repository
+        self.currency_repository = currency_repository or registry.currency_repository
 
     def _update_fields(self, wallet: Wallet, command: UpdateExistingWalletCommand) -> Wallet:
         if command.name is not None:

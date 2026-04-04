@@ -1,4 +1,4 @@
-from finances.domain.entities import WebhookType, Webhook
+from finances.domain.entities import WebhookType
 from finances.domain.events import TransactionDeletedEvent
 from finances.infrastructure.integrations import WebhookDispatcher
 
@@ -8,7 +8,7 @@ from ..interfaces import (
     WalletRepository,
     WebhookDeliveryRepository,
     EventPayloadFactory,
-    EventBus,
+    EventBus, WebhookPayloadRepository,
 )
 
 
@@ -21,6 +21,7 @@ class TransactionDeletedWebhookHandler(EventWebhookHandler):
             self,
             webhook_repository: WebhookRepository,
             delivery_repository: WebhookDeliveryRepository,
+            payload_repository: WebhookPayloadRepository,
             wallet_repository: WalletRepository,
             payload_factory: EventPayloadFactory,
             dispatcher: WebhookDispatcher,
@@ -31,28 +32,12 @@ class TransactionDeletedWebhookHandler(EventWebhookHandler):
             delivery_repository=delivery_repository,
             dispatcher=dispatcher,
             event_bus=event_bus,
+            payload_repository=payload_repository,
         )
 
         self._payload_factory = payload_factory
         self._webhook_repository = webhook_repository
         self._wallet_repository = wallet_repository
-
-    def _handle_single_endpoint(
-            self,
-            webhook: Webhook,
-            event: TransactionDeletedEvent
-    ):
-        request_body = self._payload_factory.from_transaction_deleted(event)
-        delivery = self.handle_dispatch_webhook_delivery(
-            webhook=webhook,
-            event_id=event.event_id
-        )
-
-        self.handle_webhook_delivery_attempt(
-            webhook,
-            delivery_id=delivery.id,
-            request_body=request_body,
-        )
 
     def __call__(self, event: TransactionDeletedEvent) -> None:
         transaction_wallet = self._wallet_repository.get_wallet_by_id(
@@ -65,7 +50,9 @@ class TransactionDeletedWebhookHandler(EventWebhookHandler):
         )
 
         for webhook in webhooks:
-            self._handle_single_endpoint(
+            request_body = self._payload_factory.from_transaction_deleted(event)
+            self.handle_dispatch_webhook_delivery(
                 webhook=webhook,
-                event=event
+                event=event,
+                request_body=request_body,
             )

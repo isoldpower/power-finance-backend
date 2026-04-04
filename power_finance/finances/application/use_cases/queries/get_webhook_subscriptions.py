@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from finances.infrastructure.repositories import DjangoWebhookRepository
-
+from ...bootstrap import get_repository_registry
 from ...dtos import WebhookSubscriptionDTO
 from ...interfaces import WebhookRepository
 
@@ -19,7 +18,8 @@ class GetWebhookSubscriptionsQueryHandler:
             self,
             webhook_repository: WebhookRepository | None = None,
     ) -> None:
-        self.webhook_repository = webhook_repository or DjangoWebhookRepository()
+        registry = get_repository_registry()
+        self.webhook_repository = webhook_repository or registry.webhook_repository
 
     def handle(self, query: GetWebhookSubscriptionsQuery) -> list[WebhookSubscriptionDTO]:
         return self.webhook_repository.get_subscriptions_by_webhook_id(

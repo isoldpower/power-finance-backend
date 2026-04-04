@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import timedelta
 from uuid import UUID
 
 from ...dtos import WebhookDeliveryDTO, WebhookDeliveryAttemptDTO
@@ -44,5 +45,30 @@ class WebhookDeliveryRepository(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def finalize_delivery(self, delivery_id: UUID) -> WebhookDeliveryDTO:
+    def get_deliveries_to_retry(self, limit: int) -> list[WebhookDeliveryDTO]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def mark_delivery_in_progress(self, delivery_id: UUID) -> WebhookDeliveryDTO:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def mark_delivery_success(self, delivery_id: UUID) -> WebhookDeliveryDTO:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def mark_delivery_retry_scheduled(
+            self,
+            delivery_id: UUID,
+            error_message: str | None,
+            retry_in: timedelta
+    ) -> WebhookDeliveryDTO:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def mark_delivery_failed(
+            self,
+            delivery_id: UUID,
+            error_message: str | None
+    ) -> WebhookDeliveryDTO:
         raise NotImplementedError()

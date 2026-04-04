@@ -13,8 +13,10 @@ from .filtering import (
     FilterPolicy,
     ResolvedFilterTree,
     TypeValidatorBuilder,
+    TypeVariant,
 )
 from .notification import Notification
+from .webhook_payload import WebhookPayload
 
 __all__ = [
     'Wallet',
@@ -33,5 +35,7 @@ __all__ = [
     'FilterFieldPolicy',
     'ResolvedFilterTree',
     'TypeValidatorBuilder',
+    'TypeVariant',
     'Notification',
+    'WebhookPayload',
 ]

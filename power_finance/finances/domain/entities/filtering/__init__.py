@@ -7,7 +7,7 @@ from .filter import (
     FilterPolicy,
     ResolvedFilterTree,
 )
-from .type_validation import TypeValidatorBuilder
+from .type_validation import TypeValidatorBuilder, TypeVariant
 
 __all__ = [
     'FieldFilter',
@@ -18,4 +18,5 @@ __all__ = [
     'FilterPolicy',
     'ResolvedFilterTree',
     'TypeValidatorBuilder',
+    'TypeVariant',
 ]

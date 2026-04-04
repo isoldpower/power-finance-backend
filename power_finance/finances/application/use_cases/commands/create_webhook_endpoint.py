@@ -2,9 +2,9 @@ from dataclasses import dataclass
 
 from django.db import transaction
 
-from finances.infrastructure.repositories import DjangoWebhookRepository
 from finances.domain.entities import Webhook, WebhookCreateData
 
+from ...bootstrap import get_repository_registry
 from ...dto_builders import webhook_to_dto
 from ...dtos import WebhookDTO
 from ...interfaces import WebhookRepository
@@ -24,7 +24,8 @@ class CreateWebhookEndpointCommandHandler:
             self,
             webhook_repository: WebhookRepository | None = None,
     ):
-        self.webhook_repository = webhook_repository or DjangoWebhookRepository()
+        registry = get_repository_registry()
+        self.webhook_repository = webhook_repository or registry.webhook_repository
 
     @transaction.atomic
     def handle(self, command: CreateWebhookEndpointCommand) -> WebhookDTO:

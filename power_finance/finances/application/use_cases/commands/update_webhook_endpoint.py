@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from uuid import UUID
 from django.db import transaction
 
-from finances.infrastructure.repositories import DjangoWebhookRepository
 from finances.domain.entities import Webhook
 
+from ...bootstrap import get_repository_registry
 from ...dto_builders import webhook_to_dto
 from ...dtos import WebhookDTO
 from ...interfaces import WebhookRepository
@@ -25,7 +25,8 @@ class UpdateWebhookEndpointCommandHandler:
             self,
             webhook_repository: WebhookRepository | None = None,
     ):
-        self.webhook_repository = webhook_repository or DjangoWebhookRepository()
+        registry = get_repository_registry()
+        self.webhook_repository = webhook_repository or registry.webhook_repository
 
     def _update_fields(self, webhook: Webhook, command: UpdateWebhookEndpointCommand) -> Webhook:
         if command.title is not None:
@@ -37,7 +38,7 @@ class UpdateWebhookEndpointCommandHandler:
 
     @transaction.atomic
     def handle(self, command: UpdateWebhookEndpointCommand) -> WebhookDTO:
-        existing_webhook = self.webhook_repository.get_webhook_by_id(
+        existing_webhook = self.webhook_repository.get_user_webhook_by_id(
             webhook_id=UUID(command.webhook_id),
             user_id=command.user_id
         )
