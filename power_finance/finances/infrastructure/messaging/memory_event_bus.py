@@ -1,4 +1,8 @@
+from asyncio import iscoroutinefunction
 from collections import defaultdict
+
+from asgiref.sync import async_to_sync
+
 from finances.application.interfaces import EventBus, EventHandler
 from finances.domain.events import DomainEvent
 
@@ -18,6 +22,11 @@ class InMemoryEventBus(EventBus):
 
     def publish(self, events: list[DomainEvent]) -> None:
         for event in events:
-            handlers = self._event_handlers.get(type(event)) or []
+            handlers = self._event_handlers.get(type(event), [])
+
             for handler in handlers:
-                handler(event)
+                handler_call = getattr(handler, "__call__", None)
+                if iscoroutinefunction(handler) or iscoroutinefunction(handler_call):
+                    async_to_sync(handler)(event)
+                else:
+                    handler(event)

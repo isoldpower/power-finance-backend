@@ -26,9 +26,24 @@ class WebhookPayload:
             headers: dict,
             delivery_id: UUID,
     ) -> 'WebhookPayload':
-        return WebhookPayload(
+        return cls(
             id=uuid4(),
             payload=payload,
             delivery_id=delivery_id,
             headers=headers,
+        )
+
+    @classmethod
+    def from_persistence(
+            cls,
+            id: UUID,
+            payload: dict,
+            headers: dict,
+            delivery_id: UUID,
+    ) -> 'WebhookPayload':
+        return cls(
+            id=id,
+            payload=payload,
+            headers=headers,
+            delivery_id=delivery_id,
         )

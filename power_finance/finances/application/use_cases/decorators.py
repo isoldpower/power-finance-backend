@@ -1,3 +1,4 @@
+import asyncio
 from functools import wraps
 from typing import ParamSpec, TypeVar, Callable
 
@@ -32,13 +33,12 @@ def handle_evently_command_transaction(using: str | None = None) -> Callable[[Ca
             result = function(self, *args, **kwargs)
 
             recorded_events = self.event_collector.pull_events()
-            if not recorded_events:
-                return result
+            if recorded_events:
+                transaction.on_commit(
+                    lambda: get_event_bus().publish(recorded_events),
+                    using=using,
+                )
 
-            def publish_events() -> None:
-                get_event_bus().publish(recorded_events)
-
-            transaction.on_commit(publish_events, using=using)
             return result
 
         return with_event_publish

@@ -1,3 +1,5 @@
+from asgiref.sync import sync_to_async
+
 from finances.domain.events import WebhookDeliveryStatusChangedEvent
 from finances.domain.entities import Notification
 
@@ -31,7 +33,7 @@ class WebhookDeliveryNotificationHandler:
         self._payload_factory = payload_factory
         self._notification_publisher = notification_publisher
 
-    def __call__(self, event: WebhookDeliveryStatusChangedEvent) -> None:
+    async def __call__(self, event: WebhookDeliveryStatusChangedEvent) -> None:
         payload = self._payload_factory.from_delivery_status_changed(event)
         notification_data = Notification.create(
             short="Webhook delivery status updated",
@@ -40,6 +42,9 @@ class WebhookDeliveryNotificationHandler:
             user_id=event.user_id,
             payload=payload
         )
-        notification = self._notification_repository.create_notification(notification_data)
+        notification = await sync_to_async(
+            self._notification_repository.create_notification,
+            thread_sensitive=True,
+        )(notification_data)
 
-        self._notification_publisher.publish_notification(notification)
+        await self._notification_publisher.publish_notification(notification)

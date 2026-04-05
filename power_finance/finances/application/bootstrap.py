@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from celery import Celery
-from redis import Redis
+from redis.asyncio.client import Redis
 
 from finances.domain.events import (
     TransactionCreatedEvent,
@@ -92,7 +92,7 @@ def bootstrap_application(
         broker=notification_broker,
         celery=celery,
         repository_registry=repository_registry,
-        event_bus = initialize_event_bus(
+        event_bus=initialize_event_bus(
             webhook_repository=repository_registry.webhook_repository,
             delivery_repository=repository_registry.delivery_repository,
             wallet_repository=repository_registry.wallet_repository,

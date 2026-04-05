@@ -1,11 +1,13 @@
-import uuid
-from django.http import HttpResponseForbidden, StreamingHttpResponse
+from django.http import StreamingHttpResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
+
+from identity.authentication import ClerkJWTAuthentication
+from identity.presentation.auth_decorators import async_with_auth
 
 from finances.application.bootstrap import application
 from finances.application.use_cases import (
@@ -65,14 +67,18 @@ class NotificationViewSet(viewsets.ViewSet):
 
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
-
     @extend_schema(
         methods=["POST"],
         operation_id="notifications_acknowledge",
         summary="Acknowledge notification",
         description="Acknowledge receipt of a notification, marking it as delivered. This stops the SSE stream from sending it again.",
         parameters=[
-            OpenApiParameter('notification_id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Notification ID")
+            OpenApiParameter(
+                'notification_id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Notification ID"
+            )
         ],
         responses={
             200: MessageResponseSerializer,
@@ -116,32 +122,6 @@ class NotificationViewSet(viewsets.ViewSet):
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
-        methods=["GET"],
-        operation_id="notifications_stream",
-        summary="Stream notifications",
-        description="Open an SSE stream to securely forward live notifications from the system.",
-        responses={200: OpenApiTypes.STR}
-    )
-    @action(detail=False, methods=["get"], url_path="stream")
-    def stream(self, request):
-        if not application or not application.initialized:
-            return HttpResponseForbidden("Application is not yet initialized")
-
-        handler = OpenNotificationsConnectionHandler(
-            notification_broker=application.broker
-        )
-        response = StreamingHttpResponse(
-            handler.handle(OpenNotificationsConnection(
-                user_id=request.user.id,
-            )),
-            content_type="text/event-stream",
-        )
-        response["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response["X-Accel-Buffering"] = "no"
-
-        return response
-
-    @extend_schema(
         methods=["POST"],
         operation_id="notifications_batch_acknowledge",
         summary="Batch acknowledge notifications",
@@ -177,3 +157,26 @@ class NotificationViewSet(viewsets.ViewSet):
                 resource_id=None
             ))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(
+    methods=["GET"],
+    operation_id="notifications_stream",
+    summary="Stream notifications",
+    description="Open an SSE stream to securely forward live notifications from the system.",
+    responses={200: OpenApiTypes.STR}
+)
+@async_with_auth(authenticator=ClerkJWTAuthentication())
+async def notification_stream(request):
+    handler = OpenNotificationsConnectionHandler(notification_broker=application.broker)
+    response = StreamingHttpResponse(
+        handler.handle(OpenNotificationsConnection(
+            user_id=request.user.id,
+        )),
+        content_type="text/event-stream",
+    )
+
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response["X-Accel-Buffering"] = "no"
+
+    return response

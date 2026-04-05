@@ -24,9 +24,7 @@ def attempt_webhook_delivery(
 @shared_task(name="finances.schedule_due_webhook_retries")
 def schedule_due_webhook_retries() -> None:
     registry = get_repository_registry()
-    delivery_repository = registry.delivery_repository
-
-    deliveries = delivery_repository.get_deliveries_to_retry(limit=100)
+    deliveries = registry.delivery_repository.get_deliveries_to_retry(limit=100)
 
     for delivery in deliveries:
         attempt_webhook_delivery.delay(

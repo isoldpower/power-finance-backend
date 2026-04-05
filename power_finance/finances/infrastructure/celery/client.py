@@ -18,7 +18,7 @@ def build_celery_config(resolved_settings: dict) -> dict:
         "task_time_limit": 1800,
         "task_soft_time_limit": 1500,
         "beat_schedule": {
-            "schedule-due-webhook-retries-every-30-seconds": {
+            "schedule-due-webhook-retries-every-10-seconds": {
                 "task": "finances.schedule_due_webhook_retries",
                 "schedule": 10.0,
             },

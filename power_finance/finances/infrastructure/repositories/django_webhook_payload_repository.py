@@ -9,8 +9,9 @@ from ..orm import WebhookPayloadModel
 
 class DjangoWebhookPayloadRepository(WebhookPayloadRepository):
     def write_delivery_payload(self, entity: WebhookPayload) -> WebhookPayload:
-        created_model = WebhookPayloadModel.objects.create()
+        created_model = WebhookPayloadModel.objects.create(delivery_id=entity.delivery_id)
         synced_model = WebhookPayloadMapper.update_model(created_model, entity)
+        synced_model.save()
 
         return WebhookPayloadMapper.to_domain(synced_model)
 

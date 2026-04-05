@@ -8,6 +8,7 @@ from .views import (
     WalletBalanceHistoryView,
     SpendingHeatmapView,
     NotificationViewSet,
+    notification_stream,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     'WalletBalanceHistoryView',
     'SpendingHeatmapView',
     'NotificationViewSet',
+    'notification_stream',
 ]

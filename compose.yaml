@@ -51,7 +51,8 @@ services:
       - .env
     environment:
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
-      - CELERY_RESULT_BACKEND=redis://:2222@redis:6379/2
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - DATABASE_HOST=database
       - DATABASE_PORT=5432
     depends_on:
@@ -72,7 +73,8 @@ services:
       - .env
     environment:
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
-      - CELERY_RESULT_BACKEND=redis://:2222@redis:6379/2
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - DATABASE_HOST=database
       - DATABASE_PORT=5432
     depends_on:

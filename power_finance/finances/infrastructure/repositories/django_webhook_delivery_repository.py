@@ -90,7 +90,7 @@ class DjangoWebhookDeliveryRepository(WebhookDeliveryRepository):
     def mark_delivery_in_progress(self, delivery_id: UUID) -> WebhookDeliveryDTO:
         delivery = WebhookDeliveryModel.objects.get(id=delivery_id)
 
-        delivery.status = WebhookDeliveryStatusChoices.RETRY_SCHEDULED
+        delivery.status = WebhookDeliveryStatusChoices.IN_PROGRESS
         delivery.save(update_fields=['status', 'updated_at'])
 
         return WebhookDeliveryMapper.delivery_to_dto(delivery)

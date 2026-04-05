@@ -39,7 +39,7 @@ class WebhookDeliveryModel(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
     status = models.CharField(
         choices=WebhookDeliveryStatusChoices.choices,
-        default=WebhookDeliveryStatusChoices.IN_PROGRESS,
+        default=WebhookDeliveryStatusChoices.RETRY_SCHEDULED,
         max_length=64
     )
     endpoint = models.ForeignKey(
@@ -51,7 +51,7 @@ class WebhookDeliveryModel(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     delivered_at = models.DateTimeField(blank=True, null=True)
-    next_retry_at = models.DateTimeField(blank=True, null=True)
+    next_retry_at = models.DateTimeField(default=timezone.now, blank=True, null=True)
 
     class Meta:
         db_table = "finances_webhooks_deliveries"
@@ -102,6 +102,7 @@ class WebhookPayloadModel(models.Model):
     hash = models.CharField(max_length=120)
     delivery = models.OneToOneField(WebhookDeliveryModel, on_delete=models.CASCADE)
     payload = models.JSONField(default=dict)
+    headers = models.JSONField(default=dict)
 
     class Meta:
         db_table = "finances_webhook_payloads"

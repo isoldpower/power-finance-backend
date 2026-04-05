@@ -1,72 +1,66 @@
+import asyncio
 import json
-from collections import defaultdict
-from queue import Queue, Empty
-from typing import DefaultDict
-from redis.client import Redis, PubSub
+from redis.asyncio.client import PubSub, Redis
 
-from finances.application.interfaces import NotificationBroker, NotificationChannel
+from finances.application.interfaces import (
+    NotificationBroker,
+    NotificationChannel,
+)
 
 
 class RedisChannelWrapper(NotificationChannel):
     _closed: bool = False
 
-    def __init__(
-            self,
-            pubsub: PubSub,
-            channel_id: str
-    ) -> None:
+    def __init__(self, pubsub: PubSub, channel_id: str) -> None:
         self._channel_id = channel_id
         self._pubsub = pubsub
 
-        self._pubsub.subscribe(channel_id)
+    @classmethod
+    async def create(cls, redis_client: Redis, channel_id: str) -> 'RedisChannelWrapper':
+        pubsub = redis_client.pubsub(ignore_subscribe_messages=True)
+        await pubsub.subscribe(channel_id)
 
-    def __delete__(self, instance):
-        self._pubsub.unsubscribe(self._channel_id)
+        return cls(pubsub=pubsub, channel_id=channel_id)
 
-    def __del__(self):
+    async def close(self) -> None:
+        if self._closed:
+            return
+
         self._closed = True
+        await self._pubsub.unsubscribe(self._channel_id)
+        await self._pubsub.close()
 
-    def get(
-            self,
-            block: bool = True,
-            timeout: float | None = None
-    ) -> dict:
+    async def get(self, timeout: float | None = None) -> dict:
         if self._closed:
             raise ConnectionRefusedError("Trying to read value from channel that is closed.")
 
-        fallback_timeout = None if block else 0.0
-        message = self._pubsub.get_message(timeout=timeout or fallback_timeout)
+        received_message = await self._pubsub.get_message(
+            ignore_subscribe_messages=True,
+            timeout=timeout
+        )
+        if received_message is None:
+            raise asyncio.TimeoutError("Didn't receive any message in specified timeout period.")
 
-        if message is None:
-            raise Empty()
-
-        data = message.get("data")
+        data = received_message.get("data")
         if isinstance(data, (bytes, bytearray)):
             data = data.decode("utf-8")
-
         return json.loads(data)
 
 
 class RedisNotificationBroker(NotificationBroker):
-    def __init__(
-            self,
-            redis_client: Redis
-    ) -> None:
-        self._subscriptions: DefaultDict[int, list[Queue]] = defaultdict(list)
+    def __init__(self, redis_client: Redis) -> None:
         self._redis_client = redis_client
-        self._pubsub = self._redis_client.pubsub(ignore_subscribe_messages=True)
 
     def _get_channel_id(self, user_id: int) -> str:
         return f"notifications:user:{user_id}"
 
-    def subscribe(self, user_id: int) -> RedisChannelWrapper:
+    async def subscribe(self, user_id: int) -> RedisChannelWrapper:
         channel_id = self._get_channel_id(user_id)
+        return await RedisChannelWrapper.create(self._redis_client, channel_id)
 
-        return RedisChannelWrapper(self._pubsub, channel_id)
+    async def unsubscribe(self, user_id: int, channel: RedisChannelWrapper) -> None:
+        await channel.close()
 
-    def unsubscribe(self, user_id: int, channel: RedisChannelWrapper) -> None:
-        del channel
-
-    def publish(self, user_id: int, payload: dict) -> None:
+    async def publish(self, user_id: int, payload: dict) -> None:
         channel_id = self._get_channel_id(user_id)
-        self._redis_client.publish(channel_id, json.dumps(payload))
+        await self._redis_client.publish(channel_id, json.dumps(payload))

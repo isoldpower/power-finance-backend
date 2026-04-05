@@ -154,7 +154,12 @@ class TransactionViewSet(viewsets.ViewSet):
         summary="Delete a transaction",
         description="Delete a specific transaction.",
         parameters=[
-            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Transaction ID")
+            OpenApiParameter(
+                'id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Transaction ID"
+            )
         ],
         responses={
             200: MessageResponseSerializer,
@@ -188,7 +193,12 @@ class TransactionViewSet(viewsets.ViewSet):
         summary="Update a transaction",
         description="Update description, category, or type of an existing transaction.",
         parameters=[
-            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Transaction ID")
+            OpenApiParameter(
+                'id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Transaction ID"
+            )
         ],
         request=UpdateTransactionRequestSerializer,
         responses={

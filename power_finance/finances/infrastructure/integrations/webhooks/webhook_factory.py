@@ -81,5 +81,4 @@ class WebhookPayloadFactory(EventPayloadFactory):
             "endpoint_id": str(event.endpoint_id),
             "status": event.status,
             "event_type": "notification.delivery.status_changed",
-            "attempt_number": event.attempt_number,
         }

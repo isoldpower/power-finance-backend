@@ -44,8 +44,10 @@ class StringTypeValidator(TypeValidator):
 
 class BooleanTypeValidator(TypeValidator):
     def validate(self) -> bool:
+        if isinstance(self.value, bool):
+            return True
         pattern = r'^(true|false|1|0)$'
-        return bool(re.fullmatch(pattern, self.value, re.IGNORECASE))
+        return bool(re.fullmatch(pattern, str(self.value), re.IGNORECASE))
 
 
 class DatetimeTypeValidator(TypeValidator):

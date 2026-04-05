@@ -9,14 +9,16 @@ class WebhookPayloadMapper:
         ('hash', 'hash'),
         ('delivery_id', 'delivery_id'),
         ('payload', 'payload'),
+        ('headers', 'headers'),
     ]
 
     @staticmethod
     def to_domain(model: WebhookPayloadModel) -> WebhookPayload:
-        return WebhookPayload(
+        return WebhookPayload.from_persistence(
             id=model.id,
             delivery_id=model.delivery_id,
             payload=model.payload,
+            headers=model.headers,
         )
 
     @staticmethod

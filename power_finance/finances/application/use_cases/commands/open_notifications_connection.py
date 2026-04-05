@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from uuid import uuid4
 
@@ -18,8 +19,8 @@ class OpenNotificationsConnectionHandler:
     ) -> None:
         self._broker = notification_broker
 
-    def handle(self, command: OpenNotificationsConnection):
-        subscription = self._broker.subscribe(command.user_id)
+    async def handle(self, command: OpenNotificationsConnection):
+        subscription = await self._broker.subscribe(command.user_id)
 
         try:
             yield format_sse(
@@ -32,9 +33,10 @@ class OpenNotificationsConnectionHandler:
             )
 
             while True:
-                notification_id, message = get_latest_message(subscription)
+                # get_latest_message is async
+                notification_id, message = await get_latest_message(subscription)
                 yield message
         except GeneratorExit:
             pass
         finally:
-            self._broker.unsubscribe(command.user_id, subscription)
+            await self._broker.unsubscribe(command.user_id, subscription)

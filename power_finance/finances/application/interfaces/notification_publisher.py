@@ -5,28 +5,24 @@ from finances.domain.entities import Notification
 
 class NotificationChannel(ABC):
     @abstractmethod
-    def get(
-            self,
-            block: bool,
-            timeout: float
-    ) -> dict:
+    async def get(self, timeout: float | None = None) -> dict:
         raise NotImplementedError()
 
 
 class NotificationBroker(ABC):
     @abstractmethod
-    def subscribe(self, user_id: int) -> NotificationChannel:
+    async def subscribe(self, user_id: int) -> NotificationChannel:
         raise NotImplementedError()
 
     @abstractmethod
-    def unsubscribe(self, user_id: int, queue: NotificationChannel) -> None:
+    async def unsubscribe(self, user_id: int, queue: NotificationChannel) -> None:
         raise NotImplementedError()
 
     @abstractmethod
-    def publish(self, user_id: int, payload: dict) -> None:
+    async def publish(self, user_id: int, payload: dict) -> None:
         raise NotImplementedError()
 
 class NotificationPublisher(ABC):
     @abstractmethod
-    def publish_notification(self, notification: Notification) -> None:
+    async def publish_notification(self, notification: Notification) -> None:
         raise NotImplementedError()

@@ -11,6 +11,7 @@ from .http import (
     WalletBalanceHistoryView,
     SpendingHeatmapView,
     NotificationViewSet,
+    notification_stream,
 )
 
 
@@ -31,4 +32,6 @@ analytics_urls = [
 ]
 
 # General routes
-general_urls = []
+general_urls = [
+    path('notifications/stream/', notification_stream, name='notification-stream'),
+]

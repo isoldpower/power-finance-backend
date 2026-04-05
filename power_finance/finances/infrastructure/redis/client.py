@@ -1,4 +1,4 @@
-from redis import Redis
+from redis.asyncio.client import Redis
 
 
 def build_redis_client(url: str) -> Redis:
