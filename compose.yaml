@@ -48,6 +48,7 @@ services:
     volumes:
       - ./power_finance:/app/power_finance
       - ./logs:/app/logs
+      - ./cache:/app/cache
     env_file:
       - .env
     environment:
@@ -71,6 +72,7 @@ services:
     volumes:
       - ./power_finance:/app/power_finance
       - ./logs:/app/logs
+      - ./cache:/app/cache
     env_file:
       - .env
     environment:

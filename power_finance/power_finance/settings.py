@@ -20,6 +20,7 @@ env = environ.Env(
     RABBIT_MQ_PASSWORD=(str, 'guest'),
     CLERK_CACHE_KEY=(str, 'clerk_cache'),
     API_VERSION=(str, 'v1'),
+    CELERY_BEAT_SCHEDULE_FILENAME=(str, 'cache/celerybeat-schedule'),
 )
 
 env.read_env(ENV_FILE)
@@ -40,6 +41,7 @@ RESOLVED_ENV = {
     'REDIS_URL': env('REDIS_URL'),
     'CELERY_BROKER_URL': env('CELERY_BROKER_URL'),
     'CELERY_RESULT_BACKEND': env('CELERY_RESULT_BACKEND'),
+    'CELERY_BEAT_SCHEDULE_FILENAME': str(ROOT_DIR.joinpath(env('CELERY_BEAT_SCHEDULE_FILENAME'))),
 }
 
 # Project configuration settings
@@ -47,19 +49,21 @@ SECRET_KEY = RESOLVED_ENV['SECRET_KEY']
 DEBUG = RESOLVED_ENV['DEBUG']
 ALLOWED_HOSTS = ['*']
 
-# Logger configuration
 # Detect if we are running in a Celery process (worker or beat)
 IS_CELERY_PROCESS = any(arg in sys.argv for arg in ['celery', 'worker', 'beat'])
-
 LOGS_DIR = ROOT_DIR / 'logs'
 LOGS_DIR.mkdir(parents=True, exist_ok=True)  # Create logs dir if it doesn't exist
+
+CACHE_DIR = ROOT_DIR / 'cache'
+CACHE_DIR.mkdir(parents=True, exist_ok=True)  # Create cache dir if it doesn't exist
 
 DEBUG_LOG_PATH = str(LOGS_DIR / 'debug.log')
 CELERY_LOG_PATH = str(LOGS_DIR / 'celery-debug.log')
 
-# Select the primary file handler based on the process type
 # If it's a celery process, everything goes to celery-debug.log
 MAIN_FILE_PATH = CELERY_LOG_PATH if IS_CELERY_PROCESS else DEBUG_LOG_PATH
+
+CELERY_BEAT_SCHEDULE_FILENAME = RESOLVED_ENV['CELERY_BEAT_SCHEDULE_FILENAME']
 
 LOGGING = {
     'version': 1,

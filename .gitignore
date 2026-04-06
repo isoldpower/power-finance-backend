@@ -19,6 +19,7 @@ ENV/
 db.sqlite3
 media/
 static/
+cache/**/*
 
 # IDE-specific files (Example for VS Code and PyCharm)
 .vscode/
