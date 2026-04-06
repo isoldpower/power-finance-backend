@@ -1,3 +1,4 @@
+import logging
 from uuid import UUID
 from django.db import transaction
 
@@ -12,6 +13,9 @@ from ..interfaces import (
     CreateWebhookDeliveryData,
     EventBus,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class EventWebhookHandler:
@@ -37,6 +41,7 @@ class EventWebhookHandler:
             event_id: UUID,
             request_body: dict
     ) -> WebhookDeliveryDTO:
+        logger.info("EventWebhookHandler: Handling webhook delivery for Event ID: %s, Webhook ID: %s", event_id, webhook.id)
 
         request_stamp = self._dispatcher.get_request_data(
             webhook=webhook,
@@ -54,4 +59,5 @@ class EventWebhookHandler:
         )
         self._payload_repository.write_delivery_payload(payload)
 
+        logger.info("EventWebhookHandler: Successfully created delivery (ID: %s) for Event ID: %s", delivery.id, event_id)
         return delivery

@@ -46,9 +46,9 @@ class CategoriesAnalyticsView(viewsets.ViewSet):
             )
 
             return Response(payload, status=status.HTTP_200_OK)
-        except Exception as e:
+        except Exception as exception:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
-                message=f"Failed to get categories analytics: {e}",
+                message=f"Failed to get categories analytics: {exception}",
                 resource_id=None
             ))
 

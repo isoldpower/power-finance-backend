@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
+from django.db import InternalError
 
 from finances.domain.entities import (
     FilterPolicy,
@@ -8,6 +9,7 @@ from finances.domain.entities import (
     ComparisonOperator,
     TypeVariant,
 )
+from finances.domain.exceptions import FilterParseError
 from finances.domain.services import resolve_filter_query
 
 from ...bootstrap import get_repository_registry
@@ -117,8 +119,13 @@ class ListFilteredTransactionsQueryHandler:
                 query=resolved_query,
                 applied_policy=self.filter_policy,
             )
-            filtered_transactions = self.transaction_repository.list_transactions_with_filters(filter_tree, request.user_id)
+            filtered_transactions = self.transaction_repository.list_transactions_with_filters(
+                filter_tree,
+                request.user_id
+            )
 
             return [transaction_to_plain_dto(transaction) for transaction in filtered_transactions]
-        except Exception as e:
-            raise e
+        except FilterParseError as exception:
+            raise AttributeError() from exception
+        except Exception as exception:
+            raise InternalError() from exception

@@ -1,3 +1,4 @@
+import logging
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -48,6 +49,8 @@ from ..serializers import (
     FilterWebhooksRequestSerializer,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class WebhooksViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -77,6 +80,7 @@ class WebhooksViewSet(viewsets.ViewSet):
         }
     )
     def list(self, request: Request) -> Response:
+        logger.info("WebhooksViewSet: Received request to list webhooks for User ID: %s", request.user.id)
         try:
             requested_hooks = self.list_query.handle(ListWebhooksQuery(
                 user_id=request.user.id,
@@ -88,6 +92,7 @@ class WebhooksViewSet(viewsets.ViewSet):
 
             paginated_response = paginator.get_paginated_response(payload)
             paginated_response.status_code = status.HTTP_206_PARTIAL_CONTENT
+            logger.info("WebhooksViewSet: Successfully listed %d webhooks for User ID: %s", len(page) if page else 0, request.user.id)
             return paginated_response
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -95,6 +100,7 @@ class WebhooksViewSet(viewsets.ViewSet):
                 resource_id=None
             ))
 
+            logger.error("WebhooksViewSet: Failed to list webhooks for User ID: %s - %s", request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -116,12 +122,14 @@ class WebhooksViewSet(viewsets.ViewSet):
     )
     def retrieve(self, request: Request, pk: str) -> Response:
         try:
+            logger.info("WebhooksViewSet: Received request to retrieve Webhook ID: %s for User ID: %s", pk, request.user.id)
             requested_hook = self.retrieve_query.handle(GetWebhookQuery(
                 user_id=request.user.id,
                 webhook_id=pk,
             ))
-
             payload = WebhookHttpPresenter.present_one(requested_hook)
+
+            logger.info("WebhooksViewSet: Successfully retrieved Webhook ID: %s for User ID: %s", pk, request.user.id)
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -129,6 +137,7 @@ class WebhooksViewSet(viewsets.ViewSet):
                 resource_id=pk
             ))
 
+            logger.error("WebhooksViewSet: Failed to retrieve Webhook ID: %s for User ID: %s - %s", pk, request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -142,6 +151,7 @@ class WebhooksViewSet(viewsets.ViewSet):
         }
     )
     def create(self, request: Request) -> Response:
+        logger.info("WebhooksViewSet: Received request to create new webhook for User ID: %s", request.user.id)
         serializer = CreateWebhookRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -152,8 +162,9 @@ class WebhooksViewSet(viewsets.ViewSet):
                 title=validated_data.get("title"),
                 url=validated_data.get("url"),
             ))
-
             payload = WebhookHttpPresenter.present_one_with_secret(result)
+
+            logger.info("WebhooksViewSet: Successfully created new Webhook ID: %s for User ID: %s", result.id, request.user.id)
             return Response(payload, status=status.HTTP_201_CREATED)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -161,6 +172,7 @@ class WebhooksViewSet(viewsets.ViewSet):
                 resource_id=None
             ))
 
+            logger.error("WebhooksViewSet: Failed to create new webhook for User ID: %s - %s", request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -181,16 +193,18 @@ class WebhooksViewSet(viewsets.ViewSet):
         }
     )
     def destroy(self, request: Request, pk: str | None = None) -> Response:
+        logger.info("WebhooksViewSet: Received request to delete Webhook ID: %s for User ID: %s", pk, request.user.id)
         try:
             deleted_hook = self.destroy_handler.handle(DeleteWebhookCommand(
                 user_id=request.user.id,
                 webhook_id=pk,
             ))
-
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Successfully deleted Webhook with ID {deleted_hook.id}",
                 resource_id=f"{pk}"
             ))
+
+            logger.info("WebhooksViewSet: Successfully deleted Webhook ID: %s for User ID: %s", pk, request.user.id)
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -198,6 +212,7 @@ class WebhooksViewSet(viewsets.ViewSet):
                 resource_id=f"{pk}"
             ))
 
+            logger.error("WebhooksViewSet: Failed to delete Webhook ID: %s for User ID: %s - %s", pk, request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -219,6 +234,7 @@ class WebhooksViewSet(viewsets.ViewSet):
         }
     )
     def partial_update(self, request: Request, pk: str | None = None) -> Response:
+        logger.info("WebhooksViewSet: Received request to update Webhook ID: %s for User ID: %s", pk, request.user.id)
         serializer = UpdateWebhookRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -230,8 +246,9 @@ class WebhooksViewSet(viewsets.ViewSet):
                 title=validated_data.get("title"),
                 url=validated_data.get("url"),
             ))
-
             payload = WebhookHttpPresenter.present_one(result)
+
+            logger.info("WebhooksViewSet: Successfully updated Webhook ID: %s for User ID: %s", pk, request.user.id)
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -239,6 +256,7 @@ class WebhooksViewSet(viewsets.ViewSet):
                 resource_id=f"{pk}"
             ))
 
+            logger.error("WebhooksViewSet: Failed to update Webhook ID: %s for User ID: %s - %s", pk, request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
         
     @extend_schema(
@@ -261,6 +279,7 @@ class WebhooksViewSet(viewsets.ViewSet):
     )
     @action(detail=True, methods=["post"], url_path="rotate")
     def rotate_secret(self, request: Request, pk: str | None = None) -> Response:
+        logger.info("WebhooksViewSet: Received request to rotate secret for Webhook ID: %s for User ID: %s", pk, request.user.id)
         serializer = RotateWebhookSecretRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -269,8 +288,9 @@ class WebhooksViewSet(viewsets.ViewSet):
                 webhook_id=pk,
                 user_id=request.user.id,
             ))
-
             payload = WebhookHttpPresenter.present_one_with_secret(rotated_webhook)
+
+            logger.info("WebhooksViewSet: Successfully rotated secret for Webhook ID: %s for User ID: %s", pk, request.user.id)
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -278,6 +298,7 @@ class WebhooksViewSet(viewsets.ViewSet):
                 resource_id=f"{pk}"
             ))
 
+            logger.error("WebhooksViewSet: Failed to rotate secret for Webhook ID: %s for User ID: %s - %s", pk, request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -298,6 +319,7 @@ class WebhooksViewSet(viewsets.ViewSet):
             self,
             request: Request
     ) -> Response:
+        logger.info("WebhooksViewSet: Received request to search filtered webhooks for User ID: %s", request.user.id)
         serializer = FilterWebhooksRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -312,6 +334,7 @@ class WebhooksViewSet(viewsets.ViewSet):
             paginated_response = paginator.paginate_queryset(filtered_webhooks, request, view=self)
             payload = WebhookHttpPresenter.present_many(paginated_response)
 
+            logger.info("WebhooksViewSet: Successfully retrieved %d filtered webhooks for User ID: %s", len(paginated_response) if paginated_response else 0, request.user.id)
             return paginator.get_paginated_response(payload)
         except FilterParseError as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -319,6 +342,7 @@ class WebhooksViewSet(viewsets.ViewSet):
                 resource_id=None
             ))
 
+            logger.error("WebhooksViewSet: Failed to parse filters for User ID: %s - %s", request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -326,6 +350,7 @@ class WebhooksViewSet(viewsets.ViewSet):
                 resource_id=None
             ))
 
+            logger.error("WebhooksViewSet: Failed to get filtered webhooks for User ID: %s - %s", request.user.id, str(e))
             return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @extend_schema(
@@ -378,6 +403,7 @@ class WebhooksViewSet(viewsets.ViewSet):
 
     def _list_events(self, request: Request, pk: str | None) -> Response:
         try:
+            logger.info("WebhooksViewSet: Received request to list event subscriptions for Webhook ID: %s for User ID: %s", pk, request.user.id)
             subscriptions = self.list_events_query.handle(GetWebhookSubscriptionsQuery(
                 webhook_id=pk,
                 user_id=request.user.id,
@@ -387,15 +413,19 @@ class WebhooksViewSet(viewsets.ViewSet):
             paginated_response = paginator.paginate_queryset(subscriptions, request, view=self)
             payload = WebhookHttpPresenter.present_subscription_list(paginated_response)
 
+            logger.info("WebhooksViewSet: Successfully listed %d event subscriptions for Webhook ID: %s for User ID: %s", len(paginated_response) if paginated_response else 0, pk, request.user.id)
             return paginator.get_paginated_response(payload)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to list event subscriptions:\n {e}",
                 resource_id=pk
             ))
+
+            logger.error("WebhooksViewSet: Failed to list event subscriptions for Webhook ID: %s for User ID: %s - %s", pk, request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     def _subscribe_to_event(self, request: Request, pk: str | None) -> Response:
+        logger.info("WebhooksViewSet: Received request to subscribe Webhook ID: %s to event for User ID: %s", pk, request.user.id)
         serializer = SubscribeWebhookToEventRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -405,8 +435,9 @@ class WebhooksViewSet(viewsets.ViewSet):
                 user_id=request.user.id,
                 event_type=serializer.validated_data.get("event_type"),
             ))
-
             payload = WebhookHttpPresenter.present_subscription(subscription)
+
+            logger.info("WebhooksViewSet: Successfully subscribed Webhook ID: %s to event %s for User ID: %s", pk, subscription.type, request.user.id)
             return Response(payload, status=status.HTTP_201_CREATED)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -414,6 +445,7 @@ class WebhooksViewSet(viewsets.ViewSet):
                 resource_id=pk
             ))
 
+            logger.error("WebhooksViewSet: Failed to subscribe Webhook ID: %s to event for User ID: %s - %s", pk, request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -446,17 +478,19 @@ class WebhooksViewSet(viewsets.ViewSet):
             pk: str | None = None,
             subscription_id: str | None = None
     ) -> Response:
+        logger.info("WebhooksViewSet: Received request to unsubscribe Webhook ID: %s from event subscription ID: %s for User ID: %s", pk, subscription_id, request.user.id)
         try:
             self.unsubscribe_handler.handle(UnsubscribeFromEventCommand(
                 subscription_id=subscription_id,
                 webhook_id=pk,
                 user_id=request.user.id,
             ))
-
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Successfully unsubscribed from event with subscription ID {subscription_id}",
                 resource_id=subscription_id
             ))
+
+            logger.info("WebhooksViewSet: Successfully unsubscribed Webhook ID: %s from event subscription ID: %s for User ID: %s", pk, subscription_id, request.user.id)
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -464,4 +498,5 @@ class WebhooksViewSet(viewsets.ViewSet):
                 resource_id=subscription_id
             ))
 
+            logger.error("WebhooksViewSet: Failed to unsubscribe Webhook ID: %s from event subscription ID: %s for User ID: %s - %s", pk, subscription_id, request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)

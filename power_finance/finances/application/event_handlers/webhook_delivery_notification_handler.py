@@ -1,4 +1,6 @@
+import logging
 from asgiref.sync import sync_to_async
+logger = logging.getLogger(__name__)
 
 from finances.domain.events import WebhookDeliveryStatusChangedEvent
 from finances.domain.entities import Notification
@@ -47,4 +49,11 @@ class WebhookDeliveryNotificationHandler:
             thread_sensitive=True,
         )(notification_data)
 
-        await self._notification_publisher.publish_notification(notification)
+        try:
+            await self._notification_publisher.publish_notification(notification)
+        except Exception as exception:
+            logger.error(
+                f"Exception while trying to fan-out notification %s to user %d: {exception}",
+                notification.id,
+                notification.user_id
+            )

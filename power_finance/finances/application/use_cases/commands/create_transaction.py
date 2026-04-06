@@ -3,6 +3,7 @@ from typing import Optional
 from uuid import UUID
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.management import CommandError
 
 from finances.domain.services import apply_transaction_to_wallet_balance
 from finances.domain.value_objects import Money
@@ -69,6 +70,9 @@ class CreateTransactionCommandHandler(UseCaseEvently):
             self._safe_get_wallet(receiver.wallet_id, user_id)
             if receiver else None
         )
+
+        if (sender and not sender_wallet) or (receiver and not receiver_wallet):
+            raise CommandError('One or more wallet IDs passed are invalid.')
 
         return sender_wallet, receiver_wallet
 

@@ -1,3 +1,4 @@
+import logging
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -35,6 +36,9 @@ from ..presenters import WalletHttpPresenter, CommonHttpPresenter, MessageResult
 from ..pagination import StandardResultsPagination
 
 
+logger = logging.getLogger(__name__)
+
+
 class WalletViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsPagination
@@ -50,18 +54,19 @@ class WalletViewSet(viewsets.ViewSet):
     )
     def list(self, request):
         try:
-            query = ListOwnedWalletsQuery(
+            logger.info("WalletViewSet: Received GET request to list wallets for User ID: %s", request.user.id)
+            handler = ListOwnedWalletsQueryHandler()
+            wallets = handler.handle(ListOwnedWalletsQuery(
                 user_id=request.user.id,
                 limit=None,
                 offset=None,
-            )
+            ))
 
-            handler = ListOwnedWalletsQueryHandler()
-            wallets = handler.handle(query)
             paginator = self.pagination_class()
             page = paginator.paginate_queryset(wallets, request, view=self)
             payload = WalletHttpPresenter.present_many(page)
 
+            logger.info("WalletViewSet: Successfully listed wallets for User ID: %s", request.user.id)
             return paginator.get_paginated_response(payload)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -69,6 +74,7 @@ class WalletViewSet(viewsets.ViewSet):
                 resource_id=None
             ))
 
+            logger.error("WalletViewSet: Error listing wallets for User ID: %s - %s", request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -76,7 +82,12 @@ class WalletViewSet(viewsets.ViewSet):
         summary="Get wallet details",
         description="Retrieve detailed information about a specific wallet.",
         parameters=[
-            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Wallet ID")
+            OpenApiParameter(
+                'id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Wallet ID"
+            )
         ],
         responses={
             200: WalletResponseSerializer,
@@ -85,15 +96,16 @@ class WalletViewSet(viewsets.ViewSet):
     )
     def retrieve(self, request, pk=None):
         try:
-            query = GetOwnedWalletQuery(
+            logger.info("WalletViewSet: Received GET request for wallet details (ID: %s) for User ID: %s", pk, request.user.id)
+            handler = GetOwnedWalletQueryHandler()
+            wallet = handler.handle(GetOwnedWalletQuery(
                 user_id=request.user.id,
                 wallet_id=pk,
-            )
+            ))
 
-            handler = GetOwnedWalletQueryHandler()
-            wallet = handler.handle(query)
             payload = WalletHttpPresenter.present_one(wallet)
 
+            logger.info("WalletViewSet: Successfully retrieved wallet details (ID: %s)", pk)
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -101,6 +113,7 @@ class WalletViewSet(viewsets.ViewSet):
                 resource_id=f"{pk}"
             ))
 
+            logger.error("WalletViewSet: Error retrieving wallet details (ID: %s) for User ID: %s - %s", pk, request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -114,24 +127,25 @@ class WalletViewSet(viewsets.ViewSet):
         }
     )
     def create(self, request):
+        logger.info("WalletViewSet: Received POST request to create wallet for User ID: %s", request.user.id)
         serializer = CreateWalletRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
             validated = serializer.validated_data
             balance = validated.get("balance")
-            command = CreateNewWalletCommand(
+
+            handler = CreateNewWalletCommandHandler()
+            wallet = handler.handle(CreateNewWalletCommand(
                 user_id=request.user.id,
                 name=validated.get("name"),
                 credit=validated.get("credit"),
                 balance_amount=balance.get("amount"),
                 currency=balance.get("currency"),
-            )
-
-            handler = CreateNewWalletCommandHandler()
-            wallet = handler.handle(command)
+            ))
             payload = WalletHttpPresenter.present_one(wallet)
 
+            logger.info("WalletViewSet: Successfully created wallet (ID: %s)", wallet.id)
             return Response(payload, status=status.HTTP_201_CREATED)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -139,6 +153,7 @@ class WalletViewSet(viewsets.ViewSet):
                 resource_id=None
             ))
 
+            logger.error("WalletViewSet: Error creating wallet for User ID: %s - %s", request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -146,7 +161,12 @@ class WalletViewSet(viewsets.ViewSet):
         summary="Replace a wallet",
         description="Replace an existing wallet comprehensively.",
         parameters=[
-            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Wallet ID")
+            OpenApiParameter(
+                'id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Wallet ID"
+            )
         ],
         request=ReplaceWalletRequestSerializer,
         responses={
@@ -155,26 +175,25 @@ class WalletViewSet(viewsets.ViewSet):
         }
     )
     def update(self, request, pk=None):
+        logger.info("WalletViewSet: Received PUT request to replace wallet ID: %s (User ID: %s)", pk, request.user.id)
         serializer = ReplaceWalletRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
             validated = serializer.validated_data
             balance = validated.get("balance")
-
-            command = UpdateExistingWalletCommand(
+            handler = UpdateExistingWalletCommandHandler()
+            wallet = handler.handle(UpdateExistingWalletCommand(
                 user_id=request.user.id,
                 wallet_id=pk,
                 name=validated.get("name"),
                 credit=validated.get("credit"),
                 balance_amount=balance.get("amount") if balance else None,
                 currency=balance.get("currency") if balance else None,
-            )
-
-            handler = UpdateExistingWalletCommandHandler()
-            wallet = handler.handle(command)
+            ))
             payload = WalletHttpPresenter.present_one(wallet)
 
+            logger.info("WalletViewSet: Successfully replaced wallet (ID: %s)", pk)
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -182,6 +201,7 @@ class WalletViewSet(viewsets.ViewSet):
                 resource_id=f"{pk}"
             ))
 
+            logger.error("WalletViewSet: Error replacing wallet ID %s: %s", pk, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -189,7 +209,12 @@ class WalletViewSet(viewsets.ViewSet):
         summary="Update a wallet",
         description="Update specific fields of an existing wallet.",
         parameters=[
-            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Wallet ID")
+            OpenApiParameter(
+                'id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Wallet ID"
+            )
         ],
         request=UpdateWalletRequestSerializer,
         responses={
@@ -198,6 +223,7 @@ class WalletViewSet(viewsets.ViewSet):
         }
     )
     def partial_update(self, request, pk=None):
+        logger.info("WalletViewSet: Received PATCH request to update wallet ID: %s (User ID: %s)", pk, request.user.id)
         serializer = UpdateWalletRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -205,19 +231,18 @@ class WalletViewSet(viewsets.ViewSet):
             validated = serializer.validated_data
             balance = validated.get("balance")
 
-            command = UpdateExistingWalletCommand(
+            handler = UpdateExistingWalletCommandHandler()
+            wallet = handler.handle(UpdateExistingWalletCommand(
                 user_id=request.user.id,
                 wallet_id=pk,
                 name=validated.get("name"),
                 credit=validated.get("credit"),
                 balance_amount=balance.get("amount") if balance else None,
                 currency=balance.get("currency") if balance else None,
-            )
-
-            handler = UpdateExistingWalletCommandHandler()
-            wallet = handler.handle(command)
+            ))
             payload = WalletHttpPresenter.present_one(wallet)
 
+            logger.info("WalletViewSet: Successfully updated wallet (ID: %s)", pk)
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -225,6 +250,7 @@ class WalletViewSet(viewsets.ViewSet):
                 resource_id=f"{pk}"
             ))
 
+            logger.error("WalletViewSet: Error updating wallet ID %s: %s", pk, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -232,7 +258,12 @@ class WalletViewSet(viewsets.ViewSet):
         summary="Delete a wallet",
         description="Soft delete a specific wallet.",
         parameters=[
-            OpenApiParameter('id', type=OpenApiTypes.UUID, location=OpenApiParameter.PATH, description="Wallet ID")
+            OpenApiParameter(
+                'id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="Wallet ID"
+            )
         ],
         responses={
             200: MessageResponseSerializer,
@@ -241,18 +272,19 @@ class WalletViewSet(viewsets.ViewSet):
     )
     def destroy(self, request, pk=None):
         try:
-            command = SoftDeleteWalletCommand(
-                user_id=request.user.id,
-                wallet_id=pk,
-            )
+            logger.info("WalletViewSet: Received DELETE request for wallet ID: %s (User ID: %s)", pk, request.user.id)
 
             handler = SoftDeleteWalletCommandHandler()
-            wallet = handler.handle(command)
+            wallet = handler.handle(SoftDeleteWalletCommand(
+                user_id=request.user.id,
+                wallet_id=pk,
+            ))
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Deleted wallet with ID {wallet.id}",
                 resource_id=f"{wallet.id}"
             ))
 
+            logger.info("WalletViewSet: Successfully deleted wallet (ID: %s)", pk)
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -260,6 +292,7 @@ class WalletViewSet(viewsets.ViewSet):
                 resource_id=f"{pk}"
             ))
 
+            logger.error("WalletViewSet: Error deleting wallet ID %s: %s", pk, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -276,22 +309,23 @@ class WalletViewSet(viewsets.ViewSet):
     )
     @action(detail=False, methods=["post"], url_path="search")
     def search_filtered_wallets(self, request):
+        logger.info("WalletViewSet: Received POST request for filtered wallets search (User ID: %s)", request.user.id)
         serializer = FilterWalletsRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
             validated_data = serializer.validated_data
-            query = ListFilteredWalletsQuery(
+            handler = ListFilteredWalletsQueryHandler()
+            filtered_wallets = handler.handle(ListFilteredWalletsQuery(
                 user_id=request.user.id,
                 filter_body=validated_data.get("filter_body"),
-            )
-            handler = ListFilteredWalletsQueryHandler()
-            filtered_wallets = handler.handle(query)
+            ))
 
             paginator = self.pagination_class()
             paginated_response = paginator.paginate_queryset(filtered_wallets, request, view=self)
             payload = WalletHttpPresenter.present_many(paginated_response)
 
+            logger.info("WalletViewSet: Successfully searched filtered wallets for User ID: %s", request.user.id)
             return paginator.get_paginated_response(payload)
         except FilterParseError as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -299,6 +333,7 @@ class WalletViewSet(viewsets.ViewSet):
                 resource_id=None
             ))
 
+            logger.error("WalletViewSet: Filter parse error for User ID: %s - %s", request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -306,4 +341,5 @@ class WalletViewSet(viewsets.ViewSet):
                 resource_id=None
             ))
 
+            logger.error("WalletViewSet: Error searching filtered wallets for User ID: %s - %s", request.user.id, str(e))
             return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

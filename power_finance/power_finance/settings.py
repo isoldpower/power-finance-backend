@@ -1,5 +1,8 @@
+import os
+import sys
 from pathlib import Path
 import environ
+import logging
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -13,9 +16,12 @@ env = environ.Env(
     DATABASE_HOST=(str, 'localhost'),
     DATABASE_PORT=(str, '5433'),
     DATABASE_USER=(str, 'postgres'),
+    RABBIT_MQ_USER=(str, 'guest'),
+    RABBIT_MQ_PASSWORD=(str, 'guest'),
     CLERK_CACHE_KEY=(str, 'clerk_cache'),
     API_VERSION=(str, 'v1'),
 )
+
 env.read_env(ENV_FILE)
 
 # List all environment variables
@@ -40,6 +46,45 @@ RESOLVED_ENV = {
 SECRET_KEY = RESOLVED_ENV['SECRET_KEY']
 DEBUG = RESOLVED_ENV['DEBUG']
 ALLOWED_HOSTS = ['*']
+
+# Logger configuration
+# Detect if we are running in a Celery process (worker or beat)
+IS_CELERY_PROCESS = any(arg in sys.argv for arg in ['celery', 'worker', 'beat'])
+
+LOGS_DIR = ROOT_DIR / 'logs'
+LOGS_DIR.mkdir(parents=True, exist_ok=True)  # Create logs dir if it doesn't exist
+
+DEBUG_LOG_PATH = str(LOGS_DIR / 'debug.log')
+CELERY_LOG_PATH = str(LOGS_DIR / 'celery-debug.log')
+
+# Select the primary file handler based on the process type
+# If it's a celery process, everything goes to celery-debug.log
+MAIN_FILE_PATH = CELERY_LOG_PATH if IS_CELERY_PROCESS else DEBUG_LOG_PATH
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': { 'format': '{levelname} {asctime} {module} {message}', 'style': '{' },
+    },
+    'handlers': {
+        'console': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'verbose'},
+        'file': {
+            'level': 'INFO', 
+            'class': 'logging.FileHandler', 
+            'filename': MAIN_FILE_PATH, 
+            'formatter': 'verbose',
+            'delay': True
+        },
+    },
+    'loggers': {
+        '': {'handlers': ['console', 'file'], 'level': 'INFO', 'propagate': True},
+        RESOLVED_ENV['APP_NAME']: {'handlers': ['console', 'file'], 'level': 'DEBUG', 'propagate': False},
+        'finances': {'handlers': ['console', 'file'], 'level': 'DEBUG', 'propagate': False},
+        'identity': {'handlers': ['console', 'file'], 'level': 'DEBUG', 'propagate': False},
+        'celery': {'handlers': ['console', 'file'], 'level': 'DEBUG', 'propagate': False},
+    },
+}
 
 # Application definition
 INSTALLED_APPS = [

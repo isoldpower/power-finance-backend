@@ -1,3 +1,4 @@
+import logging
 from django.http import StreamingHttpResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -33,6 +34,8 @@ from ..serializers import (
 )
 from ..pagination import StandardResultsPagination
 
+logger = logging.getLogger(__name__)
+
 
 class NotificationViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -48,6 +51,7 @@ class NotificationViewSet(viewsets.ViewSet):
         }
     )
     def list(self, request):
+        logger.info("NotificationViewSet: Received request to list notifications for User ID: %s", request.user.id)
         try:
             handler = ListNotificationsQueryHandler()
             notifications = handler.handle(ListNotificationsQuery(
@@ -58,6 +62,7 @@ class NotificationViewSet(viewsets.ViewSet):
             queryset_page = paginator.paginate_queryset(notifications, request)
             payload = NotificationHttpPresenter.present_many(queryset_page)
 
+            logger.info("NotificationViewSet: Successfully listed %d notifications for User ID: %s", len(queryset_page) if queryset_page else 0, request.user.id)
             return paginator.get_paginated_response(payload)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
@@ -65,6 +70,7 @@ class NotificationViewSet(viewsets.ViewSet):
                 resource_id=None
             ))
 
+            logger.error("NotificationViewSet: Failed to list notifications for User ID: %s - %s", request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -89,6 +95,7 @@ class NotificationViewSet(viewsets.ViewSet):
     )
     @action(detail=False, methods=["post"], url_path="(?P<notification_id>[^/.]+)/ack")
     def acknowledge(self, request, notification_id=None):
+        logger.info("NotificationViewSet: Received request to acknowledge Notification ID: %s for User ID: %s", notification_id, request.user.id)
         try:
             handler = AcknowledgeNotificationCommandHandler()
             notification = handler.handle(AcknowledgeNotificationCommand(
@@ -101,20 +108,26 @@ class NotificationViewSet(viewsets.ViewSet):
                 resource_id=f"{notification.id}"
             ))
 
+            logger.info("NotificationViewSet: Successfully acknowledged Notification ID: %s for User ID: %s", notification_id, request.user.id)
             return Response(payload, status=status.HTTP_200_OK)
         except PermissionError as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=str(e),
                 resource_id=None
             ))
+
+            logger.error("NotificationViewSet: Permission denied acknowledging Notification ID: %s for User ID: %s - %s", notification_id, request.user.id, str(e))
             return Response(payload, status=status.HTTP_403_FORBIDDEN)
         except ValueError as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=str(e),
                 resource_id=None
             ))
+
+            logger.error("NotificationViewSet: Notification ID: %s not found for User ID: %s - %s", notification_id, request.user.id, str(e))
             return Response(payload, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
+            logger.error("NotificationViewSet: Failed to acknowledge Notification ID: %s for User ID: %s - %s", notification_id, request.user.id, str(e))
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to acknowledge notification: {e}",
                 resource_id=None
@@ -134,6 +147,7 @@ class NotificationViewSet(viewsets.ViewSet):
     )
     @action(detail=False, methods=["post"], url_path="ack")
     def batch_acknowledge(self, request):
+        logger.info("NotificationViewSet: Received request to batch acknowledge notifications for User ID: %s", request.user.id)
         serializer = BatchAcknowledgeRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -150,12 +164,15 @@ class NotificationViewSet(viewsets.ViewSet):
                 resource_id=None
             ))
 
+            logger.info("NotificationViewSet: Successfully batch acknowledged %d notifications for User ID: %s", len(marked_read), request.user.id)
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(
                 message=f"Failed to batch acknowledge notifications: {e}",
                 resource_id=None
             ))
+
+            logger.error("NotificationViewSet: Failed to batch acknowledge notifications for User ID: %s - %s", request.user.id, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -168,6 +185,7 @@ class NotificationViewSet(viewsets.ViewSet):
 )
 @async_with_auth(authenticator=ClerkJWTAuthentication())
 async def notification_stream(request):
+    logger.info("notification_stream: User ID %s is opening an SSE notification stream", request.user.id)
     handler = OpenNotificationsConnectionHandler(notification_broker=application.broker)
     response = StreamingHttpResponse(
         handler.handle(OpenNotificationsConnection(
@@ -179,4 +197,5 @@ async def notification_stream(request):
     response["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response["X-Accel-Buffering"] = "no"
 
+    logger.info("notification_stream: Successfully opened SSE notification stream for User ID %s", request.user.id)
     return response

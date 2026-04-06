@@ -1,3 +1,4 @@
+import logging
 from finances.domain.entities import WebhookType
 from finances.domain.events import TransactionCreatedEvent
 from finances.infrastructure.integrations import WebhookDispatcher
@@ -11,6 +12,9 @@ from ..interfaces import (
     EventBus,
     WebhookPayloadRepository,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class TransactionCreatedWebhookHandler(EventWebhookHandler):
@@ -41,6 +45,7 @@ class TransactionCreatedWebhookHandler(EventWebhookHandler):
         self._payload_factory = payload_factory
 
     def __call__(self, event: TransactionCreatedEvent) -> None:
+        logger.info("TransactionCreatedWebhookHandler: Received TransactionCreatedEvent (Event ID: %s)", event.event_id)
         transaction_wallet = self._wallet_repository.get_wallet_by_id(
             event.sender.wallet_id
             if event.sender else event.receiver.wallet_id
