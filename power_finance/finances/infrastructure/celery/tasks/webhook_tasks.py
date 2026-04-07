@@ -19,7 +19,7 @@ def attempt_webhook_delivery(
 
     try:
         webhook = registry.webhook_repository.get_webhook_by_id(webhook_id=UUID(webhook_id))
-        handler.handle(webhook=webhook, delivery_id=delivery_id)
+        handler.handle(webhook=webhook, delivery_id=UUID(delivery_id))
         logger.info("Task [finances.attempt_webhook_delivery]: Successfully processed Delivery: %s", delivery_id)
     except Exception as exc:
         logger.error("Task [finances.attempt_webhook_delivery]: Error occurred for Delivery: %s - %s", delivery_id, str(exc))

@@ -126,6 +126,6 @@ class ListFilteredTransactionsQueryHandler:
 
             return [transaction_to_plain_dto(transaction) for transaction in filtered_transactions]
         except FilterParseError as exception:
-            raise AttributeError() from exception
+            raise exception
         except Exception as exception:
             raise InternalError() from exception

@@ -45,7 +45,7 @@ class EventWebhookHandler:
 
         request_stamp = self._dispatcher.get_request_data(
             webhook=webhook,
-            event_type=self._event_type,
+            event_type=self._event_type.value,
             payload=request_body
         )
         delivery = self._delivery_repository.create_delivery(CreateWebhookDeliveryData(

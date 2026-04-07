@@ -17,7 +17,6 @@ class CreateTransactionRequestSerializer(serializers.Serializer):
 class UpdateTransactionRequestSerializer(serializers.Serializer):
     description = serializers.CharField(required=False)
     category = serializers.CharField(required=False)
-    type = serializers.CharField(required=False)
 
 
 class FilterTransactionsRequestSerializer(serializers.Serializer):

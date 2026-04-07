@@ -25,7 +25,7 @@ class DjangoWebhookDeliveryRepository(WebhookDeliveryRepository):
         delivery = WebhookDeliveryModel.objects.get(
             endpoint_id=webhook_id,
             event_id=event_id,
-            user_id=user_id,
+            endpoint__user_id=user_id,
         )
 
         return WebhookDeliveryMapper.delivery_to_dto(delivery)

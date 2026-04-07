@@ -29,10 +29,10 @@ class WebhookEndpointModel(models.Model):
 
 
 class WebhookDeliveryStatusChoices(models.TextChoices):
-    IN_PROGRESS = WebhookDeliveryStatus.IN_PROGRESS, "Initiated"
-    RETRY_SCHEDULED = WebhookDeliveryStatus.RETRY_SCHEDULED, "Retry Scheduled"
-    DELIVERED = WebhookDeliveryStatus.SUCCESS, "Delivered"
-    FAILED_PERMANENTLY = WebhookDeliveryStatus.FAILED, "Failed Permanently"
+    IN_PROGRESS = WebhookDeliveryStatus.IN_PROGRESS.value, "Initiated"
+    RETRY_SCHEDULED = WebhookDeliveryStatus.RETRY_SCHEDULED.value, "Retry Scheduled"
+    DELIVERED = WebhookDeliveryStatus.SUCCESS.value, "Delivered"
+    FAILED_PERMANENTLY = WebhookDeliveryStatus.FAILED.value, "Failed Permanently"
 
 
 class WebhookDeliveryModel(models.Model):

@@ -1,3 +1,4 @@
+import logging
 from functools import wraps
 from http import HTTPStatus
 from typing import Callable, ParamSpec, TypeVar
@@ -5,9 +6,12 @@ from typing import Callable, ParamSpec, TypeVar
 from asgiref.sync import sync_to_async
 from django.http import HttpResponse
 from rest_framework.authentication import BaseAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.request import Request
 
 from identity.presentation.jwt_authentication import ClerkJWTAuthentication
+
+logger = logging.getLogger(__name__)
 
 
 P = ParamSpec("P")
@@ -27,8 +31,9 @@ def async_with_auth(
                     request.user = user
                 else:
                     return HttpResponse("Received unauthorized request.", status=HTTPStatus.UNAUTHORIZED)
-            except Exception as e:
-                return HttpResponse(f"Authorization error: {e}", status=HTTPStatus.UNAUTHORIZED)
+            except AuthenticationFailed as e:
+                logger.warning(e)
+                return HttpResponse(f"Authorization error occurred on endpoint", status=HTTPStatus.UNAUTHORIZED)
 
             return await function(request, *args, **kwargs)
         return wrapped

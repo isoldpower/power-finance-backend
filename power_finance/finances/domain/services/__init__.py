@@ -11,7 +11,6 @@ __all__ = [
     'apply_transaction_to_wallet_balance',
     'rollback_transaction_from_wallet_balance',
     'resolve_filter_query',
-    'listen_notifications',
     'get_latest_message',
     'format_sse',
 ]

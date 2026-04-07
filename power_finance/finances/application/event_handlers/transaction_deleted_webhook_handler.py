@@ -53,6 +53,6 @@ class TransactionDeletedWebhookHandler(EventWebhookHandler):
             request_body = self._payload_factory.from_transaction_deleted(event)
             self.handle_dispatch_webhook_delivery(
                 webhook=webhook,
-                event=event,
+                event_id=event.event_id,
                 request_body=request_body,
             )
