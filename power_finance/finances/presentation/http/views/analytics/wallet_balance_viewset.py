@@ -40,7 +40,7 @@ class WalletBalanceHistoryView(viewsets.ViewSet):
             404: serializers.Serializer
         }
     )
-    def retrieve(self, request: Request, pk=None) -> Response:
+    def summary(self, request: Request, pk=None) -> Response:
         try:
             result = self.query_handler.handle(GetWalletBalanceHistoryQuery(
                 user_id=request.user.id,

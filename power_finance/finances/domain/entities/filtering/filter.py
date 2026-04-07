@@ -35,7 +35,7 @@ class FieldFilter:
 @dataclass(frozen=True)
 class FilterGroup:
     operator: GroupOperator
-    fields: list[Union[FieldFilter, FilterGroup]]
+    fields: list[Union[FieldFilter, 'FilterGroup']]
 
 
 @dataclass(frozen=True)

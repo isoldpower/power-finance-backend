@@ -1,13 +1,12 @@
 from dataclasses import dataclass
 from typing import Optional
 from uuid import UUID
-from django.db import transaction
 
-from finances.infrastructure.repositories import DjangoTransactionRepository
 from finances.domain.entities import ExpenseCategory
 
-from ..decorators import handle_evently_command
+from ..decorators import atomic_evently_command
 from ..use_case_base import UseCaseEvently
+from ...bootstrap import get_repository_registry
 from ...dto_builders import transaction_to_dto
 from ...dtos import TransactionDTO
 from ...interfaces import TransactionRepository
@@ -29,11 +28,11 @@ class UpdateTransactionCommandHandler(UseCaseEvently):
         transaction_repository: TransactionRepository | None = None,
     ):
         super().__init__()
+        registry = get_repository_registry()
 
-        self._transaction_repository = transaction_repository or DjangoTransactionRepository()
+        self._transaction_repository = transaction_repository or registry.transaction_repository
 
-    @handle_evently_command
-    @transaction.atomic
+    @atomic_evently_command()
     def handle(self, command: UpdateTransactionCommand) -> TransactionDTO:
         current_transaction = self._transaction_repository.get_user_transaction_by_id(
             command.user_id,

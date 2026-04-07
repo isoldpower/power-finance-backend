@@ -1,7 +1,7 @@
+import logging
 from dataclasses import dataclass
 
-from finances.infrastructure.repositories import DjangoTransactionRepository
-
+from ...bootstrap import get_repository_registry
 from ...dto_builders import transaction_to_plain_dto
 from ...dtos import TransactionPlainDTO
 from ...interfaces import TransactionRepository
@@ -12,6 +12,9 @@ class ListTransactionsQuery:
     user_id: int
 
 
+logger = logging.getLogger(__name__)
+
+
 class ListTransactionsQueryHandler:
     transaction_repository: TransactionRepository
 
@@ -19,9 +22,15 @@ class ListTransactionsQueryHandler:
         self,
         transaction_repository: TransactionRepository | None = None
     ) -> None:
-        self.transaction_repository = transaction_repository or DjangoTransactionRepository()
+        registry = get_repository_registry()
+        self.transaction_repository = transaction_repository or registry.transaction_repository
 
     def handle(self, query: ListTransactionsQuery) -> list[TransactionPlainDTO]:
-        transactions = self.transaction_repository.get_user_transactions(query.user_id)
+        logger.info("ListTransactionsQueryHandler: Handling ListTransactionsQuery for User ID: %s", query.user_id)
+        user_transactions = self.transaction_repository.get_user_transactions(query.user_id)
 
-        return [transaction_to_plain_dto(transaction) for transaction in transactions]
+        logger.info("ListTransactionsQueryHandler: Successfully retrieved %d transactions for User ID: %s", len(user_transactions), query.user_id)
+        return [
+            transaction_to_plain_dto(transaction)
+            for transaction in user_transactions
+        ]

@@ -43,11 +43,8 @@ class WebhookDispatcher:
     def dispatch_request(
             self,
             webhook: Webhook,
-            event_type: str,
-            payload: dict
+            request_stamp: RequestStamp,
     ) -> MessageResponse:
-        request_stamp = self.get_request_data(webhook, event_type, payload)
-
         return self._sender.send_message_with_body(
             url=webhook.url,
             request_body=request_stamp.request_body,

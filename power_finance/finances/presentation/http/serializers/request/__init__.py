@@ -17,6 +17,7 @@ from .webhooks_serializer import (
     UpdateWebhookRequestSerializer,
     CreateWebhookRequestSerializer,
 )
+from .notification_serializer import BatchAcknowledgeRequestSerializer
 
 __all__ = [
     'TransactionParticipantField',
@@ -32,5 +33,6 @@ __all__ = [
     'SubscribeWebhookToEventRequestSerializer',
     'UpdateWebhookRequestSerializer',
     'CreateWebhookRequestSerializer',
+    'BatchAcknowledgeRequestSerializer',
 ]
 

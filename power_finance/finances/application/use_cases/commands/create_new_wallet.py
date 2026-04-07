@@ -4,12 +4,11 @@ from uuid import uuid4
 from django.db import transaction
 from django.utils import timezone
 
-from finances.infrastructure.repositories import DjangoWalletRepository
-from finances.infrastructure.repositories import DjangoCurrencyRepository
 from finances.domain.entities import Wallet
 from finances.domain.exceptions import UnsupportedCurrencyError
 from finances.domain.value_objects import Money
 
+from ...bootstrap import get_repository_registry
 from ...dtos import WalletDTO
 from ...dto_builders import wallet_to_dto
 from ...interfaces import WalletRepository, CurrencyRepository
@@ -33,8 +32,9 @@ class CreateNewWalletCommandHandler:
         wallet_repository: WalletRepository | None = None,
         currency_repository: CurrencyRepository | None = None,
     ):
-        self.wallet_repository = wallet_repository or DjangoWalletRepository()
-        self.currency_repository = currency_repository or DjangoCurrencyRepository()
+        registry = get_repository_registry()
+        self.wallet_repository = wallet_repository or registry.wallet_repository
+        self.currency_repository = currency_repository or registry.currency_repository
 
     @transaction.atomic
     def handle(self, command: CreateNewWalletCommand) -> WalletDTO:

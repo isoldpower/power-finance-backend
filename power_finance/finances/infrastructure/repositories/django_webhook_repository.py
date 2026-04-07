@@ -113,11 +113,16 @@ class DjangoWebhookRepository(WebhookRepository):
 
         return [WebhookMapper.to_domain(webhook) for webhook in requested_webhooks]
 
-    def get_webhook_by_id(self, webhook_id: str, user_id: int) -> Webhook:
+    def get_user_webhook_by_id(self, webhook_id: str, user_id: int) -> Webhook:
         requested_webhook = WebhookEndpointModel.objects.get(
             user_id=user_id,
             id=webhook_id
         )
+
+        return WebhookMapper.to_domain(requested_webhook)
+
+    def get_webhook_by_id(self, webhook_id: UUID) -> Webhook:
+        requested_webhook = WebhookEndpointModel.objects.get(id=webhook_id)
 
         return WebhookMapper.to_domain(requested_webhook)
 

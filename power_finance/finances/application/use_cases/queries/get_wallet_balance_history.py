@@ -4,12 +4,7 @@ from uuid import UUID
 
 from django.core.exceptions import ObjectDoesNotExist
 
-from finances.infrastructure.selectors import (
-    DjangoTransactionSelectorsCollection,
-    DjangoWalletSelectorsCollection,
-)
-from finances.infrastructure.orm import WalletModel
-
+from ...bootstrap import get_repository_registry
 from ...interfaces import TransactionSelectorsCollection, WalletSelectorsCollection
 from ...dtos import WalletBalanceHistoryItemDTO, WalletBalanceHistoryResultDTO
 
@@ -29,8 +24,9 @@ class GetWalletBalanceHistoryQueryHandler:
         transaction_selectors: TransactionSelectorsCollection | None = None,
         wallet_selectors: WalletSelectorsCollection | None = None,
     ) -> None:
-        self.transaction_selectors = transaction_selectors or DjangoTransactionSelectorsCollection()
-        self.wallet_selectors = wallet_selectors or DjangoWalletSelectorsCollection()
+        registry = get_repository_registry()
+        self.transaction_selectors = transaction_selectors or registry.transaction_selectors
+        self.wallet_selectors = wallet_selectors or registry.wallet_selectors
 
     def _record_transaction_history(self, wallet_id: UUID, transaction_rows: list[dict[str, Any]]):
         balance = 0.0

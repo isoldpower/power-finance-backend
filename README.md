@@ -4,11 +4,15 @@ A robust financial management backend built with Django, utilizing Domain-Driven
 
 ## Features
 
-*   **Wallet Management**: Track multiple wallets and their balances.
-*   **Transaction Tracking**: Detailed history of income and expenditures.
+*   **Wallet Management**: Track multiple wallets and their balances with ledger-based integrity.
+*   **Transaction Tracking**: Detailed history of income and expenditures using double-entry principles.
 *   **Advanced Analytics**: Spending heatmaps, category breakdowns, and money flow analysis.
-*   **Secure Authentication**: Integrated with Clerk for JWT-based authentication.
-*   **Layered Architecture**: Clean separation between Domain, Application, and Infrastructure layers.
+*   **Webhooks Service**: Resilient event subscription system with token rotation and automated delivery retries.
+*   **Real-time Notifications**: Support for REST-based acknowledgments and Server-Sent Events (SSE) streaming.
+*   **Advanced Search**: High-performance filtering and search capabilities for all financial records.
+*   **Secure Authentication**: Integrated with Clerk for JWT-based authentication and profile synchronization.
+*   **Layered Architecture**: Clean separation between Domain, Application, and Infrastructure layers using DDD principles.
+*   **Interactive Documentation**: Comprehensive OpenAPI/Swagger UI for rapid API exploration and testing.
 
 ---
 
@@ -71,7 +75,13 @@ The project implements a **Layered Architecture** inspired by Domain-Driven Desi
 
 ### Current Implementation: HTTP REST API
 
-The backend currently exposes a RESTful API. All API endpoints require a valid Clerk JWT for authentication, excluding standard administrative interfaces.
+The backend currently exposes a RESTful API. All API endpoints require a valid Clerk JWT for authentication, excluding standard administrative interfaces and the documentation UI.
+
+#### Interactive API Documentation
+The project uses `drf-spectacular` to generate a comprehensive OpenAPI 3.0 schema. You can explore the API using the built-in Swagger UI:
+
+- **Swagger UI**: [http://localhost:8000/api/docs/](http://localhost:8000/api/docs/)
+- **Schema (Raw)**: [http://localhost:8000/api/schema/](http://localhost:8000/api/schema/)
 
 #### API Endpoints (v1)
 
@@ -79,8 +89,14 @@ The backend currently exposes a RESTful API. All API endpoints require a valid C
 | :--- | :--- | :--- | :--- |
 | **Wallets** | `/api/v1/wallets/` | `GET`, `POST` | List and create wallets |
 | | `/api/v1/wallets/{id}/` | `GET`, `PUT`, `PATCH`, `DELETE` | Manage specific wallet resources |
+| | `/api/v1/wallets/search/` | `POST` | Advanced filtering for wallets |
 | **Transactions** | `/api/v1/transactions/` | `GET`, `POST` | List and create transaction records |
 | | `/api/v1/transactions/{id}/` | `GET`, `PUT`, `PATCH`, `DELETE` | Manage specific transaction resources |
+| | `/api/v1/transactions/search/` | `POST` | Advanced filtering for ledger entries |
+| **Webhooks** | `/api/v1/webhooks/` | `GET`, `POST` | List and register outgoing webhooks |
+| | `/api/v1/webhooks/{id}/` | `GET`, `PUT`, `PATCH`, `DELETE` | Manage webhook settings and rotation |
+| **Notifications**| `/api/v1/notifications/` | `GET` | List user notifications |
+| | `/api/v1/notifications/ack/`| `POST` | Acknowledge individual or batch notifications |
 | **Analytics** | `/api/v1/analytics/categories/` | `GET` | Retrieve spending by category |
 | | `/api/v1/analytics/money-flow/` | `GET` | Analyze income vs. expense flow |
 | | `/api/v1/analytics/expenditure/` | `GET` | Detailed expenditure breakdown |
@@ -122,12 +138,58 @@ sequenceDiagram
     Backend-->>Client: API Response (JSON)
 ```
 
+### Asynchronous Event & Notification Delivery Flow
+
+The system uses an event-driven architecture to handle side effects like webhook deliveries and live notifications without blocking the main request-response cycle.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Backend
+    participant Database
+    participant Celery as Celery Worker
+    participant Webhook as External Webhook
+    participant Broker as Notification Broker
+    participant Stream as SSE Stream
+
+    Client->>Backend: API Request (e.g. Create Transaction)
+    Backend->>Database: Save Record
+    Backend->>Celery: Trigger Asynchronous Tasks
+    Backend-->>Client: HTTP 201 Created
+
+    rect rgb(240, 240, 240)
+        Note over Celery: Background Processing
+        Celery->>Webhook: POST Webhook Payload (External)
+        Webhook-->>Celery: HTTP 200 OK
+        Celery->>Broker: Push Event to User Channel (Internal)
+        Broker->>Stream: Forward Event
+        Stream-->>Client: SSE Event (Real-time Update)
+    end
+```
+
+---
+
+## Infrastructure and Observability
+
+The application is fully containerized and includes various background services to ensure system responsiveness:
+
+### Background Processing
+- **Celery & RabbitMQ**: Used for asynchronous event handling, such as delivering webhook payloads and processing periodic retries.
+- **Redis**: Acts as the Celery result backend and authentication cache for JWT tokens.
+
+### Persistent Logging
+Logs are centrally managed and persistent during development across container rebuilds:
+- **Location**: All logs are stored in the `logs/` directory in the project root.
+- **`debug.log`**: Captures logs from the main HTTP REST application.
+- **`celery-debug.log`**: Dedicated log for background worker and beat process activity.
+
+The system uses an intelligent, process-aware routing mechanism to separate logs based on the execution context.
+
 ---
 
 ## Roadmap and Future Enhancements
 
-*   **Swagger UI Integration**: Implementation of OpenAPI specifications for interactive API documentation and testing.
-*   **WebSockets**: Real-time event streaming for balance updates and transaction notifications.
-*   **Webhook Support**: Native handling for external system events (e.g., Clerk user events, payment notifications).
-*   **Ledger-based Accounting**: Transition to a double-entry ledger system for enhanced financial auditing and integrity.
-*   **Unified Business Logic Flow**: Further refinement of the interaction patterns between the REST interface and application services.
+*   **WebSockets**: Real-time event streaming for balance updates and transaction notifications initially via SSE, transitioning to full duplex sockets.
+*   **Performance Optimization**: Refining authentication caching and N+1 query elimination in analytics.
+*   **Advanced Data Visualization**: Integration of client-side visualization tool support for expenditures.
+*   **Automated Testing Expansion**: Building a comprehensive integration test suite for asynchronous events.

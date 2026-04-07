@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from finances.infrastructure.repositories import DjangoWalletRepository
-
+from ...bootstrap import get_repository_registry
 from ...dto_builders import wallet_to_dto
 from ...dtos import WalletDTO
 from ...interfaces import WalletRepository
@@ -21,7 +20,8 @@ class GetOwnedWalletQueryHandler:
         self,
         wallet_repository: WalletRepository | None = None,
     ):
-        self.wallet_repository = wallet_repository or DjangoWalletRepository()
+        registry = get_repository_registry()
+        self.wallet_repository = wallet_repository or registry.wallet_repository
 
     def handle(self, query: GetOwnedWalletQuery) -> WalletDTO:
         requested_wallet = self.wallet_repository.get_user_wallet_by_id(

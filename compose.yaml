@@ -16,6 +16,79 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD?Overriding the default database password is mandatory}
       POSTGRES_USER: ${DATABASE_USER:-postgres}
       PGDATA: /var/lib/postgresql/18/docker
+  redis:
+    image: redis:8.6-alpine
+    restart: unless-stopped
+    ports:
+      - ${REDIS_PORT:-6380}:6379
+    volumes:
+      - redis_data:/data
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD?Overriding the default redis password is mandatory}
+    command: /bin/sh -c 'redis-server --save 60 1 --loglevel warning --requirepass "$REDIS_PASSWORD"'
+  rabbitmq:
+    image: rabbitmq:4.0-management-alpine
+    restart: unless-stopped
+    ports:
+      - ${RABBIT_MQ_PORT:-5673}:5672
+      - ${RABBIT_MQ_MANAGEMENT_PORT:-15673}:15672
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBIT_MQ_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBIT_MQ_PASSWORD:-guest}
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  celery-worker:
+    build: .
+    restart: unless-stopped
+    working_dir: /app/power_finance
+    command: celery -A power_finance worker -l INFO
+    volumes:
+      - ./power_finance:/app/power_finance
+      - ./logs:/app/logs
+      - ./cache:/app/cache
+    env_file:
+      - .env
+    environment:
+      - CELERY_BROKER_URL=amqp://${RABBIT_MQ_USER:-guest}:${RABBIT_MQ_PASSWORD:-guest}@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - DATABASE_HOST=database
+      - DATABASE_PORT=5432
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      database:
+        condition: service_started
+  celery-beat:
+    build: .
+    restart: unless-stopped
+    working_dir: /app/power_finance
+    command: celery -A power_finance beat -l INFO
+    volumes:
+      - ./power_finance:/app/power_finance
+      - ./logs:/app/logs
+      - ./cache:/app/cache
+    env_file:
+      - .env
+    environment:
+      - CELERY_BROKER_URL=amqp://${RABBIT_MQ_USER:-guest}:${RABBIT_MQ_PASSWORD:-guest}@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - DATABASE_HOST=database
+      - DATABASE_PORT=5432
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      database:
+        condition: service_started
 
 volumes:
   database_data:
+  redis_data:

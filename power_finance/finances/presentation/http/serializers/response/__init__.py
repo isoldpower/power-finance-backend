@@ -29,6 +29,7 @@ from .webhooks_serializer import (
     WebhookSubscriptionResponseSerializer,
     WebhookWithSecretResponseSerializer,
 )
+from .notification_serializer import NotificationResponseSerializer
 
 __all__ = [
     'ExpenditureAnalyticsSerializer',
@@ -54,4 +55,5 @@ __all__ = [
     'WebhookSimpleResponseSerializer',
     'WebhookSubscriptionResponseSerializer',
     'WebhookWithSecretResponseSerializer',
+    'NotificationResponseSerializer',
 ]

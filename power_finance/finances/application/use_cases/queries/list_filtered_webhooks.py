@@ -1,4 +1,3 @@
-from uuid import UUID
 from dataclasses import dataclass
 from typing import Any
 
@@ -8,11 +7,12 @@ from finances.domain.entities import (
     FilterPolicy, 
     ResolvedFilterTree, 
     FilterFieldPolicy,
-    ComparisonOperator
+    ComparisonOperator,
+    TypeVariant,
 )
 from finances.domain.services import resolve_filter_query
-from finances.infrastructure.repositories import DjangoWebhookRepository
 
+from ...bootstrap import get_repository_registry
 from ...dto_builders import webhook_to_dto
 from ...dtos import WebhookDTO
 from ...interfaces import WebhookRepository
@@ -31,7 +31,7 @@ class ListFilteredWebhooksQueryHandler:
             request_name="id",
             model_lookup="id",
             allowed_operators={ComparisonOperator.Equal},
-            value_type=UUID,
+            value_type=TypeVariant.UUID,
         ),
         "title": FilterFieldPolicy(
             request_name="title",
@@ -41,7 +41,7 @@ class ListFilteredWebhooksQueryHandler:
                 ComparisonOperator.Contains,
                 ComparisonOperator.IContains,
             },
-            value_type=str,
+            value_type=TypeVariant.STRING,
         ),
         "url": FilterFieldPolicy(
             request_name="url",
@@ -51,13 +51,13 @@ class ListFilteredWebhooksQueryHandler:
                 ComparisonOperator.Contains,
                 ComparisonOperator.IContains,
             },
-            value_type=str,
+            value_type=TypeVariant.STRING,
         ),
         "is_active": FilterFieldPolicy(
             request_name="is_active",
             model_lookup="is_active",
             allowed_operators={ComparisonOperator.Equal},
-            value_type=bool,
+            value_type=TypeVariant.BOOLEAN,
         ),
         "created_at": FilterFieldPolicy(
             request_name="created_at",
@@ -69,7 +69,7 @@ class ListFilteredWebhooksQueryHandler:
                 ComparisonOperator.Greater,
                 ComparisonOperator.Less,
             },
-            value_type=str,
+            value_type=TypeVariant.DATETIME,
         ),
     }
 
@@ -77,7 +77,8 @@ class ListFilteredWebhooksQueryHandler:
             self,
             webhooks_repository: WebhookRepository | None = None,
     ) -> None:
-        self.webhooks_repository = webhooks_repository or DjangoWebhookRepository()
+        registry = get_repository_registry()
+        self.webhooks_repository = webhooks_repository or registry.webhook_repository
 
     def handle(self, request: ListFilteredWebhooksQuery) -> list[WebhookDTO]:
         try:

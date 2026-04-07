@@ -16,5 +16,5 @@ class UseCaseEvently(UseCaseBase):
         self.event_collector = EventCollector()
 
     @abstractmethod
-    def handle(self):
+    def handle(self, *args, **kwargs) -> None:
         raise NotImplementedError()

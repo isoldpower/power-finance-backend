@@ -1,7 +1,25 @@
-from .urls import core_router, analytics_router, analytics_urls
+from .views import (
+    WalletViewSet,
+    TransactionViewSet,
+    WebhooksViewSet,
+    CategoriesAnalyticsView,
+    MoneyFlowAnalyticsView,
+    ExpenditureAnalyticsView,
+    WalletBalanceHistoryView,
+    SpendingHeatmapView,
+    NotificationViewSet,
+    notification_stream,
+)
 
 __all__ = [
-    'core_router',
-    'analytics_router',
-    'analytics_urls'
+    'WalletViewSet',
+    'TransactionViewSet',
+    'WebhooksViewSet',
+    'CategoriesAnalyticsView',
+    'MoneyFlowAnalyticsView',
+    'ExpenditureAnalyticsView',
+    'WalletBalanceHistoryView',
+    'SpendingHeatmapView',
+    'NotificationViewSet',
+    'notification_stream',
 ]

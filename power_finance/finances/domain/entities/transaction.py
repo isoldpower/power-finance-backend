@@ -49,11 +49,11 @@ class Transaction:
     ):
         if not sender and not receiver:
             raise ValueError('Transaction must have either sender or receiver. Got both undefined instead.')
-        elif type is TransactionType.TRANSFER and not (sender and receiver):
+        elif type == TransactionType.TRANSFER.value and not (sender and receiver):
             raise ValueError('Transaction with type set to TRANSFER should have both sender and receiver specified.')
-        elif type is TransactionType.EXPENSE and not sender:
+        elif type == TransactionType.EXPENSE.value and not sender:
             raise ValueError('EXPENSE Transactions must have a sender specified.')
-        elif type is TransactionType.INCOME and not receiver:
+        elif type == TransactionType.INCOME.value and not receiver:
             raise ValueError('INCOME Transactions must have a receiver specified.')
 
     @classmethod

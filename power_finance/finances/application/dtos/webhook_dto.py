@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
+from finances.domain.events import WebhookDeliveryStatus
+
 
 @dataclass
 class WebhookDTO:
@@ -31,7 +33,7 @@ class WebhookDeliveryAttemptDTO:
 @dataclass
 class WebhookDeliveryDTO:
     id: UUID
-    status: str
+    status: WebhookDeliveryStatus
     endpoint_id: UUID
     event_id: UUID
     updated_at: Optional[datetime]

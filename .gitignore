@@ -5,6 +5,8 @@ __pycache__/
 
 # Environments
 .env
+.env.local
+.env.docker
 .venv
 env/
 venv/
@@ -17,6 +19,7 @@ ENV/
 db.sqlite3
 media/
 static/
+cache/**/*
 
 # IDE-specific files (Example for VS Code and PyCharm)
 .vscode/

@@ -1,5 +1,8 @@
+import os
+import sys
 from pathlib import Path
 import environ
+import logging
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -8,18 +11,26 @@ ENV_FILE = str(ROOT_DIR.joinpath('.env'))
 
 # Define defaults for environment variables
 env = environ.Env(
+    APP_NAME=(str, 'power_finance'),
     DEBUG=(bool, True),
+    DATABASE_HOST=(str, 'localhost'),
     DATABASE_PORT=(str, '5433'),
     DATABASE_USER=(str, 'postgres'),
+    RABBIT_MQ_USER=(str, 'guest'),
+    RABBIT_MQ_PASSWORD=(str, 'guest'),
     CLERK_CACHE_KEY=(str, 'clerk_cache'),
     API_VERSION=(str, 'v1'),
+    CELERY_BEAT_SCHEDULE_FILENAME=(str, 'cache/celerybeat-schedule'),
 )
+
 env.read_env(ENV_FILE)
 
 # List all environment variables
 RESOLVED_ENV = {
+    'APP_NAME': env('APP_NAME'),
     'DEBUG': env('DEBUG'),
     'DATABASE_PASSWORD': env('DATABASE_PASSWORD'),
+    'DATABASE_HOST': env('DATABASE_HOST'),
     'DATABASE_PORT': env('DATABASE_PORT'),
     'DATABASE_USER': env('DATABASE_USER'),
     'SECRET_KEY': env('SECRET_KEY'),
@@ -27,12 +38,57 @@ RESOLVED_ENV = {
     'CLERK_API_URL': env('CLERK_API_URL'),
     'CLERK_CACHE_KEY': env('CLERK_CACHE_KEY'),
     'API_VERSION': env('API_VERSION'),
+    'REDIS_URL': env('REDIS_URL'),
+    'CELERY_BROKER_URL': env('CELERY_BROKER_URL'),
+    'CELERY_RESULT_BACKEND': env('CELERY_RESULT_BACKEND'),
+    'CELERY_BEAT_SCHEDULE_FILENAME': str(ROOT_DIR.joinpath(env('CELERY_BEAT_SCHEDULE_FILENAME'))),
 }
 
 # Project configuration settings
 SECRET_KEY = RESOLVED_ENV['SECRET_KEY']
 DEBUG = RESOLVED_ENV['DEBUG']
 ALLOWED_HOSTS = ['*']
+
+# Detect if we are running in a Celery process (worker or beat)
+IS_CELERY_PROCESS = any(arg in sys.argv for arg in ['celery', 'worker', 'beat'])
+LOGS_DIR = ROOT_DIR / 'logs'
+LOGS_DIR.mkdir(parents=True, exist_ok=True)  # Create logs dir if it doesn't exist
+
+CACHE_DIR = ROOT_DIR / 'cache'
+CACHE_DIR.mkdir(parents=True, exist_ok=True)  # Create cache dir if it doesn't exist
+
+DEBUG_LOG_PATH = str(LOGS_DIR / 'debug.log')
+CELERY_LOG_PATH = str(LOGS_DIR / 'celery-debug.log')
+
+# If it's a celery process, everything goes to celery-debug.log
+MAIN_FILE_PATH = CELERY_LOG_PATH if IS_CELERY_PROCESS else DEBUG_LOG_PATH
+
+CELERY_BEAT_SCHEDULE_FILENAME = RESOLVED_ENV['CELERY_BEAT_SCHEDULE_FILENAME']
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': { 'format': '{levelname} {asctime} {module} {message}', 'style': '{' },
+    },
+    'handlers': {
+        'console': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'verbose'},
+        'file': {
+            'level': 'INFO', 
+            'class': 'logging.FileHandler', 
+            'filename': MAIN_FILE_PATH, 
+            'formatter': 'verbose',
+            'delay': True
+        },
+    },
+    'loggers': {
+        '': {'handlers': ['console', 'file'], 'level': 'INFO', 'propagate': True},
+        RESOLVED_ENV['APP_NAME']: {'handlers': ['console', 'file'], 'level': 'DEBUG', 'propagate': False},
+        'finances': {'handlers': ['console', 'file'], 'level': 'DEBUG', 'propagate': False},
+        'identity': {'handlers': ['console', 'file'], 'level': 'DEBUG', 'propagate': False},
+        'celery': {'handlers': ['console', 'file'], 'level': 'DEBUG', 'propagate': False},
+    },
+}
 
 # Application definition
 INSTALLED_APPS = [
@@ -147,7 +203,7 @@ DATABASES = {
         'NAME': RESOLVED_ENV['DATABASE_USER'],
         'USER': RESOLVED_ENV['DATABASE_USER'],
         'PASSWORD': RESOLVED_ENV['DATABASE_PASSWORD'],
-        'HOST': 'localhost',
+        'HOST': RESOLVED_ENV['DATABASE_HOST'],
         'PORT': RESOLVED_ENV['DATABASE_PORT'],
         'OPTIONS': {
             'pool': True

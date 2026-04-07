@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
-from finances.infrastructure.selectors import DjangoTransactionSelectorsCollection
-
+from ...bootstrap import get_repository_registry
 from ...interfaces import TransactionSelectorsCollection
 from ...dtos import CategoryAnalyticsItemDTO, CategoryAnalyticsResultDTO
 
@@ -18,7 +17,8 @@ class GetCategoriesAnalyticsQueryHandler:
         self,
         categories_selector: TransactionSelectorsCollection | None = None
     ) -> None:
-        self.categories_selector = categories_selector or DjangoTransactionSelectorsCollection()
+        registry = get_repository_registry()
+        self.categories_selector = categories_selector or registry.transaction_selectors
 
     def handle(self, query: GetCategoriesAnalyticsQuery) -> CategoryAnalyticsResultDTO:
         rows = self.categories_selector.get_expenses_by_category(user_id=query.user_id)

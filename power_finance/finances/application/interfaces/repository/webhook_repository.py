@@ -23,7 +23,11 @@ class WebhookRepository(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_webhook_by_id(self, webhook_id: UUID, user_id: int) -> Webhook:
+    def get_user_webhook_by_id(self, webhook_id: UUID, user_id: int) -> Webhook:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_webhook_by_id(self, webhook_id: UUID) -> Webhook:
         raise NotImplementedError()
 
     @abstractmethod

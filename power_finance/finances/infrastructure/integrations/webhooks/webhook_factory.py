@@ -1,9 +1,10 @@
 from finances.application.interfaces import EventPayloadFactory
+from finances.domain.entities import WebhookType
 
 from finances.domain.events import (
     TransactionCreatedEvent,
     TransactionUpdatedEvent,
-    TransactionDeletedEvent,
+    TransactionDeletedEvent, WebhookDeliveryStatusChangedEvent,
 )
 
 
@@ -11,7 +12,7 @@ class WebhookPayloadFactory(EventPayloadFactory):
     def from_transaction_created(self, event: TransactionCreatedEvent) -> dict:
         return {
             "id": str(event.event_id),
-            "type": "transaction.created",
+            "type": WebhookType.TransactionCreate,
             "occurred_at": event.occurred_at.isoformat(),
             "data": {
                 "description": event.description,
@@ -44,7 +45,7 @@ class WebhookPayloadFactory(EventPayloadFactory):
 
         return {
             "id": str(event.event_id),
-            "type": "transaction.updated",
+            "type": WebhookType.TransactionUpdate,
             "occurred_at": event.occurred_at.isoformat(),
             "data": {
                 "previous_data": get_transaction_state(event.old_transaction),
@@ -57,7 +58,7 @@ class WebhookPayloadFactory(EventPayloadFactory):
     def from_transaction_deleted(self, event: TransactionDeletedEvent) -> dict:
         return {
             "id": str(event.event_id),
-            "type": "transaction.deleted",
+            "type": WebhookType.TransactionDelete,
             "occurred_at": event.occurred_at.isoformat(),
             "data": {
                 "description": event.description,
@@ -71,4 +72,13 @@ class WebhookPayloadFactory(EventPayloadFactory):
                     "currency": str(event.receiver.currency_code)
                 } if event.receiver else None,
             }
+        }
+
+    def from_delivery_status_changed(self, event: WebhookDeliveryStatusChangedEvent) -> dict:
+        return {
+            "event_id": str(event.event_id),
+            "delivery_id": str(event.delivery_id),
+            "endpoint_id": str(event.endpoint_id),
+            "status": event.status,
+            "event_type": "notification.delivery.status_changed",
         }

@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
-from finances.infrastructure.selectors import DjangoTransactionSelectorsCollection
-
+from ...bootstrap import get_repository_registry
 from ...interfaces import TransactionSelectorsCollection
 from ...dtos import ExpenditureAnalyticsResultDTO
 
@@ -18,7 +17,8 @@ class GetExpenditureAnalyticsQueryHandler:
         self,
         selector: TransactionSelectorsCollection | None = None
     ) -> None:
-        self.transaction_selector = selector or DjangoTransactionSelectorsCollection()
+        registry = get_repository_registry()
+        self.transaction_selector = selector or registry.transaction_selectors
 
     def handle(self, query: GetExpenditureAnalyticsQuery) -> ExpenditureAnalyticsResultDTO:
         rows = self.transaction_selector.get_monthly_expenditure_and_income(

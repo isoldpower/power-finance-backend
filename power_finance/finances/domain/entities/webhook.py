@@ -31,7 +31,7 @@ class Webhook:
         return secrets.token_urlsafe(32)
 
     @classmethod
-    def create(cls, data: WebhookCreateData) -> Webhook:
+    def create(cls, data: WebhookCreateData) -> 'Webhook':
         title = data.title.strip()
         url = data.url.strip()
         timestamp = timezone.now()

@@ -77,22 +77,9 @@ class FilterLeafNodeBuilder(LeafNodeBuilder):
             return False
 
         field_name: str = raw_value.get("field_name")
-        operator: str = raw_value.get("operator")
-        value: str = raw_value.get("value")
-
         related_policy = self._policy.get(field_name)
         if not related_policy:
             raise PolicyViolationError(f"No policy specified for field: {field_name}. "
                                        f"Supported fields: {list(self._policy.keys())}")
 
-        valid_operator: bool = operator in related_policy.allowed_operators
-        if not valid_operator:
-            raise InvalidOperationError(f"Unknown operator type: {operator}. "
-                                        f"Allowed operators: {related_policy.allowed_operators}")
-
-        valid_value: bool = self._check_valid_type(value, related_policy.value_type)
-        if not valid_value:
-            raise InvalidOperationError(f"Unknown value type: {value}. "
-                                        f"Specified value type: {related_policy.value_type}")
-
-        return valid_value and valid_operator
+        return related_policy.check_valid_value(raw_value)

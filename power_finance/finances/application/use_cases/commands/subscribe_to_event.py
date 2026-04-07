@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from uuid import UUID
 from django.db import transaction
 
-from finances.infrastructure.repositories import DjangoWebhookRepository
 from finances.domain.entities import WebhookType
 
+from ...bootstrap import get_repository_registry
 from ...dtos import WebhookSubscriptionDTO
 from ...interfaces import WebhookRepository
 
@@ -23,11 +23,12 @@ class SubscribeToEventCommandHandler:
             self,
             webhook_repository: WebhookRepository | None = None,
     ):
-        self.webhook_repository = webhook_repository or DjangoWebhookRepository()
+        registry = get_repository_registry()
+        self.webhook_repository = webhook_repository or registry.webhook_repository
 
     @transaction.atomic
     def handle(self, command: SubscribeToEventCommand) -> WebhookSubscriptionDTO:
-        webhook = self.webhook_repository.get_webhook_by_id(
+        webhook = self.webhook_repository.get_user_webhook_by_id(
             webhook_id=UUID(command.webhook_id),
             user_id=command.user_id
         )
