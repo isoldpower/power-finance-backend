@@ -16,6 +16,7 @@ from finances.application.use_cases import (
     ListFilteredTransactionsQueryHandler,
 )
 from finances.domain.exceptions import FilterParseError
+from ..mixins import IdempotentMixin
 from finances.application.use_cases import (
     CreateTransactionCommand,
     CreateTransactionCommandHandler,
@@ -40,9 +41,10 @@ from ..serializers import (
 logger = logging.getLogger(__name__)
 
 
-class TransactionViewSet(viewsets.ViewSet):
+class TransactionViewSet(IdempotentMixin, viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsPagination
+    IDEMPOTENT_ACTIONS = {'create', 'partial_update', 'destroy'}
 
     @extend_schema(
         operation_id="transactions_list",

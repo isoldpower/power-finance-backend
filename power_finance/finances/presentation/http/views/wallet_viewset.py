@@ -24,6 +24,7 @@ from finances.application.use_cases import (
 )
 from finances.domain.exceptions import FilterParseError
 
+from ..mixins import IdempotentMixin
 from ..serializers import (
     CreateWalletRequestSerializer,
     UpdateWalletRequestSerializer,
@@ -39,9 +40,10 @@ from ..pagination import StandardResultsPagination
 logger = logging.getLogger(__name__)
 
 
-class WalletViewSet(viewsets.ViewSet):
+class WalletViewSet(IdempotentMixin, viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsPagination
+    IDEMPOTENT_ACTIONS = {'create', 'update', 'partial_update', 'destroy'}
 
     @extend_schema(
         operation_id="wallets_list",

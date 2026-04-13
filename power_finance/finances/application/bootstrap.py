@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from celery import Celery
 from redis.asyncio.client import Redis
+from redis import Redis as SyncRedis
 
 from finances.domain.events import (
     TransactionCreatedEvent,
@@ -65,6 +66,7 @@ class ApplicationState:
     event_bus: EventBus
     broker: NotificationBroker
     redis: Redis
+    sync_redis: SyncRedis
     celery: Celery
     repository_registry: RepositoryRegistry
     initialized: bool = False
@@ -76,6 +78,7 @@ def bootstrap_application(
         payload_factory: EventPayloadFactory,
         dispatcher: WebhookDispatcher,
         redis: Redis,
+        sync_redis: SyncRedis,
         celery: Celery,
         notification_broker: NotificationBroker,
         notification_publisher: NotificationPublisher,
@@ -89,6 +92,7 @@ def bootstrap_application(
     application = ApplicationState(
         initialized=True,
         redis=redis,
+        sync_redis=sync_redis,
         broker=notification_broker,
         celery=celery,
         repository_registry=repository_registry,
@@ -175,3 +179,9 @@ def get_repository_registry() -> RepositoryRegistry:
     if application is None or not application.initialized:
         raise RuntimeError("Application is not bootstrapped or still initializing")
     return application.repository_registry
+
+def get_redis_client(sync: bool = True) -> Redis:
+    if application is None or not application.initialized:
+        raise RuntimeError("Application is not bootstrapped or still initializing")
+
+    return application.sync_redis if sync else application.redis

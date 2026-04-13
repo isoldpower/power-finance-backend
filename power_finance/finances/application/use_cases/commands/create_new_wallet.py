@@ -43,17 +43,17 @@ class CreateNewWalletCommandHandler:
             raise UnsupportedCurrencyError(currency_code)
 
         wallet = Wallet(
-            id = uuid4(),
-            user_id = command.user_id,
-            name = command.name,
-            balance = Money(
+            id=uuid4(),
+            user_id=command.user_id,
+            name=command.name,
+            balance=Money(
                 amount=command.balance_amount,
                 currency_code=command.currency,
             ),
-            credit = command.credit,
-            created_at = timezone.now(),
-            updated_at = timezone.now(),
-            deleted_at = None,
+            credit=command.credit,
+            created_at=timezone.now(),
+            updated_at=timezone.now(),
+            deleted_at=None,
         )
 
         created_wallet = self.wallet_repository.create_wallet(wallet)

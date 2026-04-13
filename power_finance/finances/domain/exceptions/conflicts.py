@@ -1,0 +1,2 @@
+class IdempotencyConflictError(ValueError):
+    pass

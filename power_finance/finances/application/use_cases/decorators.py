@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from functools import wraps
 from typing import ParamSpec, TypeVar, Callable
@@ -7,7 +6,6 @@ from django.db import transaction
 
 from .use_case_base import UseCaseEvently
 from ..bootstrap import get_event_bus
-
 
 logger = logging.getLogger(__name__)
 

@@ -10,6 +10,9 @@ from .filters import (
     PolicyViolationError,
     InvalidOperationError,
 )
+from .conflicts import (
+    IdempotencyConflictError,
+)
 
 __all__ = [
     'CurrencyMismatchException',
@@ -20,4 +23,5 @@ __all__ = [
     'InvalidStructureError',
     'PolicyViolationError',
     'InvalidOperationError',
+    'IdempotencyConflictError',
 ]

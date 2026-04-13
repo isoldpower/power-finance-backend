@@ -1,6 +1,8 @@
 from django.apps import AppConfig
 from django.conf import settings
 
+from finances.infrastructure.redis import build_sync_redis_client
+
 
 class FinancesConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
@@ -20,9 +22,15 @@ class FinancesConfig(AppConfig):
         from finances.infrastructure.redis import build_redis_client
         from finances.infrastructure.celery import build_celery_client
 
+
         webhook_dispatcher = WebhookDispatcher(HttpSender())
         webhook_factory = WebhookPayloadFactory()
         redis_client = build_redis_client(
+            host=settings.RESOLVED_ENV['REDIS_HOST'],
+            port=settings.RESOLVED_ENV['REDIS_PORT'],
+            password=settings.RESOLVED_ENV['REDIS_PASSWORD'],
+        )
+        sync_redis = build_sync_redis_client(
             host=settings.RESOLVED_ENV['REDIS_HOST'],
             port=settings.RESOLVED_ENV['REDIS_PORT'],
             password=settings.RESOLVED_ENV['REDIS_PASSWORD'],
@@ -46,6 +54,7 @@ class FinancesConfig(AppConfig):
             dispatcher=webhook_dispatcher,
             notification_publisher=notification_publisher,
             notification_broker=notification_broker,
+            sync_redis=sync_redis,
             redis=redis_client,
             celery=celery_client,
         )

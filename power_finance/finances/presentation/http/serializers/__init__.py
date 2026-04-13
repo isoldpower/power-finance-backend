@@ -31,6 +31,7 @@ from .response import (
     NotificationResponseSerializer,
 )
 
+
 __all__ = [
     'MoneyField',
     'CreateWalletRequestSerializer',
