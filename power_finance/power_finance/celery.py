@@ -15,4 +15,15 @@ from finances.infrastructure.celery.client import build_celery_client
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'power_finance.settings')
 
-app = build_celery_client(settings.RESOLVED_ENV)
+app = build_celery_client(
+    app_name=settings.RESOLVED_ENV['APP_NAME'],
+    rmq_host=settings.RESOLVED_ENV['RABBIT_MQ_HOST'],
+    rmq_port=settings.RESOLVED_ENV['RABBIT_MQ_PORT'],
+    rmq_user=settings.RESOLVED_ENV['RABBIT_MQ_USER'],
+    rmq_password=settings.RESOLVED_ENV['RABBIT_MQ_PASSWORD'],
+    redis_host=settings.RESOLVED_ENV['REDIS_HOST'],
+    redis_port=settings.RESOLVED_ENV['REDIS_PORT'],
+    redis_password=settings.RESOLVED_ENV['REDIS_PASSWORD'],
+    redis_celery_db=settings.RESOLVED_ENV['REDIS_CELERY_DATABASE_INDEX'],
+    beat_schedule_filename=settings.RESOLVED_ENV['CELERY_BEAT_SCHEDULE_FILENAME'],
+)

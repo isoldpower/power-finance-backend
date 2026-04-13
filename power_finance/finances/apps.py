@@ -22,8 +22,23 @@ class FinancesConfig(AppConfig):
 
         webhook_dispatcher = WebhookDispatcher(HttpSender())
         webhook_factory = WebhookPayloadFactory()
-        redis_client = build_redis_client(settings.RESOLVED_ENV.get('REDIS_URL'))
-        celery_client = build_celery_client(settings.RESOLVED_ENV)
+        redis_client = build_redis_client(
+            host=settings.RESOLVED_ENV['REDIS_HOST'],
+            port=settings.RESOLVED_ENV['REDIS_PORT'],
+            password=settings.RESOLVED_ENV['REDIS_PASSWORD'],
+        )
+        celery_client = build_celery_client(
+            app_name=settings.RESOLVED_ENV['APP_NAME'],
+            rmq_host=settings.RESOLVED_ENV['RABBIT_MQ_HOST'],
+            rmq_port=settings.RESOLVED_ENV['RABBIT_MQ_PORT'],
+            rmq_user=settings.RESOLVED_ENV['RABBIT_MQ_USER'],
+            rmq_password=settings.RESOLVED_ENV['RABBIT_MQ_PASSWORD'],
+            redis_host=settings.RESOLVED_ENV['REDIS_HOST'],
+            redis_port=settings.RESOLVED_ENV['REDIS_PORT'],
+            redis_password=settings.RESOLVED_ENV['REDIS_PASSWORD'],
+            redis_celery_db=settings.RESOLVED_ENV['REDIS_CELERY_DATABASE_INDEX'],
+            beat_schedule_filename=settings.RESOLVED_ENV['CELERY_BEAT_SCHEDULE_FILENAME'],
+        )
         notification_broker = RedisNotificationBroker(redis_client=redis_client)
         notification_publisher = InMemorySseNotificationPublisher(broker=notification_broker)
         bootstrap_application(

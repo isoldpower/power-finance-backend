@@ -16,6 +16,12 @@ env = environ.Env(
     DATABASE_HOST=(str, 'localhost'),
     DATABASE_PORT=(str, '5433'),
     DATABASE_USER=(str, 'postgres'),
+    REDIS_HOST=(str, 'localhost'),
+    REDIS_PORT=(str, '6380'),
+    REDIS_PASSWORD=(str, ''),
+    REDIS_CELERY_DATABASE_INDEX=(str, '2'),
+    RABBIT_MQ_HOST=(str, 'localhost'),
+    RABBIT_MQ_PORT=(str, '5673'),
     RABBIT_MQ_USER=(str, 'guest'),
     RABBIT_MQ_PASSWORD=(str, 'guest'),
     CLERK_CACHE_KEY=(str, 'clerk_cache'),
@@ -27,20 +33,36 @@ env.read_env(ENV_FILE)
 
 # List all environment variables
 RESOLVED_ENV = {
+    # Django core
     'APP_NAME': env('APP_NAME'),
     'DEBUG': env('DEBUG'),
+    'SECRET_KEY': env('SECRET_KEY'),
+    'API_VERSION': env('API_VERSION'),
+
+    # Database
+    'DATABASE_USER': env('DATABASE_USER'),
     'DATABASE_PASSWORD': env('DATABASE_PASSWORD'),
     'DATABASE_HOST': env('DATABASE_HOST'),
     'DATABASE_PORT': env('DATABASE_PORT'),
-    'DATABASE_USER': env('DATABASE_USER'),
-    'SECRET_KEY': env('SECRET_KEY'),
+
+    # Redis
+    'REDIS_HOST': env('REDIS_HOST'),
+    'REDIS_PORT': env('REDIS_PORT'),
+    'REDIS_PASSWORD': env('REDIS_PASSWORD'),
+    'REDIS_CELERY_DATABASE_INDEX': env('REDIS_CELERY_DATABASE_INDEX'),
+
+    # RabbitMQ
+    'RABBIT_MQ_HOST': env('RABBIT_MQ_HOST'),
+    'RABBIT_MQ_PORT': env('RABBIT_MQ_PORT'),
+    'RABBIT_MQ_USER': env('RABBIT_MQ_USER'),
+    'RABBIT_MQ_PASSWORD': env('RABBIT_MQ_PASSWORD'),
+
+    # Clerk
     'CLERK_SECRET_KEY': env('CLERK_SECRET_KEY'),
     'CLERK_API_URL': env('CLERK_API_URL'),
     'CLERK_CACHE_KEY': env('CLERK_CACHE_KEY'),
-    'API_VERSION': env('API_VERSION'),
-    'REDIS_URL': env('REDIS_URL'),
-    'CELERY_BROKER_URL': env('CELERY_BROKER_URL'),
-    'CELERY_RESULT_BACKEND': env('CELERY_RESULT_BACKEND'),
+
+    # Celery
     'CELERY_BEAT_SCHEDULE_FILENAME': str(ROOT_DIR.joinpath(env('CELERY_BEAT_SCHEDULE_FILENAME'))),
 }
 
@@ -102,10 +124,11 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'drf_spectacular',
-    
+
     'power_finance',
     'identity.apps.IdentityConfig',
-    'finances.apps.FinancesConfig'
+    'finances.apps.FinancesConfig',
+    'health.apps.HealthConfig',
 ]
 
 REST_FRAMEWORK = {

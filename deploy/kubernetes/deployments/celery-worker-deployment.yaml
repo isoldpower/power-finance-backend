@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker-deployment
+  labels:
+    app: celery-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: celery-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: celery-worker
+    spec:
+      serviceAccountName: celery-worker-sa
+      containers:
+      - name: celery-worker
+        image: ghcr.io/isoldpower/power-finance-backend:1.0.0
+        workingDir: /app/power_finance
+        # Health Probes — liveness only, worker does not serve traffic
+        livenessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - celery -A power_finance inspect ping -d celery@$HOSTNAME
+          initialDelaySeconds: 20
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        # Celery worker command
+        command:
+          - celery
+          - -A
+          - power_finance
+          - worker
+          - -l
+          - INFO
+        # Env variables mapping
+        env:
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: power-finance
+              key: debug
+        - name: APP_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: power-finance
+              key: app-name
+        - name: API_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: power-finance
+              key: api-version
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: power-finance
+              key: database-host
+        - name: DATABASE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: power-finance
+              key: database-port
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: power-finance
+              key: redis-host
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: power-finance
+              key: redis-port
+        - name: REDIS_CELERY_DATABASE_INDEX
+          valueFrom:
+            configMapKeyRef:
+              name: power-finance
+              key: redis-celery-database-index
+        - name: RABBIT_MQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: power-finance
+              key: rabbitmq-host
+        - name: RABBIT_MQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: power-finance
+              key: rabbitmq-port
+        - name: CLERK_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: power-finance
+              key: clerk-api-url
+        - name: CLERK_CACHE_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: power-finance
+              key: clerk-cache-key
+        - name: DATABASE_USER
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: .database-user
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: .database-password
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secrets
+              key: .redis-password
+        - name: RABBIT_MQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secrets
+              key: .rabbit-mq-user
+        - name: RABBIT_MQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secrets
+              key: .rabbit-mq-password
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: django-secrets
+              key: .secret-key
+        - name: CLERK_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: django-secrets
+              key: .clerk-secret-key
+        # Constructed URLs from above env vars via $(VAR) interpolation
+        - name: CELERY_BROKER_URL
+          value: "amqp://$(RABBIT_MQ_USER):$(RABBIT_MQ_PASSWORD)@$(RABBIT_MQ_HOST):$(RABBIT_MQ_PORT)//"
+        - name: CELERY_RESULT_BACKEND
+          value: "redis://:$(REDIS_PASSWORD)@$(REDIS_HOST):$(REDIS_PORT)/$(REDIS_CELERY_DATABASE_INDEX)"
+        - name: REDIS_URL
+          value: "redis://:$(REDIS_PASSWORD)@$(REDIS_HOST):$(REDIS_PORT)/0"

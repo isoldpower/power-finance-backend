@@ -17,3 +17,5 @@ COPY power_finance/ ./power_finance/
 
 ENV PYTHONPATH=/app/power_finance
 ENV DJANGO_SETTINGS_MODULE=power_finance.settings
+
+LABEL org.opencontainers.image.source=https://github.com/isoldpower/power-finance-backend
