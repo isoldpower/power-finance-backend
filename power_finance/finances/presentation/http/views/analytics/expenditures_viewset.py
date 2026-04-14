@@ -10,12 +10,16 @@ from finances.application.use_cases import (
     GetExpenditureAnalyticsQuery
 )
 
+from environment.presentation.http.base_api_view import BaseAPIView
+from environment.presentation.middleware import AnalyticsThrottle
+
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
 from ...serializers import ExpenditureAnalyticsSerializer, MessageResponseSerializer
 
 
-class ExpenditureAnalyticsView(viewsets.ViewSet):
+class ExpenditureAnalyticsView(viewsets.ViewSet, BaseAPIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [AnalyticsThrottle]
     pagination_class = None
 
     def __init__(self, **kwargs: Any) -> None:

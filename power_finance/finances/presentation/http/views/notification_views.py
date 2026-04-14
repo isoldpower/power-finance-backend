@@ -7,8 +7,9 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
-from identity.authentication import ClerkJWTAuthentication
-from identity.presentation.auth_decorators import async_with_auth
+from environment.authentication import ClerkJWTAuthentication
+from environment.presentation.http.base_api_view import BaseAPIView
+from environment.presentation.middleware import async_with_auth
 
 from finances.application.bootstrap import application
 from finances.application.use_cases import (
@@ -37,7 +38,7 @@ from ..pagination import StandardResultsPagination
 logger = logging.getLogger(__name__)
 
 
-class NotificationViewSet(viewsets.ViewSet):
+class NotificationViewSet(viewsets.ViewSet, BaseAPIView):
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsPagination
 

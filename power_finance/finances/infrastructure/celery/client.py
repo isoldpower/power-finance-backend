@@ -67,13 +67,13 @@ def build_celery_config(
 def build_celery_client(
         app_name: str,
         rmq_host: str,
-        rmq_port: str,
+        rmq_port: int,
         rmq_user: str,
         rmq_password: str,
         redis_host: str,
-        redis_port: str,
+        redis_port: int,
         redis_password: str,
-        redis_celery_db: str,
+        redis_celery_db: int,
         beat_schedule_filename: str,
 ) -> Celery:
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "power_finance.settings")
@@ -81,13 +81,13 @@ def build_celery_client(
     celery_instance = Celery(main=app_name, strict_typing=True)
     celery_instance.conf.update(build_celery_config(
         rmq_host=rmq_host,
-        rmq_port=rmq_port,
+        rmq_port=str(rmq_port),
         rmq_user=rmq_user,
         rmq_password=rmq_password,
         redis_host=redis_host,
-        redis_port=redis_port,
+        redis_port=str(redis_port),
         redis_password=redis_password,
-        redis_celery_db=redis_celery_db,
+        redis_celery_db=str(redis_celery_db),
         beat_schedule_filename=beat_schedule_filename,
     ))
     celery_instance.autodiscover_tasks(['finances.infrastructure.celery.tasks'])

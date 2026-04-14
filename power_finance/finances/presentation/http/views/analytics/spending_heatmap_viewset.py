@@ -5,6 +5,9 @@ from rest_framework.request import Request
 from drf_spectacular.utils import extend_schema
 from typing import Any
 
+from environment.presentation.http.base_api_view import BaseAPIView
+from environment.presentation.middleware import AnalyticsThrottle
+
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
 from ...serializers import SpendingHeatmapSerializer, MessageResponseSerializer
 
@@ -14,8 +17,9 @@ from finances.application.use_cases import (
 )
 
 
-class SpendingHeatmapView(viewsets.ViewSet):
+class SpendingHeatmapView(viewsets.ViewSet, BaseAPIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [AnalyticsThrottle]
     pagination_class = None
 
     def __init__(self, **kwargs: Any) -> None:

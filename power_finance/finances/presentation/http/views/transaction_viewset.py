@@ -26,6 +26,8 @@ from finances.application.use_cases import (
     UpdateTransactionCommandHandler,
 )
 
+from environment.presentation.http.base_api_view import BaseAPIView
+
 from ..pagination import StandardResultsPagination
 from ..presenters import TransactionHttpPresenter, CommonHttpPresenter, MessageResultInfo
 from ..serializers import (
@@ -41,7 +43,7 @@ from ..serializers import (
 logger = logging.getLogger(__name__)
 
 
-class TransactionViewSet(IdempotentMixin, viewsets.ViewSet):
+class TransactionViewSet(IdempotentMixin, viewsets.ViewSet, BaseAPIView):
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsPagination
     IDEMPOTENT_ACTIONS = {'create', 'partial_update', 'destroy'}

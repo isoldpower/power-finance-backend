@@ -5,7 +5,7 @@ from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from finances.presentation.urls import core_router, analytics_urls, general_urls
-from health.presentation.http.urls import urlpatterns as health_urls
+from environment.presentation.http import urlpatterns as health_urls
 
 
 api_version = settings.RESOLVED_ENV['API_VERSION']

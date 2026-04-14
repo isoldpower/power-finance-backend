@@ -12,9 +12,9 @@ test:
 		finances.application.use_cases.commands.tests \
 		finances.application.use_cases.queries.tests \
 		finances.presentation.tests \
-		identity.domain.tests \
-		identity.application.tests \
-		identity.presentation.tests \
+		environment.domain.tests \
+		environment.application.tests \
+		environment.presentation.tests \
 		--settings=$(SETTINGS)
 
 # Run fast unit tests (domain and application layer, no DB)
@@ -23,15 +23,15 @@ test-fast:
 		finances.domain.tests \
 		finances.application.use_cases.commands.tests \
 		finances.application.use_cases.queries.tests \
-		identity.domain.tests \
-		identity.application.tests \
+		environment.domain.tests \
+		environment.application.tests \
 		--settings=$(SETTINGS)
 
 # Run integration tests (presentation layer)
 test-integration:
 	$(PYTHON) $(MANAGE) test \
 		finances.presentation.tests \
-		identity.presentation.tests \
+		environment.presentation.tests \
 		--settings=$(SETTINGS)
 
 # Run the ASGI server with hot reload on file changes

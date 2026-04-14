@@ -1,8 +1,6 @@
-import os
 import sys
 from pathlib import Path
 import environ
-import logging
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -126,9 +124,8 @@ INSTALLED_APPS = [
     'drf_spectacular',
 
     'power_finance',
-    'identity.apps.IdentityConfig',
+    'environment.apps.EnvironmentConfig',
     'finances.apps.FinancesConfig',
-    'health.apps.HealthConfig',
 ]
 
 REST_FRAMEWORK = {
@@ -136,7 +133,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer'
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'identity.authentication.ClerkJWTAuthentication',
+        'environment.authentication.ClerkJWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ],
@@ -146,12 +143,16 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
     'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle'
+        'environment.presentation.middleware.AnonRedisThrottle',
+        'environment.presentation.middleware.UserRedisThrottle',
+        'environment.presentation.middleware.WriteThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',
-        'user': '1000/day'
+        'anon': '20/min',
+        'user': '200/min',
+        'writes': '60/min',
+        'analytics': '30/min',
+        'webhook_registration': '10/hour',
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }

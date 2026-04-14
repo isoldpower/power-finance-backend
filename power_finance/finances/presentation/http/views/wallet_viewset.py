@@ -33,6 +33,8 @@ from ..serializers import (
     MessageResponseSerializer,
     FilterWalletsRequestSerializer,
 )
+from environment.presentation.http.base_api_view import BaseAPIView
+
 from ..presenters import WalletHttpPresenter, CommonHttpPresenter, MessageResultInfo
 from ..pagination import StandardResultsPagination
 
@@ -40,7 +42,7 @@ from ..pagination import StandardResultsPagination
 logger = logging.getLogger(__name__)
 
 
-class WalletViewSet(IdempotentMixin, viewsets.ViewSet):
+class WalletViewSet(IdempotentMixin, viewsets.ViewSet, BaseAPIView):
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsPagination
     IDEMPOTENT_ACTIONS = {'create', 'update', 'partial_update', 'destroy'}

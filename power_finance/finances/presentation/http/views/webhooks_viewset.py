@@ -8,6 +8,8 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from typing import Any
 
+from environment.presentation.http.base_api_view import BaseAPIView
+from environment.presentation.middleware import WebhookRegistrationThrottle
 from finances.application.use_cases import (
     CreateWebhookEndpointCommandHandler,
     CreateWebhookEndpointCommand,
@@ -52,8 +54,9 @@ from ..serializers import (
 logger = logging.getLogger(__name__)
 
 
-class WebhooksViewSet(viewsets.ViewSet):
+class WebhooksViewSet(viewsets.ViewSet, BaseAPIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [WebhookRegistrationThrottle]
     pagination_class = StandardResultsPagination
 
     def __init__(self, **kwargs: Any) -> None:

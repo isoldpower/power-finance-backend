@@ -12,12 +12,16 @@ from finances.application.use_cases import (
     GetWalletBalanceHistoryQuery,
 )
 
+from environment.presentation.http.base_api_view import BaseAPIView
+from environment.presentation.middleware import AnalyticsThrottle
+
 from ...serializers import WalletBalanceHistorySerializer, MessageResponseSerializer
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
 
 
-class WalletBalanceHistoryView(viewsets.ViewSet):
+class WalletBalanceHistoryView(viewsets.ViewSet, BaseAPIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [AnalyticsThrottle]
     pagination_class = None
 
     def __init__(self, **kwargs: Any) -> None:
