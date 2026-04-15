@@ -12,7 +12,7 @@ class MessageResponse:
 
 class NetworkSender(ABC):
     @abstractmethod
-    def send_message_with_body(
+    async def send_message_with_body(
             self,
             url: str,
             request_body: dict,

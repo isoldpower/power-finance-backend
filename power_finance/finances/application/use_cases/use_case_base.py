@@ -5,7 +5,7 @@ from finances.domain.events import EventCollector
 
 class UseCaseBase(ABC):
     @abstractmethod
-    def handle(self):
+    async def handle(self):
         raise NotImplementedError()
 
 
@@ -16,5 +16,5 @@ class UseCaseEvently(UseCaseBase):
         self.event_collector = EventCollector()
 
     @abstractmethod
-    def handle(self, *args, **kwargs) -> None:
+    async def handle(self, *args, **kwargs) -> None:
         raise NotImplementedError()

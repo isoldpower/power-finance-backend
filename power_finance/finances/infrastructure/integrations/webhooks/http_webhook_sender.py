@@ -40,12 +40,12 @@ class WebhookDispatcher:
             request_headers=request_headers,
         )
 
-    def dispatch_request(
+    async def dispatch_request(
             self,
             webhook: Webhook,
             request_stamp: RequestStamp,
     ) -> MessageResponse:
-        return self._sender.send_message_with_body(
+        return await self._sender.send_message_with_body(
             url=webhook.url,
             request_body=request_stamp.request_body,
             request_headers=request_stamp.request_headers,
