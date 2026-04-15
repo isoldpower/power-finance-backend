@@ -86,14 +86,17 @@ class ListFilteredWalletsQueryHandler:
         registry = get_repository_registry()
         self.wallet_repository = wallet_repository or registry.wallet_repository
 
-    def handle(self, request: ListFilteredWalletsQuery) -> list[WalletDTO]:
+    async def handle(self, request: ListFilteredWalletsQuery) -> list[WalletDTO]:
         try:
             resolved_query = resolve_filter_query(request.filter_body, self.filter_policy)
             filter_tree = ResolvedFilterTree(
                 query=resolved_query,
                 applied_policy=self.filter_policy,
             )
-            filtered_wallets = self.wallet_repository.list_wallets_with_filters(filter_tree, request.user_id)
+            filtered_wallets = await self.wallet_repository.list_wallets_with_filters(
+                filter_tree,
+                request.user_id
+            )
 
             return [wallet_to_dto(wallet) for wallet in filtered_wallets]
         except Exception as e:

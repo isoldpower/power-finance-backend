@@ -1,3 +1,5 @@
+import asyncio
+
 from finances.domain.entities import WebhookType
 from finances.domain.events import TransactionUpdatedEvent
 from finances.infrastructure.integrations import WebhookDispatcher
@@ -39,20 +41,20 @@ class TransactionUpdatedWebhookHandler(EventWebhookHandler):
         self._webhook_repository = webhook_repository
         self._wallet_repository = wallet_repository
 
-    def __call__(self, event: TransactionUpdatedEvent) -> None:
-        transaction_wallet = self._wallet_repository.get_wallet_by_id(
+    async def __call__(self, event: TransactionUpdatedEvent) -> None:
+        transaction_wallet = await self._wallet_repository.get_wallet_by_id(
             event.current_transaction.sender.wallet_id
             if event.current_transaction.sender else event.current_transaction.receiver.wallet_id
         )
-        webhooks = self._webhook_repository.get_webhooks_by_type(
+        webhooks = await self._webhook_repository.get_webhooks_by_type(
             user_id=transaction_wallet.user_id,
             event_type=WebhookType.TransactionUpdate
         )
 
-        for webhook in webhooks:
-            request_body = self._payload_factory.from_transaction_updated(event)
+        await asyncio.gather(*[
             self.handle_dispatch_webhook_delivery(
                 webhook=webhook,
                 event_id=event.event_id,
-                request_body=request_body,
-            )
+                request_body=self._payload_factory.from_transaction_updated(event),
+            ) for webhook in webhooks
+        ])

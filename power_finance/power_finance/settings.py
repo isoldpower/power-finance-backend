@@ -229,11 +229,13 @@ DATABASES = {
         'PASSWORD': RESOLVED_ENV['DATABASE_PASSWORD'],
         'HOST': RESOLVED_ENV['DATABASE_HOST'],
         'PORT': RESOLVED_ENV['DATABASE_PORT'],
+        'CONN_MAX_AGE': 0,
         'OPTIONS': {
             'pool': True
         }
     }
 }
+
 CONN_MAX_AGE = 0
 
 MIGRATION_MODULES = {

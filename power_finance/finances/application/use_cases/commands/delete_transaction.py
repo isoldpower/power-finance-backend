@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from uuid import UUID
 from django.core.exceptions import ObjectDoesNotExist
@@ -34,50 +35,51 @@ class DeleteTransactionCommandHandler(UseCaseEvently):
         self.transaction_repository = transaction_repository or registry.transaction_repository
         self.wallet_repository = wallet_repository or registry.wallet_repository
 
-    def _safe_get_wallet(self, wallet_id: UUID, user_id: int) -> Wallet | None:
+    async def _safe_get_wallet(self, wallet_id: UUID, user_id: int) -> Wallet | None:
         try:
-            return self.wallet_repository.get_user_wallet_for_update(
+            return await self.wallet_repository.get_user_wallet_for_update(
                 wallet_id,
                 user_id,
             )
         except ObjectDoesNotExist:
             return None
 
-    def _load_affected_wallets(
+    async def _load_affected_wallets(
         self,
         cancelled_transaction: Transaction,
         user_id: int,
     ) -> tuple[Wallet | None, Wallet | None]:
         sender_wallet = (
-            self._safe_get_wallet(cancelled_transaction.sender.wallet_id, user_id)
+            await self._safe_get_wallet(cancelled_transaction.sender.wallet_id, user_id)
             if cancelled_transaction.sender else None
         )
         receiver_wallet = (
-            self._safe_get_wallet(cancelled_transaction.receiver.wallet_id, user_id)
+            await self._safe_get_wallet(cancelled_transaction.receiver.wallet_id, user_id)
             if cancelled_transaction.receiver else None
         )
 
         return sender_wallet, receiver_wallet
 
-    def _persist_wallets(self, *wallets: Wallet | None) -> None:
-        for wallet in wallets:
-            if wallet is not None:
-                self.wallet_repository.save_wallet(wallet)
+    async def _persist_wallets(self, *wallets: Wallet | None) -> None:
+        await asyncio.gather(*[
+            self.wallet_repository.save_wallet(wallet)
+            for wallet in wallets
+            if wallet is not None
+        ])
 
     @atomic_evently_command()
-    def handle(self, command: DeleteTransactionCommand) -> TransactionDTO:
+    async def handle(self, command: DeleteTransactionCommand) -> TransactionDTO:
         transaction_uuid = UUID(command.transaction_id)
-        transaction_to_delete = self.transaction_repository.get_user_transaction_by_id(
+        transaction_to_delete = await self.transaction_repository.get_user_transaction_by_id(
             user_id=command.user_id,
             transaction_id=transaction_uuid,
         )
         transaction_to_delete.migrate_event_collector(self.event_collector)
-        participants = self._load_affected_wallets(transaction_to_delete, command.user_id)
 
+        participants = await self._load_affected_wallets(transaction_to_delete, command.user_id)
         rollback_transaction_from_wallet_balance(transaction_to_delete, *participants)
-        self._persist_wallets(*participants)
+        await self._persist_wallets(*participants)
         transaction_to_delete.confirm_delete()
-
-        deleted_transaction = self.transaction_repository.delete_transaction_by_id(transaction_uuid)
+        deleted_transaction = await self.transaction_repository.delete_transaction_by_id(transaction_uuid)
 
         return transaction_to_dto(deleted_transaction, *participants)

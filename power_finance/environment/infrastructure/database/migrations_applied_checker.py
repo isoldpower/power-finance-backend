@@ -1,3 +1,4 @@
+from asgiref.sync import sync_to_async
 from django.db import connections
 from django.db.migrations.executor import MigrationExecutor
 
@@ -6,7 +7,7 @@ from environment.domain.entities import HealthProbeStatus
 
 
 class MigrationsHealthChecker(ServiceHealthChecker):
-    def health_status(self) -> str:
+    def _check_health(self) -> str:
         try:
             connection = connections['default']
             connection.prepare_database()
@@ -21,3 +22,6 @@ class MigrationsHealthChecker(ServiceHealthChecker):
                 return HealthProbeStatus.OK.value
         except Exception as e:
             return f"Error checking database state. {str(e)}"
+
+    async def health_status(self) -> str:
+        return await sync_to_async(self._check_health)()

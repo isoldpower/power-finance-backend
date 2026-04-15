@@ -45,16 +45,16 @@ class GetWalletBalanceHistoryQueryHandler:
 
         return history
 
-    def handle(self, query: GetWalletBalanceHistoryQuery) -> WalletBalanceHistoryResultDTO:
+    async def handle(self, query: GetWalletBalanceHistoryQuery) -> WalletBalanceHistoryResultDTO:
         try:
-            self.wallet_selectors.get_single_wallet(
+            await self.wallet_selectors.get_single_wallet(
                 user_id=query.user_id,
                 wallet_id=UUID(query.wallet_id)
             )
-        except WalletModel.DoesNotExist:
+        except ObjectDoesNotExist:
             raise ObjectDoesNotExist("Requested wallet's balance history not found.")
 
-        transaction_rows = (self.transaction_selectors.get_wallet_transactions(
+        transaction_rows = (await self.transaction_selectors.get_wallet_transactions(
             wallet_id=UUID(query.wallet_id)
         ) or [])
         history = self._record_transaction_history(

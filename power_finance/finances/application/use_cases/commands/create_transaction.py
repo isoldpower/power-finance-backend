@@ -47,28 +47,26 @@ class CreateTransactionCommandHandler(UseCaseEvently):
         self._transaction_repository = transaction_repository or registry.transaction_repository
         self._wallet_repository = wallet_repository or registry.wallet_repository
 
-    def _safe_get_wallet(self, wallet_id: UUID, user_id: int) -> Wallet | None:
+    async def _safe_get_wallet(self, wallet_id: UUID, user_id: int) -> Wallet | None:
         try:
-            return self._wallet_repository.get_user_wallet_for_update(
+            return await self._wallet_repository.get_user_wallet_for_update(
                 wallet_id,
                 user_id,
             )
         except ObjectDoesNotExist:
             return None
 
-    def _load_affected_wallets(
+    async def _load_affected_wallets(
             self,
             sender: Optional[CreateTransactionParticipantDTO],
             receiver: Optional[CreateTransactionParticipantDTO],
             user_id: int,
     ) -> tuple[Wallet | None, Wallet | None]:
         sender_wallet = (
-            self._safe_get_wallet(sender.wallet_id, user_id)
-            if sender else None
+            await self._safe_get_wallet(sender.wallet_id, user_id) if sender else None
         )
         receiver_wallet = (
-            self._safe_get_wallet(receiver.wallet_id, user_id)
-            if receiver else None
+            await self._safe_get_wallet(receiver.wallet_id, user_id) if receiver else None
         )
 
         if (sender and not sender_wallet) or (receiver and not receiver_wallet):
@@ -76,14 +74,14 @@ class CreateTransactionCommandHandler(UseCaseEvently):
 
         return sender_wallet, receiver_wallet
 
-    def _persist_wallets(self, *wallets: Wallet | None) -> None:
+    async def _persist_wallets(self, *wallets: Wallet | None) -> None:
         for wallet in wallets:
             if wallet is not None:
-                self._wallet_repository.save_wallet(wallet)
+                await self._wallet_repository.save_wallet(wallet)
 
     @atomic_evently_command()
-    def handle(self, command: CreateTransactionCommand) -> TransactionDTO:
-        sender_wallet, receiver_wallet = self._load_affected_wallets(
+    async def handle(self, command: CreateTransactionCommand) -> TransactionDTO:
+        sender_wallet, receiver_wallet = await self._load_affected_wallets(
             command.sender,
             command.receiver,
             command.user_id,
@@ -111,8 +109,8 @@ class CreateTransactionCommandHandler(UseCaseEvently):
         )
 
         apply_transaction_to_wallet_balance(new_transaction, sender_wallet, receiver_wallet)
-        created_transaction = self._transaction_repository.create_transaction(new_transaction)
-        self._persist_wallets(sender_wallet, receiver_wallet)
+        created_transaction = await self._transaction_repository.create_transaction(new_transaction)
+        await self._persist_wallets(sender_wallet, receiver_wallet)
 
         return transaction_to_dto(
             created_transaction,

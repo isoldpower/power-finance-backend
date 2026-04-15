@@ -35,7 +35,7 @@ class UpdateExistingWalletCommandHandler:
         self.wallet_repository = wallet_repository or registry.wallet_repository
         self.currency_repository = currency_repository or registry.currency_repository
 
-    def _update_fields(self, wallet: Wallet, command: UpdateExistingWalletCommand) -> Wallet:
+    async def _update_fields(self, wallet: Wallet, command: UpdateExistingWalletCommand) -> Wallet:
         if command.name is not None:
             wallet.name = command.name
         if command.balance_amount is not None or command.currency is not None:
@@ -47,20 +47,20 @@ class UpdateExistingWalletCommandHandler:
         if command.credit is not None:
             wallet.credit = command.credit
 
-        return self.wallet_repository.save_wallet(wallet)
+        return await self.wallet_repository.save_wallet(wallet)
 
 
     @transaction.atomic
-    def handle(self, command: UpdateExistingWalletCommand) -> WalletDTO:
+    async def handle(self, command: UpdateExistingWalletCommand) -> WalletDTO:
         if command.currency is not None:
             currency_code = command.currency.upper()
-            if not self.currency_repository.currency_code_exists(currency_code):
+            if not await self.currency_repository.currency_code_exists(currency_code):
                 raise UnsupportedCurrencyError(currency_code)
 
-        wallet = self.wallet_repository.get_user_wallet_by_id(
+        wallet = await self.wallet_repository.get_user_wallet_by_id(
             UUID(command.wallet_id),
             command.user_id
         )
-        updated_wallet = self._update_fields(wallet, command)
+        updated_wallet = await self._update_fields(wallet, command)
 
         return wallet_to_dto(updated_wallet)

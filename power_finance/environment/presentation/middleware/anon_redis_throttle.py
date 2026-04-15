@@ -5,10 +5,10 @@ class AnonRedisThrottle(RedisBaseThrottle):
     scope = 'anon'
     rate = '20/min'
 
-    def allow_request(self, request, view) -> bool:
+    async def allow_request(self, request, view) -> bool:
         if not request.user or not request.user.is_authenticated:
             key = f"rate_limit:anon:{self.get_ident(request)}"
-            count = self._get_count_in_window(key)
+            count = await self._get_count_in_window(key)
             self._current_count = count
             return count <= self._num_requests
         return True

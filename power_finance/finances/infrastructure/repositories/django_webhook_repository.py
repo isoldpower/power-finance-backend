@@ -11,21 +11,22 @@ from ..orm import WebhookEndpointModel, WebhookEventSubscriptionModel
 
 
 class DjangoWebhookRepository(WebhookRepository):
-    def get_subscriptions_by_webhook_id(self, webhook_id: UUID, user_id: int) -> list[WebhookSubscriptionDTO]:
+    async def get_subscriptions_by_webhook_id(self, webhook_id: UUID, user_id: int) -> list[WebhookSubscriptionDTO]:
         subscriptions = WebhookEventSubscriptionModel.objects.filter(
             endpoint_id=webhook_id,
             endpoint__user_id=user_id,
             is_active=True
         )
-        return [WebhookMapper.subscription_to_dto(sub) for sub in subscriptions]
 
-    def subscribe_webhook_to_event(
+        return [WebhookMapper.subscription_to_dto(sub) async for sub in subscriptions]
+
+    async def subscribe_webhook_to_event(
             self,
             webhook: Webhook,
             event_type: WebhookType,
             user_id: int
     ) -> WebhookSubscriptionDTO:
-        subscription_object = WebhookEventSubscriptionModel.objects.create(
+        subscription_object = await WebhookEventSubscriptionModel.objects.acreate(
             endpoint_id=webhook.id,
             event_type=event_type.value,
             is_active=True
@@ -33,14 +34,14 @@ class DjangoWebhookRepository(WebhookRepository):
 
         return WebhookMapper.subscription_to_dto(subscription_object)
 
-    def unsubscribe_webhook_from_event(
+    async def unsubscribe_webhook_from_event(
             self,
             webhook: Webhook,
             event_type: WebhookType,
             user_id: int,
     ) -> WebhookSubscriptionDTO:
         try:
-            subscription_object = WebhookEventSubscriptionModel.objects.get(
+            subscription_object = await WebhookEventSubscriptionModel.objects.aget(
                 endpoint_id=webhook.id,
                 endpoint__user_id=user_id,
                 event_type=event_type.value,
@@ -50,18 +51,18 @@ class DjangoWebhookRepository(WebhookRepository):
             raise ObjectDoesNotExist(f"Subscription for event {event_type} not found.")
 
         subscription_dto = WebhookMapper.subscription_to_dto(subscription_object)
-        subscription_object.delete()
+        await subscription_object.adelete()
 
         return subscription_dto
 
-    def unsubscribe_webhook_by_id(
+    async def unsubscribe_webhook_by_id(
             self,
             subscription_id: UUID,
             webhook_id: UUID,
             user_id: int,
     ) -> WebhookSubscriptionDTO:
         try:
-            subscription_object = WebhookEventSubscriptionModel.objects.get(
+            subscription_object = await WebhookEventSubscriptionModel.objects.aget(
                 id=subscription_id,
                 endpoint_id=webhook_id,
                 endpoint__user_id=user_id
@@ -70,18 +71,18 @@ class DjangoWebhookRepository(WebhookRepository):
             raise ObjectDoesNotExist(f"Subscription with ID {subscription_id} not found for this webhook.")
 
         subscription_dto = WebhookMapper.subscription_to_dto(subscription_object)
-        subscription_object.delete()
+        await subscription_object.adelete()
 
         return subscription_dto
 
-    def get_subscription_by_id(
+    async def get_subscription_by_id(
             self,
             subscription_id: UUID,
             webhook_id: UUID,
             user_id: int,
     ) -> WebhookSubscriptionDTO:
         try:
-            subscription_object = WebhookEventSubscriptionModel.objects.get(
+            subscription_object = await WebhookEventSubscriptionModel.objects.aget(
                 id=subscription_id,
                 endpoint_id=webhook_id,
                 endpoint__user_id=user_id
@@ -91,44 +92,42 @@ class DjangoWebhookRepository(WebhookRepository):
 
         return WebhookMapper.subscription_to_dto(subscription_object)
 
-    def create_webhook(self, webhook: Webhook) -> Webhook:
+    async def create_webhook(self, webhook: Webhook) -> Webhook:
         new_webhook = WebhookEndpointModel()
-
-        new_webhook.id = webhook.id
         WebhookMapper.update_model(new_webhook, webhook)
-        new_webhook.save()
+        await new_webhook.asave()
 
         return WebhookMapper.to_domain(new_webhook)
 
-    def get_user_webhooks(self, user_id: int) -> list[Webhook]:
+    async def get_user_webhooks(self, user_id: int) -> list[Webhook]:
         requested_webhooks = WebhookEndpointModel.objects.filter(user_id=user_id)
 
-        return [WebhookMapper.to_domain(webhook) for webhook in requested_webhooks]
+        return [WebhookMapper.to_domain(webhook) async for webhook in requested_webhooks]
 
-    def get_webhooks_by_type(self, event_type: WebhookType, user_id: int) -> list[Webhook]:
+    async def get_webhooks_by_type(self, event_type: WebhookType, user_id: int) -> list[Webhook]:
         requested_webhooks = (WebhookEndpointModel.objects
             .filter(subscriptions__event_type=event_type.value, user_id=user_id)
             .distinct()
         )
 
-        return [WebhookMapper.to_domain(webhook) for webhook in requested_webhooks]
+        return [WebhookMapper.to_domain(webhook) async for webhook in requested_webhooks]
 
-    def get_user_webhook_by_id(self, webhook_id: str, user_id: int) -> Webhook:
-        requested_webhook = WebhookEndpointModel.objects.get(
+    async def get_user_webhook_by_id(self, webhook_id: str, user_id: int) -> Webhook:
+        requested_webhook = await WebhookEndpointModel.objects.aget(
             user_id=user_id,
             id=webhook_id
         )
 
         return WebhookMapper.to_domain(requested_webhook)
 
-    def get_webhook_by_id(self, webhook_id: UUID) -> Webhook:
-        requested_webhook = WebhookEndpointModel.objects.get(id=webhook_id)
+    async def get_webhook_by_id(self, webhook_id: UUID) -> Webhook:
+        requested_webhook = await WebhookEndpointModel.objects.aget(id=webhook_id)
 
         return WebhookMapper.to_domain(requested_webhook)
 
-    def delete_webhook_by_id(self, webhook_id: str, user_id: int) -> Webhook:
+    async def delete_webhook_by_id(self, webhook_id: str, user_id: int) -> Webhook:
         try:
-            requested_webhook: WebhookEndpointModel = WebhookEndpointModel.objects.get(
+            requested_webhook: WebhookEndpointModel = await WebhookEndpointModel.objects.aget(
                 user_id=user_id,
                 id=webhook_id
             )
@@ -136,12 +135,12 @@ class DjangoWebhookRepository(WebhookRepository):
             raise ObjectDoesNotExist("Webhook with specified ID does not exist.")
 
         domain_webhook: Webhook = WebhookMapper.to_domain(requested_webhook)
-        requested_webhook.delete()
+        await requested_webhook.adelete()
 
         return domain_webhook
 
-    def save_webhook(self, webhook: Webhook) -> Webhook:
-        webhook_model = WebhookEndpointModel.objects.get(
+    async def save_webhook(self, webhook: Webhook) -> Webhook:
+        webhook_model = await WebhookEndpointModel.objects.aget(
             id=webhook.id,
             user_id=webhook.user_id,
         )
@@ -149,12 +148,12 @@ class DjangoWebhookRepository(WebhookRepository):
         updated_fields = WebhookMapper.get_changed_fields(webhook_model, webhook)
         WebhookMapper.update_model(webhook_model, webhook)
 
-        webhook_model.save(update_fields=updated_fields)
+        await webhook_model.asave(update_fields=updated_fields)
         return WebhookMapper.to_domain(webhook_model)
 
-    def list_webhooks_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Webhook]:
+    async def list_webhooks_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Webhook]:
         filtered_webhooks = (WebhookEndpointModel.objects
-                             .filter(Q(user_id=user_id) & tree.query)
-                             .distinct())
+            .filter(Q(user_id=user_id) & tree.query)
+            .distinct())
 
-        return [WebhookMapper.to_domain(webhook) for webhook in filtered_webhooks]
+        return [WebhookMapper.to_domain(webhook) async for webhook in filtered_webhooks]

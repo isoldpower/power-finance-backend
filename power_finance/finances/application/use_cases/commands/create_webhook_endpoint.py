@@ -27,13 +27,13 @@ class CreateWebhookEndpointCommandHandler:
         registry = get_repository_registry()
         self.webhook_repository = webhook_repository or registry.webhook_repository
 
-    @transaction.atomic
-    def handle(self, command: CreateWebhookEndpointCommand) -> WebhookDTO:
-        domain_webhook = Webhook.create(WebhookCreateData(
-            title=command.title,
-            url=command.url,
-            user_id=command.user_id,
-        ))
-        database_webhook = self.webhook_repository.create_webhook(domain_webhook)
+    async def handle(self, command: CreateWebhookEndpointCommand) -> WebhookDTO:
+        async with transaction.atomic():
+            domain_webhook = Webhook.create(WebhookCreateData(
+                title=command.title,
+                url=command.url,
+                user_id=command.user_id,
+            ))
+            database_webhook = await self.webhook_repository.create_webhook(domain_webhook)
 
-        return webhook_to_dto(database_webhook)
+            return webhook_to_dto(database_webhook)

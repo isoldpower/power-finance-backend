@@ -30,8 +30,8 @@ class IdempotentMixin:
     Delegates key logic to IdempotencyService (application layer).
 
     Usage:
-        class MyViewSet(IdempotentMixin, viewsets.ViewSet):
-            IDEMPOTENT_ACTIONS = {'create', 'update', 'destroy'}
+        class MyViewSet(IdempotentMixin, APIView):
+            IDEMPOTENT_ACTIONS = {'post', 'patch', 'delete'}
     """
     IDEMPOTENT_ACTIONS: set[str] = set()
     _idempotency_key_acquired: bool = False
@@ -42,7 +42,7 @@ class IdempotentMixin:
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
 
-        if getattr(self, 'action', None) not in self.IDEMPOTENT_ACTIONS:
+        if request.method.lower() not in self.IDEMPOTENT_ACTIONS:
             return
         key = request.headers.get("Idempotency-Key")
         if not key:

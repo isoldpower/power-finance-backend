@@ -34,11 +34,13 @@ test-integration:
 		environment.presentation.tests \
 		--settings=$(SETTINGS)
 
+PORT ?= 8000
+
 # Run the ASGI server with hot reload on file changes
 run-dev:
 	cd power_finance && \
 	../$(PYTHON) -m uvicorn power_finance.asgi:application \
-		--reload
+		--reload --port $(PORT)
 
 # Run the ASGI server in stable mode without reloads
 run-stable:

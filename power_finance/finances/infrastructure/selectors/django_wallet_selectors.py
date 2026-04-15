@@ -8,15 +8,14 @@ from ..orm import WalletModel
 
 
 class DjangoWalletSelectorsCollection(WalletSelectorsCollection):
-    def get_ordered_user_wallets(self, user_id: int) -> list[Wallet]:
+    async def get_ordered_user_wallets(self, user_id: int) -> list[Wallet]:
         requested_wallets = (WalletModel.objects
             .filter(user_id=user_id)
             .order_by('created_at', 'id'))
 
-        return [WalletMapper.to_domain(wallet) for wallet in requested_wallets]
+        return [WalletMapper.to_domain(wallet) async for wallet in requested_wallets]
 
-    def get_single_wallet(self, user_id: int, wallet_id: UUID) -> Wallet:
-        requested_wallet = (WalletModel.objects
-            .get(user_id=user_id, id=wallet_id))
+    async def get_single_wallet(self, user_id: int, wallet_id: UUID) -> Wallet:
+        requested_wallet = await WalletModel.objects.aget(user_id=user_id, id=wallet_id)
 
         return WalletMapper.to_domain(requested_wallet)

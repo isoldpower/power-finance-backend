@@ -25,8 +25,8 @@ class SoftDeleteWalletCommandHandler:
         self.wallet_repository = wallet_repository or registry.wallet_repository
 
     @transaction.atomic
-    def handle(self, command: SoftDeleteWalletCommand) -> WalletDTO:
-        wallet = self.wallet_repository.soft_delete_wallet(
+    async def handle(self, command: SoftDeleteWalletCommand) -> WalletDTO:
+        wallet = await self.wallet_repository.soft_delete_wallet(
             UUID(command.wallet_id),
             command.user_id
         )

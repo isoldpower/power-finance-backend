@@ -23,8 +23,8 @@ class GetOwnedWalletQueryHandler:
         registry = get_repository_registry()
         self.wallet_repository = wallet_repository or registry.wallet_repository
 
-    def handle(self, query: GetOwnedWalletQuery) -> WalletDTO:
-        requested_wallet = self.wallet_repository.get_user_wallet_by_id(
+    async def handle(self, query: GetOwnedWalletQuery) -> WalletDTO:
+        requested_wallet = await self.wallet_repository.get_user_wallet_by_id(
             UUID(query.wallet_id),
             query.user_id
         )

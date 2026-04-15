@@ -37,9 +37,9 @@ class CreateNewWalletCommandHandler:
         self.currency_repository = currency_repository or registry.currency_repository
 
     @transaction.atomic
-    def handle(self, command: CreateNewWalletCommand) -> WalletDTO:
+    async def handle(self, command: CreateNewWalletCommand) -> WalletDTO:
         currency_code = command.currency.upper()
-        if not self.currency_repository.currency_code_exists(currency_code):
+        if not await self.currency_repository.currency_code_exists(currency_code):
             raise UnsupportedCurrencyError(currency_code)
 
         wallet = Wallet(
@@ -55,7 +55,6 @@ class CreateNewWalletCommandHandler:
             updated_at=timezone.now(),
             deleted_at=None,
         )
-
-        created_wallet = self.wallet_repository.create_wallet(wallet)
+        created_wallet = await self.wallet_repository.create_wallet(wallet)
 
         return wallet_to_dto(created_wallet)

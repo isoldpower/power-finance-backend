@@ -23,8 +23,8 @@ class GetWebhookQueryHandler:
         registry = get_repository_registry()
         self.webhook_repository = webhook_repository or registry.webhook_repository
 
-    def handle(self, query: GetWebhookQuery) -> WebhookDTO:
-        requested_webhook = self.webhook_repository.get_user_webhook_by_id(
+    async def handle(self, query: GetWebhookQuery) -> WebhookDTO:
+        requested_webhook = await self.webhook_repository.get_user_webhook_by_id(
             user_id=query.user_id,
             webhook_id=UUID(query.webhook_id)
         )

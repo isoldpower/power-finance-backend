@@ -112,14 +112,14 @@ class ListFilteredTransactionsQueryHandler:
         registry = get_repository_registry()
         self.transaction_repository = transaction_repository or registry.transaction_repository
 
-    def handle(self, request: ListFilteredTransactionsQuery) -> list[TransactionPlainDTO]:
+    async def handle(self, request: ListFilteredTransactionsQuery) -> list[TransactionPlainDTO]:
         try:
             resolved_query = resolve_filter_query(request.filter_body, self.filter_policy)
             filter_tree = ResolvedFilterTree(
                 query=resolved_query,
                 applied_policy=self.filter_policy,
             )
-            filtered_transactions = self.transaction_repository.list_transactions_with_filters(
+            filtered_transactions = await self.transaction_repository.list_transactions_with_filters(
                 filter_tree,
                 request.user_id
             )

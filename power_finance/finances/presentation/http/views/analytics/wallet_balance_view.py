@@ -1,33 +1,24 @@
-from rest_framework import status, viewsets, serializers
-from rest_framework.permissions import IsAuthenticated
+import logging
+from rest_framework import status, serializers
 from rest_framework.response import Response
 from rest_framework.request import Request
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from django.core.exceptions import ObjectDoesNotExist
-from typing import Any
 
 from finances.application.use_cases import (
     GetWalletBalanceHistoryQueryHandler,
     GetWalletBalanceHistoryQuery,
 )
 
-from environment.presentation.http.base_api_view import BaseAPIView
-from environment.presentation.middleware import AnalyticsThrottle
-
+from .base import AnalyticsView
 from ...serializers import WalletBalanceHistorySerializer, MessageResponseSerializer
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
 
+logger = logging.getLogger(__name__)
 
-class WalletBalanceHistoryView(viewsets.ViewSet, BaseAPIView):
-    permission_classes = [IsAuthenticated]
-    throttle_classes = [AnalyticsThrottle]
-    pagination_class = None
 
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-        self.query_handler = GetWalletBalanceHistoryQueryHandler()
-
+class WalletBalanceHistoryView(AnalyticsView):
     @extend_schema(
         operation_id="analytics_wallet_balance_history_retrieve",
         summary="Wallet balance history",
@@ -44,9 +35,10 @@ class WalletBalanceHistoryView(viewsets.ViewSet, BaseAPIView):
             404: serializers.Serializer
         }
     )
-    def summary(self, request: Request, pk=None) -> Response:
+    async def get(self, request: Request, pk=None) -> Response:
         try:
-            result = self.query_handler.handle(GetWalletBalanceHistoryQuery(
+            handler = GetWalletBalanceHistoryQueryHandler()
+            result = await handler.handle(GetWalletBalanceHistoryQuery(
                 user_id=request.user.id,
                 wallet_id=pk
             ))
@@ -68,4 +60,5 @@ class WalletBalanceHistoryView(viewsets.ViewSet, BaseAPIView):
                 resource_id=f"{pk}"
             ))
 
+            logger.error("WalletBalanceHistoryView: Error for User ID: %s, Wallet ID: %s - %s", request.user.id, pk, str(e))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)

@@ -58,15 +58,15 @@ def handle_evently_command_transaction(using: str | None = None) -> Callable[[Ca
 def atomic_evently_command(using: str | None = None) -> Callable[[Callable[P, R]], Callable[P, R]]:
     def decorator(function: Callable[P, R]) -> Callable[P, R]:
         @wraps(function)
-        def wrapped(self: UseCaseEvently, *args: P.args, **kwargs: P.kwargs) -> R:
+        async def wrapped(self: UseCaseEvently, *args: P.args, **kwargs: P.kwargs) -> R:
             logger.info("%s: Starting atomic handle() with args=%s, kwargs=%s", self.__class__.__name__, args, kwargs)
-            with transaction.atomic(using=using):
-                result = function(self, *args, **kwargs)
+            async with transaction.atomic(using=using):
+                result = await function(self, *args, **kwargs)
 
                 recorded_events = self.event_collector.pull_events()
                 if recorded_events:
                     logger.debug("%s: Scheduling %d events for publication on commit (atomic)", self.__class__.__name__, len(recorded_events))
-                    transaction.on_commit(
+                    await transaction.aon_commit(
                         lambda: get_event_bus().publish(recorded_events),
                         using=using,
                     )

@@ -7,10 +7,10 @@ class WriteThrottle(RedisBaseThrottle):
     scope = 'writes'
     rate = '60/min'
 
-    def allow_request(self, request, view) -> bool:
+    async def allow_request(self, request, view) -> bool:
         if request.user and request.user.is_authenticated and request.method in _WRITE_METHODS:
             key = f"rate_limit:writes:{request.user.id}"
-            count = self._get_count_in_window(key)
+            count = await self._get_count_in_window(key)
             self._current_count = count
             return count <= self._num_requests
         return True

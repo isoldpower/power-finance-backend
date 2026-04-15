@@ -10,7 +10,7 @@ class RedisBaseThrottle(BaseThrottle):
     rate: str | None = None
 
     def __init__(self):
-        self._redis_client = get_redis_client(sync=True)
+        self._redis_client = get_redis_client(sync=False)
         parsed = self._parse_rate(self.rate)
         self._num_requests, self._duration = parsed if parsed else (None, None)
 
@@ -22,7 +22,7 @@ class RedisBaseThrottle(BaseThrottle):
         period_map = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}
         return int(num), int(period_map[period[0]])
 
-    def _get_count_in_window(self, key: str) -> int:
+    async def _get_count_in_window(self, key: str) -> int:
         now_ms = int(time.time() * 1000)
         window_start_ms = now_ms - (self._duration * 1000)
         member = f"{now_ms}:{uuid.uuid4().hex}"
@@ -32,7 +32,7 @@ class RedisBaseThrottle(BaseThrottle):
         pipe.zadd(key, {member: now_ms})
         pipe.zcard(key)
         pipe.expire(key, self._duration)
-        _, _, cardinality, _ = pipe.execute()
+        _, _, cardinality, _ = await pipe.execute()
 
         return cardinality
 
@@ -41,8 +41,7 @@ class RedisBaseThrottle(BaseThrottle):
             return {}
 
         prefix = f"X-RateLimit-{self.scope.replace('_', '-').title()}"
-        count = self._current_count
-        remaining = max(0, self._num_requests - count)
+        remaining = max(0, self._num_requests - self._current_count)
         reset_at = int(time.time()) + self._duration
 
         return {
@@ -51,7 +50,7 @@ class RedisBaseThrottle(BaseThrottle):
             f'{prefix}-Reset': str(reset_at),
         }
 
-    def allow_request(self, request, view) -> bool:
+    async def allow_request(self, request, view) -> bool:
         raise NotImplementedError
 
     def wait(self) -> float | None:

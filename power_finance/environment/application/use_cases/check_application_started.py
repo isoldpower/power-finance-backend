@@ -1,3 +1,5 @@
+import asyncio
+
 from ..dtos import ApplicationInitializedReportDTO
 from ..interfaces import ServiceHealthChecker
 
@@ -17,16 +19,23 @@ class CheckApplicationStarted:
             'migrations': MigrationsHealthChecker(),
         }
 
-    def handle(self):
-        ready_dict: dict[str, str] = {}
-        for dependency, service in self._dependencies_list.items():
-            ready_dict[dependency] = service.health_status()
-
-        dependency_ready: bool = all(status == HealthProbeStatus.OK.value for status in ready_dict.values())
-        service_status = HealthProbeStatus.OK.value if dependency_ready else HealthProbeStatus.DEGRADED.value
+    async def handle(self):
+        dependencies = list(self._dependencies_list.items())
+        health_statuses = await asyncio.gather(
+            *[service.health_status() for _, service in dependencies],
+            return_exceptions=True
+        )
+        health_checks = {
+            dependency: result
+            for (dependency, _), result in zip(dependencies, health_statuses)
+        }
+        dependency_ready: bool = all(
+            isinstance(status, str) and status == HealthProbeStatus.OK.value
+            for status in health_checks.values()
+        )
 
         return ApplicationInitializedReportDTO(
-            status=service_status,
-            postgres=ready_dict.get('postgres'),
-            migrations=ready_dict.get('migrations'),
+            status=HealthProbeStatus.OK.value if dependency_ready else HealthProbeStatus.DEGRADED.value,
+            postgres=health_checks.get('postgres'),
+            migrations=health_checks.get('migrations'),
         )

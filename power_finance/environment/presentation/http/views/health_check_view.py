@@ -1,23 +1,23 @@
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
+from ..base_api_view import BaseAPIView
 from ..presenters import HealthCheckPresenters
 
 from environment.application.use_cases import CheckDependenciesReady, CheckApplicationStarted
 
 
-class LivenessView(APIView):
-    def get(self, request: Request):
+class LivenessView(BaseAPIView):
+    async def get(self, request: Request):
         return Response(status=status.HTTP_200_OK)
 
 
-class ReadinessView(APIView):
-    def get(self, request: Request):
+class ReadinessView(BaseAPIView):
+    async def get(self, request: Request):
         try:
             handler = CheckDependenciesReady()
-            service_report = handler.handle()
+            service_report = await handler.handle()
 
             payload = HealthCheckPresenters.present_ready_report(service_report)
             http_status = status.HTTP_200_OK if service_report.status == "ok" else status.HTTP_503_SERVICE_UNAVAILABLE
@@ -26,11 +26,11 @@ class ReadinessView(APIView):
             return Response(str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class StartupView(APIView):
-    def get(self, request: Request):
+class StartupView(BaseAPIView):
+    async def get(self, request: Request):
         try:
             handler = CheckApplicationStarted()
-            service_report = handler.handle()
+            service_report = await handler.handle()
 
             payload = HealthCheckPresenters.present_started_report(service_report)
             http_status = status.HTTP_200_OK if service_report.status == "ok" else status.HTTP_503_SERVICE_UNAVAILABLE

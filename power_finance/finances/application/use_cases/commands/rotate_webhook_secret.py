@@ -25,14 +25,14 @@ class RotateWebhookSecretCommandHandler:
         registry = get_repository_registry()
         self.webhook_repository = webhook_repository or registry.webhook_repository
 
-    @transaction.atomic
-    def handle(self, command: RotateWebhookSecretCommand) -> WebhookDTO:
-        requested_webhook = self.webhook_repository.get_user_webhook_by_id(
-            webhook_id=UUID(command.webhook_id),
-            user_id=command.user_id,
-        )
+    async def handle(self, command: RotateWebhookSecretCommand) -> WebhookDTO:
+        async with transaction.atomic():
+            requested_webhook = await self.webhook_repository.get_user_webhook_by_id(
+                webhook_id=UUID(command.webhook_id),
+                user_id=command.user_id,
+            )
 
-        requested_webhook.rotate_secret()
-        updated_webhook = self.webhook_repository.save_webhook(requested_webhook)
+            requested_webhook.rotate_secret()
+            updated_webhook = await self.webhook_repository.save_webhook(requested_webhook)
 
-        return webhook_to_dto(updated_webhook)
+            return webhook_to_dto(updated_webhook)

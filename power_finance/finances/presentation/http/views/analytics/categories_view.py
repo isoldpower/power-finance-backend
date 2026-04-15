@@ -1,31 +1,22 @@
-from rest_framework import status, viewsets
-from rest_framework.permissions import IsAuthenticated
+import logging
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.request import Request
 from drf_spectacular.utils import extend_schema
-from typing import Any
 
 from finances.application.use_cases import (
     GetCategoriesAnalyticsQueryHandler,
     GetCategoriesAnalyticsQuery,
 )
 
-from environment.presentation.http.base_api_view import BaseAPIView
-from environment.presentation.middleware import AnalyticsThrottle
-
+from .base import AnalyticsView
 from ...presenters import CommonHttpPresenter, MessageResultInfo, AnalyticsHttpPresenter
 from ...serializers import CategoryAnalyticsSerializer, MessageResponseSerializer
 
+logger = logging.getLogger(__name__)
 
-class CategoriesAnalyticsView(viewsets.ViewSet, BaseAPIView):
-    permission_classes = [IsAuthenticated]
-    throttle_classes = [AnalyticsThrottle]
-    pagination_class = None
 
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-        self.query_handler = GetCategoriesAnalyticsQueryHandler()
-
+class CategoriesAnalyticsView(AnalyticsView):
     @extend_schema(
         operation_id="analytics_categories_list",
         summary="Categories spending analytics",
@@ -35,9 +26,10 @@ class CategoriesAnalyticsView(viewsets.ViewSet, BaseAPIView):
             400: MessageResponseSerializer
         }
     )
-    def summary(self, request: Request) -> Response:
+    async def get(self, request: Request) -> Response:
         try:
-            result = self.query_handler.handle(GetCategoriesAnalyticsQuery(
+            handler = GetCategoriesAnalyticsQueryHandler()
+            result = await handler.handle(GetCategoriesAnalyticsQuery(
                 user_id=request.user.id
             ))
 
@@ -56,4 +48,5 @@ class CategoriesAnalyticsView(viewsets.ViewSet, BaseAPIView):
                 resource_id=None
             ))
 
+            logger.error("CategoriesAnalyticsView: Error for User ID: %s - %s", request.user.id, str(exception))
             return Response(payload, status=status.HTTP_400_BAD_REQUEST)

@@ -25,9 +25,9 @@ class ListTransactionsQueryHandler:
         registry = get_repository_registry()
         self.transaction_repository = transaction_repository or registry.transaction_repository
 
-    def handle(self, query: ListTransactionsQuery) -> list[TransactionPlainDTO]:
+    async def handle(self, query: ListTransactionsQuery) -> list[TransactionPlainDTO]:
         logger.info("ListTransactionsQueryHandler: Handling ListTransactionsQuery for User ID: %s", query.user_id)
-        user_transactions = self.transaction_repository.get_user_transactions(query.user_id)
+        user_transactions = await self.transaction_repository.get_user_transactions(query.user_id)
 
         logger.info("ListTransactionsQueryHandler: Successfully retrieved %d transactions for User ID: %s", len(user_transactions), query.user_id)
         return [

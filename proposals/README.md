@@ -17,6 +17,7 @@ Implementation proposals for production system concepts. Each folder contains a 
 | 9        | [Ledger-Based Balance + CQRS](./ledger-cqrs/)           | Event sourcing, derived state, checkpointing |
 | 10       | [Piggy Bank](./piggy-bank/)                             | Savings goals, scheduled contributions       |
 | 11       | [Split Payments](./split-payments/)                     | Multi-party billing, debt coordination       |
+| 12       | [Async Migration](./async-migration/)                   | ASGI, async views, async ORM, httpx          |
 
 ## Why This Order
 

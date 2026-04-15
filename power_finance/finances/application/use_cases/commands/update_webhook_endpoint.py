@@ -28,21 +28,21 @@ class UpdateWebhookEndpointCommandHandler:
         registry = get_repository_registry()
         self.webhook_repository = webhook_repository or registry.webhook_repository
 
-    def _update_fields(self, webhook: Webhook, command: UpdateWebhookEndpointCommand) -> Webhook:
+    async def _update_fields(self, webhook: Webhook, command: UpdateWebhookEndpointCommand) -> Webhook:
         if command.title is not None:
             webhook.title = command.title
         if command.url is not None:
             webhook.url = command.url
-        
-        return self.webhook_repository.save_webhook(webhook)
 
-    @transaction.atomic
-    def handle(self, command: UpdateWebhookEndpointCommand) -> WebhookDTO:
-        existing_webhook = self.webhook_repository.get_user_webhook_by_id(
-            webhook_id=UUID(command.webhook_id),
-            user_id=command.user_id
-        )
-        
-        updated_webhook = self._update_fields(existing_webhook, command)
+        return await self.webhook_repository.save_webhook(webhook)
 
-        return webhook_to_dto(updated_webhook)
+    async def handle(self, command: UpdateWebhookEndpointCommand) -> WebhookDTO:
+        async with transaction.atomic():
+            existing_webhook = await self.webhook_repository.get_user_webhook_by_id(
+                webhook_id=UUID(command.webhook_id),
+                user_id=command.user_id
+            )
+
+            updated_webhook = await self._update_fields(existing_webhook, command)
+
+            return webhook_to_dto(updated_webhook)

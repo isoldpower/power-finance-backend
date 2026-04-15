@@ -1,5 +1,4 @@
 import logging
-from asgiref.sync import sync_to_async
 logger = logging.getLogger(__name__)
 
 from finances.domain.events import WebhookDeliveryStatusChangedEvent
@@ -44,10 +43,7 @@ class WebhookDeliveryNotificationHandler:
             user_id=event.user_id,
             payload=payload
         )
-        notification = await sync_to_async(
-            self._notification_repository.create_notification,
-            thread_sensitive=True,
-        )(notification_data)
+        notification = await self._notification_repository.create_notification(notification_data)
 
         try:
             await self._notification_publisher.publish_notification(notification)

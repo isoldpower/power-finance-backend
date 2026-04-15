@@ -7,20 +7,19 @@ from ..mappers import UserMapper
 
 
 class DjangoUserRepository(UserRepository):
-    def get_or_create_by_external_id(self, external_user_id: str) -> UserEntity:
-        user, _ = User.objects.get_or_create(username=external_user_id)
-
+    async def get_or_create_by_external_id(self, external_user_id: str) -> UserEntity:
+        user, _ = await User.objects.aget_or_create(username=external_user_id)
         return UserMapper.to_domain(user)
 
-    def update_user_info(self, user: UserEntity) -> UserEntity:
-        updated_user: User = User.objects.get(username=user.id)
+    async def update_user_info(self, user: UserEntity) -> UserEntity:
+        updated_user: User = await User.objects.aget(username=user.id)
         modified_fields = UserMapper.get_changed_fields(updated_user, user)
 
-        if len(modified_fields) > 0:
+        if modified_fields:
             UserMapper.update_model(updated_user, user)
-            updated_user.save(update_fields=modified_fields)
+            await updated_user.asave(update_fields=modified_fields)
 
         return UserMapper.to_domain(updated_user)
 
-    def get_user_raw(self, user: UserEntity) -> User:
-        return User.objects.get(username=user.id)
+    async def get_user_raw(self, user: UserEntity) -> User:
+        return await User.objects.aget(username=user.id)

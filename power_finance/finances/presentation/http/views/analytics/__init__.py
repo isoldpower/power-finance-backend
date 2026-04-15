@@ -1,8 +1,8 @@
-from .money_flow_viewset import MoneyFlowAnalyticsView
-from .categories_viewset import CategoriesAnalyticsView
-from .expenditures_viewset import ExpenditureAnalyticsView
-from .wallet_balance_viewset import WalletBalanceHistoryView
-from .spending_heatmap_viewset import SpendingHeatmapView
+from .money_flow_view import MoneyFlowAnalyticsView
+from .categories_view import CategoriesAnalyticsView
+from .expenditures_view import ExpenditureAnalyticsView
+from .wallet_balance_view import WalletBalanceHistoryView
+from .spending_heatmap_view import SpendingHeatmapView
 
 __all__ = [
     "MoneyFlowAnalyticsView",

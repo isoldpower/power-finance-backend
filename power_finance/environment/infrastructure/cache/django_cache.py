@@ -1,3 +1,4 @@
+import asyncio
 from typing import Callable, TypeVar
 
 from django.core.cache import cache, BaseCache
@@ -16,19 +17,19 @@ class DjangoCacheStorage(CacheStorage):
         self.cache_instance = cache
         self.base_cache_key = cache_key
 
-    def get_data(
+    async def get_data(
             self,
             callback: Callable[[], TValue],
             key: str | None = None,
     ) -> TValue:
         final_key = f'{self.base_cache_key}{f":{key}" if key else ""}'
-        requested_data = self.cache_instance.get(final_key)
+        requested_data = await self.cache_instance.aget(final_key)
 
-        data: TValue
         if requested_data:
             data = requested_data
         else:
-            data = callback()
+            result = callback()
+            data = await result if asyncio.iscoroutine(result) else result
 
-        self.cache_instance.set(final_key, data)
+        await self.cache_instance.aset(final_key, data)
         return data

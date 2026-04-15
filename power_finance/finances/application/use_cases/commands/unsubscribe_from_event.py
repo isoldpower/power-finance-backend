@@ -24,10 +24,10 @@ class UnsubscribeFromEventCommandHandler:
         registry = get_repository_registry()
         self.webhook_repository = webhook_repository or registry.webhook_repository
 
-    @transaction.atomic
-    def handle(self, command: UnsubscribeFromEventCommand) -> WebhookSubscriptionDTO:
-        return self.webhook_repository.unsubscribe_webhook_by_id(
-            subscription_id=UUID(command.subscription_id),
-            webhook_id=UUID(command.webhook_id),
-            user_id=command.user_id
-        )
+    async def handle(self, command: UnsubscribeFromEventCommand) -> WebhookSubscriptionDTO:
+        async with transaction.atomic():
+            return await self.webhook_repository.unsubscribe_webhook_by_id(
+                subscription_id=UUID(command.subscription_id),
+                webhook_id=UUID(command.webhook_id),
+                user_id=command.user_id
+            )

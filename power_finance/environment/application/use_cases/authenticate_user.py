@@ -37,28 +37,26 @@ class AuthenticateUserCommandHandler:
             api_base_url="https://api.clerk.com/v1",
         )
 
-    def _get_user_from_api(self, token: str) -> UserEntity:
-        auth_jwks = self._cache_storage.get_data(self._external_auth.get_jwks, self._jwks_cache_key)
+    async def _get_user_from_api(self, token: str) -> UserEntity:
+        auth_jwks = await self._cache_storage.get_data(self._external_auth.get_jwks, self._jwks_cache_key)
         principal = decode_jwt_contents(token, auth_jwks)
-        external_user = self._external_auth.fetch_user_info(principal.external_user_id)
-        internal_user = self._user_repository.get_or_create_by_external_id(principal.external_user_id)
+        external_user = await self._external_auth.fetch_user_info(principal.external_user_id)
+        internal_user = await self._user_repository.get_or_create_by_external_id(principal.external_user_id)
         internal_user.sync_with_external(external_user)
-
-        return self._user_repository.update_user_info(internal_user)
+        return await self._user_repository.update_user_info(internal_user)
 
     def _build_user_hash(self, token: str) -> str:
         token_hash = hashlib.sha256(token.encode()).hexdigest()
-
         return f"user_{token_hash}"
 
-    def handle(self, command: AuthenticateUserCommand) -> tuple[User, str] | None:
+    async def handle(self, command: AuthenticateUserCommand) -> tuple[User, str] | None:
         token = self._external_auth.resolve_auth_token(command.auth_header)
         if not token:
             return None
 
-        user_entity: UserEntity = self._cache_storage.get_data(
-            lambda : self._get_user_from_api(token),
+        user_entity: UserEntity = await self._cache_storage.get_data(
+            lambda: self._get_user_from_api(token),
             self._build_user_hash(token),
         )
-        user_model = self._user_repository.get_user_raw(user_entity)
+        user_model = await self._user_repository.get_user_raw(user_entity)
         return user_model, token
