@@ -1,8 +1,6 @@
 from .transaction_serializer import (
-    TransactionParticipantField,
     CreateTransactionRequestSerializer,
     FilterTransactionsRequestSerializer,
-    UpdateTransactionRequestSerializer,
 )
 from .wallet_serializer import (
     FilterWalletsRequestSerializer,
@@ -20,10 +18,8 @@ from .webhooks_serializer import (
 from .notification_serializer import BatchAcknowledgeRequestSerializer
 
 __all__ = [
-    'TransactionParticipantField',
     'CreateTransactionRequestSerializer',
     'FilterTransactionsRequestSerializer',
-    'UpdateTransactionRequestSerializer',
     'FilterWalletsRequestSerializer',
     'UpdateWalletRequestSerializer',
     'CreateWalletRequestSerializer',

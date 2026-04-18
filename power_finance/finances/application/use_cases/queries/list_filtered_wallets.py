@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from typing import Any
 
@@ -8,12 +9,12 @@ from finances.domain.entities import (
     ComparisonOperator,
     TypeVariant,
 )
-from finances.domain.services import resolve_filter_query
+from finances.domain.services import resolve_filter_query, resolve_filter_query_sql
 
 from ...bootstrap import get_repository_registry
 from ...dto_builders import wallet_to_dto
 from ...dtos import WalletDTO
-from ...interfaces import WalletRepository
+from ...interfaces import WalletRepository, TransactionRepository
 
 
 @dataclass(frozen=True)
@@ -82,21 +83,31 @@ class ListFilteredWalletsQueryHandler:
     def __init__(
             self,
             wallet_repository: WalletRepository | None = None,
+            transaction_repository: TransactionRepository | None = None,
     ) -> None:
         registry = get_repository_registry()
         self.wallet_repository = wallet_repository or registry.wallet_repository
+        self.transaction_repository = transaction_repository or registry.transaction_repository
 
     async def handle(self, request: ListFilteredWalletsQuery) -> list[WalletDTO]:
         try:
             resolved_query = resolve_filter_query(request.filter_body, self.filter_policy)
+            resolved_sql = resolve_filter_query_sql(request.filter_body, self.filter_policy)
             filter_tree = ResolvedFilterTree(
-                query=resolved_query,
+                django_query=resolved_query,
+                raw_sql_query=resolved_sql,
                 applied_policy=self.filter_policy,
             )
             filtered_wallets = await self.wallet_repository.list_wallets_with_filters(
                 filter_tree,
                 request.user_id
             )
+            wallet_transactions = await asyncio.gather(*[
+                self.transaction_repository.get_wallet_transactions(wallet.id)
+                for wallet in filtered_wallets
+            ])
+            for wallet, transactions in zip(filtered_wallets, wallet_transactions):
+                wallet.transactions = transactions
 
             return [wallet_to_dto(wallet) for wallet in filtered_wallets]
         except Exception as e:

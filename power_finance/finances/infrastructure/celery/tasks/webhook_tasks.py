@@ -1,4 +1,5 @@
 from uuid import UUID
+from asgiref.sync import async_to_sync
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
@@ -18,8 +19,8 @@ def attempt_webhook_delivery(
     registry = get_repository_registry()
 
     try:
-        webhook = registry.webhook_repository.get_webhook_by_id(webhook_id=UUID(webhook_id))
-        handler.handle(webhook=webhook, delivery_id=UUID(delivery_id))
+        webhook = async_to_sync(registry.webhook_repository.get_webhook_by_id)(webhook_id=UUID(webhook_id))
+        async_to_sync(handler.handle)(webhook=webhook, delivery_id=UUID(delivery_id))
         logger.info("Task [finances.attempt_webhook_delivery]: Successfully processed Delivery: %s", delivery_id)
     except Exception as exc:
         logger.error("Task [finances.attempt_webhook_delivery]: Error occurred for Delivery: %s - %s", delivery_id, str(exc))
@@ -27,11 +28,15 @@ def attempt_webhook_delivery(
 
 @shared_task(name="finances.schedule_due_webhook_retries")
 def schedule_due_webhook_retries() -> None:
+    async_to_sync(_schedule_due_webhook_retries)()
+
+
+async def _schedule_due_webhook_retries() -> None:
     logger.info("Task [finances.schedule_due_webhook_retries]: Checking for deliveries to retry")
 
     try:
         registry = get_repository_registry()
-        deliveries = registry.delivery_repository.get_deliveries_to_retry(limit=100)
+        deliveries = await registry.delivery_repository.get_deliveries_to_retry(limit=100)
 
         logger.info("Task [finances.schedule_due_webhook_retries]: Found %d deliveries to retry", len(deliveries))
         for delivery in deliveries:

@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
 from celery import Celery
+from immudb import ImmudbClient
+from immudb.handler.useDatabase import dbUseResponse
 from redis.asyncio.client import Redis
 from redis import Redis as SyncRedis
 
@@ -32,6 +34,11 @@ class ApplicationEnvironment:
     rabbitmq_user: str
     rabbitmq_password: str
     celery_beat_filename: str
+    immudb_host: str
+    immudb_transactions_database: str
+    immudb_port: int
+    immudb_user: str
+    immudb_password: str
 
 
 @dataclass(frozen=True)
@@ -54,7 +61,14 @@ class RedisClient:
 
 
 @dataclass(frozen=True)
+class ImmudbConnection:
+    client: ImmudbClient
+    transaction_token: dbUseResponse
+
+
+@dataclass(frozen=True)
 class ApplicationState:
+    immudb: ImmudbConnection
     event_bus: EventBus
     broker: NotificationBroker
     redis: Redis

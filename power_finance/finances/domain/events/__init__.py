@@ -3,8 +3,6 @@ from .transaction_events import (
     TransactionCreatedEvent,
     TransactionEventParticipant,
     TransactionDeletedEvent,
-    TransactionUpdatedEvent,
-    UpdateTransactionData,
 )
 from .webhook_delivery_status_changed import (
     WebhookDeliveryStatusChangedEvent,
@@ -16,8 +14,6 @@ __all__ = [
     'TransactionEventParticipant',
     'TransactionCreatedEvent',
     'TransactionDeletedEvent',
-    'TransactionUpdatedEvent',
-    'UpdateTransactionData',
     'DomainEvent',
     'EventCollector',
     'WebhookDeliveryStatusChangedEvent',

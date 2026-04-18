@@ -13,6 +13,9 @@ class IContainsLeafTreeNode(LeafTreeNode):
     def resolve(self) -> Q:
         return Q(**{f"{self.field_name}__icontains": self.value})
 
+    def resolve_sql(self) -> str:
+        return f"LOWER({self.field_name}) LIKE LOWER('%{self.value}%')"
+
 
 class FilterIContainsLeafTreeNode(FilterLeafTreeNode):
     @classmethod
@@ -22,5 +25,11 @@ class FilterIContainsLeafTreeNode(FilterLeafTreeNode):
     def resolve(self) -> Q:
         if self.operator.value in self.policy.allowed_operators:
             return Q(**{f"{self.policy.model_lookup}__icontains": self.value})
+
+        raise PolicyViolationError(f"Filter {self.operator} is forbidden for {self.policy.request_name} field")
+
+    def resolve_sql(self) -> str:
+        if self.operator.value in self.policy.allowed_operators:
+            return f"LOWER({self.policy.model_lookup}) LIKE LOWER('%{self.value}%')"
 
         raise PolicyViolationError(f"Filter {self.operator} is forbidden for {self.policy.request_name} field")

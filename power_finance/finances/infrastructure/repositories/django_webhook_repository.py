@@ -153,7 +153,7 @@ class DjangoWebhookRepository(WebhookRepository):
 
     async def list_webhooks_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Webhook]:
         filtered_webhooks = (WebhookEndpointModel.objects
-            .filter(Q(user_id=user_id) & tree.query)
+            .filter(Q(user_id=user_id) & tree.django_query)
             .distinct())
 
         return [WebhookMapper.to_domain(webhook) async for webhook in filtered_webhooks]

@@ -7,6 +7,10 @@ class FinancesConfig(AppConfig):
     name = 'finances'
 
     def ready(self) -> None:
+        import sys
+        if 'makemigrations' in sys.argv or 'migrate' in sys.argv:
+            return
+
         from finances.application.bootstrap import bootstrap_application, ApplicationEnvironment
 
         bootstrap_application(ApplicationEnvironment(
@@ -21,4 +25,9 @@ class FinancesConfig(AppConfig):
             redis_default_db_index=0,
             redis_celery_db_index=settings.RESOLVED_ENV['REDIS_CELERY_DATABASE_INDEX'],
             celery_beat_filename=settings.RESOLVED_ENV['CELERY_BEAT_SCHEDULE_FILENAME'],
+            immudb_host=settings.RESOLVED_ENV['IMMUDB_HOST'],
+            immudb_port=settings.RESOLVED_ENV['IMMUDB_PORT'],
+            immudb_user=settings.RESOLVED_ENV['IMMUDB_USER'],
+            immudb_password=settings.RESOLVED_ENV['IMMUDB_PASSWORD'],
+            immudb_transactions_database="transactions",
         ))

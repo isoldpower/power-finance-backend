@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.test import TestCase
 from finances.application.use_cases.commands.delete_transaction import DeleteTransactionCommand, DeleteTransactionCommandHandler
 from finances.application.dtos import TransactionDTO
-from finances.domain.entities.transaction import Transaction, TransactionParticipant
+from finances.domain.entities.old_transaction import Transaction, TransactionParticipant
 from finances.domain.entities.transaction_type import TransactionType
 from finances.domain.entities.expense_category import ExpenseCategory
 from finances.domain.entities.wallet import Wallet
@@ -50,7 +50,10 @@ class DeleteTransactionTests(TestCase):
         
         self.transaction = Transaction.from_persistence(
             id=self.transaction_id,
-            sender=TransactionParticipant(wallet_id=self.wallet_id, money=Money(amount=Decimal("20.00"), currency_code="USD")),
+            sender=TransactionParticipant(
+                wallet_id=self.wallet_id,
+                money=Money(amount=Decimal("20.00"), currency_code="USD")
+            ),
             receiver=None,
             description="Expense",
             type=TransactionType.EXPENSE,

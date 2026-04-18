@@ -13,6 +13,9 @@ class GreaterLeafTreeNode(LeafTreeNode):
     def resolve(self) -> Q:
         return Q(**{f"{self.field_name}__gt": self.value})
 
+    def resolve_sql(self) -> str:
+        return f"{self.field_name} > '{self.value}'"
+
 
 class FilterGreaterLeafTreeNode(FilterLeafTreeNode):
     @classmethod
@@ -22,5 +25,11 @@ class FilterGreaterLeafTreeNode(FilterLeafTreeNode):
     def resolve(self) -> Q:
         if self.operator.value in self.policy.allowed_operators:
             return Q(**{f"{self.policy.model_lookup}__gt": self.value})
+
+        raise PolicyViolationError(f"Filter {self.operator} is forbidden for {self.policy.request_name} field")
+
+    def resolve_sql(self) -> str:
+        if self.operator.value in self.policy.allowed_operators:
+            return f"{self.policy.model_lookup} > '{self.value}'"
 
         raise PolicyViolationError(f"Filter {self.operator} is forbidden for {self.policy.request_name} field")

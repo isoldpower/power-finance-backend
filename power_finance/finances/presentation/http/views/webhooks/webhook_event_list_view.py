@@ -101,7 +101,7 @@ class WebhookEventListView(WebhookView):
             ))
             payload = WebhookHttpPresenter.present_subscription(subscription)
 
-            logger.info("WebhookEventListView: Successfully subscribed Webhook ID: %s to event %s", pk, subscription.type)
+            logger.info("WebhookEventListView: Successfully subscribed Webhook ID: %s to event %s", pk, subscription.event_type)
             return Response(payload, status=status.HTTP_201_CREATED)
         except Exception as e:
             payload = CommonHttpPresenter.present_message_result(MessageResultInfo(

@@ -42,12 +42,8 @@ class TransactionDeletedWebhookHandler(EventWebhookHandler):
         self._wallet_repository = wallet_repository
 
     async def __call__(self, event: TransactionDeletedEvent) -> None:
-        transaction_wallet = await self._wallet_repository.get_wallet_by_id(
-            event.sender.wallet_id
-            if event.sender else event.receiver.wallet_id
-        )
         webhooks = await self._webhook_repository.get_webhooks_by_type(
-            user_id=transaction_wallet.user_id,
+            user_id=event.user_id,
             event_type=WebhookType.TransactionDelete
         )
 

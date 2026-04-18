@@ -27,6 +27,10 @@ class LeafTreeNode(TreeNode):
     def resolve(self) -> Q:
         raise NotImplementedError()
 
+    @abstractmethod
+    def resolve_sql(self) -> Q:
+        raise NotImplementedError()
+
 
 class FilterLeafTreeNode(LeafTreeNode, FilterTreeNode):
     policy: FilterFieldPolicy
@@ -39,6 +43,10 @@ class FilterLeafTreeNode(LeafTreeNode, FilterTreeNode):
 
     @abstractmethod
     def resolve(self) -> Q:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def resolve_sql(self) -> Q:
         raise NotImplementedError()
 
 

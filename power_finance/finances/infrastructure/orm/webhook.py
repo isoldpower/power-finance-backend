@@ -10,7 +10,6 @@ from finances.domain.events import WebhookDeliveryStatus
 
 class WebhookEventChoices(models.TextChoices):
     CREATE_TRANSACTION = WebhookType.TransactionCreate.value, "Transaction Created"
-    UPDATE_TRANSACTION = WebhookType.TransactionUpdate.value, "Transaction Updated"
     DELETE_TRANSACTION = WebhookType.TransactionDelete.value, "Transaction Deleted"
 
 

@@ -7,6 +7,10 @@ class TreeNode(ABC):
     def resolve(self) -> Q:
         raise NotImplementedError()
 
+    @abstractmethod
+    def resolve_sql(self) -> str:
+        raise NotImplementedError()
+
 
 class FilterTreeNode(TreeNode):
     def __init__(self, **kwargs):
@@ -14,4 +18,8 @@ class FilterTreeNode(TreeNode):
 
     @abstractmethod
     def resolve(self) -> Q:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def resolve_sql(self) -> str:
         raise NotImplementedError()

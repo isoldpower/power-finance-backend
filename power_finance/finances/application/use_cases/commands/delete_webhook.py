@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from uuid import UUID
 from django.core.management import CommandError
-from django.db import transaction
 
+from ...db_utils import aatomic
 from ...bootstrap import get_repository_registry
 from ...dto_builders import webhook_to_dto
 from ...dtos import WebhookDTO
@@ -11,7 +11,7 @@ from ...interfaces import WebhookRepository
 
 @dataclass(frozen=True)
 class DeleteWebhookCommand:
-    webhook_id: str
+    webhook_id: UUID
     user_id: int
 
 
@@ -26,9 +26,9 @@ class DeleteWebhookCommandHandler:
         self.webhook_repository = webhook_repository or registry.webhook_repository
 
     async def handle(self, command: DeleteWebhookCommand) -> WebhookDTO:
-        async with transaction.atomic():
+        async with aatomic():
             deleted_webhook = await self.webhook_repository.delete_webhook_by_id(
-                UUID(command.webhook_id),
+                command.webhook_id,
                 command.user_id
             )
 

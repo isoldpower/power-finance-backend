@@ -83,7 +83,7 @@ class DjangoWalletRepository(WalletRepository):
 
     async def list_wallets_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Wallet]:
         filtered_wallets = (WalletModel.objects
-            .filter(Q(user_id=user_id) & tree.query)
+            .filter(Q(user_id=user_id) & tree.django_query)
             .select_related("currency")
             .order_by()
             .distinct())

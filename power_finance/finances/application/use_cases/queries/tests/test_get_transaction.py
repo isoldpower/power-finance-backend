@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.test import SimpleTestCase
 from finances.application.use_cases.queries.get_transaction import GetTransactionQuery, GetTransactionQueryHandler
 from finances.application.dtos import TransactionDTO
-from finances.domain.entities.transaction import Transaction, TransactionParticipant
+from finances.domain.entities.old_transaction import Transaction, TransactionParticipant
 from finances.domain.entities.transaction_type import TransactionType
 from finances.domain.entities.expense_category import ExpenseCategory
 from finances.domain.entities.wallet import Wallet

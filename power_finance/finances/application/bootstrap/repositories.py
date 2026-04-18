@@ -3,27 +3,27 @@ from finances.infrastructure.repositories import (
     DjangoWebhookRepository,
     DjangoWalletRepository,
     DjangoNotificationRepository,
-    DjangoTransactionRepository,
+    ImmudbTransactionRepository,
     DjangoCurrencyRepository,
     DjangoWebhookPayloadRepository,
 )
 from finances.infrastructure.selectors import (
     DjangoWalletSelectorsCollection,
-    DjangoTransactionSelectorsCollection,
+    ImmudbTransactionSelectorsCollection,
 )
 
-from .state import RepositoryRegistry
+from .state import ImmudbConnection, RepositoryRegistry
 
 
-def initialize_repositories() -> RepositoryRegistry:
+def initialize_repositories(immudb_client: ImmudbConnection) -> RepositoryRegistry:
     return RepositoryRegistry(
         delivery_repository=DjangoWebhookDeliveryRepository(),
         webhook_repository=DjangoWebhookRepository(),
         wallet_repository=DjangoWalletRepository(),
         notification_repository=DjangoNotificationRepository(),
-        transaction_repository=DjangoTransactionRepository(),
+        transaction_repository=ImmudbTransactionRepository(immudb_client),
         currency_repository=DjangoCurrencyRepository(),
         payload_repository=DjangoWebhookPayloadRepository(),
         wallet_selectors=DjangoWalletSelectorsCollection(),
-        transaction_selectors=DjangoTransactionSelectorsCollection(),
+        transaction_selectors=ImmudbTransactionSelectorsCollection(immudb_client),
     )

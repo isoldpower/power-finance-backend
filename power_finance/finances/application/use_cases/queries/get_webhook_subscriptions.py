@@ -8,7 +8,7 @@ from ...interfaces import WebhookRepository
 
 @dataclass(frozen=True)
 class GetWebhookSubscriptionsQuery:
-    webhook_id: str
+    webhook_id: UUID
     user_id: int
 
 
@@ -24,6 +24,6 @@ class GetWebhookSubscriptionsQueryHandler:
 
     async def handle(self, query: GetWebhookSubscriptionsQuery) -> list[WebhookSubscriptionDTO]:
         return await self.webhook_repository.get_subscriptions_by_webhook_id(
-            webhook_id=UUID(query.webhook_id),
+            webhook_id=query.webhook_id,
             user_id=query.user_id,
         )

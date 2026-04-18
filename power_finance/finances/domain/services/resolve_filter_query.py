@@ -11,3 +11,11 @@ def resolve_filter_query(
 ) -> Q:
     filter_tree = FilterTree(filter_policy)
     return filter_tree.resolve(query)
+
+
+def resolve_filter_query_sql(
+        query: dict[str, Any],
+        filter_policy: FilterPolicy
+) -> str:
+    filter_tree = FilterTree(filter_policy)
+    return filter_tree.resolve_sql(query)

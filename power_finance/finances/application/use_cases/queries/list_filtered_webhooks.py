@@ -10,7 +10,7 @@ from finances.domain.entities import (
     ComparisonOperator,
     TypeVariant,
 )
-from finances.domain.services import resolve_filter_query
+from finances.domain.services import resolve_filter_query, resolve_filter_query_sql
 
 from ...bootstrap import get_repository_registry
 from ...dto_builders import webhook_to_dto
@@ -83,8 +83,10 @@ class ListFilteredWebhooksQueryHandler:
     async def handle(self, request: ListFilteredWebhooksQuery) -> list[WebhookDTO]:
         try:
             resolved_query = resolve_filter_query(request.filter_body, self.filter_policy)
+            resolved_sql = resolve_filter_query_sql(request.filter_body, self.filter_policy)
             filter_tree = ResolvedFilterTree(
-                query=resolved_query,
+                django_query=resolved_query,
+                raw_sql_query=resolved_sql,
                 applied_policy=self.filter_policy,
             )
             filtered_webhooks = await self.webhooks_repository.list_webhooks_with_filters(

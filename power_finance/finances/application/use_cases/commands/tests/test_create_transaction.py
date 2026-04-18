@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from django.test import TestCase
 from finances.application.use_cases.commands.create_transaction import CreateTransactionCommand, CreateTransactionCommandHandler
 from finances.application.dtos import CreateTransactionParticipantDTO, TransactionDTO
-from finances.domain.entities.transaction import Transaction
+from finances.domain.entities.old_transaction import Transaction
 from finances.domain.entities.transaction_type import TransactionType
 from finances.domain.entities.expense_category import ExpenseCategory
 from finances.domain.entities.wallet import Wallet

@@ -1,15 +1,15 @@
+import asyncio
 from dataclasses import dataclass
 from uuid import UUID
-from django.db import transaction
 
-from finances.domain.value_objects import Money
 from finances.domain.entities import Wallet
-from finances.domain.exceptions import UnsupportedCurrencyError
 
+from ..use_case_base import UseCaseEvently
+from ..decorators import atomic_evently_command
 from ...bootstrap import get_repository_registry
 from ...dto_builders import wallet_to_dto
 from ...dtos import WalletDTO
-from ...interfaces import WalletRepository, CurrencyRepository
+from ...interfaces import WalletRepository, TransactionRepository
 
 
 @dataclass
@@ -17,50 +17,36 @@ class UpdateExistingWalletCommand:
     wallet_id: str
     user_id: int
     name: str | None = None
-    currency: str | None = None
-    balance_amount: int | None = None
-    credit: bool | None = None
 
 
-class UpdateExistingWalletCommandHandler:
+class UpdateExistingWalletCommandHandler(UseCaseEvently):
     wallet_repository: WalletRepository
-    currency_repository: CurrencyRepository
+    transaction_repository: TransactionRepository
 
     def __init__(
         self,
         wallet_repository: WalletRepository | None = None,
-        currency_repository: CurrencyRepository | None = None,
+        transaction_repository: TransactionRepository | None = None,
     ):
+        super().__init__()
         registry = get_repository_registry()
         self.wallet_repository = wallet_repository or registry.wallet_repository
-        self.currency_repository = currency_repository or registry.currency_repository
+        self.transaction_repository = transaction_repository or registry.transaction_repository
 
     async def _update_fields(self, wallet: Wallet, command: UpdateExistingWalletCommand) -> Wallet:
         if command.name is not None:
             wallet.name = command.name
-        if command.balance_amount is not None or command.currency is not None:
-            balance = Money(
-                amount=command.balance_amount or wallet.balance.amount,
-                currency_code=command.currency or wallet.balance.currency_code
-            )
-            wallet.balance = balance
-        if command.credit is not None:
-            wallet.credit = command.credit
 
         return await self.wallet_repository.save_wallet(wallet)
 
-
-    @transaction.atomic
+    @atomic_evently_command()
     async def handle(self, command: UpdateExistingWalletCommand) -> WalletDTO:
-        if command.currency is not None:
-            currency_code = command.currency.upper()
-            if not await self.currency_repository.currency_code_exists(currency_code):
-                raise UnsupportedCurrencyError(currency_code)
-
-        wallet = await self.wallet_repository.get_user_wallet_by_id(
-            UUID(command.wallet_id),
-            command.user_id
-        )
+        wallet_id = UUID(command.wallet_id)
+        wallet, transactions = await asyncio.gather(*[
+            self.wallet_repository.get_user_wallet_by_id(wallet_id, command.user_id),
+            self.transaction_repository.get_wallet_transactions(wallet_id),
+        ])
+        wallet.transactions = transactions
         updated_wallet = await self._update_fields(wallet, command)
 
         return wallet_to_dto(updated_wallet)

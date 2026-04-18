@@ -3,7 +3,6 @@ from rest_framework import status
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 
-from finances.application.dtos import CreateTransactionParticipantDTO
 from finances.application.use_cases import (
     ListTransactionsQuery,
     ListTransactionsQueryHandler,
@@ -82,23 +81,12 @@ class TransactionListView(TransactionView, IdempotentMixin):
 
         try:
             validated = serializer.validated_data
-            validated_sender = validated.get("sender")
-            validated_receiver = validated.get("receiver")
 
             handler = CreateTransactionCommandHandler()
             created_transaction = await handler.handle(CreateTransactionCommand(
                 user_id=request.user.id,
-                sender=CreateTransactionParticipantDTO(
-                    validated_sender.get("wallet_id"),
-                    validated_sender.get("amount"),
-                ) if validated_sender else None,
-                receiver=CreateTransactionParticipantDTO(
-                    validated_receiver.get("wallet_id"),
-                    validated_receiver.get("amount"),
-                ) if validated_receiver else None,
-                description=validated.get("description"),
-                type=validated.get("type"),
-                category=validated.get("category"),
+                source_wallet_id=validated["source_wallet_id"],
+                amount=validated["amount"],
             ))
             payload = TransactionHttpPresenter.present_one(created_transaction)
 

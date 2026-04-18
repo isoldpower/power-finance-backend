@@ -10,7 +10,7 @@ from ...interfaces import WebhookRepository
 @dataclass(frozen=True)
 class GetWebhookQuery:
     user_id: int
-    webhook_id: str
+    webhook_id: UUID
 
 
 class GetWebhookQueryHandler:
@@ -26,7 +26,7 @@ class GetWebhookQueryHandler:
     async def handle(self, query: GetWebhookQuery) -> WebhookDTO:
         requested_webhook = await self.webhook_repository.get_user_webhook_by_id(
             user_id=query.user_id,
-            webhook_id=UUID(query.webhook_id)
+            webhook_id=query.webhook_id
         )
 
         return webhook_to_dto(requested_webhook)

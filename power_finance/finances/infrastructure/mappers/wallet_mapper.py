@@ -1,5 +1,4 @@
 from finances.domain.entities import Wallet
-from finances.domain.value_objects import Money
 from finances.infrastructure.orm import WalletModel
 
 from .currency_mapper import CurrencyMapper
@@ -10,9 +9,6 @@ class WalletMapper:
     WALLET_EDITABLE_MAP: list[tuple[str, str]] = [
         ('user_id', 'user_id'),
         ('name', 'name'),
-        ('balance_amount', 'balance.amount'),
-        ('currency_id', 'balance.currency_code'),
-        ('credit', 'credit'),
         ('deleted_at', 'deleted_at'),
     ]
 
@@ -28,11 +24,7 @@ class WalletMapper:
             id=model.id,
             user_id=model.user_id,
             name=model.name,
-            balance=Money(
-                amount=model.balance_amount,
-                currency_code=mapped_currency.code,
-            ),
-            credit=model.credit,
+            currency_code=mapped_currency.code,
             created_at=model.created_at,
             updated_at=model.updated_at,
             deleted_at=model.deleted_at,

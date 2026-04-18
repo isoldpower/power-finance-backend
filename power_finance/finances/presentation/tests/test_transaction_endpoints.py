@@ -30,7 +30,6 @@ class TransactionEndpointTests(APITestCase):
             name="Test Wallet",
             balance_amount=Decimal("100.00"),
             currency="USD",
-            credit=False,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc)
         )

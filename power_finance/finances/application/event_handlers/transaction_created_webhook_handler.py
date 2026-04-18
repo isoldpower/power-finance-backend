@@ -15,6 +15,7 @@ from ..interfaces import (
 )
 
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,12 +48,8 @@ class TransactionCreatedWebhookHandler(EventWebhookHandler):
 
     async def __call__(self, event: TransactionCreatedEvent) -> None:
         logger.info("TransactionCreatedWebhookHandler: Received TransactionCreatedEvent (Event ID: %s)", event.event_id)
-        transaction_wallet = await self._wallet_repository.get_wallet_by_id(
-            event.sender.wallet_id
-            if event.sender else event.receiver.wallet_id
-        )
         webhooks = await self._webhook_repository.get_webhooks_by_type(
-            user_id=transaction_wallet.user_id,
+            user_id=event.user_id,
             event_type=WebhookType.TransactionCreate
         )
 

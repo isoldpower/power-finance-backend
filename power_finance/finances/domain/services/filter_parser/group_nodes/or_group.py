@@ -22,6 +22,13 @@ class OrGroupTreeNode(GroupTreeNode):
 
         return reduce(or_, resolved_children)
 
+    def resolve_sql(self) -> str:
+        parts = [child.resolve_sql() for child in self.children]
+        if not parts:
+            raise InvalidStructureError("Filtering group must have non-empty list of conditions as value")
+
+        return "(" + " OR ".join(parts) + ")"
+
 
 class FilterOrGroupTreeNode(FilterGroupTreeNode):
     operator: GroupOperator = GroupOperator.Or
@@ -36,3 +43,10 @@ class FilterOrGroupTreeNode(FilterGroupTreeNode):
             raise InvalidStructureError("Filtering group must have non-empty list of conditions as value")
 
         return reduce(or_, resolved_children)
+
+    def resolve_sql(self) -> str:
+        parts = [child.resolve_sql() for child in self.children]
+        if not parts:
+            raise InvalidStructureError("Filtering group must have non-empty list of conditions as value")
+
+        return "(" + " OR ".join(parts) + ")"

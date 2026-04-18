@@ -2,10 +2,9 @@ import logging
 from functools import wraps
 from typing import ParamSpec, TypeVar, Callable
 
-from django.db import transaction
-
 from .use_case_base import UseCaseEvently
 from ..bootstrap import get_event_bus
+from ..db_utils import aatomic
 
 logger = logging.getLogger(__name__)
 
@@ -60,19 +59,16 @@ def atomic_evently_command(using: str | None = None) -> Callable[[Callable[P, R]
         @wraps(function)
         async def wrapped(self: UseCaseEvently, *args: P.args, **kwargs: P.kwargs) -> R:
             logger.info("%s: Starting atomic handle() with args=%s, kwargs=%s", self.__class__.__name__, args, kwargs)
-            async with transaction.atomic(using=using):
+            async with aatomic(using=using):
                 result = await function(self, *args, **kwargs)
 
-                recorded_events = self.event_collector.pull_events()
-                if recorded_events:
-                    logger.debug("%s: Scheduling %d events for publication on commit (atomic)", self.__class__.__name__, len(recorded_events))
-                    await transaction.aon_commit(
-                        lambda: get_event_bus().publish(recorded_events),
-                        using=using,
-                    )
+            recorded_events = self.event_collector.pull_events()
+            if recorded_events:
+                logger.debug("%s: Publishing %d events", self.__class__.__name__, len(recorded_events))
+                await get_event_bus().publish(recorded_events)
 
-                logger.info("%s: Successfully finished atomic handle()", self.__class__.__name__)
-                return result
+            logger.info("%s: Successfully finished atomic handle()", self.__class__.__name__)
+            return result
 
         return wrapped
 

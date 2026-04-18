@@ -1,6 +1,5 @@
 from finances.domain.events import (
     TransactionCreatedEvent,
-    TransactionUpdatedEvent,
     TransactionDeletedEvent,
     WebhookDeliveryStatusChangedEvent,
 )
@@ -9,7 +8,6 @@ from finances.infrastructure.messaging import InMemoryEventBus
 
 from ..event_handlers import (
     TransactionCreatedWebhookHandler,
-    TransactionUpdatedWebhookHandler,
     TransactionDeletedWebhookHandler,
     WebhookDeliveryNotificationHandler,
 )
@@ -42,15 +40,6 @@ def initialize_event_bus(
         wallet_repository=wallet_repository,
         payload_factory=payload_factory,
         payload_repository=payload_repository,
-        dispatcher=dispatcher,
-        event_bus=event_bus,
-    ))
-    event_bus.subscribe(TransactionUpdatedEvent, TransactionUpdatedWebhookHandler(
-        webhook_repository=webhook_repository,
-        delivery_repository=delivery_repository,
-        wallet_repository=wallet_repository,
-        payload_repository=payload_repository,
-        payload_factory=payload_factory,
         dispatcher=dispatcher,
         event_bus=event_bus,
     ))

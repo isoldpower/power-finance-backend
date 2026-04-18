@@ -13,6 +13,9 @@ class NotEqualLeafTreeNode(LeafTreeNode):
     def resolve(self) -> Q:
         return ~Q(**{self.field_name: self.value})
 
+    def resolve_sql(self) -> str:
+        return f"{self.field_name} != '{self.value}'"
+
 
 class FilterNotEqualLeafTreeNode(FilterLeafTreeNode):
     @classmethod
@@ -22,5 +25,11 @@ class FilterNotEqualLeafTreeNode(FilterLeafTreeNode):
     def resolve(self) -> Q:
         if self.operator.value in self.policy.allowed_operators:
             return ~Q(**{self.policy.model_lookup: self.value})
+
+        raise PolicyViolationError(f"Filter {self.operator} is forbidden for {self.policy.request_name} field")
+
+    def resolve_sql(self) -> str:
+        if self.operator.value in self.policy.allowed_operators:
+            return f"{self.policy.model_lookup} != '{self.value}'"
 
         raise PolicyViolationError(f"Filter {self.operator} is forbidden for {self.policy.request_name} field")

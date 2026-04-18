@@ -25,6 +25,8 @@ env = environ.Env(
     CLERK_CACHE_KEY=(str, 'clerk_cache'),
     API_VERSION=(str, 'v1'),
     CELERY_BEAT_SCHEDULE_FILENAME=(str, 'cache/celerybeat-schedule'),
+    IMMUDB_HOST=(str, 'localhost'),
+    IMMUDB_PORT=(str, 3322),
 )
 
 env.read_env(ENV_FILE)
@@ -59,6 +61,12 @@ RESOLVED_ENV = {
     'CLERK_SECRET_KEY': env('CLERK_SECRET_KEY'),
     'CLERK_API_URL': env('CLERK_API_URL'),
     'CLERK_CACHE_KEY': env('CLERK_CACHE_KEY'),
+
+    # ImmuDB
+    'IMMUDB_HOST': env('IMMUDB_HOST'),
+    'IMMUDB_PORT': env('IMMUDB_PORT'),
+    'IMMUDB_USER': env('IMMUDB_USER'),
+    'IMMUDB_PASSWORD': env('IMMUDB_PASSWORD'),
 
     # Celery
     'CELERY_BEAT_SCHEDULE_FILENAME': str(ROOT_DIR.joinpath(env('CELERY_BEAT_SCHEDULE_FILENAME'))),

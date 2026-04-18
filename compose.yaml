@@ -16,6 +16,16 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD?Overriding the default database password is mandatory}
       POSTGRES_USER: ${DATABASE_USER:-postgres}
       PGDATA: /var/lib/postgresql/18/docker
+  immudb:
+    image: codenotary/immudb:1.10
+    restart: unless-stopped
+    ports:
+      - ${IMMUDB_PORT:-3323}:3322
+      - ${IMMUDB_METRICS_PORT:-9498}:9497
+    volumes:
+      - immudb_data:/var/lib/immudb
+    networks:
+      - immudbnet
   redis:
     image: redis:8.6-alpine
     restart: unless-stopped
@@ -89,6 +99,11 @@ services:
       database:
         condition: service_started
 
+networks:
+  immudbnet:
+    driver: bridge
+
 volumes:
   database_data:
   redis_data:
+  immudb_data:

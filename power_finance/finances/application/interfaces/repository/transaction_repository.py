@@ -18,13 +18,17 @@ class TransactionRepository(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    async def save_transaction(self, transaction: Transaction) -> Transaction:
-        raise NotImplementedError()
-
-    @abstractmethod
-    async def delete_transaction_by_id(self, transaction_id: UUID) -> Transaction:
+    async def delete_transaction_by_id(self, user_id: int, transaction_id: UUID) -> Transaction:
         raise NotImplementedError()
 
     @abstractmethod
     async def list_transactions_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Transaction]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def get_cancelling_transaction(self, transaction_id: UUID) -> Transaction | None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def get_wallet_transactions(self, wallet_id: UUID) -> list[Transaction]:
         raise NotImplementedError()

@@ -11,6 +11,7 @@ from finances.infrastructure.messaging import (
 )
 
 from ..interfaces import EventBus
+from .immudb import initialize_immudb
 from .celery import initialize_celery
 from .redis import initialize_redis
 from .event_bus import initialize_event_bus
@@ -19,6 +20,7 @@ from .state import (
     ApplicationEnvironment,
     ApplicationState,
     RepositoryRegistry,
+    ImmudbConnection,
 )
 
 
@@ -30,9 +32,10 @@ def bootstrap_application(environment: ApplicationEnvironment):
     if application:
         return
 
-    repository_registry = initialize_repositories()
     redis_clients = initialize_redis(environment)
     celery_client = initialize_celery(environment)
+    immudb_client = initialize_immudb(environment)
+    repository_registry = initialize_repositories(immudb_client)
     notification_broker = RedisNotificationBroker(redis_client=redis_clients.async_client)
 
     application = ApplicationState(
@@ -41,6 +44,7 @@ def bootstrap_application(environment: ApplicationEnvironment):
         sync_redis=redis_clients.sync_client,
         broker=notification_broker,
         celery=celery_client,
+        immudb=immudb_client,
         repository_registry=repository_registry,
         event_bus=initialize_event_bus(
             webhook_repository=repository_registry.webhook_repository,

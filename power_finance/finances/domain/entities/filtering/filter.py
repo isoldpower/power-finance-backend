@@ -67,5 +67,6 @@ FilterPolicy = dict[str, FilterFieldPolicy]
 
 @dataclass(frozen=True)
 class ResolvedFilterTree:
-    query: Q
+    django_query: Q
+    raw_sql_query: str
     applied_policy: FilterPolicy

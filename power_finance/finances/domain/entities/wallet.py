@@ -1,38 +1,98 @@
-from dataclasses import dataclass
+import uuid
+from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
 
-from ..exceptions import CurrencyMismatchException, InsufficientFundsException
-from ..value_objects import Money
+from .transaction import Transaction
+from ..events import EventCollector
+from ..exceptions import InsufficientFundsException
 
 
 @dataclass
 class Wallet:
-    """
-    Represents a user's financial account that stores balance in a specific currency and can be
-    whether credit or debit. Each user can have multiple wallets
-    """
-
     id: UUID
     user_id: int
     name: str
-    balance: Money
-    credit: bool
+    currency_code: str
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime]
+    transactions: list[Transaction] = field(default_factory=list)
 
-    def deposit_money(self, amount: Money):
-        if amount.currency_code != self.balance.currency_code:
-            raise CurrencyMismatchException(self.balance.currency_code, amount.currency_code)
+    _event_collector: EventCollector = field(default_factory=EventCollector)
 
-        self.balance += amount
+    @classmethod
+    def create(
+            cls,
+            user_id: int,
+            name: str,
+            currency_code: str,
+            _event_collector: EventCollector | None = None,
+    ):
+        return cls(
+            id=uuid.uuid4(),
+            user_id=user_id,
+            name=name,
+            currency_code=currency_code,
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+            deleted_at=None,
+            transactions=[],
+            _event_collector=_event_collector or EventCollector(),
+        )
 
-    def withdraw_money(self, amount: Money):
-        if amount.currency_code != self.balance.currency_code:
-            raise CurrencyMismatchException(self.balance.currency_code, amount.currency_code)
-        if amount.amount > self.balance.amount:
-            raise InsufficientFundsException(amount.amount, self.balance.amount)
 
-        self.balance -= amount
+    @property
+    def balance(self) -> Decimal:
+        return sum((t.amount for t in self.transactions), Decimal('0'))
+
+    def _deposit_money(
+            self,
+            user_id: int,
+            amount: Decimal,
+    ) -> Transaction:
+        if amount < Decimal('0'):
+            raise InsufficientFundsException(abs(amount), self.balance)
+
+        deposit_transaction = Transaction.create(
+            user_id=user_id,
+            amount=amount,
+            source_wallet_id=self.id,
+            event_collector=self._event_collector,
+        )
+
+        self.transactions.append(deposit_transaction)
+        return deposit_transaction
+
+    def _withdraw_money(
+            self,
+            user_id: int,
+            amount: Decimal,
+    ) -> Transaction:
+        new_balance = self.balance - amount
+        if new_balance < Decimal('0'):
+            raise InsufficientFundsException(abs(amount), self.balance)
+
+        withdraw_transaction = Transaction.create(
+            user_id=user_id,
+            amount=amount,
+            source_wallet_id=self.id,
+            event_collector=self._event_collector,
+        )
+
+        self.transactions.append(withdraw_transaction)
+        return withdraw_transaction
+
+    def apply_transaction(
+            self,
+            user_id: int,
+            amount: Decimal,
+    ) -> Transaction:
+        if amount < Decimal('0'):
+            return self._withdraw_money(user_id, abs(amount))
+        elif amount > Decimal('0'):
+            return self._deposit_money(user_id, abs(amount))
+        else:
+            raise AttributeError('Trying to add transaction with zero actual value')

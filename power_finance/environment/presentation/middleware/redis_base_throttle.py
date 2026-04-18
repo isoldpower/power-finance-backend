@@ -1,3 +1,4 @@
+import asyncio
 import time
 import uuid
 
@@ -28,10 +29,12 @@ class RedisBaseThrottle(BaseThrottle):
         member = f"{now_ms}:{uuid.uuid4().hex}"
 
         pipe = self._redis_client.pipeline()
-        pipe.zremrangebyscore(key, 0, window_start_ms)
-        pipe.zadd(key, {member: now_ms})
-        pipe.zcard(key)
-        pipe.expire(key, self._duration)
+        await asyncio.gather(*[
+            pipe.zremrangebyscore(key, 0, window_start_ms),
+            pipe.zadd(key, {member: now_ms}),
+            pipe.zcard(key),
+            pipe.expire(key, self._duration),
+        ])
         _, _, cardinality, _ = await pipe.execute()
 
         return cardinality
