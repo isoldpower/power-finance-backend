@@ -6,7 +6,7 @@ from ..exceptions import IdempotencyInFlightError, IdempotencyCachedError
 logger = logging.getLogger(__name__)
 
 
-_IN_FLIGHT = b"in_flight"
+_IN_FLIGHT = "in_flight"
 _PREFIX = "idempotency"
 _TTL = 86400
 
@@ -33,7 +33,7 @@ class IdempotencyService:
         logger.debug("IdempotencyService: Cache hit for key %s", redis_key)
         raise IdempotencyCachedError(payload=value)
 
-    def store(self, user_id: int, idempotency_key: str, payload: bytes) -> None:
+    def store(self, user_id: int, idempotency_key: str, payload: str) -> None:
         redis_key = self._key(user_id, idempotency_key)
         self._redis.set(redis_key, payload, ex=_TTL)
         logger.debug("IdempotencyService: Stored response for key %s", redis_key)

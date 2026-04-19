@@ -22,12 +22,16 @@ class AndGroupTreeNode(GroupTreeNode):
 
         return reduce(and_, resolved_children)
 
-    def resolve_sql(self) -> str:
-        parts = [child.resolve_sql() for child in self.children]
-        if not parts:
+    def resolve_sql(self) -> tuple[str, dict]:
+        results = [child.resolve_sql() for child in self.children]
+        if not results:
             raise InvalidStructureError("Filtering group must have non-empty list of conditions as value")
 
-        return "(" + " AND ".join(parts) + ")"
+        parts, params = zip(*results)
+        merged = {}
+        for p in params:
+            merged.update(p)
+        return "(" + " AND ".join(parts) + ")", merged
 
 
 class FilterAndGroupTreeNode(FilterGroupTreeNode):
@@ -44,9 +48,13 @@ class FilterAndGroupTreeNode(FilterGroupTreeNode):
 
         return reduce(and_, resolved_children)
 
-    def resolve_sql(self) -> str:
-        parts = [child.resolve_sql() for child in self.children]
-        if not parts:
+    def resolve_sql(self) -> tuple[str, dict]:
+        results = [child.resolve_sql() for child in self.children]
+        if not results:
             raise InvalidStructureError("Filtering group must have non-empty list of conditions as value")
 
-        return "(" + " AND ".join(parts) + ")"
+        parts, params = zip(*results)
+        merged = {}
+        for p in params:
+            merged.update(p)
+        return "(" + " AND ".join(parts) + ")", merged

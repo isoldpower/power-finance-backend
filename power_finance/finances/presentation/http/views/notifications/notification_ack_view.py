@@ -38,11 +38,11 @@ class NotificationAckView(IdempotentMixin, NotificationView):
             404: MessageResponseSerializer,
         }
     )
-    def post(self, request, notification_id=None):
+    async def post(self, request, notification_id=None):
         logger.info("NotificationAckView: Received request to acknowledge Notification ID: %s for User ID: %s", notification_id, request.user.id)
         try:
             handler = AcknowledgeNotificationCommandHandler()
-            notification = handler.handle(AcknowledgeNotificationCommand(
+            notification = await handler.handle(AcknowledgeNotificationCommand(
                 user_id=request.user.id,
                 notification_id=notification_id,
             ))

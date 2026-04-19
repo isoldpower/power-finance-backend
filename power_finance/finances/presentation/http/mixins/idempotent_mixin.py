@@ -80,7 +80,7 @@ class IdempotentMixin:
             payload = json.dumps({
                 "status_code": response.status_code,
                 "body": body.decode(),
-            }).encode()
+            })
             service.store(request.user.id, key, payload)
         else:
             service.release(request.user.id, key)

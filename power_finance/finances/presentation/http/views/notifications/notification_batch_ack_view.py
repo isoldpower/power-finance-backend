@@ -28,7 +28,7 @@ class NotificationBatchAckView(IdempotentMixin, NotificationView):
             400: MessageResponseSerializer,
         }
     )
-    def post(self, request):
+    async def post(self, request):
         logger.info("NotificationBatchAckView: Received request to batch acknowledge notifications for User ID: %s", request.user.id)
         serializer = BatchAcknowledgeRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -37,7 +37,7 @@ class NotificationBatchAckView(IdempotentMixin, NotificationView):
             batch_ids = serializer.validated_data.get("batch", [])
             handler = BatchAcknowledgeNotificationCommandHandler()
 
-            marked_read = handler.handle(BatchAcknowledgeNotificationCommand(
+            marked_read = await handler.handle(BatchAcknowledgeNotificationCommand(
                 user_id=request.user.id,
                 notification_ids=batch_ids,
             ))

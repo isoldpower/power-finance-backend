@@ -8,7 +8,7 @@ class TreeNode(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def resolve_sql(self) -> str:
+    def resolve_sql(self) -> tuple[str, dict]:
         raise NotImplementedError()
 
 
@@ -21,5 +21,5 @@ class FilterTreeNode(TreeNode):
         raise NotImplementedError()
 
     @abstractmethod
-    def resolve_sql(self) -> str:
+    def resolve_sql(self) -> tuple[str, dict]:
         raise NotImplementedError()

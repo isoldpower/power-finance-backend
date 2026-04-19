@@ -128,7 +128,7 @@ class ImmudbTransactionRepository(TransactionRepository):
     async def list_transactions_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Transaction]:
         user_transactions = self._immudb.sqlQuery(
             f'SELECT * FROM {self._transactions_table} WHERE (user_id = @user_id AND {tree.raw_sql_query});',
-            {'user_id': user_id},
+            {'user_id': user_id, **tree.raw_sql_params},
             COLUMN_NAME_MODE_FIELD
         )
 

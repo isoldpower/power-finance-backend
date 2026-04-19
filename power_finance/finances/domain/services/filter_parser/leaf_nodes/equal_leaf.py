@@ -1,3 +1,5 @@
+import uuid
+
 from django.db.models import Q
 
 from .abstraction import LeafTreeNode, FilterLeafTreeNode
@@ -13,8 +15,9 @@ class EqualLeafTreeNode(LeafTreeNode):
     def resolve(self) -> Q:
         return Q(**{self.field_name: self.value})
 
-    def resolve_sql(self) -> str:
-        return f"{self.field_name} = '{self.value}'"
+    def resolve_sql(self) -> tuple[str, dict]:
+        pname = f"p{uuid.uuid4().hex[:8]}"
+        return f"{self.field_name} = @{pname}", {pname: self.value}
 
 
 class FilterEqualLeafTreeNode(FilterLeafTreeNode):
@@ -28,8 +31,9 @@ class FilterEqualLeafTreeNode(FilterLeafTreeNode):
 
         raise PolicyViolationError(f"Filter {self.operator} is forbidden for {self.policy.request_name} field")
 
-    def resolve_sql(self) -> str:
+    def resolve_sql(self) -> tuple[str, dict]:
         if self.operator.value in self.policy.allowed_operators:
-            return f"{self.policy.model_lookup} = '{self.value}'"
+            pname = f"p{uuid.uuid4().hex[:8]}"
+            return f"{self.policy.model_lookup} = @{pname}", {pname: self.value}
 
         raise PolicyViolationError(f"Filter {self.operator} is forbidden for {self.policy.request_name} field")

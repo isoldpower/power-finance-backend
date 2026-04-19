@@ -1,5 +1,4 @@
 import httpx
-import requests
 
 from finances.application.interfaces import NetworkSender, MessageResponse
 
@@ -13,9 +12,9 @@ class HttpSender(NetworkSender):
     ) -> MessageResponse:
         try:
             async with httpx.AsyncClient() as client:
-                response: requests.Response = await client.post(
+                response: httpx.Response = await client.post(
                     url=url,
-                    data=request_body,
+                    json=request_body,
                     headers=request_headers,
                     timeout=5,
                     follow_redirects=False,

@@ -83,10 +83,11 @@ class ListFilteredWebhooksQueryHandler:
     async def handle(self, request: ListFilteredWebhooksQuery) -> list[WebhookDTO]:
         try:
             resolved_query = resolve_filter_query(request.filter_body, self.filter_policy)
-            resolved_sql = resolve_filter_query_sql(request.filter_body, self.filter_policy)
+            resolved_sql, resolved_sql_params = resolve_filter_query_sql(request.filter_body, self.filter_policy)
             filter_tree = ResolvedFilterTree(
                 django_query=resolved_query,
                 raw_sql_query=resolved_sql,
+                raw_sql_params=resolved_sql_params,
                 applied_policy=self.filter_policy,
             )
             filtered_webhooks = await self.webhooks_repository.list_webhooks_with_filters(

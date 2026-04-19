@@ -16,6 +16,6 @@ def resolve_filter_query(
 def resolve_filter_query_sql(
         query: dict[str, Any],
         filter_policy: FilterPolicy
-) -> str:
+) -> tuple[str, dict]:
     filter_tree = FilterTree(filter_policy)
     return filter_tree.resolve_sql(query)
