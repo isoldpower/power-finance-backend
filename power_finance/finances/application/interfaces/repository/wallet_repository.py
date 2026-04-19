@@ -40,3 +40,7 @@ class WalletRepository(ABC):
     @abstractmethod
     async def list_wallets_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Wallet]:
         raise NotImplementedError()
+
+    @abstractmethod
+    async def get_all_active_wallets(self) -> list[Wallet]:
+        raise NotImplementedError()

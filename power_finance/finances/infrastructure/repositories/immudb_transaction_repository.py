@@ -1,3 +1,4 @@
+from decimal import Decimal
 from uuid import UUID
 
 from django.utils import timezone
@@ -6,7 +7,7 @@ from immudb.datatypesv2 import PrimaryKeyVarCharValue
 
 from finances.application.bootstrap.state import ImmudbConnection
 from finances.application.interfaces import TransactionRepository
-from finances.domain.entities import ResolvedFilterTree, Transaction
+from finances.domain.entities import BalanceCheckpoint, ResolvedFilterTree, Transaction
 from finances.infrastructure.mappers import TransactionMapper
 
 
@@ -15,6 +16,7 @@ class ImmudbTransactionRepository(TransactionRepository):
         self._immudb = immudb_client.client
         self._token = immudb_client.transaction_token
         self._transactions_table = 'transactions'
+        self._checkpoints_table = 'balance_checkpoints'
 
     async def get_user_transactions(self, user_id: int) -> list[Transaction]:
         user_transactions = self._immudb.sqlQuery(
@@ -33,22 +35,29 @@ class ImmudbTransactionRepository(TransactionRepository):
 
         return [TransactionMapper.to_domain(transaction) for transaction in verified_transactions]
 
-    async def get_wallet_transactions(self, wallet_id: UUID) -> list[Transaction]:
-        wallet_transactions = self._immudb.sqlQuery(
-            f'SELECT * FROM {self._transactions_table} WHERE source_wallet_id = @wallet_id;',
-            {'wallet_id': str(wallet_id)},
-            COLUMN_NAME_MODE_FIELD,
-        )
+    async def get_unsettled_transactions(self, wallet_id: UUID, settled_at: str | None = None) -> list[Transaction]:
+        if settled_at is not None:
+            results = self._immudb.sqlQuery(
+                f'SELECT * FROM {self._transactions_table} WHERE source_wallet_id = @wallet_id AND created_at > @settled_at;',
+                {'wallet_id': str(wallet_id), 'settled_at': settled_at},
+                COLUMN_NAME_MODE_FIELD,
+            )
+        else:
+            results = self._immudb.sqlQuery(
+                f'SELECT * FROM {self._transactions_table} WHERE source_wallet_id = @wallet_id;',
+                {'wallet_id': str(wallet_id)},
+                COLUMN_NAME_MODE_FIELD,
+            )
 
-        verified_transactions = []
-        for transaction in wallet_transactions:
+        verified = []
+        for transaction in results:
             self._immudb.verifiableSQLGet(
                 self._transactions_table,
                 [PrimaryKeyVarCharValue(value=transaction.get('id'))],
             )
-            verified_transactions.append(transaction)
+            verified.append(transaction)
 
-        return [TransactionMapper.to_domain(transaction) for transaction in verified_transactions]
+        return [TransactionMapper.to_domain(t) for t in verified]
 
     async def get_user_transaction_by_id(self, user_id: int, transaction_id: UUID) -> Transaction:
         query_params = {
@@ -132,3 +141,34 @@ class ImmudbTransactionRepository(TransactionRepository):
             verified_transactions.append(transaction)
 
         return [TransactionMapper.to_domain(transaction) for transaction in verified_transactions]
+
+    async def get_checkpoint(self, wallet_id: UUID) -> BalanceCheckpoint | None:
+        results = self._immudb.sqlQuery(
+            f'SELECT * FROM {self._checkpoints_table} WHERE wallet_id = @wallet_id;',
+            {'wallet_id': str(wallet_id)},
+            COLUMN_NAME_MODE_FIELD,
+        )
+        rows = list(results)
+        if not rows:
+            return None
+        row = rows[0]
+        return BalanceCheckpoint(
+            wallet_id=UUID(row['wallet_id']),
+            balance=Decimal(row['balance']),
+            currency=row['currency'],
+            settled_at=row['settled_at'],
+            last_tx_id=UUID(row['last_tx_id']) if row.get('last_tx_id') else None,
+        )
+
+    async def save_checkpoint(self, checkpoint: BalanceCheckpoint) -> None:
+        self._immudb.sqlExec(
+            f'UPSERT INTO {self._checkpoints_table} (wallet_id, balance, currency, settled_at, last_tx_id) '
+            f'VALUES (@wallet_id, @balance, @currency, @settled_at, @last_tx_id);',
+            {
+                'wallet_id': str(checkpoint.wallet_id),
+                'balance': str(checkpoint.balance),
+                'currency': checkpoint.currency,
+                'settled_at': checkpoint.settled_at,
+                'last_tx_id': str(checkpoint.last_tx_id) if checkpoint.last_tx_id else None,
+            },
+        )

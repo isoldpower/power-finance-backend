@@ -9,13 +9,15 @@ from finances.application.use_cases import (
 )
 
 from .base import NotificationView
+from ...mixins import IdempotentMixin
 from ...presenters import CommonHttpPresenter, MessageResultInfo
 from ...serializers import MessageResponseSerializer, BatchAcknowledgeRequestSerializer
 
 logger = logging.getLogger(__name__)
 
 
-class NotificationBatchAckView(NotificationView):
+class NotificationBatchAckView(IdempotentMixin, NotificationView):
+    IDEMPOTENT_ACTIONS = {'post'}
     @extend_schema(
         operation_id="notifications_batch_acknowledge",
         summary="Batch acknowledge notifications",

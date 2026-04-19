@@ -28,7 +28,7 @@ from ...serializers import (
 logger = logging.getLogger(__name__)
 
 
-class TransactionResourceView(TransactionView, IdempotentMixin):
+class TransactionResourceView(IdempotentMixin, TransactionView):
     IDEMPOTENT_ACTIONS = {'delete'}
 
     @extend_schema(

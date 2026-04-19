@@ -10,13 +10,15 @@ from finances.application.use_cases import (
 )
 
 from .base import NotificationView
+from ...mixins import IdempotentMixin
 from ...presenters import CommonHttpPresenter, MessageResultInfo
 from ...serializers import MessageResponseSerializer
 
 logger = logging.getLogger(__name__)
 
 
-class NotificationAckView(NotificationView):
+class NotificationAckView(IdempotentMixin, NotificationView):
+    IDEMPOTENT_ACTIONS = {'post'}
     @extend_schema(
         operation_id="notifications_acknowledge",
         summary="Acknowledge notification",

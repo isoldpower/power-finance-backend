@@ -10,6 +10,7 @@ from finances.application.use_cases import (
 )
 
 from .base import WebhookView
+from ...mixins import IdempotentMixin
 from ...presenters import CommonHttpPresenter, MessageResultInfo, WebhookHttpPresenter
 from ...serializers import (
     MessageResponseSerializer,
@@ -20,7 +21,8 @@ from ...serializers import (
 logger = logging.getLogger(__name__)
 
 
-class WebhookSecretView(WebhookView):
+class WebhookSecretView(IdempotentMixin, WebhookView):
+    IDEMPOTENT_ACTIONS = {'post'}
     @extend_schema(
         operation_id="webhooks_rotate_secret",
         summary="Rotate webhook secret",

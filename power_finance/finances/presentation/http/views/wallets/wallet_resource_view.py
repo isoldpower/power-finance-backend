@@ -32,7 +32,7 @@ from ...presenters import (
 logger = logging.getLogger(__name__)
 
 
-class WalletResourceView(WalletView, IdempotentMixin):
+class WalletResourceView(IdempotentMixin, WalletView):
     IDEMPOTENT_ACTIONS = {'put', 'patch', 'delete'}
 
     @extend_schema(

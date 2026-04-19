@@ -60,6 +60,10 @@ def build_celery_config(
                 "task": "finances.schedule_due_webhook_retries",
                 "schedule": 10.0,
             },
+            "checkpoint-wallet-balances-every-30-minutes": {
+                "task": "finances.checkpoint_wallet_balances",
+                "schedule": 1800.0,
+            },
         },
     }
 

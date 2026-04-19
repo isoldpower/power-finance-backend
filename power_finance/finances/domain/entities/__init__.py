@@ -1,3 +1,4 @@
+from .balance_checkpoint import BalanceCheckpoint
 from .wallet import Wallet
 from .webhook import Webhook, WebhookCreateData
 from .webhook_type import WebhookType
@@ -19,6 +20,7 @@ from .notification import Notification
 from .webhook_payload import WebhookPayload
 
 __all__ = [
+    'BalanceCheckpoint',
     'Wallet',
     'Webhook',
     'WebhookCreateData',

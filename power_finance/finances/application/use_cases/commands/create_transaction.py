@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 from uuid import UUID
 
+from finances.domain.builders import WalletBuilder
+
 from ..use_case_base import UseCaseEvently
 from ..decorators import atomic_evently_command
 from ...bootstrap import get_repository_registry
@@ -34,14 +36,21 @@ class CreateTransactionCommandHandler(UseCaseEvently):
 
     @atomic_evently_command()
     async def handle(self, command: CreateTransactionCommand) -> TransactionDTO:
-        wallet, transactions = await asyncio.gather(*[
+        wallet, checkpoint = await asyncio.gather(
             self._wallet_repository.get_user_wallet_by_id(
                 wallet_id=command.source_wallet_id,
                 user_id=command.user_id,
             ),
-            self._transaction_repository.get_wallet_transactions(command.source_wallet_id),
-        ])
-        wallet.transactions = transactions
+            self._transaction_repository.get_checkpoint(command.source_wallet_id),
+        )
+        wallet = (
+            WalletBuilder(wallet)
+                .set_checkpoint(checkpoint)
+                .set_transactions(await self._transaction_repository.get_unsettled_transactions(
+                    command.source_wallet_id, checkpoint.settled_at if checkpoint else None
+                ))
+                .build_wallet()
+        )
         new_transaction = wallet.apply_transaction(
             user_id=command.user_id,
             amount=command.amount,

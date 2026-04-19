@@ -15,6 +15,7 @@ from finances.application.use_cases import (
 )
 
 from .base import WebhookView
+from ...mixins import IdempotentMixin
 from ...presenters import CommonHttpPresenter, MessageResultInfo, WebhookHttpPresenter
 from ...serializers import (
     SubscribeWebhookToEventRequestSerializer,
@@ -25,7 +26,8 @@ from ...serializers import (
 logger = logging.getLogger(__name__)
 
 
-class WebhookEventListView(WebhookView):
+class WebhookEventListView(IdempotentMixin, WebhookView):
+    IDEMPOTENT_ACTIONS = {'post'}
     @extend_schema(
         methods=["GET"],
         operation_id="webhooks_list_subscriptions",

@@ -1,36 +1,28 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: celery-worker-sa
+  name: immudb-sa
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: celery-worker-role
+  name: immudb-role
 rules:
 - apiGroups: [""]
   resources: ["secrets"]
-  resourceNames: [
-    "database-secrets",
-    "redis-secrets",
-    "rabbitmq-secrets",
-  ]
-  verbs: ["get"]
-- apiGroups: [""]
-  resources: ["configmaps"]
-  resourceNames: ["power-finance"]
+  resourceNames: ["immudb-secrets"]
   verbs: ["get"]
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: celery-worker-rolebinding
+  name: immudb-rolebinding
 subjects:
 - kind: ServiceAccount
-  name: celery-worker-sa
+  name: immudb-sa
 roleRef:
   kind: Role
-  name: celery-worker-role
+  name: immudb-role
   apiGroup: rbac.authorization.k8s.io

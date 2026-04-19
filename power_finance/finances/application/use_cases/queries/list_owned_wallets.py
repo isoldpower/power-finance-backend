@@ -3,6 +3,8 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
+from finances.domain.builders import WalletBuilder
+
 from ...bootstrap import get_repository_registry
 from ...dto_builders import wallet_to_dto
 from ...dtos import WalletDTO
@@ -16,6 +18,7 @@ class ListOwnedWalletsQuery:
     user_id: int
     limit: Optional[int]
     offset: Optional[int]
+
 
 class ListOwnedWalletsQueryHandler:
     wallet_repository: WalletRepository
@@ -36,12 +39,23 @@ class ListOwnedWalletsQueryHandler:
             query.user_id
         )
         user_wallets = await self.wallet_repository.get_user_wallets(query.user_id)
-        wallet_transactions = await asyncio.gather(*[
-            self.transaction_repository.get_wallet_transactions(wallet.id)
+        checkpoints = await asyncio.gather(*[
+            self.transaction_repository.get_checkpoint(wallet.id)
             for wallet in user_wallets
         ])
-        for wallet, transactions in zip(user_wallets, wallet_transactions):
-            wallet.transactions = transactions
+        wallet_transactions = await asyncio.gather(*[
+            self.transaction_repository.get_unsettled_transactions(
+                wallet.id, checkpoint.settled_at if checkpoint else None
+            )
+            for wallet, checkpoint in zip(user_wallets, checkpoints)
+        ])
+        user_wallets = [
+            WalletBuilder(wallet)
+                .set_checkpoint(checkpoint)
+                .set_transactions(transactions)
+                .build_wallet()
+            for wallet, checkpoint, transactions in zip(user_wallets, checkpoints, wallet_transactions)
+        ]
 
         logger.info(
             "ListOwnedWalletsQueryHandler: Successfully retrieved %d wallets for User ID: %s",

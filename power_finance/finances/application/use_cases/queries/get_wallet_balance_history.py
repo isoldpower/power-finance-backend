@@ -12,7 +12,7 @@ from ...dtos import WalletBalanceHistoryItemDTO, WalletBalanceHistoryResultDTO
 @dataclass(frozen=True)
 class GetWalletBalanceHistoryQuery:
     user_id: int
-    wallet_id: str
+    wallet_id: UUID
 
 
 class GetWalletBalanceHistoryQueryHandler:
@@ -49,16 +49,16 @@ class GetWalletBalanceHistoryQueryHandler:
         try:
             await self.wallet_selectors.get_single_wallet(
                 user_id=query.user_id,
-                wallet_id=UUID(query.wallet_id)
+                wallet_id=query.wallet_id
             )
         except ObjectDoesNotExist:
             raise ObjectDoesNotExist("Requested wallet's balance history not found.")
 
         transaction_rows = (await self.transaction_selectors.get_wallet_transactions(
-            wallet_id=UUID(query.wallet_id)
+            wallet_id=query.wallet_id
         ) or [])
         history = self._record_transaction_history(
-            UUID(query.wallet_id),
+            query.wallet_id,
             transaction_rows,
         )
 

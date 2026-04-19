@@ -15,6 +15,7 @@ from finances.application.use_cases import (
 )
 
 from .base import WebhookView
+from ...mixins import IdempotentMixin
 from ...presenters import CommonHttpPresenter, MessageResultInfo, WebhookHttpPresenter
 from ...serializers import (
     UpdateWebhookRequestSerializer,
@@ -25,7 +26,8 @@ from ...serializers import (
 logger = logging.getLogger(__name__)
 
 
-class WebhookResourceView(WebhookView):
+class WebhookResourceView(IdempotentMixin, WebhookView):
+    IDEMPOTENT_ACTIONS = {'patch', 'delete'}
     @extend_schema(
         operation_id="webhooks_retrieve",
         summary="Get webhook details",

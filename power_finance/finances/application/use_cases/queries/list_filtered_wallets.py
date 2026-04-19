@@ -3,13 +3,15 @@ from dataclasses import dataclass
 from typing import Any
 
 from finances.domain.entities import (
-    FilterPolicy, 
-    ResolvedFilterTree, 
+    FilterPolicy,
+    ResolvedFilterTree,
     FilterFieldPolicy,
     ComparisonOperator,
     TypeVariant,
 )
 from finances.domain.services import resolve_filter_query, resolve_filter_query_sql
+
+from finances.domain.builders import WalletBuilder
 
 from ...bootstrap import get_repository_registry
 from ...dto_builders import wallet_to_dto
@@ -102,12 +104,23 @@ class ListFilteredWalletsQueryHandler:
                 filter_tree,
                 request.user_id
             )
-            wallet_transactions = await asyncio.gather(*[
-                self.transaction_repository.get_wallet_transactions(wallet.id)
+            checkpoints = await asyncio.gather(*[
+                self.transaction_repository.get_checkpoint(wallet.id)
                 for wallet in filtered_wallets
             ])
-            for wallet, transactions in zip(filtered_wallets, wallet_transactions):
-                wallet.transactions = transactions
+            wallet_transactions = await asyncio.gather(*[
+                self.transaction_repository.get_unsettled_transactions(
+                    wallet.id, checkpoint.settled_at if checkpoint else None
+                )
+                for wallet, checkpoint in zip(filtered_wallets, checkpoints)
+            ])
+            filtered_wallets = [
+                WalletBuilder(wallet)
+                    .set_checkpoint(checkpoint)
+                    .set_transactions(transactions)
+                    .build_wallet()
+                for wallet, checkpoint, transactions in zip(filtered_wallets, checkpoints, wallet_transactions)
+            ]
 
             return [wallet_to_dto(wallet) for wallet in filtered_wallets]
         except Exception as e:

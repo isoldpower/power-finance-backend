@@ -81,6 +81,11 @@ class DjangoWalletRepository(WalletRepository):
         await requested_wallet.asave(update_fields=modified_fields)
         return WalletMapper.to_domain(requested_wallet)
 
+    async def get_all_active_wallets(self) -> list[Wallet]:
+        wallets = WalletModel.objects.select_related("currency").order_by('id')
+
+        return [WalletMapper.to_domain(wallet) async for wallet in wallets]
+
     async def list_wallets_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Wallet]:
         filtered_wallets = (WalletModel.objects
             .filter(Q(user_id=user_id) & tree.django_query)

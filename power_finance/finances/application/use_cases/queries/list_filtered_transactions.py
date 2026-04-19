@@ -13,6 +13,8 @@ from finances.domain.entities import (
 from finances.domain.exceptions import FilterParseError
 from finances.domain.services import resolve_filter_query, resolve_filter_query_sql
 
+from finances.domain.builders import WalletBuilder
+
 from ...bootstrap import get_repository_registry
 from ...dto_builders import transaction_to_plain_dto, wallet_to_dto
 from ...dtos import TransactionPlainDTO
@@ -95,12 +97,23 @@ class ListFilteredTransactionsQueryHandler:
                     user_id=request.user_id,
                 ) for transaction in filtered_transactions
             ])
-            wallet_transactions = await asyncio.gather(*[
-                self.transaction_repository.get_wallet_transactions(wallet.id)
+            checkpoints = await asyncio.gather(*[
+                self.transaction_repository.get_checkpoint(wallet.id)
                 for wallet in wallets
             ])
-            for wallet, transactions in zip(wallets, wallet_transactions):
-                wallet.transactions = transactions
+            wallet_transactions = await asyncio.gather(*[
+                self.transaction_repository.get_unsettled_transactions(
+                    wallet.id, checkpoint.settled_at if checkpoint else None
+                )
+                for wallet, checkpoint in zip(wallets, checkpoints)
+            ])
+            wallets = [
+                WalletBuilder(wallet)
+                    .set_checkpoint(checkpoint)
+                    .set_transactions(transactions)
+                    .build_wallet()
+                for wallet, checkpoint, transactions in zip(wallets, checkpoints, wallet_transactions)
+            ]
 
             return [
                 transaction_to_plain_dto(transaction, wallet_to_dto(wallets[i]))

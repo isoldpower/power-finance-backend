@@ -1,4 +1,38 @@
 services:
+  django:
+    build: .
+    restart: unless-stopped
+    command: uvicorn power_finance.asgi:application --host 0.0.0.0 --port 8000
+    ports:
+      - ${DJANGO_PORT:-8000}:8000
+    working_dir: /app/power_finance
+    volumes:
+      - ./power_finance:/app/power_finance
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - DATABASE_HOST=database
+      - DATABASE_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - RABBIT_MQ_HOST=rabbitmq
+      - RABBIT_MQ_PORT=5672
+      - CELERY_BROKER_URL=amqp://${RABBIT_MQ_USER:-guest}:${RABBIT_MQ_PASSWORD:-guest}@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
+      - IMMUDB_HOST=immudb
+      - IMMUDB_PORT=3322
+    networks:
+      - default
+      - immudbnet
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      database:
+        condition: service_started
   database:
     image: postgres:18.3
     restart: unless-stopped
@@ -67,6 +101,11 @@ services:
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - DATABASE_HOST=database
       - DATABASE_PORT=5432
+      - IMMUDB_HOST=immudb
+      - IMMUDB_PORT=3322
+    networks:
+      - default
+      - immudbnet
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -91,6 +130,11 @@ services:
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - DATABASE_HOST=database
       - DATABASE_PORT=5432
+      - IMMUDB_HOST=immudb
+      - IMMUDB_PORT=3322
+    networks:
+      - default
+      - immudbnet
     depends_on:
       rabbitmq:
         condition: service_healthy

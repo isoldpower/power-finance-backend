@@ -29,7 +29,7 @@ from ...serializers import (
 logger = logging.getLogger(__name__)
 
 
-class TransactionListView(TransactionView, IdempotentMixin):
+class TransactionListView(IdempotentMixin, TransactionView):
     IDEMPOTENT_ACTIONS = {'post'}
 
     @extend_schema(

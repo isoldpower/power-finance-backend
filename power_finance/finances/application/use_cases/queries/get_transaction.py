@@ -2,16 +2,18 @@ import asyncio
 from dataclasses import dataclass
 from uuid import UUID
 
+from finances.domain.builders import WalletBuilder
+
 from ...bootstrap import get_repository_registry
 from ...dto_builders import transaction_to_dto, wallet_to_dto
-from ...dtos import TransactionDTO, WalletDTO
+from ...dtos import TransactionDTO
 from ...interfaces import TransactionRepository, WalletRepository
 
 
 @dataclass(frozen=True)
 class GetTransactionQuery:
     user_id: int
-    transaction_id: str
+    transaction_id: UUID
 
 
 class GetTransactionQueryHandler:
@@ -29,18 +31,25 @@ class GetTransactionQueryHandler:
 
     async def handle(self, query: GetTransactionQuery) -> TransactionDTO:
         requested_transaction = await self.transaction_repository.get_user_transaction_by_id(
-            query.user_id,
-            UUID(query.transaction_id)
+            user_id=query.user_id,
+            transaction_id=query.transaction_id,
         )
-        wallet, transactions = await asyncio.gather(*[
+        wallet_id = requested_transaction.source_wallet_id
+        wallet, checkpoint = await asyncio.gather(
             self.wallet_repository.get_user_wallet_by_id(
-                wallet_id=requested_transaction.source_wallet_id,
+                wallet_id=wallet_id,
                 user_id=query.user_id,
             ),
-            self.transaction_repository.get_wallet_transactions(requested_transaction.source_wallet_id)
-        ])
-        wallet.transactions = transactions
-
+            self.transaction_repository.get_checkpoint(wallet_id),
+        )
+        wallet = (
+            WalletBuilder(wallet)
+                .set_checkpoint(checkpoint)
+                .set_transactions(await self.transaction_repository.get_unsettled_transactions(
+                    wallet_id, checkpoint.settled_at if checkpoint else None
+                ))
+                .build_wallet()
+        )
         return transaction_to_dto(
             transaction=requested_transaction,
             source_wallet=wallet_to_dto(wallet),

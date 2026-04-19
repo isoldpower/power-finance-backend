@@ -13,6 +13,7 @@ from finances.application.use_cases import (
 )
 
 from .base import WalletView
+from ...mixins import IdempotentMixin
 from ...serializers import (
     CreateWalletRequestSerializer,
     WalletResponseSerializer,
@@ -27,7 +28,8 @@ from ...presenters import (
 logger = logging.getLogger(__name__)
 
 
-class WalletListView(WalletView):
+class WalletListView(IdempotentMixin, WalletView):
+    IDEMPOTENT_ACTIONS = {'post'}
     @extend_schema(
         methods=["GET"],
         operation_id="wallets_list",

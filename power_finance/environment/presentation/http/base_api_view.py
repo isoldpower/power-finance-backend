@@ -70,6 +70,24 @@ class BaseAPIView(
         await self.perform_authentication(request)
         await self.check_permissions(request)
         await self.check_throttles(request)
+        hook = getattr(type(self), '_idempotency_initial', None)
+        if hook is not None:
+            await _call(hook, self, request, *args, **kwargs)
+
+    def handle_exception(self, exc):
+        hook = getattr(type(self), '_idempotency_exception', None)
+        if hook is not None:
+            result = hook(self, exc)
+            if result is not None:
+                return result
+        return super().handle_exception(exc)
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        hook = getattr(type(self), '_idempotency_finalize', None)
+        if hook is not None:
+            hook(self, request, response)
+        return response
 
     async def dispatch(self, request, *args, **kwargs):
         self.args = args

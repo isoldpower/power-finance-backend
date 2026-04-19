@@ -2,6 +2,8 @@ import asyncio
 from dataclasses import dataclass
 from uuid import UUID
 
+from finances.domain.builders import WalletBuilder
+
 from ..use_case_base import UseCaseEvently
 from ..decorators import atomic_evently_command
 from ...bootstrap import get_repository_registry
@@ -38,18 +40,20 @@ class DeleteTransactionCommandHandler(UseCaseEvently):
         )
         inverse_transaction.migrate_event_collector(self.event_collector)
 
-        wallet, transactions = await asyncio.gather(*[
+        wallet, checkpoint = await asyncio.gather(
             self.wallet_repository.get_user_wallet_by_id(
                 wallet_id=inverse_transaction.source_wallet_id,
                 user_id=command.user_id,
             ),
-            self.transaction_repository.get_wallet_transactions(
-                inverse_transaction.source_wallet_id
-            )
-        ])
-        wallet.transactions = transactions
-
-        return transaction_to_dto(
-            inverse_transaction,
-            wallet_to_dto(wallet),
+            self.transaction_repository.get_checkpoint(inverse_transaction.source_wallet_id),
         )
+        wallet = (
+            WalletBuilder(wallet)
+                .set_checkpoint(checkpoint)
+                .set_transactions(await self.transaction_repository.get_unsettled_transactions(
+                    inverse_transaction.source_wallet_id, checkpoint.settled_at if checkpoint else None
+                ))
+                .build_wallet()
+        )
+
+        return transaction_to_dto(inverse_transaction, wallet_to_dto(wallet))

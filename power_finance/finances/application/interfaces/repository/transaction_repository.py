@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from finances.domain.entities import Transaction, ResolvedFilterTree
+from finances.domain.entities import Transaction, ResolvedFilterTree, BalanceCheckpoint
 
 
 class TransactionRepository(ABC):
@@ -30,5 +30,13 @@ class TransactionRepository(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    async def get_wallet_transactions(self, wallet_id: UUID) -> list[Transaction]:
+    async def get_unsettled_transactions(self, wallet_id: UUID, settled_at: str | None = None) -> list[Transaction]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def get_checkpoint(self, wallet_id: UUID) -> BalanceCheckpoint | None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def save_checkpoint(self, checkpoint: BalanceCheckpoint) -> None:
         raise NotImplementedError()

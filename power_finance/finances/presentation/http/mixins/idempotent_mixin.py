@@ -27,10 +27,10 @@ class _CachedResponseSignal(Exception):
 class IdempotentMixin:
     """
     DRF ViewSet mixin that enforces idempotency on specified actions.
-    Delegates key logic to IdempotencyService (application layer).
+    Works regardless of MRO order relative to the base view class.
 
     Usage:
-        class MyViewSet(IdempotentMixin, APIView):
+        class MyView(IdempotentMixin, APIView):
             IDEMPOTENT_ACTIONS = {'post', 'patch', 'delete'}
     """
     IDEMPOTENT_ACTIONS: set[str] = set()
@@ -39,9 +39,7 @@ class IdempotentMixin:
     def _get_idempotency_service(self) -> IdempotencyService:
         return IdempotencyService(redis=get_redis_client(sync=True))
 
-    def initial(self, request, *args, **kwargs):
-        super().initial(request, *args, **kwargs)
-
+    def _idempotency_initial(self, request, *args, **kwargs):
         if request.method.lower() not in self.IDEMPOTENT_ACTIONS:
             return
         key = request.headers.get("Idempotency-Key")
@@ -61,20 +59,18 @@ class IdempotentMixin:
                 body=cached["body"].encode(),
             )
 
-    def handle_exception(self, exc):
+    def _idempotency_exception(self, exc):
         if isinstance(exc, _CachedResponseSignal):
             return HttpResponse(
                 content=exc.body,
                 content_type="application/json",
                 status=exc.status_code,
             )
-        return super().handle_exception(exc)
+        return None
 
-    def finalize_response(self, request, response, *args, **kwargs):
-        response = super().finalize_response(request, response, *args, **kwargs)
-
+    def _idempotency_finalize(self, request, response):
         if not getattr(self, '_idempotency_key_acquired', False):
-            return response
+            return
 
         key = request.headers.get("Idempotency-Key")
         service = self._get_idempotency_service()
@@ -88,5 +84,3 @@ class IdempotentMixin:
             service.store(request.user.id, key, payload)
         else:
             service.release(request.user.id, key)
-
-        return response

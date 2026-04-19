@@ -1,9 +1,11 @@
-.PHONY: test test-fast test-integration
+.PHONY: test test-fast test-integration restart rebuild
 
 # Variables
 PYTHON = .venv/bin/python
 MANAGE = power_finance/manage.py
 SETTINGS = power_finance.settings
+PORT ?= 8000
+SERVICES = django celery-worker celery-beat
 
 # Run all tests
 test:
@@ -34,7 +36,13 @@ test-integration:
 		environment.presentation.tests \
 		--settings=$(SETTINGS)
 
-PORT ?= 8000
+# Restart app services without rebuilding
+restart:
+	docker compose restart $(SERVICES)
+
+# Rebuild and restart app services
+rebuild:
+	docker compose up -d --build $(SERVICES)
 
 # Run the ASGI server with hot reload on file changes
 run-dev:

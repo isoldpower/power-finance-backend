@@ -25,7 +25,7 @@ from ...presenters import (
 logger = logging.getLogger(__name__)
 
 
-class WalletSearchView(WalletView, IdempotentMixin):
+class WalletSearchView(IdempotentMixin, WalletView):
     @extend_schema(
         methods=["POST"],
         operation_id="wallets_search",

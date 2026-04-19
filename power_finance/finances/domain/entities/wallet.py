@@ -5,6 +5,7 @@ from typing import Optional
 from uuid import UUID
 from datetime import datetime
 
+from .balance_checkpoint import BalanceCheckpoint
 from .transaction import Transaction
 from ..events import EventCollector
 from ..exceptions import InsufficientFundsException
@@ -19,7 +20,8 @@ class Wallet:
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime]
-    transactions: list[Transaction] = field(default_factory=list)
+    unsettled_transactions: list[Transaction] = field(default_factory=list)
+    checkpoint: Optional[BalanceCheckpoint] = field(default=None)
 
     _event_collector: EventCollector = field(default_factory=EventCollector)
 
@@ -39,14 +41,16 @@ class Wallet:
             created_at=datetime.now(),
             updated_at=datetime.now(),
             deleted_at=None,
-            transactions=[],
+            unsettled_transactions=[],
+            checkpoint=None,
             _event_collector=_event_collector or EventCollector(),
         )
 
-
     @property
     def balance(self) -> Decimal:
-        return sum((t.amount for t in self.transactions), Decimal('0'))
+        base = self.checkpoint.balance if self.checkpoint else Decimal('0')
+
+        return base + sum((t.amount for t in self.unsettled_transactions), Decimal('0'))
 
     def _deposit_money(
             self,
@@ -63,7 +67,7 @@ class Wallet:
             event_collector=self._event_collector,
         )
 
-        self.transactions.append(deposit_transaction)
+        self.unsettled_transactions.append(deposit_transaction)
         return deposit_transaction
 
     def _withdraw_money(
@@ -82,7 +86,7 @@ class Wallet:
             event_collector=self._event_collector,
         )
 
-        self.transactions.append(withdraw_transaction)
+        self.unsettled_transactions.append(withdraw_transaction)
         return withdraw_transaction
 
     def apply_transaction(

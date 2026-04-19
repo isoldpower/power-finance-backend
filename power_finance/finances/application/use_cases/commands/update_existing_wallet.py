@@ -2,6 +2,7 @@ import asyncio
 from dataclasses import dataclass
 from uuid import UUID
 
+from finances.domain.builders import WalletBuilder
 from finances.domain.entities import Wallet
 
 from ..use_case_base import UseCaseEvently
@@ -42,11 +43,17 @@ class UpdateExistingWalletCommandHandler(UseCaseEvently):
     @atomic_evently_command()
     async def handle(self, command: UpdateExistingWalletCommand) -> WalletDTO:
         wallet_id = UUID(command.wallet_id)
-        wallet, transactions = await asyncio.gather(*[
+        wallet, checkpoint = await asyncio.gather(
             self.wallet_repository.get_user_wallet_by_id(wallet_id, command.user_id),
-            self.transaction_repository.get_wallet_transactions(wallet_id),
-        ])
-        wallet.transactions = transactions
+            self.transaction_repository.get_checkpoint(wallet_id),
+        )
+        wallet = (
+            WalletBuilder(wallet)
+                .set_checkpoint(checkpoint)
+                .set_transactions(await self.transaction_repository.get_unsettled_transactions(
+                    wallet_id, checkpoint.settled_at if checkpoint else None
+                ))
+                .build_wallet()
+        )
         updated_wallet = await self._update_fields(wallet, command)
-
         return wallet_to_dto(updated_wallet)

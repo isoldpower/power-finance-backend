@@ -11,6 +11,7 @@ from finances.application.use_cases import (
 )
 
 from .base import WebhookView
+from ...mixins import IdempotentMixin
 from ...presenters import CommonHttpPresenter, MessageResultInfo
 from ...serializers import (
     MessageResponseSerializer,
@@ -19,7 +20,8 @@ from ...serializers import (
 logger = logging.getLogger(__name__)
 
 
-class WebhookEventResourceView(WebhookView):
+class WebhookEventResourceView(IdempotentMixin, WebhookView):
+    IDEMPOTENT_ACTIONS = {'delete'}
     @extend_schema(
         operation_id="webhooks_unsubscribe",
         summary="Unsubscribe from event",
