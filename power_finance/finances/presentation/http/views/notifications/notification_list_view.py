@@ -25,11 +25,11 @@ class NotificationListView(NotificationView):
             400: MessageResponseSerializer
         }
     )
-    def get(self, request):
+    async def get(self, request):
         logger.info("NotificationListView: Received request to list notifications for User ID: %s", request.user.id)
         try:
             handler = ListNotificationsQueryHandler()
-            notifications = handler.handle(ListNotificationsQuery(
+            notifications = await handler.handle(ListNotificationsQuery(
                 user_id=request.user.id
             ))
 
