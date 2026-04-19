@@ -17,7 +17,7 @@ spec:
       serviceAccountName: celery-worker-sa
       containers:
       - name: celery-worker
-        image: ghcr.io/isoldpower/power-finance-backend:1.0.0
+        image: ghcr.io/isoldpower/power-finance-backend:1.1.0
         workingDir: /app/power_finance
         # Health Probes — liveness only, worker does not serve traffic
         livenessProbe:
