@@ -1,107 +1,52 @@
-import copy
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from uuid import UUID, uuid4
+from decimal import Decimal
+from uuid import UUID
 
 from django.utils import timezone
 
-from .expense_category import ExpenseCategory
-from .transaction_type import TransactionType
-from ..events import (
-    EventCollector,
-    TransactionEventParticipant,
-    TransactionCreatedEvent,
-    TransactionUpdatedEvent,
-    TransactionDeletedEvent,
-    UpdateTransactionData,
-)
-from ..value_objects import Money
-
-
-@dataclass
-class TransactionParticipant:
-    wallet_id: UUID
-    money: Money
+from finances.domain.events import EventCollector, TransactionCreatedEvent, TransactionDeletedEvent
 
 
 @dataclass
 class Transaction:
-    """
-    Transaction model represents any sort of money inflow/outflow transaction and is used to
-    analyze money flows of the user.
-    """
-
     id: UUID
-    sender: TransactionParticipant | None
-    receiver: TransactionParticipant | None
-    description: str
+    user_id: int
+    source_wallet_id: UUID
+    amount: Decimal
     created_at: datetime
-    type: TransactionType
-    category: ExpenseCategory
+    cancels_other: UUID | None = None
+    adjusts_other: UUID | None = None
     _event_collector: EventCollector = field(default_factory=EventCollector, compare=False)
-
-    @classmethod
-    def _validate_participants(
-            cls,
-            receiver: TransactionParticipant | None,
-            sender: TransactionParticipant | None,
-            type: TransactionType,
-    ):
-        if not sender and not receiver:
-            raise ValueError('Transaction must have either sender or receiver. Got both undefined instead.')
-        elif type == TransactionType.TRANSFER.value and not (sender and receiver):
-            raise ValueError('Transaction with type set to TRANSFER should have both sender and receiver specified.')
-        elif type == TransactionType.EXPENSE.value and not sender:
-            raise ValueError('EXPENSE Transactions must have a sender specified.')
-        elif type == TransactionType.INCOME.value and not receiver:
-            raise ValueError('INCOME Transactions must have a receiver specified.')
 
     @classmethod
     def create(
             cls,
-            sender: TransactionParticipant | None,
-            receiver: TransactionParticipant | None,
-            description: str,
-            type: TransactionType,
-            category: ExpenseCategory,
+            user_id: int,
+            source_wallet_id: UUID,
+            amount: Decimal,
+            cancels_other: UUID | None = None,
+            adjusts_other: UUID | None = None,
             event_collector: EventCollector | None = None,
     ):
-        try:
-            cls._validate_participants(receiver, sender, type)
-        except ValueError as e:
-            raise ValueError(f'Exception while creating new domain entity: {e}')
-
         created_transaction = cls(
-            id=uuid4(),
-            sender=TransactionParticipant(
-                wallet_id=sender.wallet_id,
-                money=sender.money,
-            ) if sender else None,
-            receiver=TransactionParticipant(
-                wallet_id=receiver.wallet_id,
-                money=receiver.money,
-            ) if receiver else None,
-            description=description,
-            created_at=timezone.now(),
-            type=type,
-            category=category,
+            id=uuid.uuid4(),
+            user_id=user_id,
+            source_wallet_id=source_wallet_id,
+            amount=amount,
+            created_at=datetime.now(),
+            cancels_other=cancels_other,
+            adjusts_other=adjusts_other,
             _event_collector=event_collector or EventCollector(),
         )
 
         created_transaction._event_collector.collect(TransactionCreatedEvent(
             transaction_id=created_transaction.id,
-            sender=TransactionEventParticipant(
-                wallet_id=sender.wallet_id,
-                amount=created_transaction.sender.money.amount,
-                currency_code=created_transaction.sender.money.currency_code,
-            ) if created_transaction.sender else None,
-            receiver=TransactionEventParticipant(
-                wallet_id=receiver.wallet_id,
-                amount=created_transaction.receiver.money.amount,
-                currency_code=created_transaction.receiver.money.currency_code,
-            ) if created_transaction.receiver else None,
-            description=created_transaction.description,
+            wallet_id=source_wallet_id,
             created_at=created_transaction.created_at,
+            user_id=created_transaction.user_id,
+            amount=created_transaction.amount,
         ))
 
         return created_transaction
@@ -109,69 +54,25 @@ class Transaction:
     @classmethod
     def from_persistence(
             cls,
-            id: UUID,
-            sender: TransactionParticipant | None,
-            receiver: TransactionParticipant | None,
-            description: str,
-            type: TransactionType,
-            category: ExpenseCategory,
+            transaction_id: UUID,
+            user_id: int,
+            wallet_id: UUID,
+            amount: Decimal,
             created_at: datetime,
+            cancels_other: UUID | None = None,
+            adjusts_other: UUID | None = None,
             event_collector: EventCollector | None = None,
     ):
-        try:
-            cls._validate_participants(receiver, sender, type)
-        except ValueError as e:
-            raise ValueError(f'Exception while restoring domain entity Transaction from database: {e}')
-
         return cls(
-            id=id,
-            sender=sender,
-            receiver=receiver,
-            description=description,
+            id=transaction_id,
+            user_id=user_id,
+            source_wallet_id=wallet_id,
+            amount=amount,
             created_at=created_at,
-            type=type,
-            category=category,
+            cancels_other=cancels_other,
+            adjusts_other=adjusts_other,
             _event_collector=event_collector or EventCollector(),
         )
-
-    def update_fields(
-            self,
-            category: ExpenseCategory | None = None,
-            description: str | None = None,
-    ):
-        timestamp = timezone.now()
-        old_transaction = copy.deepcopy(self)
-
-        if category is not None:
-            self.category = category
-        if description is not None:
-            self.description = description
-
-        if old_transaction != self:
-            self._event_collector.collect(TransactionUpdatedEvent(
-                transaction_id=old_transaction.id,
-                updated_at=timestamp,
-                old_transaction=UpdateTransactionData(
-                    sender=TransactionEventParticipant(
-                        wallet_id=old_transaction.sender.wallet_id,
-                        currency_code=old_transaction.sender.money.currency_code,
-                        amount=old_transaction.sender.money.amount,
-                    ) if old_transaction.sender else None,
-                    receiver=TransactionEventParticipant(
-                        wallet_id=old_transaction.receiver.wallet_id,
-                        currency_code=old_transaction.receiver.money.currency_code,
-                        amount=old_transaction.receiver.money.amount,
-                    ) if old_transaction.receiver else None,
-                    description=old_transaction.description,
-                    category=old_transaction.category.value,
-                ),
-                current_transaction=UpdateTransactionData(
-                    sender=self.sender,
-                    receiver=self.receiver,
-                    description=self.description,
-                    category=self.category.value,
-                )
-            ))
 
     def migrate_event_collector(
             self,
@@ -183,11 +84,22 @@ class Transaction:
 
         self._event_collector = event_collector
 
-    def confirm_delete(self):
-        self._event_collector.collect(TransactionDeletedEvent(
+    def get_inverse(self):
+        return Transaction.create(
+            user_id=self.user_id,
+            source_wallet_id=self.source_wallet_id,
+            amount=self.amount * -1,
+            cancels_other=self.id,
+        )
+
+    def delete(self) -> 'Transaction':
+        inverse = self.get_inverse()
+        inverse._event_collector.collect(TransactionDeletedEvent(
             transaction_id=self.id,
-            created_at=self.created_at,
-            sender=self.sender,
-            receiver=self.receiver,
-            description=self.description
+            wallet_id=self.source_wallet_id,
+            user_id=self.user_id,
+            amount=self.amount,
+            cancelled_by=inverse.id,
+            created_at=inverse.created_at,
         ))
+        return inverse

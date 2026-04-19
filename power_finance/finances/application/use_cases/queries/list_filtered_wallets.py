@@ -1,19 +1,22 @@
+import asyncio
 from dataclasses import dataclass
 from typing import Any
 
 from finances.domain.entities import (
-    FilterPolicy, 
-    ResolvedFilterTree, 
+    FilterPolicy,
+    ResolvedFilterTree,
     FilterFieldPolicy,
     ComparisonOperator,
     TypeVariant,
 )
-from finances.domain.services import resolve_filter_query
+from finances.domain.services import resolve_filter_query, resolve_filter_query_sql
+
+from finances.domain.builders import WalletBuilder
 
 from ...bootstrap import get_repository_registry
 from ...dto_builders import wallet_to_dto
 from ...dtos import WalletDTO
-from ...interfaces import WalletRepository
+from ...interfaces import WalletRepository, TransactionRepository
 
 
 @dataclass(frozen=True)
@@ -82,18 +85,43 @@ class ListFilteredWalletsQueryHandler:
     def __init__(
             self,
             wallet_repository: WalletRepository | None = None,
+            transaction_repository: TransactionRepository | None = None,
     ) -> None:
         registry = get_repository_registry()
         self.wallet_repository = wallet_repository or registry.wallet_repository
+        self.transaction_repository = transaction_repository or registry.transaction_repository
 
-    def handle(self, request: ListFilteredWalletsQuery) -> list[WalletDTO]:
+    async def handle(self, request: ListFilteredWalletsQuery) -> list[WalletDTO]:
         try:
             resolved_query = resolve_filter_query(request.filter_body, self.filter_policy)
+            resolved_sql, resolved_sql_params = resolve_filter_query_sql(request.filter_body, self.filter_policy)
             filter_tree = ResolvedFilterTree(
-                query=resolved_query,
+                django_query=resolved_query,
+                raw_sql_query=resolved_sql,
+                raw_sql_params=resolved_sql_params,
                 applied_policy=self.filter_policy,
             )
-            filtered_wallets = self.wallet_repository.list_wallets_with_filters(filter_tree, request.user_id)
+            filtered_wallets = await self.wallet_repository.list_wallets_with_filters(
+                filter_tree,
+                request.user_id
+            )
+            checkpoints = await asyncio.gather(*[
+                self.transaction_repository.get_checkpoint(wallet.id)
+                for wallet in filtered_wallets
+            ])
+            wallet_transactions = await asyncio.gather(*[
+                self.transaction_repository.get_unsettled_transactions(
+                    wallet.id, checkpoint.settled_at if checkpoint else None
+                )
+                for wallet, checkpoint in zip(filtered_wallets, checkpoints)
+            ])
+            filtered_wallets = [
+                WalletBuilder(wallet)
+                    .set_checkpoint(checkpoint)
+                    .set_transactions(transactions)
+                    .build_wallet()
+                for wallet, checkpoint, transactions in zip(filtered_wallets, checkpoints, wallet_transactions)
+            ]
 
             return [wallet_to_dto(wallet) for wallet in filtered_wallets]
         except Exception as e:

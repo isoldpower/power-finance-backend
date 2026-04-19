@@ -22,9 +22,9 @@ class ListWebhooksQueryHandler:
         registry = get_repository_registry()
         self.webhooks_repository = webhooks_repository or registry.webhook_repository
 
-    def handle(self, request: ListWebhooksQuery) -> list[WebhookDTO]:
+    async def handle(self, request: ListWebhooksQuery) -> list[WebhookDTO]:
         try:
-            typed_webhooks = self.webhooks_repository.get_user_webhooks(
+            typed_webhooks = await self.webhooks_repository.get_user_webhooks(
                 user_id=request.user_id,
             )
 

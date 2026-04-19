@@ -7,30 +7,27 @@ class FinancesConfig(AppConfig):
     name = 'finances'
 
     def ready(self) -> None:
-        from finances.application.bootstrap import bootstrap_application
-        from finances.infrastructure.integrations import (
-            HttpSender,
-            WebhookDispatcher,
-            WebhookPayloadFactory,
-        )
-        from finances.infrastructure.messaging import (
-            InMemorySseNotificationPublisher,
-            RedisNotificationBroker,
-        )
-        from finances.infrastructure.redis import build_redis_client
-        from finances.infrastructure.celery import build_celery_client
+        import sys
+        if 'makemigrations' in sys.argv or 'migrate' in sys.argv:
+            return
 
-        webhook_dispatcher = WebhookDispatcher(HttpSender())
-        webhook_factory = WebhookPayloadFactory()
-        redis_client = build_redis_client(settings.RESOLVED_ENV.get('REDIS_URL'))
-        celery_client = build_celery_client(settings.RESOLVED_ENV)
-        notification_broker = RedisNotificationBroker(redis_client=redis_client)
-        notification_publisher = InMemorySseNotificationPublisher(broker=notification_broker)
-        bootstrap_application(
-            payload_factory=webhook_factory,
-            dispatcher=webhook_dispatcher,
-            notification_publisher=notification_publisher,
-            notification_broker=notification_broker,
-            redis=redis_client,
-            celery=celery_client,
-        )
+        from finances.application.bootstrap import bootstrap_application, ApplicationEnvironment
+
+        bootstrap_application(ApplicationEnvironment(
+            app_name=settings.RESOLVED_ENV['APP_NAME'],
+            rabbitmq_host=settings.RESOLVED_ENV['RABBIT_MQ_HOST'],
+            rabbitmq_port=settings.RESOLVED_ENV['RABBIT_MQ_PORT'],
+            rabbitmq_user=settings.RESOLVED_ENV['RABBIT_MQ_USER'],
+            rabbitmq_password=settings.RESOLVED_ENV['RABBIT_MQ_PASSWORD'],
+            redis_host=settings.RESOLVED_ENV['REDIS_HOST'],
+            redis_port=settings.RESOLVED_ENV['REDIS_PORT'],
+            redis_password=settings.RESOLVED_ENV['REDIS_PASSWORD'],
+            redis_default_db_index=0,
+            redis_celery_db_index=settings.RESOLVED_ENV['REDIS_CELERY_DATABASE_INDEX'],
+            celery_beat_filename=settings.RESOLVED_ENV['CELERY_BEAT_SCHEDULE_FILENAME'],
+            immudb_host=settings.RESOLVED_ENV['IMMUDB_HOST'],
+            immudb_port=settings.RESOLVED_ENV['IMMUDB_PORT'],
+            immudb_user=settings.RESOLVED_ENV['IMMUDB_USER'],
+            immudb_password=settings.RESOLVED_ENV['IMMUDB_PASSWORD'],
+            immudb_transactions_database="transactions",
+        ))

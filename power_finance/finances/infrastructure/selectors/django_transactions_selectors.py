@@ -9,7 +9,7 @@ from ..orm import TransactionModel
 
 
 class DjangoTransactionSelectorsCollection(TransactionSelectorsCollection):
-    def get_expenses_by_category(self, user_id: int) -> list[dict[str, str]]:
+    async def get_expenses_by_category(self, user_id: int) -> list[dict[str, str]]:
         category_transactions = (TransactionModel.objects
             .filter(
                 send_wallet__user_id=user_id,
@@ -19,9 +19,9 @@ class DjangoTransactionSelectorsCollection(TransactionSelectorsCollection):
             .annotate(amount=Sum("send_amount"))
             .order_by("-amount"))
 
-        return list(category_transactions)
+        return [row async for row in category_transactions]
 
-    def get_monthly_expenditure_and_income(self, user_id: int) -> list[dict[str, str]]:
+    async def get_monthly_expenditure_and_income(self, user_id: int) -> list[dict[str, str]]:
         monthly_expenditure_and_income = (TransactionModel.objects
             .filter(
                 Q(send_wallet__user_id=user_id) |
@@ -40,24 +40,23 @@ class DjangoTransactionSelectorsCollection(TransactionSelectorsCollection):
                     default=0,
                     output_field=DecimalField()
                 )))
-            .order_by("month")                              )
+            .order_by("month"))
 
-        return list(monthly_expenditure_and_income)
+        return [row async for row in monthly_expenditure_and_income]
 
-    def get_user_transfers_grouped(self, user_id: int) -> list[dict[str, str]]:
+    async def get_user_transfers_grouped(self, user_id: int) -> list[dict[str, str]]:
         grouped_transactions = (TransactionModel.objects
-                                .filter(
-            send_wallet__user_id=user_id,
-            receive_wallet__user_id=user_id,
-            type=TransactionType.TRANSFER,
-        )
-                                .values("send_wallet__id", "receive_wallet__id")
-                                .annotate(total=Sum("send_amount"))
-                                )
+            .filter(
+                send_wallet__user_id=user_id,
+                receive_wallet__user_id=user_id,
+                type=TransactionType.TRANSFER,
+            )
+            .values("send_wallet__id", "receive_wallet__id")
+            .annotate(total=Sum("send_amount")))
 
-        return list(grouped_transactions)
+        return [row async for row in grouped_transactions]
 
-    def get_daily_spending(self, user_id: int) -> list[dict[str, any]]:
+    async def get_daily_spending(self, user_id: int) -> list[dict[str, any]]:
         daily_spending = (TransactionModel.objects
             .filter(
                 send_wallet__user_id=user_id,
@@ -69,9 +68,9 @@ class DjangoTransactionSelectorsCollection(TransactionSelectorsCollection):
             .annotate(total=Sum("send_amount"))
             .order_by("day"))
 
-        return list(daily_spending)
+        return [row async for row in daily_spending]
 
-    def get_wallet_transactions(self, wallet_id: UUID) -> list[dict[str, any]]:
+    async def get_wallet_transactions(self, wallet_id: UUID) -> list[dict[str, any]]:
         wallet_transactions = (TransactionModel.objects
             .filter(Q(send_wallet__id=wallet_id) | Q(receive_wallet__id=wallet_id))
             .order_by("created_at")
@@ -83,4 +82,4 @@ class DjangoTransactionSelectorsCollection(TransactionSelectorsCollection):
                 "created_at"
             ))
 
-        return list(wallet_transactions)
+        return [row async for row in wallet_transactions]

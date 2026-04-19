@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+    spec:
+      serviceAccountName: redis-sa
+      containers:
+      - name: redis
+        image: redis:8.6-alpine
+        ports:
+        - containerPort: 6379
+        # Health Probes
+        livenessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        # Start with password auth and persistence every 60s
+        command:
+          - /bin/sh
+          - -c
+          - 'redis-server --save 60 1 --loglevel warning --requirepass "$REDIS_PASSWORD"'
+        # Env variables mapping
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secrets
+              key: .redis-password
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: redis-pvc

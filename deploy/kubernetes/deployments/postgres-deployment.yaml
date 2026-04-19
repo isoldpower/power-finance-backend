@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: database
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: database
+    spec:
+      serviceAccountName: postgres-sa
+      containers:
+      - name: postgres
+        image: postgres:18.3
+        ports:
+        - containerPort: 5432
+        # Health Probes
+        livenessProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - $(POSTGRES_USER)
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - $(POSTGRES_USER)
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        # Env variables mapping
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: .database-user
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: .database-password
+        - name: PGDATA
+          value: /var/lib/postgresql/18/docker
+        # Volume mounts: persistent data + shared memory
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql
+        - name: dshm
+          mountPath: /dev/shm
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi

@@ -1,9 +1,11 @@
-.PHONY: test test-fast test-integration
+.PHONY: test test-fast test-integration restart rebuild
 
 # Variables
 PYTHON = .venv/bin/python
 MANAGE = power_finance/manage.py
 SETTINGS = power_finance.settings
+PORT ?= 8000
+SERVICES = django celery-worker celery-beat
 
 # Run all tests
 test:
@@ -12,9 +14,9 @@ test:
 		finances.application.use_cases.commands.tests \
 		finances.application.use_cases.queries.tests \
 		finances.presentation.tests \
-		identity.domain.tests \
-		identity.application.tests \
-		identity.presentation.tests \
+		environment.domain.tests \
+		environment.application.tests \
+		environment.presentation.tests \
 		--settings=$(SETTINGS)
 
 # Run fast unit tests (domain and application layer, no DB)
@@ -23,22 +25,30 @@ test-fast:
 		finances.domain.tests \
 		finances.application.use_cases.commands.tests \
 		finances.application.use_cases.queries.tests \
-		identity.domain.tests \
-		identity.application.tests \
+		environment.domain.tests \
+		environment.application.tests \
 		--settings=$(SETTINGS)
 
 # Run integration tests (presentation layer)
 test-integration:
 	$(PYTHON) $(MANAGE) test \
 		finances.presentation.tests \
-		identity.presentation.tests \
+		environment.presentation.tests \
 		--settings=$(SETTINGS)
+
+# Restart app services without rebuilding
+restart:
+	docker compose restart $(SERVICES)
+
+# Rebuild and restart app services
+rebuild:
+	docker compose up -d --build $(SERVICES)
 
 # Run the ASGI server with hot reload on file changes
 run-dev:
 	cd power_finance && \
 	../$(PYTHON) -m uvicorn power_finance.asgi:application \
-		--reload
+		--reload --port $(PORT)
 
 # Run the ASGI server in stable mode without reloads
 run-stable:

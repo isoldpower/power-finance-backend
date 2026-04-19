@@ -1,8 +1,15 @@
 from .queries import *
 from .commands import *
 from .workflows import *
+from .exceptions import (
+    IdempotencyCachedError,
+    IdempotencyInFlightError,
+)
 
-__all__ = []
+__all__ = [
+    'IdempotencyCachedError',
+    'IdempotencyInFlightError'
+]
 
 __all__.extend([
     queries.__all__,

@@ -11,6 +11,5 @@ class WalletDTO:
     name: str
     balance_amount: Decimal
     currency: str
-    credit: bool
     created_at: datetime
     updated_at: datetime

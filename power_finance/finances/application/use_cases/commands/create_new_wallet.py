@@ -1,13 +1,10 @@
 from dataclasses import dataclass
-from decimal import Decimal
-from uuid import uuid4
-from django.db import transaction
-from django.utils import timezone
 
 from finances.domain.entities import Wallet
 from finances.domain.exceptions import UnsupportedCurrencyError
-from finances.domain.value_objects import Money
 
+from ..use_case_base import UseCaseEvently
+from ..decorators import atomic_evently_command
 from ...bootstrap import get_repository_registry
 from ...dtos import WalletDTO
 from ...dto_builders import wallet_to_dto
@@ -18,12 +15,10 @@ from ...interfaces import WalletRepository, CurrencyRepository
 class CreateNewWalletCommand:
     user_id: int
     name: str
-    balance_amount: Decimal
     currency: str
-    credit: bool
 
 
-class CreateNewWalletCommandHandler:
+class CreateNewWalletCommandHandler(UseCaseEvently):
     wallet_repository: WalletRepository
     currency_repository: CurrencyRepository
 
@@ -32,30 +27,22 @@ class CreateNewWalletCommandHandler:
         wallet_repository: WalletRepository | None = None,
         currency_repository: CurrencyRepository | None = None,
     ):
+        super().__init__()
         registry = get_repository_registry()
         self.wallet_repository = wallet_repository or registry.wallet_repository
         self.currency_repository = currency_repository or registry.currency_repository
 
-    @transaction.atomic
-    def handle(self, command: CreateNewWalletCommand) -> WalletDTO:
+    @atomic_evently_command()
+    async def handle(self, command: CreateNewWalletCommand) -> WalletDTO:
         currency_code = command.currency.upper()
-        if not self.currency_repository.currency_code_exists(currency_code):
+        if not await self.currency_repository.currency_code_exists(currency_code):
             raise UnsupportedCurrencyError(currency_code)
 
-        wallet = Wallet(
-            id = uuid4(),
-            user_id = command.user_id,
-            name = command.name,
-            balance = Money(
-                amount=command.balance_amount,
-                currency_code=command.currency,
-            ),
-            credit = command.credit,
-            created_at = timezone.now(),
-            updated_at = timezone.now(),
-            deleted_at = None,
+        wallet = Wallet.create(
+            user_id=command.user_id,
+            name=command.name,
+            currency_code=currency_code,
         )
-
-        created_wallet = self.wallet_repository.create_wallet(wallet)
+        created_wallet = await self.wallet_repository.create_wallet(wallet)
 
         return wallet_to_dto(created_wallet)

@@ -4,13 +4,13 @@ from typing import Any
 from django.core.exceptions import ObjectDoesNotExist
 
 from finances.domain.entities import (
-    FilterPolicy, 
-    ResolvedFilterTree, 
+    FilterPolicy,
+    ResolvedFilterTree,
     FilterFieldPolicy,
     ComparisonOperator,
     TypeVariant,
 )
-from finances.domain.services import resolve_filter_query
+from finances.domain.services import resolve_filter_query, resolve_filter_query_sql
 
 from ...bootstrap import get_repository_registry
 from ...dto_builders import webhook_to_dto
@@ -80,14 +80,19 @@ class ListFilteredWebhooksQueryHandler:
         registry = get_repository_registry()
         self.webhooks_repository = webhooks_repository or registry.webhook_repository
 
-    def handle(self, request: ListFilteredWebhooksQuery) -> list[WebhookDTO]:
+    async def handle(self, request: ListFilteredWebhooksQuery) -> list[WebhookDTO]:
         try:
             resolved_query = resolve_filter_query(request.filter_body, self.filter_policy)
+            resolved_sql, resolved_sql_params = resolve_filter_query_sql(request.filter_body, self.filter_policy)
             filter_tree = ResolvedFilterTree(
-                query=resolved_query,
+                django_query=resolved_query,
+                raw_sql_query=resolved_sql,
+                raw_sql_params=resolved_sql_params,
                 applied_policy=self.filter_policy,
             )
-            filtered_webhooks = self.webhooks_repository.list_webhooks_with_filters(filter_tree, request.user_id)
+            filtered_webhooks = await self.webhooks_repository.list_webhooks_with_filters(
+                filter_tree, request.user_id
+            )
 
             return [webhook_to_dto(webhook) for webhook in filtered_webhooks]
         except ObjectDoesNotExist as e:

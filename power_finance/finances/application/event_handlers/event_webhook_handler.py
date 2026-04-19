@@ -1,6 +1,5 @@
 import logging
 from uuid import UUID
-from django.db import transaction
 
 from finances.domain.entities import Webhook, WebhookType, WebhookPayload
 from finances.domain.events import EventCollector
@@ -13,6 +12,7 @@ from ..interfaces import (
     CreateWebhookDeliveryData,
     EventBus,
 )
+from ..db_utils import aatomic
 
 
 logger = logging.getLogger(__name__)
@@ -34,30 +34,35 @@ class EventWebhookHandler:
         self._event_collector = EventCollector()
         self._dispatcher = dispatcher
 
-    @transaction.atomic
-    def handle_dispatch_webhook_delivery(
+    async def handle_dispatch_webhook_delivery(
             self,
             webhook: Webhook,
             event_id: UUID,
             request_body: dict
     ) -> WebhookDeliveryDTO:
-        logger.info("EventWebhookHandler: Handling webhook delivery for Event ID: %s, Webhook ID: %s", event_id, webhook.id)
-
-        request_stamp = self._dispatcher.get_request_data(
-            webhook=webhook,
-            event_type=self._event_type.value,
-            payload=request_body
+        logger.info(
+            "EventWebhookHandler: Handling webhook delivery for Event ID: %s, Webhook ID: %s",
+            event_id, webhook.id
         )
-        delivery = self._delivery_repository.create_delivery(CreateWebhookDeliveryData(
-            endpoint_id=webhook.id,
-            event_id=event_id,
-        ))
-        payload = WebhookPayload.create(
-            delivery_id=delivery.id,
-            payload=request_stamp.request_body,
-            headers=request_stamp.request_headers,
-        )
-        self._payload_repository.write_delivery_payload(payload)
+        async with aatomic():
+            request_stamp = self._dispatcher.get_request_data(
+                webhook=webhook,
+                event_type=self._event_type.value,
+                payload=request_body
+            )
+            delivery = await self._delivery_repository.create_delivery(CreateWebhookDeliveryData(
+                endpoint_id=webhook.id,
+                event_id=event_id,
+            ))
+            payload = WebhookPayload.create(
+                delivery_id=delivery.id,
+                payload=request_stamp.request_body,
+                headers=request_stamp.request_headers,
+            )
+            await self._payload_repository.write_delivery_payload(payload)
 
-        logger.info("EventWebhookHandler: Successfully created delivery (ID: %s) for Event ID: %s", delivery.id, event_id)
+        logger.info(
+            "EventWebhookHandler: Successfully created delivery (ID: %s) for Event ID: %s",
+            delivery.id, event_id
+        )
         return delivery

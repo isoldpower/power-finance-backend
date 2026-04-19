@@ -15,7 +15,6 @@ class WalletHttpPresenter:
         return {
             "id": wallet.id,
             "name": wallet.name,
-            "credit": wallet.credit,
             "balance": {
                 "amount": wallet.balance_amount,
                 "currency": wallet.currency,

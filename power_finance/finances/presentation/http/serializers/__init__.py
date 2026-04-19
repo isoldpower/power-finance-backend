@@ -5,7 +5,6 @@ from .request import (
     UpdateWalletRequestSerializer,
     ReplaceWalletRequestSerializer,
     CreateTransactionRequestSerializer,
-    UpdateTransactionRequestSerializer,
     CreateWebhookRequestSerializer,
     RotateWebhookSecretRequestSerializer,
     UpdateWebhookRequestSerializer,
@@ -31,6 +30,7 @@ from .response import (
     NotificationResponseSerializer,
 )
 
+
 __all__ = [
     'MoneyField',
     'CreateWalletRequestSerializer',
@@ -38,7 +38,6 @@ __all__ = [
     'ReplaceWalletRequestSerializer',
     'WalletResponseSerializer',
     'CreateTransactionRequestSerializer',
-    'UpdateTransactionRequestSerializer',
     'TransactionResponseSerializer',
     'TransactionPreviewResponseSerializer',
     'CreateWebhookRequestSerializer',

@@ -2,12 +2,49 @@ import os
 
 from celery import Celery
 from django.utils import timezone
+from pika import ConnectionParameters, PlainCredentials
 
 
-def build_celery_config(resolved_settings: dict) -> dict:
+def _build_amqp_url(host: str, port: str, user: str, password: str) -> str:
+    params = ConnectionParameters(
+        host=host,
+        port=int(port),
+        credentials=PlainCredentials(username=user, password=password),
+    )
+    return (
+        f"amqp://{params.credentials.username}:{params.credentials.password}"
+        f"@{params.host}:{params.port}//"
+    )
+
+
+def _build_redis_url(host: str, port: str, password: str, db: str) -> str:
+    return f"redis://:{password}@{host}:{port}/{db}"
+
+
+def build_celery_config(
+        rmq_host: str,
+        rmq_port: str,
+        rmq_user: str,
+        rmq_password: str,
+        redis_host: str,
+        redis_port: str,
+        redis_password: str,
+        redis_celery_db: str,
+        beat_schedule_filename: str,
+) -> dict:
     return {
-        "broker_url": resolved_settings.get('CELERY_BROKER_URL'),
-        "result_backend": resolved_settings.get('CELERY_RESULT_BACKEND'),
+        "broker_url": _build_amqp_url(
+            host=rmq_host,
+            port=rmq_port,
+            user=rmq_user,
+            password=rmq_password,
+        ),
+        "result_backend": _build_redis_url(
+            host=redis_host,
+            port=redis_port,
+            password=redis_password,
+            db=redis_celery_db,
+        ),
         "task_serializer": "json",
         "accept_content": ["json"],
         "result_serializer": "json",
@@ -17,20 +54,46 @@ def build_celery_config(resolved_settings: dict) -> dict:
         "task_track_started": True,
         "task_time_limit": 1800,
         "task_soft_time_limit": 1500,
-        "beat_schedule_filename": resolved_settings.get("CELERY_BEAT_SCHEDULE_FILENAME"),
+        "beat_schedule_filename": beat_schedule_filename,
         "beat_schedule": {
             "schedule-due-webhook-retries-every-10-seconds": {
                 "task": "finances.schedule_due_webhook_retries",
                 "schedule": 10.0,
             },
+            "checkpoint-wallet-balances-every-30-minutes": {
+                "task": "finances.checkpoint_wallet_balances",
+                "schedule": 1800.0,
+            },
         },
     }
 
-def build_celery_client(resolved_settings: dict) -> Celery:
+
+def build_celery_client(
+        app_name: str,
+        rmq_host: str,
+        rmq_port: int,
+        rmq_user: str,
+        rmq_password: str,
+        redis_host: str,
+        redis_port: int,
+        redis_password: str,
+        redis_celery_db: int,
+        beat_schedule_filename: str,
+) -> Celery:
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "power_finance.settings")
 
-    celery_instance = Celery(main=resolved_settings.get('APP_NAME'), strict_typing=True)
-    celery_instance.conf.update(build_celery_config(resolved_settings))
+    celery_instance = Celery(main=app_name, strict_typing=True)
+    celery_instance.conf.update(build_celery_config(
+        rmq_host=rmq_host,
+        rmq_port=str(rmq_port),
+        rmq_user=rmq_user,
+        rmq_password=rmq_password,
+        redis_host=redis_host,
+        redis_port=str(redis_port),
+        redis_password=redis_password,
+        redis_celery_db=str(redis_celery_db),
+        beat_schedule_filename=beat_schedule_filename,
+    ))
     celery_instance.autodiscover_tasks(['finances.infrastructure.celery.tasks'])
 
     return celery_instance

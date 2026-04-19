@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: immudb-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: immudb
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: django-server
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: celery-worker
+      ports:
+        - port: 3322
+        - port: 9497
+  egress: []

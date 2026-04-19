@@ -20,3 +20,8 @@ class FilterTree:
         tree_head = self._builder.build_tree(raw)
 
         return tree_head.resolve()
+
+    def resolve_sql(self, raw: dict[str, Any]) -> tuple[str, dict]:
+        tree_head = self._builder.build_tree(raw)
+
+        return tree_head.resolve_sql()

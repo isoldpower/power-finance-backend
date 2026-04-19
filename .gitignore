@@ -28,3 +28,6 @@ cache/**/*
 # Operating System files
 .DS_Store
 schema.yml
+
+# Kubernetes secrets
+deploy/kubernetes/secrets.yaml

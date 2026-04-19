@@ -2,7 +2,7 @@ from decimal import Decimal
 from uuid import uuid4
 from datetime import datetime, timezone
 from django.test import SimpleTestCase
-from finances.domain.entities.transaction import Transaction, TransactionParticipant
+from finances.domain.entities.old_transaction import Transaction, TransactionParticipant
 from finances.domain.entities.wallet import Wallet
 from finances.domain.entities.transaction_type import TransactionType
 from finances.domain.entities.expense_category import ExpenseCategory

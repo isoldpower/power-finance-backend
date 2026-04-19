@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: power-finance
+data:
+  # Django core
+  debug: "False"
+  app-name: "power_finance"
+  api-version: "v1"
+  # Postgres — host matches service name in cluster
+  database-host: "postgres-service"
+  database-port: "5432"
+  # Redis — host matches service name in cluster
+  redis-host: "redis-service"
+  redis-port: "6379"
+  redis-celery-database-index: "2"
+  # RabbitMQ — host matches service name in cluster
+  rabbitmq-host: "rabbitmq-service"
+  rabbitmq-port: "5672"
+  rabbitmq-management-port: "15672"
+  # Clerk auth
+  clerk-api-url: "https://tolerant-fawn-35.clerk.accounts.dev"
+  clerk-cache-key: "clerk_cache"

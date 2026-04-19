@@ -22,16 +22,16 @@ class AcknowledgeNotificationCommandHandler:
         registry = get_repository_registry()
         self._notification_repository = notification_repository or registry.notification_repository
 
-    def handle(self, command: AcknowledgeNotificationCommand) -> Notification:
+    async def handle(self, command: AcknowledgeNotificationCommand) -> Notification:
         try:
-            notification = self._notification_repository.get_notification_by_id(command.notification_id)
+            notification = await self._notification_repository.get_notification_by_id(command.notification_id)
         except ObjectDoesNotExist:
             raise ValueError(f"Notification with id {command.notification_id} not found")
 
         if notification.user_id != command.user_id:
             raise PermissionError("User is not authorized to acknowledge this notification")
 
-        return self._notification_repository.mark_notification_delivered(command.notification_id)
+        return await self._notification_repository.mark_notification_delivered(command.notification_id)
 
 
 @dataclass(frozen=True)
@@ -48,8 +48,8 @@ class BatchAcknowledgeNotificationCommandHandler:
         registry = get_repository_registry()
         self._notification_repository = notification_repository or registry.notification_repository
 
-    def handle(self, command: BatchAcknowledgeNotificationCommand) -> list[str]:
-        read_notifications = self._notification_repository.mark_notifications_delivered(
+    async def handle(self, command: BatchAcknowledgeNotificationCommand) -> list[str]:
+        read_notifications = await self._notification_repository.mark_notifications_delivered(
             command.notification_ids,
             command.user_id,
         )

@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: django-sa
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: django-role
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  # Access to all secrets django needs — no access to postgres/redis/rabbitmq internal secrets
+  resourceNames: [
+    "django-secrets",
+    "database-secrets",
+    "redis-secrets",
+    "rabbitmq-secrets",
+  ]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames: ["power-finance"]
+  verbs: ["get"]
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: django-rolebinding
+subjects:
+- kind: ServiceAccount
+  name: django-sa
+roleRef:
+  kind: Role
+  name: django-role
+  apiGroup: rbac.authorization.k8s.io

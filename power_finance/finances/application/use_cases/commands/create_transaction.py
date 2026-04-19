@@ -1,35 +1,23 @@
+import asyncio
 from dataclasses import dataclass
-from typing import Optional
+from decimal import Decimal
 from uuid import UUID
 
-from django.core.exceptions import ObjectDoesNotExist
-from django.core.management import CommandError
+from finances.domain.builders import WalletBuilder
 
-from finances.domain.services import apply_transaction_to_wallet_balance
-from finances.domain.value_objects import Money
-from finances.domain.entities import (
-    Transaction,
-    TransactionType,
-    ExpenseCategory,
-    Wallet, TransactionParticipant
-)
-
-from ..decorators import atomic_evently_command
 from ..use_case_base import UseCaseEvently
+from ..decorators import atomic_evently_command
 from ...bootstrap import get_repository_registry
-from ...dtos import TransactionDTO, CreateTransactionParticipantDTO
-from ...dto_builders import transaction_to_dto
+from ...dto_builders import transaction_to_dto, wallet_to_dto
+from ...dtos import TransactionDTO
 from ...interfaces import TransactionRepository, WalletRepository
 
 
 @dataclass(frozen=True)
 class CreateTransactionCommand:
     user_id: int
-    sender: Optional[CreateTransactionParticipantDTO]
-    receiver: Optional[CreateTransactionParticipantDTO]
-    description: Optional[str]
-    type: TransactionType
-    category: Optional[ExpenseCategory]
+    source_wallet_id: UUID
+    amount: Decimal
 
 
 class CreateTransactionCommandHandler(UseCaseEvently):
@@ -43,79 +31,31 @@ class CreateTransactionCommandHandler(UseCaseEvently):
     ):
         super().__init__()
         registry = get_repository_registry()
-
         self._transaction_repository = transaction_repository or registry.transaction_repository
         self._wallet_repository = wallet_repository or registry.wallet_repository
 
-    def _safe_get_wallet(self, wallet_id: UUID, user_id: int) -> Wallet | None:
-        try:
-            return self._wallet_repository.get_user_wallet_for_update(
-                wallet_id,
-                user_id,
-            )
-        except ObjectDoesNotExist:
-            return None
-
-    def _load_affected_wallets(
-            self,
-            sender: Optional[CreateTransactionParticipantDTO],
-            receiver: Optional[CreateTransactionParticipantDTO],
-            user_id: int,
-    ) -> tuple[Wallet | None, Wallet | None]:
-        sender_wallet = (
-            self._safe_get_wallet(sender.wallet_id, user_id)
-            if sender else None
-        )
-        receiver_wallet = (
-            self._safe_get_wallet(receiver.wallet_id, user_id)
-            if receiver else None
-        )
-
-        if (sender and not sender_wallet) or (receiver and not receiver_wallet):
-            raise CommandError('One or more wallet IDs passed are invalid.')
-
-        return sender_wallet, receiver_wallet
-
-    def _persist_wallets(self, *wallets: Wallet | None) -> None:
-        for wallet in wallets:
-            if wallet is not None:
-                self._wallet_repository.save_wallet(wallet)
-
     @atomic_evently_command()
-    def handle(self, command: CreateTransactionCommand) -> TransactionDTO:
-        sender_wallet, receiver_wallet = self._load_affected_wallets(
-            command.sender,
-            command.receiver,
-            command.user_id,
+    async def handle(self, command: CreateTransactionCommand) -> TransactionDTO:
+        wallet, checkpoint = await asyncio.gather(
+            self._wallet_repository.get_user_wallet_by_id(
+                wallet_id=command.source_wallet_id,
+                user_id=command.user_id,
+            ),
+            self._transaction_repository.get_checkpoint(command.source_wallet_id),
         )
-
-        new_transaction = Transaction.create(
-            sender=TransactionParticipant(
-                wallet_id=sender_wallet.id,
-                money=Money(
-                    amount=command.sender.amount,
-                    currency_code=sender_wallet.balance.currency_code,
-                )
-            ) if (sender_wallet and command.sender) else None,
-            receiver=TransactionParticipant(
-                wallet_id=receiver_wallet.id,
-                money=Money(
-                    amount=command.receiver.amount,
-                    currency_code=receiver_wallet.balance.currency_code,
-                )
-            ) if (receiver_wallet and command.receiver) else None,
-            description=command.description,
-            type=command.type,
-            category=command.category,
-            event_collector=self.event_collector,
+        wallet = (
+            WalletBuilder(wallet)
+                .set_checkpoint(checkpoint)
+                .set_transactions(await self._transaction_repository.get_unsettled_transactions(
+                    command.source_wallet_id, checkpoint.settled_at if checkpoint else None
+                ))
+                .build_wallet()
         )
-
-        apply_transaction_to_wallet_balance(new_transaction, sender_wallet, receiver_wallet)
-        created_transaction = self._transaction_repository.create_transaction(new_transaction)
-        self._persist_wallets(sender_wallet, receiver_wallet)
-
-        return transaction_to_dto(
-            created_transaction,
-            sender_wallet,
-            receiver_wallet,
+        new_transaction = wallet.apply_transaction(
+            user_id=command.user_id,
+            amount=command.amount,
         )
+        new_transaction.migrate_event_collector(self.event_collector)
+        await self._transaction_repository.create_transaction(new_transaction)
+
+        return transaction_to_dto(new_transaction, wallet_to_dto(wallet))

@@ -4,15 +4,18 @@ A robust financial management backend built with Django, utilizing Domain-Driven
 
 ## Features
 
-*   **Wallet Management**: Track multiple wallets and their balances with ledger-based integrity.
-*   **Transaction Tracking**: Detailed history of income and expenditures using double-entry principles.
+*   **Wallet Management**: Track multiple wallets; balances are derived from an immutable transaction ledger (ImmuDB).
+*   **Transaction Tracking**: Double-entry ledger with tamper-evident storage in ImmuDB; periodic balance checkpoints via Celery Beat.
 *   **Advanced Analytics**: Spending heatmaps, category breakdowns, and money flow analysis.
-*   **Webhooks Service**: Resilient event subscription system with token rotation and automated delivery retries.
-*   **Real-time Notifications**: Support for REST-based acknowledgments and Server-Sent Events (SSE) streaming.
-*   **Advanced Search**: High-performance filtering and search capabilities for all financial records.
-*   **Secure Authentication**: Integrated with Clerk for JWT-based authentication and profile synchronization.
-*   **Layered Architecture**: Clean separation between Domain, Application, and Infrastructure layers using DDD principles.
-*   **Interactive Documentation**: Comprehensive OpenAPI/Swagger UI for rapid API exploration and testing.
+*   **Webhooks Service**: Resilient event subscription system with token rotation and automated async delivery retries.
+*   **Real-time Notifications**: REST acknowledgment and Server-Sent Events (SSE) streaming.
+*   **Advanced Search**: High-performance filtering with a composable filter-tree DSL for all financial records.
+*   **Idempotency Keys**: Redis-backed idempotency on all mutating endpoints — safe for client retries.
+*   **Rate Limiting**: Redis sliding-window throttle applied per-user across all endpoints.
+*   **Async Runtime**: Fully async Django/ASGI stack (Uvicorn + async ORM + httpx).
+*   **Secure Authentication**: Clerk JWT with local user-profile sync.
+*   **Kubernetes-Ready**: Full k8s manifests — Deployments, PVCs, Services, RBAC, ConfigMap, Secrets, NetworkPolicies.
+*   **Layered Architecture**: Domain → Application → Infrastructure → Presentation (DDD/Clean Architecture).
 
 ---
 
@@ -21,8 +24,8 @@ A robust financial management backend built with Django, utilizing Domain-Driven
 ### Prerequisites
 
 *   **Python 3.12+**
-*   **Docker & Docker Compose**
-*   **PostgreSQL** (Managed via Docker)
+*   **Docker & Docker Compose** (local dev) or **Kubernetes** (production)
+*   **PostgreSQL**, **Redis**, **RabbitMQ**, **ImmuDB** — all managed via Docker Compose or k8s manifests
 
 ### Setup Instructions
 
@@ -68,10 +71,48 @@ A robust financial management backend built with Django, utilizing Domain-Driven
 
 The project implements a **Layered Architecture** inspired by Domain-Driven Design (DDD):
 
-*   **Domain Layer**: Contains core business logic, entities (Wallet, Transaction), and domain services.
-*   **Application Layer**: Orchestrates domain logic via Commands, Queries, and Use Case services.
-*   **Infrastructure Layer**: Handles external concerns such as Database persistence (Django ORM), External integrations (Clerk), and Repository implementations.
-*   **Presentation Layer**: Responsible for the HTTP interface, including DRF ViewSets and API routing.
+*   **Domain Layer**: Core business logic — entities (`Wallet`, `Transaction`, `BalanceCheckpoint`), domain services, and a composable filter-tree DSL.
+*   **Application Layer**: Commands, Queries, and Use Cases; idempotency decorator; async use-case base class.
+*   **Infrastructure Layer**: Django ORM (PostgreSQL), ImmuDB client (immutable ledger), Redis (cache/throttle), Celery tasks, Clerk integration, repository implementations.
+*   **Presentation Layer**: Async DRF views with Redis-sliding-window throttle and idempotency middleware.
+
+### Component Diagram
+
+```mermaid
+graph TB
+    subgraph presentation["Presentation"]
+        API[Async DRF Views<br/>Throttle · Idempotency]
+    end
+
+    subgraph application["Application"]
+        CMD[Commands]
+        QRY[Queries]
+        WF[Workflows<br/>webhook delivery]
+    end
+
+    subgraph domain["Domain"]
+        ENT[Entities<br/>Wallet · Transaction · Checkpoint]
+        SVC[Services<br/>apply_transaction · filter_parser]
+    end
+
+    subgraph infra["Infrastructure"]
+        PG[(PostgreSQL)]
+        IMMUDB[(ImmuDB<br/>immutable ledger)]
+        REDIS[(Redis<br/>cache · throttle)]
+        RMQ[(RabbitMQ)]
+        CELERY[Celery Worker<br/>+ Beat]
+        CLERK[Clerk SDK]
+    end
+
+    API --> CMD & QRY
+    CMD & QRY --> ENT & SVC
+    CMD & QRY --> PG & IMMUDB & REDIS
+    API --> REDIS
+    CMD -->|events| RMQ --> CELERY
+    CELERY --> IMMUDB
+    CELERY -->|webhooks| External[External Services]
+    API --> CLERK
+```
 
 ### Current Implementation: HTTP REST API
 
@@ -171,25 +212,46 @@ sequenceDiagram
 
 ## Infrastructure and Observability
 
-The application is fully containerized and includes various background services to ensure system responsiveness:
+The application is fully containerized. Both Docker Compose (local dev) and Kubernetes manifests (`deploy/kubernetes/`) are provided.
 
 ### Background Processing
-- **Celery & RabbitMQ**: Used for asynchronous event handling, such as delivering webhook payloads and processing periodic retries.
-- **Redis**: Acts as the Celery result backend and authentication cache for JWT tokens.
+- **Celery & RabbitMQ**: Async event handling — webhook delivery, delivery retries.
+- **Celery Beat**: Periodic balance-checkpoint task writes a `BalanceCheckpoint` to ImmuDB, keeping read-model balance queries O(1) instead of full ledger replay.
+- **Redis**: Celery result backend, JWT auth cache, and sliding-window rate-limit counters.
+
+### Immutable Transaction Ledger (ImmuDB)
+Transactions are appended to ImmuDB — a tamper-evident, cryptographically verified ledger. Wallet balance is **derived state**: `balance = latest_checkpoint.amount + sum(transactions since checkpoint)`. This makes balance history auditable without separate audit-log infrastructure.
+
+```mermaid
+flowchart LR
+    T1[tx +100] --> T2[tx -30] --> T3[tx +50] --> CP["checkpoint\n120"] --> T4[tx -20]
+    CP -->|"balance = 120 + (−20) = 100"| B[current balance]
+```
+
+### Kubernetes Deployment
+Full manifests in `deploy/kubernetes/`:
+
+| Resource | Description |
+|---|---|
+| Deployments | `django`, `celery-worker`, `postgres`, `redis`, `rabbitmq` |
+| Services | LoadBalancer (django), ClusterIP (postgres, redis, rabbitmq) |
+| PVCs | Persistent volumes for postgres, redis, rabbitmq |
+| RBAC | Least-privilege ServiceAccounts for django and celery-worker |
+| NetworkPolicies | ImmuDB isolated — only reachable from django + celery |
+| ConfigMap / Secrets | Env config and credentials separate from images |
 
 ### Persistent Logging
-Logs are centrally managed and persistent during development across container rebuilds:
-- **Location**: All logs are stored in the `logs/` directory in the project root.
-- **`debug.log`**: Captures logs from the main HTTP REST application.
-- **`celery-debug.log`**: Dedicated log for background worker and beat process activity.
+- **`logs/debug.log`**: Main HTTP application.
+- **`logs/celery-debug.log`**: Worker and beat activity.
 
-The system uses an intelligent, process-aware routing mechanism to separate logs based on the execution context.
+Process-aware routing separates logs by execution context across container rebuilds.
 
 ---
 
 ## Roadmap and Future Enhancements
 
-*   **WebSockets**: Real-time event streaming for balance updates and transaction notifications initially via SSE, transitioning to full duplex sockets.
-*   **Performance Optimization**: Refining authentication caching and N+1 query elimination in analytics.
-*   **Advanced Data Visualization**: Integration of client-side visualization tool support for expenditures.
-*   **Automated Testing Expansion**: Building a comprehensive integration test suite for asynchronous events.
+*   **Subscriptions & Dunning**: State-machine-driven subscription billing with Celery Beat retry logic.
+*   **Money Transfers**: Atomic cross-wallet transfers with deadlock-safe locking.
+*   **OpenTelemetry**: Distributed tracing for all k8s services.
+*   **Cursor Pagination**: Keyset-based pagination for high-volume transaction lists.
+*   **Audit Log**: Structured event sourcing on top of the existing ImmuDB ledger.

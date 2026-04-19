@@ -1,8 +1,6 @@
-import os
 import sys
 from pathlib import Path
 import environ
-import logging
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -16,31 +14,61 @@ env = environ.Env(
     DATABASE_HOST=(str, 'localhost'),
     DATABASE_PORT=(str, '5433'),
     DATABASE_USER=(str, 'postgres'),
+    REDIS_HOST=(str, 'localhost'),
+    REDIS_PORT=(str, '6380'),
+    REDIS_PASSWORD=(str, ''),
+    REDIS_CELERY_DATABASE_INDEX=(str, '2'),
+    RABBIT_MQ_HOST=(str, 'localhost'),
+    RABBIT_MQ_PORT=(str, '5673'),
     RABBIT_MQ_USER=(str, 'guest'),
     RABBIT_MQ_PASSWORD=(str, 'guest'),
     CLERK_CACHE_KEY=(str, 'clerk_cache'),
     API_VERSION=(str, 'v1'),
     CELERY_BEAT_SCHEDULE_FILENAME=(str, 'cache/celerybeat-schedule'),
+    IMMUDB_HOST=(str, 'localhost'),
+    IMMUDB_PORT=(str, 3322),
 )
 
 env.read_env(ENV_FILE)
 
 # List all environment variables
 RESOLVED_ENV = {
+    # Django core
     'APP_NAME': env('APP_NAME'),
     'DEBUG': env('DEBUG'),
+    'SECRET_KEY': env('SECRET_KEY'),
+    'API_VERSION': env('API_VERSION'),
+
+    # Database
+    'DATABASE_USER': env('DATABASE_USER'),
     'DATABASE_PASSWORD': env('DATABASE_PASSWORD'),
     'DATABASE_HOST': env('DATABASE_HOST'),
     'DATABASE_PORT': env('DATABASE_PORT'),
-    'DATABASE_USER': env('DATABASE_USER'),
-    'SECRET_KEY': env('SECRET_KEY'),
+
+    # Redis
+    'REDIS_HOST': env('REDIS_HOST'),
+    'REDIS_PORT': env('REDIS_PORT'),
+    'REDIS_PASSWORD': env('REDIS_PASSWORD'),
+    'REDIS_CELERY_DATABASE_INDEX': env('REDIS_CELERY_DATABASE_INDEX'),
+
+    # RabbitMQ
+    'RABBIT_MQ_HOST': env('RABBIT_MQ_HOST'),
+    'RABBIT_MQ_PORT': env('RABBIT_MQ_PORT'),
+    'RABBIT_MQ_USER': env('RABBIT_MQ_USER'),
+    'RABBIT_MQ_PASSWORD': env('RABBIT_MQ_PASSWORD'),
+
+    # Clerk
     'CLERK_SECRET_KEY': env('CLERK_SECRET_KEY'),
     'CLERK_API_URL': env('CLERK_API_URL'),
     'CLERK_CACHE_KEY': env('CLERK_CACHE_KEY'),
-    'API_VERSION': env('API_VERSION'),
-    'REDIS_URL': env('REDIS_URL'),
-    'CELERY_BROKER_URL': env('CELERY_BROKER_URL'),
-    'CELERY_RESULT_BACKEND': env('CELERY_RESULT_BACKEND'),
+
+    # ImmuDB
+    'IMMUDB_HOST': env('IMMUDB_HOST'),
+    'IMMUDB_PORT': env('IMMUDB_PORT'),
+    'IMMUDB_USER': env('IMMUDB_USER'),
+    'IMMUDB_PASSWORD': env('IMMUDB_PASSWORD'),
+
+    # Celery
     'CELERY_BEAT_SCHEDULE_FILENAME': str(ROOT_DIR.joinpath(env('CELERY_BEAT_SCHEDULE_FILENAME'))),
 }
 
@@ -102,10 +130,10 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'drf_spectacular',
-    
+
     'power_finance',
-    'identity.apps.IdentityConfig',
-    'finances.apps.FinancesConfig'
+    'environment.apps.EnvironmentConfig',
+    'finances.apps.FinancesConfig',
 ]
 
 REST_FRAMEWORK = {
@@ -113,7 +141,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer'
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'identity.authentication.ClerkJWTAuthentication',
+        'environment.authentication.ClerkJWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ],
@@ -123,12 +151,16 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
     'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle'
+        'environment.presentation.middleware.AnonRedisThrottle',
+        'environment.presentation.middleware.UserRedisThrottle',
+        'environment.presentation.middleware.WriteThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',
-        'user': '1000/day'
+        'anon': '20/min',
+        'user': '200/min',
+        'writes': '60/min',
+        'analytics': '30/min',
+        'webhook_registration': '10/hour',
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
@@ -205,11 +237,13 @@ DATABASES = {
         'PASSWORD': RESOLVED_ENV['DATABASE_PASSWORD'],
         'HOST': RESOLVED_ENV['DATABASE_HOST'],
         'PORT': RESOLVED_ENV['DATABASE_PORT'],
+        'CONN_MAX_AGE': 0,
         'OPTIONS': {
             'pool': True
         }
     }
 }
+
 CONN_MAX_AGE = 0
 
 MIGRATION_MODULES = {

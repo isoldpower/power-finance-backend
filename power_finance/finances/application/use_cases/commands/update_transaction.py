@@ -28,13 +28,13 @@ class UpdateTransactionCommandHandler(UseCaseEvently):
         transaction_repository: TransactionRepository | None = None,
     ):
         super().__init__()
-        registry = get_repository_registry()
 
+        registry = get_repository_registry()
         self._transaction_repository = transaction_repository or registry.transaction_repository
 
     @atomic_evently_command()
-    def handle(self, command: UpdateTransactionCommand) -> TransactionDTO:
-        current_transaction = self._transaction_repository.get_user_transaction_by_id(
+    async def handle(self, command: UpdateTransactionCommand) -> TransactionDTO:
+        current_transaction = await self._transaction_repository.get_user_transaction_by_id(
             command.user_id,
             UUID(command.transaction_id),
         )
@@ -44,6 +44,6 @@ class UpdateTransactionCommandHandler(UseCaseEvently):
             description=command.description,
             category=command.category,
         )
-        updated_transaction = self._transaction_repository.save_transaction(current_transaction)
+        updated_transaction = await self._transaction_repository.save_transaction(current_transaction)
 
         return transaction_to_dto(updated_transaction)

@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 
 from finances.domain.events import (
     TransactionCreatedEvent,
-    TransactionUpdatedEvent,
     TransactionDeletedEvent,
     WebhookDeliveryStatusChangedEvent,
 )
@@ -11,10 +10,6 @@ from finances.domain.events import (
 class EventPayloadFactory(ABC):
     @abstractmethod
     def from_transaction_created(self, event: TransactionCreatedEvent) -> dict:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def from_transaction_updated(self, event: TransactionUpdatedEvent) -> dict:
         raise NotImplementedError()
 
     @abstractmethod

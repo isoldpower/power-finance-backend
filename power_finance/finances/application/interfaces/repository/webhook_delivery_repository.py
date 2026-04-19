@@ -29,35 +29,35 @@ class FinalizeWebhookDeliveryAttemptData:
 
 class WebhookDeliveryRepository(ABC):
     @abstractmethod
-    def get_delivery_by_id(self, webhook_id: UUID, event_id: UUID, user_id: int) -> WebhookDeliveryDTO:
+    async def get_delivery_by_id(self, webhook_id: UUID, event_id: UUID, user_id: int) -> WebhookDeliveryDTO:
         raise NotImplementedError()
 
     @abstractmethod
-    def create_delivery(self, data: CreateWebhookDeliveryData) -> WebhookDeliveryDTO:
+    async def create_delivery(self, data: CreateWebhookDeliveryData) -> WebhookDeliveryDTO:
         raise NotImplementedError()
 
     @abstractmethod
-    def create_delivery_attempt(self, data: CreateWebhookDeliveryAttemptData) -> WebhookDeliveryAttemptDTO:
+    async def create_delivery_attempt(self, data: CreateWebhookDeliveryAttemptData) -> WebhookDeliveryAttemptDTO:
         raise NotImplementedError()
 
     @abstractmethod
-    def finalize_delivery_attempt(self, data: FinalizeWebhookDeliveryAttemptData) -> WebhookDeliveryAttemptDTO:
+    async def finalize_delivery_attempt(self, data: FinalizeWebhookDeliveryAttemptData) -> WebhookDeliveryAttemptDTO:
         raise NotImplementedError()
 
     @abstractmethod
-    def get_deliveries_to_retry(self, limit: int) -> list[WebhookDeliveryDTO]:
+    async def get_deliveries_to_retry(self, limit: int) -> list[WebhookDeliveryDTO]:
         raise NotImplementedError()
 
     @abstractmethod
-    def mark_delivery_in_progress(self, delivery_id: UUID) -> WebhookDeliveryDTO:
+    async def mark_delivery_in_progress(self, delivery_id: UUID) -> WebhookDeliveryDTO:
         raise NotImplementedError()
 
     @abstractmethod
-    def mark_delivery_success(self, delivery_id: UUID) -> WebhookDeliveryDTO:
+    async def mark_delivery_success(self, delivery_id: UUID) -> WebhookDeliveryDTO:
         raise NotImplementedError()
 
     @abstractmethod
-    def mark_delivery_retry_scheduled(
+    async def mark_delivery_retry_scheduled(
             self,
             delivery_id: UUID,
             error_message: str | None,
@@ -66,7 +66,7 @@ class WebhookDeliveryRepository(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def mark_delivery_failed(
+    async def mark_delivery_failed(
             self,
             delivery_id: UUID,
             error_message: str | None

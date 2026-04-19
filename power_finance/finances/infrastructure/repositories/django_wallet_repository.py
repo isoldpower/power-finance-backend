@@ -11,67 +11,86 @@ from ..orm import WalletModel
 
 
 class DjangoWalletRepository(WalletRepository):
-    def get_user_wallet_by_id(self, wallet_id: UUID, user_id: int) -> Wallet:
-        requested_wallet: WalletModel = WalletModel.objects.get(id=wallet_id, user_id=user_id)
+    async def get_user_wallet_by_id(self, wallet_id: UUID, user_id: int) -> Wallet:
+        requested_wallet: WalletModel = await (WalletModel.objects
+            .select_related("currency")
+            .aget(id=wallet_id, user_id=user_id))
 
         return WalletMapper.to_domain(requested_wallet)
 
-    def get_user_wallet_for_update(self, wallet_id: UUID, user_id: int) -> Wallet:
-        requested_wallet: WalletModel = (WalletModel.objects
+    async def get_user_wallet_for_update(self, wallet_id: UUID, user_id: int) -> Wallet:
+        requested_wallet: WalletModel = await (WalletModel.objects
             .select_for_update()
-            .get(id=wallet_id, user_id=user_id))
+            .select_related("currency")
+            .aget(id=wallet_id, user_id=user_id))
 
         return WalletMapper.to_domain(requested_wallet)
 
-    def soft_delete_wallet(self, wallet_id: UUID, user_id: int) -> Wallet:
+    async def soft_delete_wallet(self, wallet_id: UUID, user_id: int) -> Wallet:
         try:
-            requested_wallet: WalletModel = WalletModel.objects.get(
+            requested_wallet: WalletModel = await WalletModel.objects.aget(
                 id=wallet_id,
                 user_id=user_id,
             )
         except WalletModel.DoesNotExist:
             raise ObjectDoesNotExist("Wallet with specified ID does not exist.")
 
-        requested_wallet.delete()
-        requested_wallet.refresh_from_db()
+        domain_wallet = WalletMapper.to_domain(requested_wallet)
+        await requested_wallet.adelete()
 
-        return WalletMapper.to_domain(requested_wallet)
+        return domain_wallet
 
-    def create_wallet(self, wallet: Wallet) -> Wallet:
-        created_wallet: WalletModel = WalletModel()
-
+    async def create_wallet(self, wallet: Wallet) -> Wallet:
+        created_wallet = WalletModel()
         WalletMapper.update_model(created_wallet, wallet)
-        created_wallet.save()
+        await created_wallet.asave()
 
         return WalletMapper.to_domain(created_wallet)
 
-    def get_wallet_by_id(self, wallet_id: UUID) -> Wallet:
-        requested_wallet: WalletModel = WalletModel.objects.get(id=wallet_id)
+    async def get_wallet_by_id(self, wallet_id: UUID) -> Wallet:
+        requested_wallet: WalletModel = await (WalletModel.objects
+            .select_related("currency")
+            .aget(id=wallet_id))
 
         return WalletMapper.to_domain(requested_wallet)
 
-    def get_user_wallets(self, user_id: int) -> list[Wallet]:
-        user_wallets = WalletModel.objects.filter(user_id=user_id).order_by("-created_at", "id")
+    async def get_user_wallets(self, user_id: int) -> list[Wallet]:
+        user_wallets = (WalletModel.objects
+            .filter(user_id=user_id)
+            .select_related("currency")
+            .order_by("-created_at", "id"))
 
-        return [WalletMapper.to_domain(wallet) for wallet in user_wallets]
+        return [WalletMapper.to_domain(wallet) async for wallet in user_wallets]
 
-    def get_ordered_user_wallets(self, user_id: int) -> list[Wallet]:
-        user_wallets = WalletModel.objects.filter(user_id=user_id).order_by('created_at', 'id')
+    async def get_ordered_user_wallets(self, user_id: int) -> list[Wallet]:
+        user_wallets = (WalletModel.objects
+            .filter(user_id=user_id)
+            .select_related("currency")
+            .order_by('created_at', 'id'))
 
-        return [WalletMapper.to_domain(wallet) for wallet in user_wallets]
+        return [WalletMapper.to_domain(wallet) async for wallet in user_wallets]
 
-    def save_wallet(self, wallet: Wallet) -> Wallet:
-        requested_wallet = WalletModel.objects.get(id=wallet.id)
+    async def save_wallet(self, wallet: Wallet) -> Wallet:
+        requested_wallet = await (WalletModel.objects
+            .select_related("currency")
+            .aget(id=wallet.id))
         modified_fields = WalletMapper.get_changed_fields(requested_wallet, wallet)
 
         WalletMapper.update_model(requested_wallet, wallet)
 
-        requested_wallet.save(update_fields=modified_fields)
+        await requested_wallet.asave(update_fields=modified_fields)
         return WalletMapper.to_domain(requested_wallet)
 
-    def list_wallets_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Wallet]:
-        filtered_wallets = (WalletModel.objects
-                             .filter(Q(user_id=user_id) & tree.query)
-                             .distinct())
+    async def get_all_active_wallets(self) -> list[Wallet]:
+        wallets = WalletModel.objects.select_related("currency").order_by('id')
 
-        return [WalletMapper.to_domain(wallet) for wallet in filtered_wallets]
+        return [WalletMapper.to_domain(wallet) async for wallet in wallets]
+
+    async def list_wallets_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Wallet]:
+        filtered_wallets = (WalletModel.objects
+            .filter(Q(user_id=user_id) & tree.django_query)
+            .select_related("currency")
+            .order_by()
+            .distinct())
+
+        return [WalletMapper.to_domain(wallet) async for wallet in filtered_wallets]

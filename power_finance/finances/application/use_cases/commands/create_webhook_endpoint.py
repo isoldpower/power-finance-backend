@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 
-from django.db import transaction
-
 from finances.domain.entities import Webhook, WebhookCreateData
 
+from ...db_utils import aatomic
 from ...bootstrap import get_repository_registry
 from ...dto_builders import webhook_to_dto
 from ...dtos import WebhookDTO
@@ -27,13 +26,13 @@ class CreateWebhookEndpointCommandHandler:
         registry = get_repository_registry()
         self.webhook_repository = webhook_repository or registry.webhook_repository
 
-    @transaction.atomic
-    def handle(self, command: CreateWebhookEndpointCommand) -> WebhookDTO:
-        domain_webhook = Webhook.create(WebhookCreateData(
-            title=command.title,
-            url=command.url,
-            user_id=command.user_id,
-        ))
-        database_webhook = self.webhook_repository.create_webhook(domain_webhook)
+    async def handle(self, command: CreateWebhookEndpointCommand) -> WebhookDTO:
+        async with aatomic():
+            domain_webhook = Webhook.create(WebhookCreateData(
+                title=command.title,
+                url=command.url,
+                user_id=command.user_id,
+            ))
+            database_webhook = await self.webhook_repository.create_webhook(domain_webhook)
 
-        return webhook_to_dto(database_webhook)
+            return webhook_to_dto(database_webhook)

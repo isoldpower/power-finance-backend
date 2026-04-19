@@ -19,5 +19,5 @@ class ListNotificationsQueryHandler:
         registry = get_repository_registry()
         self._notification_repository = notification_repository or registry.notification_repository
 
-    def handle(self, query: ListNotificationsQuery) -> list[Notification]:
-        return self._notification_repository.get_notifications_by_user_id(query.user_id)
+    async def handle(self, query: ListNotificationsQuery) -> list[Notification]:
+        return await self._notification_repository.get_notifications_by_user_id(query.user_id)

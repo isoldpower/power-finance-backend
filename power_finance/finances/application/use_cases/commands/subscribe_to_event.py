@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from uuid import UUID
-from django.db import transaction
 
 from finances.domain.entities import WebhookType
 
+from ...db_utils import aatomic
 from ...bootstrap import get_repository_registry
 from ...dtos import WebhookSubscriptionDTO
 from ...interfaces import WebhookRepository
@@ -11,7 +11,7 @@ from ...interfaces import WebhookRepository
 
 @dataclass
 class SubscribeToEventCommand:
-    webhook_id: str
+    webhook_id: UUID
     user_id: int
     event_type: str
 
@@ -26,20 +26,20 @@ class SubscribeToEventCommandHandler:
         registry = get_repository_registry()
         self.webhook_repository = webhook_repository or registry.webhook_repository
 
-    @transaction.atomic
-    def handle(self, command: SubscribeToEventCommand) -> WebhookSubscriptionDTO:
-        webhook = self.webhook_repository.get_user_webhook_by_id(
-            webhook_id=UUID(command.webhook_id),
-            user_id=command.user_id
-        )
+    async def handle(self, command: SubscribeToEventCommand) -> WebhookSubscriptionDTO:
+        async with aatomic():
+            webhook = await self.webhook_repository.get_user_webhook_by_id(
+                webhook_id=command.webhook_id,
+                user_id=command.user_id
+            )
 
-        try:
-            event_type = WebhookType(command.event_type)
-        except ValueError:
-            raise ValueError(f"Invalid event type: {command.event_type}")
+            try:
+                event_type = WebhookType(command.event_type)
+            except ValueError:
+                raise ValueError(f"Invalid event type: {command.event_type}")
 
-        return self.webhook_repository.subscribe_webhook_to_event(
-            webhook=webhook,
-            event_type=event_type,
-            user_id=command.user_id
-        )
+            return await self.webhook_repository.subscribe_webhook_to_event(
+                webhook=webhook,
+                event_type=event_type,
+                user_id=command.user_id
+            )

@@ -1,30 +1,42 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from finances.domain.entities import Transaction, ResolvedFilterTree
+from finances.domain.entities import Transaction, ResolvedFilterTree, BalanceCheckpoint
 
 
 class TransactionRepository(ABC):
     @abstractmethod
-    def get_user_transactions(self, user_id: int) -> list[Transaction]:
+    async def get_user_transactions(self, user_id: int) -> list[Transaction]:
         raise NotImplementedError()
 
     @abstractmethod
-    def get_user_transaction_by_id(self, user_id: int, transaction_id: UUID) -> Transaction:
+    async def get_user_transaction_by_id(self, user_id: int, transaction_id: UUID) -> Transaction:
         raise NotImplementedError()
 
     @abstractmethod
-    def create_transaction(self, transaction: Transaction) -> Transaction:
+    async def create_transaction(self, transaction: Transaction) -> Transaction:
         raise NotImplementedError()
 
     @abstractmethod
-    def save_transaction(self, transaction: Transaction) -> Transaction:
+    async def delete_transaction_by_id(self, user_id: int, transaction_id: UUID) -> Transaction:
         raise NotImplementedError()
 
     @abstractmethod
-    def delete_transaction_by_id(self, transaction_id: UUID) -> Transaction:
+    async def list_transactions_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Transaction]:
         raise NotImplementedError()
 
     @abstractmethod
-    def list_transactions_with_filters(self, tree: ResolvedFilterTree, user_id: int) -> list[Transaction]:
+    async def get_cancelling_transaction(self, transaction_id: UUID) -> Transaction | None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def get_unsettled_transactions(self, wallet_id: UUID, settled_at: str | None = None) -> list[Transaction]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def get_checkpoint(self, wallet_id: UUID) -> BalanceCheckpoint | None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def save_checkpoint(self, checkpoint: BalanceCheckpoint) -> None:
         raise NotImplementedError()

@@ -17,10 +17,7 @@ from .wallet_serializer import (
 )
 from .transaction_serializer import (
     TransactionResponseSerializer,
-    TransactionMetaSerializer,
     TransactionPreviewResponseSerializer,
-    TransactionParticipantDetailedSerializer,
-    TransactionParticipantPreviewSerializer,
 )
 from .webhooks_serializer import (
     WebhookResponseSerializer,
@@ -46,10 +43,7 @@ __all__ = [
     'WalletMetaResponseSerializer',
     'WalletBalanceResponseSerializer',
     'TransactionResponseSerializer',
-    'TransactionMetaSerializer',
     'TransactionPreviewResponseSerializer',
-    'TransactionParticipantDetailedSerializer',
-    'TransactionParticipantPreviewSerializer',
     'WebhookResponseSerializer',
     'WebhookMetaResponseSerializer',
     'WebhookSimpleResponseSerializer',

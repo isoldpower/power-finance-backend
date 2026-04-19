@@ -68,10 +68,10 @@ class GetMoneyFlowQueryHandler:
 
         return links
 
-    def handle(self, query: GetMoneyFlowQuery) -> MoneyFlowResultDTO:
-        wallets = (self.wallet_selector.get_ordered_user_wallets(user_id=query.user_id)
+    async def handle(self, query: GetMoneyFlowQuery) -> MoneyFlowResultDTO:
+        wallets = (await self.wallet_selector.get_ordered_user_wallets(user_id=query.user_id)
             or [])
-        transfer_rows = (self.transaction_selector.get_user_transfers_grouped(user_id=query.user_id)
+        transfer_rows = (await self.transaction_selector.get_user_transfers_grouped(user_id=query.user_id)
             or [])
 
         nodes = [MoneyFlowNodeDTO(

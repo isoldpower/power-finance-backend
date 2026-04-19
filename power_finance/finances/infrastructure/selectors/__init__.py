@@ -1,7 +1,7 @@
 from .django_wallet_selectors import DjangoWalletSelectorsCollection
-from .django_transactions_selectors import DjangoTransactionSelectorsCollection
+from .immudb_transactions_selectors import ImmudbTransactionSelectorsCollection
 
 __all__ = [
     "DjangoWalletSelectorsCollection",
-    "DjangoTransactionSelectorsCollection",
+    "ImmudbTransactionSelectorsCollection",
 ]
