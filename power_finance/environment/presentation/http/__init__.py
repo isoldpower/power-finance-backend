@@ -1,5 +1,6 @@
-from .urls import urlpatterns
+from .urls import health_urls, docs_urls
 
 __all__ = [
-    'urlpatterns',
+    'health_urls',
+    'docs_urls',
 ]
