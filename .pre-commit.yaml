@@ -1,0 +1,39 @@
+# Pre-commit hooks for the CQRS workspace.
+#
+# The old monolith lives under `old-structure/` for reference only and is
+# excluded from every hook via the `exclude:` regex. Hooks delegate to
+# Makefile targets at the repo root so commands have a single source of
+# truth.
+
+default_language_version:
+  python: python3.12
+
+default_stages: [pre-commit]
+
+exclude: ^old-structure/
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        name: ruff (lint + auto-fix)
+        args: [--fix]
+      - id: ruff-format
+        name: ruff (format)
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (services + libraries)
+        language: system
+        entry: make typecheck
+        pass_filenames: false
+        files: \.py$
+
+      - id: project-tests
+        name: project tests (write-service + correlation-py)
+        language: system
+        entry: make test
+        pass_filenames: false
+        files: \.py$
