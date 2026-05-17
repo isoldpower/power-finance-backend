@@ -8,6 +8,8 @@ to call `create_test_db`) without requiring a live Postgres in CI or local.
 
 from .base import *  # noqa: F401,F403
 
+TESTING = True
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",

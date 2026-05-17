@@ -3,11 +3,19 @@ from health_probes.application.dtos import (
     ReadinessReportDTO,
     StartupReportDTO,
 )
+from health_probes.domain.entities import ProbeStatus
 
 
 class HealthCheckPresenter:
     """Serializes probe DTOs into the JSON shape returned to Kubernetes /
     Kong. Kept thin — DTOs already carry everything the response needs."""
+
+    @staticmethod
+    def present_degraded(exception: Exception) -> dict:
+        return {
+            "status": ProbeStatus.DEGRADED.value,
+            "error": str(exception),
+        }
 
     @staticmethod
     def present_liveness(report: LivenessReportDTO) -> dict:
