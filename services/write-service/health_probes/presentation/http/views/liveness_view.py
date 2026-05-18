@@ -3,7 +3,7 @@ import logging
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
-from write_service.common import BaseAsyncAPIView
+from write_service.common.base_async_api_view import BaseAsyncAPIView
 
 from health_probes.application.dtos import LivenessReportDTO
 from health_probes.domain.entities import ProbeStatus

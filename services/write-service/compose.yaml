@@ -22,11 +22,35 @@ services:
       IMMUDB_PORT: 3322
       IMMUDB_USER: ${IMMUDB_USER:-immudb}
       IMMUDB_PASSWORD: ${IMMUDB_PASSWORD:-immudb}
+
+      REDIS_HOST: write-redis
+      REDIS_PORT: 6379
     depends_on:
       postgres-write:
         condition: service_healthy
       immudb:
         condition: service_started
+      write-redis:
+        condition: service_healthy
+
+  # Write-service Redis. Single logical store, currently used only for
+  # idempotency-key dedup (in-flight lock + 24h cached response). Persistence
+  # is off — idempotency state is bounded by TTL and a Redis restart at worst
+  # means duplicate POSTs *during the outage window* land twice, which on a
+  # money endpoint is caught by the @idempotent decorator failing closed
+  # (503) when the client cannot reach Redis at request time.
+  #
+  # Kept separate from the gateway-redis instance so rate-limit churn and
+  # idempotency state can't compete for memory or eviction policy.
+  write-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   postgres-write:
     image: postgres:18.3
@@ -40,17 +64,15 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_write_data:/var/lib/postgresql/data
+      - ../../infrastructure/postgres/write_config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
     shm_size: 128mb
-    # Logical replication required by Debezium (when the outbox publisher
-    # is added). Harmless without Debezium attached.
+    # All server-side config (logical replication for Debezium, WAL slot
+    # bounds, etc.) lives in the mounted postgresql.conf. It includes the
+    # image-generated defaults first and layers project overrides on top.
     command:
       - "postgres"
       - "-c"
-      - "wal_level=logical"
-      - "-c"
-      - "max_wal_senders=4"
-      - "-c"
-      - "max_replication_slots=4"
+      - "config_file=/etc/postgresql/postgresql.conf"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-power_finance_write}"]
       interval: 5s

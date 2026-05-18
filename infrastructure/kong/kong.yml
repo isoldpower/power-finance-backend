@@ -144,8 +144,10 @@ plugins:
         - Content-Type
         - X-Correlation-ID
         - Read-At-Least
+        - Idempotency-Key
       exposed_headers:
         - X-Correlation-ID
         - X-Write-Version
+        - Idempotent-Replayed
       credentials: false
       max_age: 3600

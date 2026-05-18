@@ -1,10 +1,19 @@
 [project]
 name = "kafka-client-py"
 version = "0.0.0"
-description = "Thin wrappers over the Kafka client (producer, idempotent consumer, retry/DLQ helpers) shared by Write Service and Read Service projection/cache-invalidation consumers."
+description = "Async Kafka primitives shared by services: retry-topic + DLQ routing, idempotent-consumer dedupe, and header conventions for the events.async / events.retry / events.dlq pipeline."
 requires-python = ">=3.12"
 dependencies = [
-    "confluent-kafka>=2.6,<3.0",
+    "aiokafka>=0.11,<0.13",
+    "psycopg[binary,pool]>=3.3,<4.0",
+    "protobuf>=5.29,<6.0",
+    "kafka-messages-proto",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9.0",
+    "pytest-asyncio>=0.24,<1.0",
 ]
 
 [build-system]
@@ -13,3 +22,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["kafka_client_py"]
+
+[tool.uv.sources]
+kafka-messages-proto = { workspace = true }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

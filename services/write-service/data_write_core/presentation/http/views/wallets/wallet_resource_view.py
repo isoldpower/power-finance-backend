@@ -2,6 +2,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
+from write_service.common.idempotency import idempotent
 
 from data_write_core.application.commands import (
     SoftDeleteWalletCommand,
@@ -43,6 +44,7 @@ class WalletResourceView(WalletView):
             500: MessageResponseSerializer,
         },
     )
+    @idempotent(required=False)
     @trace_handler_flow
     async def patch(self, request, pk=None):
         serializer = UpdateWalletRequestSerializer(data=request.data)
@@ -91,6 +93,7 @@ class WalletResourceView(WalletView):
             500: MessageResponseSerializer,
         },
     )
+    @idempotent(required=False)
     @trace_handler_flow
     async def delete(self, request, pk=None):
         try:

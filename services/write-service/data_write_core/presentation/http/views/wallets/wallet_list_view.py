@@ -1,6 +1,7 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
+from write_service.common.idempotency import idempotent
 
 from data_write_core.application.commands import (
     CreateNewWalletCommand,
@@ -32,6 +33,7 @@ class WalletListView(WalletView):
             500: MessageResponseSerializer,
         },
     )
+    @idempotent(required=False)
     @trace_handler_flow
     async def post(self, request):
         serializer = CreateWalletRequestSerializer(data=request.data)

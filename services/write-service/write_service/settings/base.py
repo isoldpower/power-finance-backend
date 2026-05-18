@@ -8,6 +8,7 @@ the service root. See `.env.example` for the full list of recognised keys.
 from pathlib import Path
 
 import environ
+from psycopg_pool import ConnectionPool
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 ENV_FILE = BASE_DIR / ".env"
@@ -26,6 +27,9 @@ env = environ.Env(
     REDIS_HOST=(str, "localhost"),
     REDIS_PORT=(int, 6379),
     REDIS_PASSWORD=(str, ""),
+    IDEMPOTENCY_REDIS_DB=(int, 0),
+    IDEMPOTENCY_LOCK_TTL_SECONDS=(int, 30),
+    IDEMPOTENCY_RESPONSE_TTL_SECONDS=(int, 86400),
     IMMUDB_HOST=(str, "localhost"),
     IMMUDB_PORT=(int, 3322),
     IMMUDB_USER=(str, "immudb"),
@@ -58,6 +62,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "health_probes.apps.HealthProbesConfig",
     "data_write_core.apps.DataWriteCoreConfig",
+    "write_service.common.apps.WriteServiceCommonConfig",
 ]
 
 MIGRATION_MODULES = {
@@ -93,7 +98,15 @@ DATABASES = {
         "HOST": env("DATABASE_HOST"),
         "PORT": env("DATABASE_PORT"),
         "CONN_MAX_AGE": 0,
-        "OPTIONS": {"pool": True},
+        "OPTIONS": {
+            "pool": {
+                "min_size": 2,
+                "max_size": 10,
+                # Liveness probe (SELECT 1) on checkout so a Postgres
+                # restart doesn't poison the pool with dead connections.
+                "check": ConnectionPool.check_connection,
+            },
+        },
     }
 }
 
@@ -101,6 +114,18 @@ REDIS = {
     "HOST": env("REDIS_HOST"),
     "PORT": env("REDIS_PORT"),
     "PASSWORD": env("REDIS_PASSWORD"),
+}
+
+IDEMPOTENCY = {
+    "REDIS_DB": env("IDEMPOTENCY_REDIS_DB"),
+    # In-flight lock TTL — bounds how long a stuck/crashed handler can hold
+    # a key before another request is allowed through. Must comfortably
+    # exceed worst-case request latency (SAGA + ImmuDB + outbox).
+    "LOCK_TTL_SECONDS": env("IDEMPOTENCY_LOCK_TTL_SECONDS"),
+    # Cached-response TTL after success. 24h matches the Stripe convention
+    # — long enough for offline-client retries, short enough that key reuse
+    # past a day processes again as a fresh request.
+    "RESPONSE_TTL_SECONDS": env("IDEMPOTENCY_RESPONSE_TTL_SECONDS"),
 }
 
 IMMUDB = {

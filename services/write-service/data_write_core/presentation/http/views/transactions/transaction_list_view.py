@@ -3,6 +3,7 @@ import logging
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
+from write_service.common.idempotency import idempotent
 
 from data_write_core.application.commands import (
     CreateTransactionCommand,
@@ -36,6 +37,7 @@ class TransactionListView(TransactionView):
             500: MessageResponseSerializer,
         },
     )
+    @idempotent(required=True)
     @trace_handler_flow
     async def post(self, request):
         serializer = CreateTransactionRequestSerializer(data=request.data)
