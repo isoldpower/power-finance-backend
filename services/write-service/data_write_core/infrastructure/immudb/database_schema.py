@@ -33,13 +33,16 @@ def _initialize_schema(client: ImmudbClient) -> None:
     "
     )
 
-    client.sqlExec("ALTER TABLE users ADD COLUMN cancels_other VARCHAR[36];")
-    client.sqlExec("ALTER TABLE users ADD COLUMN adjusts_other VARCHAR[36];")
+    # Non-unique index on cancels_other: immudb treats NULL as a real value
+    # in unique indexes, so a UNIQUE index here would reject every non-
+    # cancelling transaction after the first. Uniqueness ("a transaction
+    # can only be cancelled once") is enforced at the repository layer via
+    # `get_cancelling_transaction`.
     client.sqlExec(
         "\
         CREATE INDEX IF NOT EXISTS ON transactions(user_id); \
         CREATE INDEX IF NOT EXISTS ON transactions(source_wallet_id); \
-        CREATE UNIQUE INDEX IF NOT EXISTS ON transactions(cancels_other); \
+        CREATE INDEX IF NOT EXISTS ON transactions(cancels_other); \
     "
     )
     client.sqlExec(

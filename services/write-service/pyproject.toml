@@ -17,6 +17,7 @@ dependencies = [
     "uvicorn-worker>=0.4,<0.5",
     "gunicorn>=25.3,<26.0",
     "correlation-py",
+    "immudb-py>=1.5,<2.0",
 ]
 
 [tool.uv.sources]

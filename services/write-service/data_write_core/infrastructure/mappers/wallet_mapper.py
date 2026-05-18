@@ -23,6 +23,7 @@ class WalletMapper:
         model.name = entity.title
         model.currency_id = entity.currency_code
         model.user_id = int(entity.user_id)
-        if entity.deleted_at is not None:
-            model.deleted_at = entity.deleted_at
+        # Write unconditionally so save_wallet can both soft-delete
+        # (entity.deleted_at set) and restore (entity.deleted_at None).
+        model.deleted_at = entity.deleted_at
         return model

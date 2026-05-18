@@ -1,0 +1,105 @@
+_format_version: "3.0"
+_transform: true
+
+# -----------------------------------------------------------------------------
+# Upstream services
+#
+# Kong proxies requests to these by their docker-compose service names on the
+# internal network. read-service and push-service are stubs — declared so the
+# routing surface is stable, but their containers aren't up yet.
+# -----------------------------------------------------------------------------
+
+services:
+  - name: write-service
+    host: write-service
+    port: 8000
+    protocol: http
+    connect_timeout: 5000
+    write_timeout: 30000
+    read_timeout: 30000
+    routes:
+      - name: write-api-v1
+        paths:
+          - /api/v1
+        strip_path: false
+        preserve_host: false
+        methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+    plugins:
+      - name: clerk-jwt
+        config:
+          issuer_url: https://tolerant-fawn-35.clerk.accounts.dev
+
+  - name: read-service
+    host: read-service
+    port: 8000
+    protocol: http
+    connect_timeout: 5000
+    write_timeout: 10000
+    read_timeout: 10000
+    routes:
+      - name: read-api-v1
+        paths:
+          - /api/v1/reads
+        strip_path: false
+        preserve_host: false
+        methods: [GET, OPTIONS]
+    plugins:
+      - name: clerk-jwt
+        config:
+          issuer_url: https://tolerant-fawn-35.clerk.accounts.dev
+
+  - name: push-service
+    host: push-service
+    port: 8000
+    protocol: http
+    connect_timeout: 5000
+    # Long timeouts — SSE connections are long-lived. Buffering disabled at
+    # the nginx layer via KONG_NGINX_PROXY_PROXY_BUFFERING=off in compose.
+    write_timeout: 3600000
+    read_timeout: 3600000
+    routes:
+      - name: events-sse
+        paths:
+          - /events
+        strip_path: false
+        preserve_host: false
+        methods: [GET, OPTIONS]
+    plugins:
+      - name: clerk-jwt
+        config:
+          issuer_url: https://tolerant-fawn-35.clerk.accounts.dev
+
+# -----------------------------------------------------------------------------
+# Global plugins — cross-cutting concerns from the spec.
+#
+# auth (Clerk JWT) is intentionally NOT wired here in v0: Clerk uses a rotating
+# JWKS endpoint, and Kong OSS's built-in jwt plugin only accepts static keys.
+# A custom Lua plugin (or community kong-plugin-jwt-keycloak / equivalent) is
+# required for gateway-side validation. Until then the bearer token is
+# forwarded as-is and validated inside write-service. TODO: add Clerk JWT
+# plugin once decision is made.
+# -----------------------------------------------------------------------------
+
+plugins:
+  - name: correlation-id
+    config:
+      header_name: X-Correlation-ID
+      generator: uuid
+      echo_downstream: true
+
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+      headers:
+        - Accept
+        - Authorization
+        - Content-Type
+        - X-Correlation-ID
+        - Read-At-Least
+      exposed_headers:
+        - X-Correlation-ID
+        - X-Write-Version
+      credentials: false
+      max_age: 3600

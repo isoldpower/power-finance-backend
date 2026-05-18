@@ -28,3 +28,11 @@ class WalletRepository(ABC):
     @abstractmethod
     async def save_wallet(self, wallet: WalletEntity) -> WalletEntity:
         raise NotImplementedError()
+
+    @abstractmethod
+    async def hard_delete_wallet(self, wallet_id: UUID) -> None:
+        """Permanently remove a wallet row, bypassing the soft-delete
+        manager. Intended only as a SAGA compensation for a failed
+        wallet-create flow (where outbox emission failed after the
+        PG insert committed). Idempotent: missing rows are a no-op."""
+        raise NotImplementedError()

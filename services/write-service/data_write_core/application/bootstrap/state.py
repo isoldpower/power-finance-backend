@@ -2,8 +2,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from data_write_core.application.interfaces import EventBus
     from data_write_core.application.interfaces.repository import (
         CurrencyRepository,
+        OutboxRepository,
         TransactionRepository,
         WalletRepository,
     )
@@ -20,6 +22,7 @@ class RepositoryRegistry:
     wallet_repository: "WalletRepository"
     transaction_repository: "TransactionRepository"
     currency_repository: "CurrencyRepository"
+    outbox_repository: "OutboxRepository"
 
 
 @dataclass
@@ -36,3 +39,4 @@ class ApplicationState:
     initialized: bool
     immudb: ImmudbConnection
     repository_registry: RepositoryRegistry
+    event_bus: "EventBus"

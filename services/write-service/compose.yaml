@@ -1,0 +1,71 @@
+services:
+  write-service:
+    build:
+      context: ../..
+      dockerfile: services/write-service/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${WRITE_SERVICE_PORT:-8000}:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: write_service.settings.local
+      SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+      DEBUG: "true"
+      ALLOWED_HOSTS: "*"
+
+      DATABASE_HOST: postgres-write
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+
+      IMMUDB_HOST: immudb
+      IMMUDB_PORT: 3322
+      IMMUDB_USER: ${IMMUDB_USER:-immudb}
+      IMMUDB_PASSWORD: ${IMMUDB_PASSWORD:-immudb}
+    depends_on:
+      postgres-write:
+        condition: service_healthy
+      immudb:
+        condition: service_started
+
+  postgres-write:
+    image: postgres:18.3
+    restart: unless-stopped
+    ports:
+      - "${DATABASE_PORT:-5433}:5432"
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-power_finance_write}
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_write_data:/var/lib/postgresql/data
+    shm_size: 128mb
+    # Logical replication required by Debezium (when the outbox publisher
+    # is added). Harmless without Debezium attached.
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_wal_senders=4"
+      - "-c"
+      - "max_replication_slots=4"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-power_finance_write}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  immudb:
+    image: codenotary/immudb:1.10
+    restart: unless-stopped
+    ports:
+      - "${IMMUDB_PORT:-3323}:3322"
+      - "${IMMUDB_METRICS_PORT:-9498}:9497"
+    volumes:
+      - immudb_data:/var/lib/immudb
+
+volumes:
+  postgres_write_data:
+  immudb_data:

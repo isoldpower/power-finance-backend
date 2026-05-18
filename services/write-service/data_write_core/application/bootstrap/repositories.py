@@ -1,5 +1,6 @@
 from data_write_core.infrastructure.repositories import (
     DjangoCurrencyRepository,
+    DjangoOutboxRepository,
     DjangoWalletRepository,
     ImmudbTransactionRepository,
 )
@@ -12,4 +13,5 @@ def initialize_repositories(immudb_client: ImmudbConnection) -> RepositoryRegist
         wallet_repository=DjangoWalletRepository(),
         transaction_repository=ImmudbTransactionRepository(immudb_client),
         currency_repository=DjangoCurrencyRepository(),
+        outbox_repository=DjangoOutboxRepository(),
     )

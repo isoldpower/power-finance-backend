@@ -50,6 +50,13 @@ class WalletEntity(EntityRoot, WalletData):
         self._deleted_at = now
         self._updated_at = now
 
+    def restore(self, now: datetime) -> None:
+        """Inverse of mark_deleted. Compensation hook only — no
+        domain meaning, no event emission; used by SAGA rollback
+        when an outbox emission fails after a soft-delete commit."""
+        self._deleted_at = None
+        self._updated_at = now
+
     def rename(self, new_title: str, now: datetime) -> None:
         self.title = new_title
         self._updated_at = now
