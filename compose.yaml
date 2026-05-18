@@ -5,6 +5,9 @@
 include:
   - services/write-service/compose.yaml
 
+volumes:
+  kafka_data:
+
 services:
   api-gateway:
     build:
@@ -25,23 +28,90 @@ services:
       KONG_NGINX_PROXY_PROXY_BUFFERING: "off"
       KONG_NGINX_PROXY_PROXY_READ_TIMEOUT: "3600s"
       KONG_NGINX_PROXY_PROXY_SEND_TIMEOUT: "3600s"
-      # Custom plugin: clerk-jwt. Bind-mounted into the kong/plugins lua
-      # tree below; shared dict carries the cached Clerk JWKS.
-      KONG_PLUGINS: "bundled,clerk-jwt"
+      # Custom plugins. clerk-jwt validates Clerk session tokens; read-at-least
+      # enforces the spec's HMAC-signed Read-At-Least header and injects a
+      # default offset from the JWT when the client omits it.
+      KONG_PLUGINS: "bundled,clerk-jwt,read-at-least,user-tier-rate-limit"
       KONG_NGINX_HTTP_LUA_SHARED_DICT: "clerk_jwks_cache 10m"
       # Surfaced into Kong's env vault as {vault://env/clerk-issuer-url}.
       CLERK_ISSUER_URL: ${CLERK_ISSUER_URL:-}
+      # Shared HMAC secret between gateway and write-service. Same value must
+      # also be set in write-service env so it can sign offsets it returns
+      # to clients.
+      READ_AT_LEAST_HMAC_SECRET: ${READ_AT_LEAST_HMAC_SECRET:-}
     volumes:
       - ./infrastructure/kong/kong.yml:/etc/kong/kong.yml:ro
       - ./infrastructure/kong/plugins/clerk-jwt:/usr/local/share/lua/5.1/kong/plugins/clerk-jwt:ro
+      - ./infrastructure/kong/plugins/read-at-least:/usr/local/share/lua/5.1/kong/plugins/read-at-least:ro
+      - ./infrastructure/kong/plugins/user-tier-rate-limit:/usr/local/share/lua/5.1/kong/plugins/user-tier-rate-limit:ro
     ports:
       - "${GATEWAY_PROXY_PORT:-8080}:8000"
       - "${GATEWAY_ADMIN_PORT:-8001}:8001"
     depends_on:
       write-service:
         condition: service_started
+      gateway-redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "kong health"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Backing store for Kong rate-limiting counters. Keeping it in Redis is
+  # what keeps the gateway stateless — every Kong replica reads/writes the
+  # same counters, restarts don't lose state. Persistence is intentionally
+  # off: rate-limit counters are ephemeral and survive nothing meaningful.
+  gateway-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # -----------------------------------------------------------------------
+  # Async event bus — shared infrastructure
+  #
+  # Single-broker Kafka in KRaft mode for local dev. Cross-service: the
+  # Read and Push services will consume from here too. The Debezium
+  # connector that publishes write-service's outbox lives in the
+  # write-service compose alongside its source Postgres.
+  # -----------------------------------------------------------------------
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    restart: unless-stopped
+    environment:
+      # KRaft (no Zookeeper). Single-node cluster: broker + controller in
+      # the same process. Fine for dev; production uses an odd-numbered
+      # controller quorum on separate nodes.
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: "controller,broker"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # 1 broker → replication factor and ISR must collapse to 1 for the
+      # Connect internal topics, otherwise Connect refuses to start.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      # Stable cluster ID across restarts — required by KRaft and must be
+      # a 22-char base64 (no padding) UUID. Generated once and pinned.
+      CLUSTER_ID: "MkU3OEEzZWMyL1A1U0RFcw"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+

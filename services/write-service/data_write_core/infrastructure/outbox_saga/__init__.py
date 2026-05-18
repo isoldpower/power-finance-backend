@@ -12,7 +12,6 @@ from .outbox_events import (
     WalletCreatedOutboxEvent,
     WalletDeletedOutboxEvent,
     WalletUpdatedOutboxEvent,
-    WebhookDeliveryStatusChangedOutboxEvent,
 )
 from .saga_step import SagaStep
 
@@ -29,5 +28,4 @@ __all__ = [
     "WalletCreatedOutboxEvent",
     "WalletDeletedOutboxEvent",
     "WalletUpdatedOutboxEvent",
-    "WebhookDeliveryStatusChangedOutboxEvent",
 ]

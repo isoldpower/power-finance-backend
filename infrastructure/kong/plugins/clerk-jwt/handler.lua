@@ -15,9 +15,13 @@ local jwt        = require "resty.jwt"
 local http       = require "resty.http"
 local pkey       = require "resty.openssl.pkey"
 
+-- PRIORITY 850 is deliberately below Kong's bundled rate-limiting plugin
+-- (priority 901). The IP-floor rate limit must fire before clerk-jwt so
+-- that attackers can't burn JWT verification CPU by spraying invalid
+-- tokens at the gateway — they hit the IP cap and get 429'd first.
 local ClerkJwtHandler = {
-    PRIORITY = 1005,
-    VERSION  = "0.1.0",
+    PRIORITY = 850,
+    VERSION  = "0.2.0",
 }
 
 local JWKS_CACHE_NAME = "clerk_jwks_cache"
@@ -166,6 +170,11 @@ function ClerkJwtHandler:access(conf)
 
     -- Spec: gateway attaches identity for downstream services to trust.
     kong.service.request.set_header("X-User-Id", sub)
+
+    -- Stash the verified claims for downstream plugins (e.g. read-at-least
+    -- reads a default offset claim out of the JWT). Sharing via kong.ctx
+    -- avoids a second parse / verify pass.
+    kong.ctx.shared.clerk_claims = verified.payload
 end
 
 

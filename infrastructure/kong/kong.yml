@@ -27,7 +27,30 @@ services:
     plugins:
       - name: clerk-jwt
         config:
-          issuer_url: https://tolerant-fawn-35.clerk.accounts.dev
+          issuer_url: "{vault://env/clerk-issuer-url}"
+      # Tier 1 — IP floor. Applies to every request (anonymous and
+      # authenticated). Generous enough to survive shared IPs (NAT,
+      # corporate, mobile carriers) where many users share an egress.
+      # Runs before clerk-jwt thanks to clerk-jwt's lowered priority.
+      - name: rate-limiting
+        config:
+          minute: 200
+          hour: 5000
+          policy: redis
+          redis_host: gateway-redis
+          redis_port: 6379
+          limit_by: ip
+          fault_tolerant: true
+          # IP floor is enforced but invisible. Headers come from the
+          # user-tier plugin so the client sees one set of numbers that
+          # actually match the limit binding their traffic.
+          hide_client_headers: true
+      # Tier 2 — per-user ceiling for authenticated callers. Stricter than
+      # the IP floor; for normal traffic this is what actually bites.
+      - name: user-tier-rate-limit
+        config:
+          per_minute: 60
+          per_hour: 1000
 
   - name: read-service
     host: read-service
@@ -46,7 +69,34 @@ services:
     plugins:
       - name: clerk-jwt
         config:
-          issuer_url: https://tolerant-fawn-35.clerk.accounts.dev
+          issuer_url: "{vault://env/clerk-issuer-url}"
+      # read-at-least only matters on the read path: it enforces the
+      # consistency contract between client and Read Service.
+      - name: read-at-least
+        config:
+          hmac_secret: "{vault://env/read-at-least-hmac-secret}"
+          offset_claim_name: last_write_offset
+      # Tier 1 — IP floor on the read path. Reads are cheap; this cap is
+      # mostly here as anti-flood for unauthenticated probes.
+      - name: rate-limiting
+        config:
+          minute: 1200
+          hour: 30000
+          policy: redis
+          redis_host: gateway-redis
+          redis_port: 6379
+          limit_by: ip
+          fault_tolerant: true
+          # IP floor is enforced but invisible. Headers come from the
+          # user-tier plugin so the client sees one set of numbers that
+          # actually match the limit binding their traffic.
+          hide_client_headers: true
+      # Tier 2 — per-user ceiling on reads. Tuned wide because read UIs
+      # are pagination-heavy and re-render on every focus change.
+      - name: user-tier-rate-limit
+        config:
+          per_minute: 600
+          per_hour: 20000
 
   - name: push-service
     host: push-service
@@ -67,17 +117,13 @@ services:
     plugins:
       - name: clerk-jwt
         config:
-          issuer_url: https://tolerant-fawn-35.clerk.accounts.dev
+          issuer_url: "{vault://env/clerk-issuer-url}"
+      # No rate-limiting on /events: SSE is connection-bound, not request-
+      # bound, and a per-request counter would fire after the first event.
+      # Concurrent-connection limits belong on the Push Service itself.
 
 # -----------------------------------------------------------------------------
-# Global plugins — cross-cutting concerns from the spec.
-#
-# auth (Clerk JWT) is intentionally NOT wired here in v0: Clerk uses a rotating
-# JWKS endpoint, and Kong OSS's built-in jwt plugin only accepts static keys.
-# A custom Lua plugin (or community kong-plugin-jwt-keycloak / equivalent) is
-# required for gateway-side validation. Until then the bearer token is
-# forwarded as-is and validated inside write-service. TODO: add Clerk JWT
-# plugin once decision is made.
+# Global plugins — cross-cutting concerns applied to every route.
 # -----------------------------------------------------------------------------
 
 plugins:

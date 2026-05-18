@@ -4,7 +4,10 @@ from decimal import Decimal
 from typing import Any, ClassVar
 from uuid import UUID
 
+from kafka_messages_proto import TransactionCreated, TransactionDeleted
+
 from ._outbox_event import OutboxEvent
+from ._proto_utilities import format_timestamp_as_proto, to_proto_payload
 
 
 @dataclass(frozen=True)
@@ -24,16 +27,18 @@ class TransactionCreatedOutboxEvent(OutboxEvent):
         return str(self.transaction_id)
 
     def to_payload(self) -> dict[str, Any]:
-        return {
-            "schema_version": self.SCHEMA_VERSION,
-            "event_id": str(self.event_id),
-            "occurred_at": self.occurred_at.isoformat(),
-            "transaction_id": str(self.transaction_id),
-            "wallet_id": str(self.wallet_id),
-            "user_id": self.user_id,
-            "amount": str(self.amount),
-            "created_at": self.created_at.isoformat(),
-        }
+        return to_proto_payload(
+            TransactionCreated(
+                event_id=str(self.event_id),
+                occurred_at=format_timestamp_as_proto(self.occurred_at),
+                schema_version=self.SCHEMA_VERSION,
+                transaction_id=str(self.transaction_id),
+                wallet_id=str(self.wallet_id),
+                user_id=self.user_id,
+                amount=str(self.amount),
+                created_at=format_timestamp_as_proto(self.created_at),
+            )
+        )
 
 
 @dataclass(frozen=True)
@@ -54,14 +59,16 @@ class TransactionDeletedOutboxEvent(OutboxEvent):
         return str(self.transaction_id)
 
     def to_payload(self) -> dict[str, Any]:
-        return {
-            "schema_version": self.SCHEMA_VERSION,
-            "event_id": str(self.event_id),
-            "occurred_at": self.occurred_at.isoformat(),
-            "transaction_id": str(self.transaction_id),
-            "wallet_id": str(self.wallet_id),
-            "user_id": self.user_id,
-            "amount": str(self.amount),
-            "cancelled_by": str(self.cancelled_by),
-            "created_at": self.created_at.isoformat(),
-        }
+        return to_proto_payload(
+            TransactionDeleted(
+                event_id=str(self.event_id),
+                occurred_at=format_timestamp_as_proto(self.occurred_at),
+                schema_version=self.SCHEMA_VERSION,
+                transaction_id=str(self.transaction_id),
+                wallet_id=str(self.wallet_id),
+                user_id=self.user_id,
+                amount=str(self.amount),
+                cancelled_by=str(self.cancelled_by),
+                created_at=format_timestamp_as_proto(self.created_at),
+            )
+        )

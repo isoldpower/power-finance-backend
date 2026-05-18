@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package power_finance.events.v1;
+
+option go_package = "github.com/power-finance/kafka-messages-proto/gen/go/events/v1;eventsv1";
+
+import "google/protobuf/timestamp.proto";
+
+message TransactionCreated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string transaction_id = 10;
+  string wallet_id = 11;
+  int32 user_id = 12;
+  // Decimal as string — proto has no native arbitrary-precision number
+  // type and floats lose money precision.
+  string amount = 13;
+  google.protobuf.Timestamp created_at = 14;
+}
+
+message TransactionDeleted {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string transaction_id = 10;
+  string wallet_id = 11;
+  int32 user_id = 12;
+  string amount = 13;
+  // UUID of the inverse/compensating transaction that cancels this one.
+  string cancelled_by = 14;
+  google.protobuf.Timestamp created_at = 15;
+}

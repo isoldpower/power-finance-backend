@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package power_finance.events.v1;
+
+option go_package = "github.com/power-finance/kafka-messages-proto/gen/go/events/v1;eventsv1";
+
+import "google/protobuf/timestamp.proto";
+
+enum WebhookDeliveryStatus {
+  WEBHOOK_DELIVERY_STATUS_UNSPECIFIED = 0;
+  WEBHOOK_DELIVERY_STATUS_IN_PROGRESS = 1;
+  WEBHOOK_DELIVERY_STATUS_SUCCESS = 2;
+  WEBHOOK_DELIVERY_STATUS_FAILED = 3;
+  WEBHOOK_DELIVERY_STATUS_RETRY_SCHEDULED = 4;
+}
+
+message WebhookDeliveryStatusChanged {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string delivery_id = 10;
+  string endpoint_id = 11;
+  int32 user_id = 12;
+  WebhookDeliveryStatus status = 13;
+}

@@ -17,11 +17,13 @@ dependencies = [
     "uvicorn-worker>=0.4,<0.5",
     "gunicorn>=25.3,<26.0",
     "correlation-py",
+    "kafka-messages-proto",
     "immudb-py>=1.5,<2.0",
 ]
 
 [tool.uv.sources]
 correlation-py = { workspace = true }
+kafka-messages-proto = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

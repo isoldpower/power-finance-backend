@@ -66,6 +66,70 @@ services:
     volumes:
       - immudb_data:/var/lib/immudb
 
+  # ---------------------------------------------------------------------
+  # Debezium outbox publisher.
+  #
+  # The Connect worker tails postgres-write's WAL via logical replication
+  # and forwards rows from the `outbox_events` table through the Outbox
+  # Event Router SMT, then onto Kafka (shared cluster declared in the
+  # root compose). The connector is write-side-only because it knows the
+  # write Postgres schema — other services owning their own outbox would
+  # spin up their own Connect worker.
+  # ---------------------------------------------------------------------
+
+  kafka-connect:
+    image: debezium/connect:2.7.3.Final
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres-write:
+        condition: service_healthy
+    environment:
+      BOOTSTRAP_SERVERS: "kafka:9092"
+      GROUP_ID: "outbox-connect-cluster"
+      CONFIG_STORAGE_TOPIC: "connect_configs"
+      OFFSET_STORAGE_TOPIC: "connect_offsets"
+      STATUS_STORAGE_TOPIC: "connect_statuses"
+      CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      STATUS_STORAGE_REPLICATION_FACTOR: "1"
+      KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+      VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    ports:
+      - "${KAFKA_CONNECT_PORT:-8083}:8083"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/ >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  # One-shot: posts the outbox connector config to Kafka Connect's REST
+  # API once Connect is healthy. PUT to /connectors/<name>/config is
+  # idempotent — reruns update in place, no manual cleanup needed.
+  debezium-bootstrap:
+    image: curlimages/curl:8.9.1
+    depends_on:
+      kafka-connect:
+        condition: service_healthy
+    restart: "no"
+    volumes:
+      - ../../infrastructure/debezium/connectors:/connectors:ro
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -eu
+        echo "Registering outbox-connector"
+        curl -fsS -X PUT \
+          -H "Content-Type: application/json" \
+          --data @/connectors/outbox-connector.json \
+          http://kafka-connect:8083/connectors/outbox-connector/config
+        echo
+        echo "OK"
+
 volumes:
   postgres_write_data:
   immudb_data:

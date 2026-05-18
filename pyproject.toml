@@ -12,6 +12,7 @@ members = [
     "libraries/correlation-py",
     "libraries/events-py",
     "libraries/kafka-client-py",
+    "libraries/kafka-messages-proto",
     "libraries/observability-py",
 ]
 
@@ -23,6 +24,10 @@ dev = [
     "ruff>=0.8,<0.9",
     "mypy>=1.13,<2.0",
     "pre-commit>=4.0,<5.0",
+    # protoc + Python plugin, used by libraries/kafka-messages-proto's
+    # codegen script. Workspace-level dev dep so a single `uv sync` makes
+    # `python -m grpc_tools.protoc` available in .venv.
+    "grpcio-tools>=1.66,<2.0",
 ]
 
 [tool.ruff]

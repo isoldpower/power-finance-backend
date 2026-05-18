@@ -13,6 +13,7 @@ return {
                         issuer_url = {
                             type = "string",
                             required = true,
+                            referenceable = true,
                             description = "Clerk frontend API base URL (no trailing slash). "
                                 .. "Plugin appends /.well-known/jwks.json.",
                         },

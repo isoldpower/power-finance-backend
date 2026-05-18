@@ -8,7 +8,6 @@ from .wallet_outbox_events import (
     WalletDeletedOutboxEvent,
     WalletUpdatedOutboxEvent,
 )
-from .webhook_outbox_events import WebhookDeliveryStatusChangedOutboxEvent
 
 __all__ = [
     "OutboxEvent",
@@ -17,5 +16,4 @@ __all__ = [
     "WalletCreatedOutboxEvent",
     "WalletDeletedOutboxEvent",
     "WalletUpdatedOutboxEvent",
-    "WebhookDeliveryStatusChangedOutboxEvent",
 ]
