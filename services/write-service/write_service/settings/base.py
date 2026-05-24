@@ -8,7 +8,6 @@ the service root. See `.env.example` for the full list of recognised keys.
 from pathlib import Path
 
 import environ
-from psycopg_pool import ConnectionPool
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 ENV_FILE = BASE_DIR / ".env"
@@ -102,9 +101,9 @@ DATABASES = {
             "pool": {
                 "min_size": 2,
                 "max_size": 10,
-                # Liveness probe (SELECT 1) on checkout so a Postgres
-                # restart doesn't poison the pool with dead connections.
-                "check": ConnectionPool.check_connection,
+                # Liveness probe (SELECT 1) on checkout is added by
+                # Django 5.2+ automatically via ConnectionPool.check_connection;
+                # passing it here too raises "multiple values for 'check'".
             },
         },
     }
@@ -146,9 +145,11 @@ CORRELATION_ID_HEADER = env("CORRELATION_ID_HEADER")
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "data_write_core.infrastructure.auth.GatewayUserHeaderAuthentication",
+        "data_write_core.presentation.http.gateway_authentication.GatewayUserHeaderAuthentication",
     ],
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "data_write_core.presentation.http.gateway_authentication.IsGatewayAuthenticated",
+    ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 

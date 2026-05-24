@@ -5,7 +5,7 @@ from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import TransactionEntity
 from data_write_core.infrastructure.outbox_saga import (
     ImmudbTransactionStep,
-    OutboxEmissionStep,
+    PostgresOutboxEmissionStep,
     SagaCoordinator,
     TransactionDeletedOutboxEvent,
 )
@@ -23,7 +23,9 @@ class DeleteTransactionCommand:
     user_id: int
 
 
-class DeleteTransactionCommandHandler(CommandHandlerBase, LoadWalletMixin, LoadTransactionMixin):
+class DeleteTransactionCommandHandler(
+    CommandHandlerBase[TransactionDTO], LoadWalletMixin, LoadTransactionMixin
+):
     _transaction_repository: TransactionRepository
     _wallet_repository: WalletRepository
     _outbox_repository: OutboxRepository
@@ -46,36 +48,37 @@ class DeleteTransactionCommandHandler(CommandHandlerBase, LoadWalletMixin, LoadT
         self._wallet_repository = wallet_repository
         self._outbox_repository = outbox_repository
 
-    async def handle(self, command: DeleteTransactionCommand) -> TransactionDTO:
+    async def handle(self, command: DeleteTransactionCommand) -> tuple[TransactionDTO, int]:
         transaction_aggregate = await self.load_transaction_aggregate(
             transaction_id=command.transaction_id,
             user_id=command.user_id,
         )
-        inverse_transaction = await self._run_transactions_saga(
+        inverse_transaction, latest_sequence = await self._run_transactions_saga(
             transaction_aggregate,
         )
         wallet_dto = await self.load_wallet_dto(
             wallet_id=transaction_aggregate.root.source_wallet_id,
             user_id=command.user_id,
         )
+        transaction_dto = transaction_to_dto(inverse_transaction, wallet_dto)
 
         await self._publish_domain_events(transaction_aggregate)
-        return transaction_to_dto(inverse_transaction, wallet_dto)
+        return transaction_dto, latest_sequence
 
     async def _run_transactions_saga(
         self,
         transaction_aggregate: TransactionAggregate,
-    ) -> TransactionEntity:
+    ) -> tuple[TransactionEntity, int]:
         inverse_transaction = transaction_aggregate.delete_self()
 
-        saga = SagaCoordinator(
+        saga_coordinator = SagaCoordinator(
             transaction_steps=[
                 ImmudbTransactionStep(
                     self._transaction_repository,
                     inverse_transaction,
                 ),
             ],
-            final_step=OutboxEmissionStep(
+            final_step=PostgresOutboxEmissionStep(
                 outbox_repository=self._outbox_repository,
                 events=[
                     TransactionDeletedOutboxEvent(
@@ -89,6 +92,6 @@ class DeleteTransactionCommandHandler(CommandHandlerBase, LoadWalletMixin, LoadT
                 ],
             ),
         )
-        await saga.run_transaction()
+        latest_sequence = await saga_coordinator.run_transaction()
 
-        return inverse_transaction
+        return inverse_transaction, latest_sequence

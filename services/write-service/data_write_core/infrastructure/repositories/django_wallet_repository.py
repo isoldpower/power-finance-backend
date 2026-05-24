@@ -3,8 +3,8 @@ from uuid import UUID
 from data_write_core.application.interfaces import WalletRepository
 from data_write_core.domain.entities import WalletEntity
 
-from ..mappers import WalletMapper
 from ..orm import WalletModel
+from .mappers import WalletMapper
 
 
 class DjangoWalletRepository(WalletRepository):

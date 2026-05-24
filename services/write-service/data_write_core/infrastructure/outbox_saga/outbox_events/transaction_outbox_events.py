@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Any, ClassVar
 from uuid import UUID
 
-from kafka_messages_proto import TransactionCreated, TransactionDeleted
+from kafka_messages import TransactionCreated, TransactionDeleted
 
 from ._outbox_event import OutboxEvent
 from ._proto_utilities import format_timestamp_as_proto, to_proto_payload

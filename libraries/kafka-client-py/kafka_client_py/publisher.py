@@ -1,16 +1,5 @@
-"""Minimal async producer wrapper.
-
-Scope: just enough to back `RetryPublisher` and `DLQPublisher`. A full producer
-abstraction (envelope construction, schema validation, transactional output)
-is intentionally out of scope for this module — those live next to the outbox
-publisher and the per-service event emitters.
-
-Lifecycle: `start()` once on service boot, `stop()` once on shutdown.
-"""
-
-from __future__ import annotations
-
 from dataclasses import dataclass
+from typing import Self
 
 from aiokafka import AIOKafkaProducer
 
@@ -21,15 +10,13 @@ from .headers import KafkaHeaders
 class ProducerConfig:
     bootstrap_servers: str
     client_id: str | None = None
-    acks: str = "all"  # never weaken: retry/DLQ losses are catastrophic
+    acknowledgement_mode: str = "all"
     enable_idempotence: bool = True
-    linger_ms: int = 5
+    linger_milliseconds: int = 5
     compression_type: str | None = "gzip"
 
 
 class AsyncPublisher:
-    """Thin wrapper around `AIOKafkaProducer` returning awaitable sends."""
-
     def __init__(self, config: ProducerConfig) -> None:
         self._config = config
         self._producer: AIOKafkaProducer | None = None
@@ -40,9 +27,9 @@ class AsyncPublisher:
         self._producer = AIOKafkaProducer(
             bootstrap_servers=self._config.bootstrap_servers,
             client_id=self._config.client_id,
-            acks=self._config.acks,
+            acks=self._config.acknowledgement_mode,
             enable_idempotence=self._config.enable_idempotence,
-            linger_ms=self._config.linger_ms,
+            linger_ms=self._config.linger_milliseconds,
             compression_type=self._config.compression_type,
         )
         await self._producer.start()
@@ -70,7 +57,7 @@ class AsyncPublisher:
             headers=headers or [],
         )
 
-    async def __aenter__(self) -> AsyncPublisher:
+    async def __aenter__(self) -> Self:
         await self.start()
         return self
 

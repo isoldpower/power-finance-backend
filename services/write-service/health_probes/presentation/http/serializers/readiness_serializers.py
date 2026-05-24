@@ -12,6 +12,7 @@ ReadinessResponseSerializer = inline_serializer(
         "checks": _ReadinessChecksSerializer,
     },
 )
+
 ReadinessDegradedResponseSerializer = inline_serializer(
     name="ReadinessDegradedResponse",
     fields={

@@ -1,24 +1,5 @@
-"""Idempotent-consumer dedupe support.
-
-Kafka guarantees at-least-once. To get effectively-once at the application
-level, consumers must remember which `event_id`s they've already processed.
-This module ships:
-
-* `DedupeStore` — Protocol so consumers can plug in any backend (Postgres,
-  Redis, in-memory for tests).
-* `PostgresDedupeStore` — psycopg-async implementation backed by a single
-  table per consumer group.
-
-The recommended pattern is to call `mark()` *inside the same transaction*
-that applies the message's side effects, so the dedupe row and the
-projection write commit atomically. `PostgresDedupeStore.mark()` accepts an
-existing connection for exactly this reason.
-"""
-
-from __future__ import annotations
-
+from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import Protocol
 
 import psycopg
 from psycopg_pool import AsyncConnectionPool
@@ -36,27 +17,23 @@ CREATE INDEX IF NOT EXISTS kafka_consumed_events_consumed_at_idx
 """
 
 
-class DedupeStore(Protocol):
-    async def seen(self, event_id: str) -> bool: ...
+class DedupeStore(ABC):
+    @abstractmethod
+    async def seen(self, event_id: str) -> bool:
+        raise NotImplementedError()
 
+    @abstractmethod
     async def mark(
         self,
         event_id: str,
         *,
-        conn: psycopg.AsyncConnection | None = None,
+        connection: psycopg.AsyncConnection | None = None,
         consumed_at: datetime | None = None,
-    ) -> None: ...
+    ) -> None:
+        raise NotImplementedError()
 
 
-class PostgresDedupeStore:
-    """Postgres-backed dedupe store keyed by `(consumer_group, event_id)`.
-
-    `seen()` opens its own short connection from the pool (read-only check
-    before work begins). `mark()` accepts an external connection so callers
-    can commit it together with their projection writes — that atomicity is
-    the whole point of dedupe.
-    """
-
+class PostgresDedupeStore(DedupeStore):
     def __init__(
         self,
         pool: AsyncConnectionPool,
@@ -69,48 +46,51 @@ class PostgresDedupeStore:
         self._table = table
 
     async def seen(self, event_id: str) -> bool:
-        sql = f"SELECT 1 FROM {self._table} WHERE consumer_group = %s AND event_id = %s"
-        async with self._pool.connection() as conn, conn.cursor() as cur:
-            await cur.execute(sql, (self._consumer_group, event_id))
-            return await cur.fetchone() is not None
+        select_statement = (
+            f"SELECT 1 FROM {self._table} " f"WHERE consumer_group = %s AND event_id = %s"
+        )
+        async with self._pool.connection() as connection, connection.cursor() as cursor:
+            await cursor.execute(
+                select_statement,
+                (self._consumer_group, event_id),
+            )
+            return await cursor.fetchone() is not None
 
     async def mark(
         self,
         event_id: str,
         *,
-        conn: psycopg.AsyncConnection | None = None,
+        connection: psycopg.AsyncConnection | None = None,
         consumed_at: datetime | None = None,
     ) -> None:
-        ts = consumed_at or datetime.now(UTC)
-        sql = (
+        consumed_at_timestamp = consumed_at or datetime.now(UTC)
+        insert_statement = (
             f"INSERT INTO {self._table} (consumer_group, event_id, consumed_at) "
             f"VALUES (%s, %s, %s) ON CONFLICT DO NOTHING"
         )
-        params = (self._consumer_group, event_id, ts)
+        insert_parameters = (self._consumer_group, event_id, consumed_at_timestamp)
 
-        if conn is not None:
-            async with conn.cursor() as cur:
-                await cur.execute(sql, params)
+        if connection is not None:
+            async with connection.cursor() as cursor:
+                await cursor.execute(insert_statement, insert_parameters)
             return
 
-        async with self._pool.connection() as owned, owned.cursor() as cur:
-            await cur.execute(sql, params)
+        async with self._pool.connection() as owned_connection, owned_connection.cursor() as cursor:
+            await cursor.execute(insert_statement, insert_parameters)
 
 
 class InMemoryDedupeStore:
-    """Test-only dedupe store. Not safe across processes."""
-
     def __init__(self) -> None:
-        self._seen: set[str] = set()
+        self._seen_event_ids: set[str] = set()
 
     async def seen(self, event_id: str) -> bool:
-        return event_id in self._seen
+        return event_id in self._seen_event_ids
 
     async def mark(
         self,
         event_id: str,
         *,
-        conn: psycopg.AsyncConnection | None = None,
+        connection: psycopg.AsyncConnection | None = None,
         consumed_at: datetime | None = None,
     ) -> None:
-        self._seen.add(event_id)
+        self._seen_event_ids.add(event_id)

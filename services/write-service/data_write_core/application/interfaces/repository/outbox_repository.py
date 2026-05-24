@@ -1,17 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from data_write_core.infrastructure.outbox_saga.outbox_events import OutboxEvent
+from ..outbox_event import OutboxEventBase
 
 
 class OutboxRepository(ABC):
-    """Persists outbox events to durable storage so a downstream
-    publisher (Debezium) can stream them to Kafka. Callers must
-    invoke `append` inside the same DB transaction as the business
-    write that produced the event — that's what makes the outbox
-    pattern atomic."""
+    @abstractmethod
+    async def append(self, event: "OutboxEventBase") -> int:
+        raise NotImplementedError()
 
     @abstractmethod
-    async def append(self, event: "OutboxEvent") -> None:
+    async def get_latest_sequence(self) -> int:
         raise NotImplementedError()

@@ -24,7 +24,7 @@ Key design properties:
 
 - **Write side** — synchronous persistence to PostgreSQL (with outbox table) + ImmuDB (immutable audit log). SAGA compensation between the two. Outbox publisher emits events to Async Kafka.
 - **Read side** — multiple projections (PostgreSQL, Elasticsearch) consumed asynchronously from Async Kafka. Two Redis caches (single-resource and paginated). Cache invalidation driven by the same event stream.
-- **Consistency** — clients can opt into read-your-writes via a `Read-At-Least` header carrying a Kafka offset. Read Service returns 503 if not caught up; Gateway falls back to Write Service for consistency-required reads.
+- **Consistency** — clients can opt into read-your-writes via a `Read-At-Least` header carrying a Postgres outbox seq (the `BIGSERIAL` row id assigned at commit time). Read Service returns 503 if not caught up; Gateway falls back to Write Service for consistency-required reads.
 - **Fraud detection** — two tiers: synchronous fast-path (Fraud Redis lookup in Write Service) and asynchronous deep-path (Flink consuming Async Kafka, publishing detected fraud to Fraud Signals Kafka).
 - **Real-time UX** — Push Service maintains SSE connections, consumes Async Kafka via Redis Pub/Sub for cross-instance fan-out, pushes updates to connected clients.
 
@@ -116,7 +116,7 @@ The end-user application (web/mobile). Communicates only through the API Gateway
 **Responsibilities:**
 - Issue REST requests through API Gateway
 - Maintain SSE connection for live updates
-- Track latest write version (Kafka offset returned on writes) and pass it as `Read-At-Least` header on subsequent reads when read-your-writes is required
+- Track latest write version (outbox seq returned on writes as `X-Write-Version`) and pass it as `Read-At-Least` header on subsequent reads when read-your-writes is required
 - Handle 503 responses with retry/backoff
 
 ---
@@ -125,15 +125,21 @@ The end-user application (web/mobile). Communicates only through the API Gateway
 
 Stateless edge component handling cross-cutting request concerns.
 
-**Implementation:** Kong (open-source). Custom logic (HMAC `Read-At-Least` validation, 503 → Write Service fallback) implemented as Kong plugins.
+**Implementation:** Kong (open-source). Custom logic implemented as Kong plugins:
+- `clerk-jwt` — validates Clerk session tokens, stashes claims for downstream plugins
+- `read-at-least` — request-side: verifies inbound `Read-At-Least` HMAC and injects a default from per-user Redis on read routes
+- `write-version` — response-side: signs the raw `X-Write-Version` emitted by Write Service and records `(user_id, seq)` to Redis on write routes
+- `user-tier-rate-limit` — per-user rate caps layered on top of Kong's bundled IP rate-limiting
 
 **Responsibilities:**
 - **Auth** — validate bearer tokens; attach authenticated identity to downstream requests
 - **CorrelationID** — generate or propagate a correlation ID for distributed tracing across all downstream calls and Kafka events
 - **Requests Redirect / Fallback** — when Read Service returns 503 (not caught up to `Read-At-Least`), redirect the read to the Write Service's read endpoint as a consistency fallback
 - **Timeout** — enforce upper bounds on request duration regardless of downstream behavior
-- Validate `Read-At-Least` header is signed/HMAC'd by Write Service to prevent client forgery
-- Inject default version from session token when header is missing
+- Own the HMAC secret used to bind `Read-At-Least` and `X-Write-Version` so upstream services never see it
+- Verify the HMAC of inbound `Read-At-Least` headers on read routes to prevent client forgery
+- On write responses: intercept the raw outbox seq emitted by Write Service as `X-Write-Version`, sign it in-place (`{seq}:{hmac}`) before returning to the client, and best-effort record `(user_id, seq)` in `gateway-redis` under `ral:user:{sub}`
+- On read requests without `Read-At-Least`: look up `ral:user:{sub}` in `gateway-redis`, sign the value, and inject the default header — gives stateless clients read-your-writes without tracking versions themselves
 - Pass through SSE connections to Push Service with appropriate timeout/buffering configuration
 
 **Critical configuration for SSE:**
@@ -154,7 +160,7 @@ Synchronous, consistency-oriented service that owns all write operations.
 - Persist to PostgreSQL (operational data + outbox row in same transaction)
 - Persist to ImmuDB (immutable audit log)
 - Coordinate SAGA between PostgreSQL and ImmuDB (compensate on partial failure)
-- Return canonical record + Kafka offset (`X-Write-Version`) to client for optimistic UI and read-your-writes
+- Return canonical record + outbox seq as a raw integer in the `X-Write-Version` response header. The outbox seq is the `BIGSERIAL` row id assigned by Postgres inside the write transaction, so it is known synchronously at response time (no wait on Kafka publish). Write Service stays ignorant of HMAC signing and Redis bookkeeping — the gateway intercepts the response header and handles both.
 - Consume Fraud Signals Kafka to:
   - Update Fraud Redis when accounts are flagged
   - Issue compensating transactions for already-committed fraud
@@ -308,7 +314,7 @@ Read-optimized projection of the operational data.
 
 **Consumer:** A "Postgres projection consumer" reads Async Kafka and applies events to the read schema. This consumer owns the schema translation logic ("data mapping").
 
-**Read-At-Least support:** The consumer tracks the latest applied Kafka offset per partition. The Read Service queries this offset to determine whether to serve a request or return 503.
+**Read-At-Least support:** The consumer extracts the originating outbox seq from each consumed event (carried as a Kafka header or event field, set by the outbox publisher at publish time) and persists the highest applied value alongside its projection state. The Read Service compares this `applied_outbox_seq` against the `Read-At-Least` header to decide between serve / wait / 503.
 
 ---
 
@@ -335,7 +341,7 @@ Stateless query service.
 - Serve read queries by routing to appropriate backing store (Postgres for transactional reads, ES for search, Redis for cached items)
 - Implement cache-aside pattern: check Redis → fall through to Postgres/ES → populate cache
 - Honor `Read-At-Least` header:
-  - Compare requested offset to current applied offset
+  - Compare requested outbox seq to current `applied_outbox_seq` from the projection consumer
   - If caught up: serve normally
   - If behind: short bounded wait (100-200ms), re-check
   - If still behind: return 503 with `Retry-After`
@@ -459,6 +465,7 @@ sequenceDiagram
     participant IM as ImmuDB
     participant OB as Outbox Publisher
     participant AK as Async Kafka
+    participant GR as Gateway Redis
 
     C->>GW: POST /transaction
     GW->>GW: Auth, attach CorrelationID
@@ -478,20 +485,24 @@ sequenceDiagram
             WS->>PG: SAGA compensate (reverse)
             WS-->>GW: 500 Internal Error
         else ImmuDB OK
+            WS->>WS: Capture outbox.id (BIGSERIAL) from the committed row
+            WS-->>GW: 201 Created<br/>X-Write-Version: {outbox_seq}  (raw integer)
+            GW->>GW: Sign value as {outbox_seq}:{hmac}
+            GW->>GR: EVAL monotonic-set ral:user:{sub} {outbox_seq} TTL 7d
+            GW-->>C: 201 + X-Write-Version: {outbox_seq}:{hmac}
             Note over OB,AK: Async, parallel to response
             OB->>PG: SELECT unpublished
-            OB->>AK: Publish event
-            AK-->>OB: Ack with offset
+            OB->>AK: Publish event (header: outbox_seq)
+            AK-->>OB: Ack
             OB->>PG: Mark published
-            WS-->>GW: 201 Created<br/>X-Write-Version: {offset}
-            GW-->>C: 201 + version
         end
     end
 ```
 
 **Notes:**
 - The outbox publisher runs continuously, decoupled from the request path
-- Client receives the Kafka offset as `X-Write-Version` for use in subsequent `Read-At-Least` requests
+- Write Service returns the outbox seq as a raw integer. The gateway HMAC-signs it before forwarding to the client and writes `(user_id, outbox_seq)` to `gateway-redis` under `ral:user:{user_id}` via a monotonic Lua script. Both the secret and the Redis dependency stay inside the gateway.
+- The Redis write is best-effort and runs synchronously inside the response phase; if it fails, the response is unaffected and the client can still use the signed `X-Write-Version` directly as `Read-At-Least`
 - Postgres + Outbox writes are in the same transaction → atomic
 - Postgres + ImmuDB are coordinated via SAGA, not atomic
 
@@ -508,12 +519,12 @@ sequenceDiagram
     participant Cache as Redis Cache
     participant WS as Write Service
 
-    C->>GW: GET /transaction/{id}<br/>Read-At-Least: {offset}
-    GW->>GW: Validate header signature
+    C->>GW: GET /transaction/{id}<br/>Read-At-Least: {outbox_seq}
+    GW->>GW: Validate header signature<br/>(or look up default from gateway-redis)
     GW->>RS: Forward with header
 
-    RS->>RPG: SELECT applied_offset
-    alt Caught up (applied_offset >= header)
+    RS->>RPG: SELECT applied_outbox_seq
+    alt Caught up (applied_outbox_seq >= header)
         RS->>Cache: Check cache
         alt Cache hit
             Cache-->>RS: Cached value
@@ -524,9 +535,9 @@ sequenceDiagram
         end
         RS-->>GW: 200 OK
         GW-->>C: 200 OK
-    else Behind (applied_offset < header)
+    else Behind (applied_outbox_seq < header)
         RS->>RS: Wait up to 200ms
-        RS->>RPG: Re-check applied_offset
+        RS->>RPG: Re-check applied_outbox_seq
         alt Now caught up
             Note over RS: Continue normal flow
         else Still behind
@@ -628,7 +639,13 @@ Two-step write across Postgres and ImmuDB cannot be atomic; coordinated via SAGA
 
 ### Read-Your-Writes via Version Token
 
-Client receives Kafka offset on write, sends as `Read-At-Least` header on subsequent reads. Read Service compares to applied offset, waits or returns 503. Gateway falls back to Write Service on 503.
+Write Service returns the outbox seq (`BIGSERIAL` row id) as a raw integer in the `X-Write-Version` response header. The gateway intercepts the response, HMAC-signs the value into `{seq}:{hmac}`, and writes `(user_id, seq)` to `gateway-redis` (`ral:user:{sub}`) via a monotonic Lua `SET`. The client receives the already-signed header and sends it back verbatim as `Read-At-Least` on subsequent reads. Read Service compares the requested seq to the projection consumer's `applied_outbox_seq`, waits or returns 503. Gateway falls back to Write Service on 503.
+
+When the client omits `Read-At-Least`, the gateway looks up the user's latest seq in `gateway-redis` and injects a freshly-signed default header. Cache miss or Redis unavailable → no header, eventually-consistent read. This lets stateless / freshly-loaded clients still get read-your-writes without tracking versions client-side.
+
+**Why the gateway owns HMAC and Redis:** keeping the HMAC secret out of Write Service means rotating the secret is a gateway-only operation, and a Write Service compromise can't forge `Read-At-Least` headers. Write Service emits a plain integer and never sees the per-user Redis. The gateway is the single trust boundary for the consistency-token mechanism.
+
+**Why outbox seq instead of Kafka offset:** the outbox row id is assigned by Postgres inside the write transaction, so Write Service knows it synchronously at response time. Using the Kafka offset would force the request path to block on publish or fall back to a less-fresh signal. The outbox seq is monotonic per Postgres instance and survives Kafka partition rebalances unchanged.
 
 ### Two-Tier Fraud Detection
 

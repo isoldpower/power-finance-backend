@@ -1,17 +1,3 @@
-"""Public API for kafka-client-py.
-
-This iteration ships the error-routing primitives only:
-
-* `RetryPolicy` — budgets + backoff math
-* `RetryPublisher` / `DLQPublisher` — publish to events.retry / events.dlq
-* `MessageHandler` — wraps a user handler with retry/DLQ/dedupe routing
-* `DedupeStore` (+ `PostgresDedupeStore`, `InMemoryDedupeStore`)
-* `AsyncPublisher` — minimal aiokafka producer wrapper used by the routers
-* Header conventions in `kafka_client_py.headers`
-
-Full consumer/producer wrappers come in a follow-up.
-"""
-
 from . import headers
 from ._message import ConsumedMessage
 from .dedupe import (

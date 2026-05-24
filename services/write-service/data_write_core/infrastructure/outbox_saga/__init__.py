@@ -1,8 +1,8 @@
 from .coordinator import SagaCoordinator
 from .defined_steps import (
     ImmudbTransactionStep,
-    OutboxEmissionStep,
     PostgresAction,
+    PostgresOutboxEmissionStep,
     PostgresWriteStep,
 )
 from .outbox_events import (
@@ -17,7 +17,7 @@ from .saga_step import SagaStep
 
 __all__ = [
     "ImmudbTransactionStep",
-    "OutboxEmissionStep",
+    "PostgresOutboxEmissionStep",
     "PostgresAction",
     "PostgresWriteStep",
     "SagaCoordinator",

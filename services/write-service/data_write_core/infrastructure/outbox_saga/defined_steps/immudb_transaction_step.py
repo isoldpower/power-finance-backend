@@ -5,7 +5,7 @@ from data_write_core.domain.events import EventCollector
 from ..saga_step import SagaStep
 
 
-class ImmudbTransactionStep(SagaStep):
+class ImmudbTransactionStep(SagaStep[None]):
     """ImmuDB side of the transactions SAGA."""
 
     def __init__(

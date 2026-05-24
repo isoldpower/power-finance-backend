@@ -21,13 +21,6 @@ _INFRA_FREE_COMMANDS: tuple[str, ...] = (
 
 
 def skip_without_infra(function: Callable[P, R]) -> Callable[P, R | None]:
-    """No-op the wrapped bootstrap call when there is no live infra to dial:
-    - `settings.TESTING` is truthy (set by the test settings module), or
-    - the active management command does not need infra
-      (`makemigrations`, `migrate`, `collectstatic`).
-    Keeps ImmuDB / Redis / Kafka handshakes off the import path for those
-    cases without making the AppConfig aware of any of them."""
-
     @wraps(function)
     def wrapped(*args: P.args, **kwargs: P.kwargs) -> R | None:
         if getattr(settings, "TESTING", False):
@@ -36,6 +29,7 @@ def skip_without_infra(function: Callable[P, R]) -> Callable[P, R | None]:
                 function.__qualname__,
             )
             return None
+
         infra_free_command = next(
             (command for command in _INFRA_FREE_COMMANDS if command in sys.argv),
             None,

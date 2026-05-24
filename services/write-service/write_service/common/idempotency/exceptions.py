@@ -4,10 +4,12 @@ These extend DRF's `APIException` so the framework's exception handler turns
 them into proper responses without any view-level translation.
 """
 
-from __future__ import annotations
-
 from rest_framework import status
 from rest_framework.exceptions import APIException
+
+
+class StoreUnavailable(RuntimeError):
+    """Raised when Redis is unreachable; the caller decides fail-open vs fail-closed."""
 
 
 class IdempotencyError(APIException):

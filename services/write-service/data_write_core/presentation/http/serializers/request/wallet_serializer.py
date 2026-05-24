@@ -7,7 +7,4 @@ class CreateWalletRequestSerializer(serializers.Serializer):
 
 
 class UpdateWalletRequestSerializer(serializers.Serializer):
-    """Request body for renaming a wallet. Balance/currency are derived
-    from the immutable transaction history and cannot be patched."""
-
     new_name = serializers.CharField(max_length=120)

@@ -37,6 +37,7 @@ class BaseAsyncAPIView(APIView):
                 request._authenticator = authenticator
                 request.user, request.auth = user_auth_tuple
                 return
+
         request._not_authenticated()
 
     async def check_permissions(self, request):
@@ -67,10 +68,12 @@ class BaseAsyncAPIView(APIView):
 
     async def initial(self, request, *args, **kwargs):
         self.format_kwarg = self.get_format_suffix(**kwargs)
-        neg = self.perform_content_negotiation(request)
-        request.accepted_renderer, request.accepted_media_type = neg
+
+        negotiated = self.perform_content_negotiation(request)
+        request.accepted_renderer, request.accepted_media_type = negotiated
         version, scheme = self.determine_version(request, *args, **kwargs)
         request.version, request.versioning_scheme = version, scheme
+
         await self.perform_authentication(request)
         await self.check_permissions(request)
         await self.check_throttles(request)

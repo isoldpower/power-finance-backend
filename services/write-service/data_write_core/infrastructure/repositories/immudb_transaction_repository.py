@@ -7,7 +7,8 @@ from immudb.datatypesv2 import PrimaryKeyVarCharValue
 from data_write_core.application.bootstrap.state import ImmudbConnection
 from data_write_core.application.interfaces import TransactionRepository
 from data_write_core.domain.entities import BalanceCheckpointEntity, TransactionEntity
-from data_write_core.infrastructure.mappers import TransactionMapper
+
+from .mappers import TransactionMapper
 
 
 class ImmudbTransactionRepository(TransactionRepository):
@@ -26,6 +27,7 @@ class ImmudbTransactionRepository(TransactionRepository):
                 [PrimaryKeyVarCharValue(value=row["id"])],
             )
             verified.append(row)
+
         return verified
 
     async def get_user_transactions(self, user_id: int) -> list[TransactionEntity]:
@@ -34,6 +36,7 @@ class ImmudbTransactionRepository(TransactionRepository):
             {"user_id": user_id},
             COLUMN_NAME_MODE_FIELD,
         )
+
         return [TransactionMapper.to_domain(row) for row in self._verify(list(rows))]
 
     async def get_user_transaction_by_id(
@@ -55,6 +58,7 @@ class ImmudbTransactionRepository(TransactionRepository):
             self._TRANSACTIONS_TABLE,
             [PrimaryKeyVarCharValue(value=row["id"])],
         )
+
         return TransactionMapper.to_domain(row)
 
     async def create_transaction(self, transaction: TransactionEntity) -> TransactionEntity:
@@ -76,6 +80,7 @@ class ImmudbTransactionRepository(TransactionRepository):
             f"INSERT INTO {self._TRANSACTIONS_TABLE} ({sql_columns}) VALUES ({sql_values});",
             insert_params,
         )
+
         return transaction
 
     async def get_cancelling_transaction(
@@ -91,6 +96,7 @@ class ImmudbTransactionRepository(TransactionRepository):
         )
         if not rows:
             return None
+
         return TransactionMapper.to_domain(rows[0])
 
     async def get_adjusting_transaction(
@@ -106,6 +112,7 @@ class ImmudbTransactionRepository(TransactionRepository):
         )
         if not rows:
             return None
+
         return TransactionMapper.to_domain(rows[0])
 
     async def delete_transaction_by_id(
@@ -123,6 +130,7 @@ class ImmudbTransactionRepository(TransactionRepository):
         current_transaction = await self.get_user_transaction_by_id(user_id, transaction_id)
         inverse_transaction = current_transaction.create_inverse()
         await self.create_transaction(inverse_transaction)
+
         return inverse_transaction
 
     async def get_unsettled_transactions(
@@ -143,6 +151,7 @@ class ImmudbTransactionRepository(TransactionRepository):
                 {"wallet_id": str(wallet_id)},
                 COLUMN_NAME_MODE_FIELD,
             )
+
         return [TransactionMapper.to_domain(row) for row in self._verify(list(rows))]
 
     async def get_checkpoint(
@@ -161,6 +170,7 @@ class ImmudbTransactionRepository(TransactionRepository):
         if not rows:
             return None
         row = rows[0]
+
         return BalanceCheckpointEntity(
             id=row["wallet_id"],
             created_at=datetime.fromisoformat(row["settled_at"]),

@@ -5,7 +5,7 @@ from uuid import UUID
 from data_write_core.domain.entities import TransactionEntity
 from data_write_core.infrastructure.outbox_saga import (
     ImmudbTransactionStep,
-    OutboxEmissionStep,
+    PostgresOutboxEmissionStep,
     SagaCoordinator,
     TransactionCreatedOutboxEvent,
 )
@@ -27,7 +27,9 @@ class UpdateTransactionCommand:
     new_amount: Decimal
 
 
-class UpdateTransactionCommandHandler(CommandHandlerBase, LoadWalletMixin, LoadTransactionMixin):
+class UpdateTransactionCommandHandler(
+    CommandHandlerBase[TransactionDTO], LoadWalletMixin, LoadTransactionMixin
+):
     _transaction_repository: TransactionRepository
     _wallet_repository: WalletRepository
     _outbox_repository: OutboxRepository
@@ -50,7 +52,7 @@ class UpdateTransactionCommandHandler(CommandHandlerBase, LoadWalletMixin, LoadT
         self._wallet_repository = wallet_repository
         self._outbox_repository = outbox_repository
 
-    async def handle(self, command: UpdateTransactionCommand) -> TransactionDTO:
+    async def handle(self, command: UpdateTransactionCommand) -> tuple[TransactionDTO, int]:
         transaction_aggregate = await self.load_transaction_aggregate(
             transaction_id=command.transaction_id,
             user_id=command.user_id,
@@ -58,22 +60,25 @@ class UpdateTransactionCommandHandler(CommandHandlerBase, LoadWalletMixin, LoadT
 
         adjustment_transaction = transaction_aggregate.adjust_self(new_amount=command.new_amount)
         if adjustment_transaction is not transaction_aggregate.root:
-            await self._run_transactions_sage(adjustment_transaction)
+            latest_sequence = await self._run_transactions_saga(adjustment_transaction)
+        else:
+            latest_sequence = await self._outbox_repository.get_latest_sequence()
 
         wallet_dto = await self.load_wallet_dto(
             wallet_id=transaction_aggregate.root.source_wallet_id,
             user_id=command.user_id,
         )
+        transaction_dto = transaction_to_dto(adjustment_transaction, wallet_dto)
 
         await self._publish_domain_events(transaction_aggregate)
-        return transaction_to_dto(adjustment_transaction, wallet_dto)
+        return transaction_dto, latest_sequence
 
-    async def _run_transactions_sage(self, adjustment_transaction: TransactionEntity) -> None:
-        saga = SagaCoordinator(
+    async def _run_transactions_saga(self, adjustment_transaction: TransactionEntity) -> int:
+        saga_coordinator = SagaCoordinator(
             transaction_steps=[
                 ImmudbTransactionStep(self._transaction_repository, adjustment_transaction),
             ],
-            final_step=OutboxEmissionStep(
+            final_step=PostgresOutboxEmissionStep(
                 outbox_repository=self._outbox_repository,
                 events=[
                     TransactionCreatedOutboxEvent(
@@ -87,4 +92,4 @@ class UpdateTransactionCommandHandler(CommandHandlerBase, LoadWalletMixin, LoadT
             ),
         )
 
-        await saga.run_transaction()
+        return await saga_coordinator.run_transaction()

@@ -6,8 +6,8 @@ from data_write_core.domain.entities import WalletEntity
 from data_write_core.domain.exceptions import UnsupportedCurrencyError
 from data_write_core.domain.value_objects import WalletData
 from data_write_core.infrastructure.outbox_saga import (
-    OutboxEmissionStep,
     PostgresAction,
+    PostgresOutboxEmissionStep,
     PostgresWriteStep,
     SagaCoordinator,
     WalletCreatedOutboxEvent,
@@ -26,7 +26,7 @@ class CreateNewWalletCommand:
     currency: str
 
 
-class CreateNewWalletCommandHandler(CommandHandlerBase):
+class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
     _wallet_repository: WalletRepository
     _currency_repository: CurrencyRepository
     _outbox_repository: OutboxRepository
@@ -42,7 +42,7 @@ class CreateNewWalletCommandHandler(CommandHandlerBase):
         self._currency_repository = currency_repository or registry.currency_repository
         self._outbox_repository = outbox_repository or registry.outbox_repository
 
-    async def handle(self, command: CreateNewWalletCommand) -> WalletDTO:
+    async def handle(self, command: CreateNewWalletCommand) -> tuple[WalletDTO, int]:
         currency_code = command.currency.upper()
         if not await self._currency_repository.currency_code_exists(currency_code):
             raise UnsupportedCurrencyError(currency_code)
@@ -58,26 +58,26 @@ class CreateNewWalletCommandHandler(CommandHandlerBase):
             created_at=timestamp_now,
             updated_at=timestamp_now,
         )
-        persisted_wallet = await self._run_transactions_saga(new_wallet)
+        persisted_wallet, write_version = await self._run_transactions_saga(new_wallet)
 
         await self._publish_domain_events(new_wallet)
-        return wallet_to_dto(persisted_wallet)
+        return wallet_to_dto(persisted_wallet), write_version
 
-    async def _run_transactions_saga(self, new_wallet: WalletEntity) -> WalletEntity:
+    async def _run_transactions_saga(self, new_wallet: WalletEntity) -> tuple[WalletEntity, int]:
         created_wallet_holder: dict[str, WalletEntity] = {}
         persist_wallet, undo_persisted_wallet = self._get_save_unsave_lambdas(
             wallet_holder=created_wallet_holder,
             created_wallet=new_wallet,
         )
 
-        saga = SagaCoordinator(
+        saga_coordinator = SagaCoordinator(
             transaction_steps=[
                 PostgresWriteStep(
                     forward_action=persist_wallet,
                     compensate_action=undo_persisted_wallet,
                 ),
             ],
-            final_step=OutboxEmissionStep(
+            final_step=PostgresOutboxEmissionStep(
                 outbox_repository=self._outbox_repository,
                 events=[
                     WalletCreatedOutboxEvent(
@@ -91,8 +91,8 @@ class CreateNewWalletCommandHandler(CommandHandlerBase):
             ),
         )
 
-        await saga.run_transaction()
-        return created_wallet_holder["wallet"]
+        outbox_version = await saga_coordinator.run_transaction()
+        return created_wallet_holder["wallet"], outbox_version
 
     def _get_save_unsave_lambdas(
         self,

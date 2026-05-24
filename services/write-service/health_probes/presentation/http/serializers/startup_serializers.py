@@ -16,6 +16,7 @@ StartupResponseSerializer = inline_serializer(
         "checks": _StartupChecksSerializer,
     },
 )
+
 StartupDegradedResponseSerializer = inline_serializer(
     name="StartupDegradedResponse",
     fields={

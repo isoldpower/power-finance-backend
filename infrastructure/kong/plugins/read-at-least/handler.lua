@@ -1,119 +1,103 @@
 -- Custom Kong plugin: read-at-least
 --
--- Implements the gateway-side mechanics for the Read-At-Least header
--- described in the architecture spec:
+-- Implements the request-side mechanics for the Read-At-Least header.
+-- The response side (signing X-Write-Version on write routes and
+-- recording the per-user offset to Redis) lives in the separate
+-- `write-ral-version` plugin so the read and write halves can be
+-- attached to their own routes without cross-coupling.
 --
 --   * When the client supplies a Read-At-Least header, validate it as
---     `<offset>:<hex-hmac-sha256>` against a secret shared with the
---     Write Service. This stops clients from forging arbitrary offsets
---     to force Read-Service 503 fallbacks.
+--     `<offset>:<hex-hmac-sha256>` against a gateway-internal secret.
+--     This stops clients from forging arbitrary offsets to force
+--     Read-Service 503 fallbacks.
 --
---   * When the client omits Read-At-Least, look at the Clerk JWT claim
---     `last_write_offset` (or whatever name `offset_claim_name` points
---     at) and inject a freshly-signed header. The Write Service can
---     bake the latest offset into the session token on every refresh,
---     so reads are read-your-writes by default without the client
---     having to keep track.
+--   * When the client omits Read-At-Least, look up the user's latest
+--     write offset in Redis (key `ral:user:{sub}`, populated by the
+--     write-ral-version plugin on write responses) and inject a freshly
+--     signed header. Falls open (no header, free read) on Redis miss
+--     or any lookup failure.
+--
+-- "Offset" here is the Postgres outbox seq id (BIGSERIAL), not the
+-- Kafka offset — see write-ral-version/redis_writer.lua for how the value
+-- gets into Redis.
 --
 -- Runs AFTER clerk-jwt so kong.ctx.shared.clerk_claims is populated.
 
-local hmac = require "resty.openssl.hmac"
+local messages     = require "kong.plugins.read-at-least.messages"
+local utilities    = require "kong.plugins.read-at-least.utilities"
+local redis_lookup = require "kong.plugins.read-at-least.redis_lookup"
 
--- PRIORITY 700 keeps read-at-least below clerk-jwt (850) so the verified
+-- PRIORITY 700 keeps read-at-least below clerk-jwt (801) so the verified
 -- claims have already been stashed in kong.ctx.shared by the time this
 -- runs.
 local ReadAtLeastHandler = {
     PRIORITY = 700,
-    VERSION  = "0.2.0",
+    VERSION  = "0.5.0",
 }
 
 local READ_AT_LEAST_HEADER = "Read-At-Least"
 
 
-local function unauthorized(message)
-    return kong.response.exit(401, { message = message })
-end
-
-
-local function to_hex(bytes)
-    return (bytes:gsub(".", function(c) return string.format("%02x", c:byte()) end))
-end
-
-
-local function sign(secret, payload)
-    local h, err = hmac.new(secret, "sha256")
-    if not h then
-        return nil, "hmac init: " .. (err or "unknown")
+local verify_received_header = function(config, header)
+    local offset, signature = header:match("^(%d+):([a-fA-F0-9]+)$")
+    if not offset or not signature then
+        return messages.malformed_header_message()
     end
-    local digest, derr = h:final(payload)
+
+    local digest, digest_error = utilities.retrieve_digest(config.hmac_secret, offset)
     if not digest then
-        return nil, "hmac final: " .. (derr or "unknown")
+        kong.log.err("read-at-least: ", digest_error)
+        return messages.header_verification_failure()
     end
-    return to_hex(digest)
+    local hex_digest = utilities.to_hex(digest)
+
+    if not utilities.constant_time_equals(hex_digest, signature:lower()) then
+        return messages.hmac_signature_mismatch()
+    end
+
+    return nil
 end
 
 
--- Constant-time string equality. Required for HMAC verification — a naive
--- `==` leaks timing information about the prefix length of the matching
--- signature and lets an attacker recover the secret one byte at a time.
-local function constant_time_equals(a, b)
-    if type(a) ~= "string" or type(b) ~= "string" or #a ~= #b then
-        return false
+local sign_default_offset = function(config, user_id)
+    local offset, lookup_error = redis_lookup.get_user_offset(config, user_id)
+    if lookup_error then
+        kong.log.warn("read-at-least: redis lookup failed (failing open): ", lookup_error)
+        return nil
     end
-    local diff = 0
-    for i = 1, #a do
-        diff = bit.bor(diff, bit.bxor(a:byte(i), b:byte(i)))
+    if not offset then
+        return nil
     end
-    return diff == 0
+
+    local digest, digest_error = utilities.retrieve_digest(config.hmac_secret, offset)
+    if not digest then
+        kong.log.err("read-at-least: ", digest_error)
+        return nil
+    end
+
+    return {
+        signature = utilities.to_hex(digest),
+        offset    = offset,
+    }
 end
 
 
-function ReadAtLeastHandler:access(conf)
+function ReadAtLeastHandler:access(config)
     local header = kong.request.get_header(READ_AT_LEAST_HEADER)
-
     if header and header ~= "" then
-        local offset, signature = header:match("^(%d+):([a-fA-F0-9]+)$")
-        if not offset or not signature then
-            return unauthorized("Malformed Read-At-Least header.")
-        end
-
-        local expected, err = sign(conf.hmac_secret, offset)
-        if not expected then
-            kong.log.err("read-at-least: ", err)
-            return unauthorized("Read-At-Least verification failed.")
-        end
-        if not constant_time_equals(expected, signature:lower()) then
-            return unauthorized("Read-At-Least signature mismatch.")
-        end
-        -- Header is trusted — leave it untouched for the upstream.
-        return
+        return verify_received_header(config, header)
     end
 
-    -- No header → try to inject from the JWT default offset claim.
     local claims = kong.ctx.shared.clerk_claims
-    if not claims then
-        return
-    end
-    local claim_value = claims[conf.offset_claim_name]
-    if claim_value == nil then
+    if not claims or not claims.sub then
         return
     end
 
-    local offset = tostring(claim_value)
-    if not offset:match("^%d+$") then
-        kong.log.warn(
-            "read-at-least: JWT claim `", conf.offset_claim_name,
-            "` is not an integer offset; skipping injection"
-        )
-        return
+    local stored_state = sign_default_offset(config, claims.sub)
+    if stored_state then
+        local header_value = stored_state.offset .. ":" .. stored_state.signature
+        kong.service.request.set_header(READ_AT_LEAST_HEADER, header_value)
     end
-
-    local signature, err = sign(conf.hmac_secret, offset)
-    if not signature then
-        kong.log.err("read-at-least: ", err)
-        return
-    end
-    kong.service.request.set_header(READ_AT_LEAST_HEADER, offset .. ":" .. signature)
 end
 
 

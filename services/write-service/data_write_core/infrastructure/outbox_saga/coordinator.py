@@ -1,6 +1,7 @@
 import logging
+from typing import Any
 
-from .saga_step import SagaStep
+from .saga_step import OutboxSagaStep, SagaStep
 
 logger = logging.getLogger(__name__)
 
@@ -14,43 +15,39 @@ class SagaCoordinator:
     2. `final_step` executes last — the broadcast / "announce it"
        step (currently the outbox emission). Keeping it separate
        leaves the broadcast adapter swappable (PG outbox today,
-       NoSQL outbox tomorrow) without touching the business pipeline.
-
-    Compensation rules:
-    - A transaction step's `forward()` failure runs `compensate()`
-      on already-completed transaction steps in reverse order.
-    - The final step's `forward()` failure runs `compensate()` on
-      ALL transaction steps in reverse order (no consumer ever saw
-      the announcement, so transaction state is rolled back).
-    - The final step is never compensated — by definition no later
-      step exists to fail after it.
-    - Compensation errors are logged at CRITICAL (alertable per
-      architecture.md L677) and do NOT interrupt remaining
-      compensations: best-effort cleanup."""
+       NoSQL outbox tomorrow) without touching the business pipeline."""
 
     def __init__(
         self,
         *,
-        transaction_steps: list[SagaStep],
-        final_step: SagaStep,
+        transaction_steps: list[SagaStep[None]],
+        final_step: OutboxSagaStep,
     ) -> None:
         if not transaction_steps:
             raise ValueError("SagaCoordinator requires at least one transaction step")
-        self._transaction_steps: list[SagaStep] = list(transaction_steps)
-        self._final_step: SagaStep = final_step
 
-    async def run_transaction(self) -> None:
-        completed_steps: list[SagaStep] = []
+        self._transaction_steps: list[SagaStep[None]] = list(transaction_steps)
+        self._final_step: OutboxSagaStep = final_step
 
-        for single_step in self._transaction_steps:
-            await self._run_transaction_step(single_step, completed_steps)
+    async def run_transaction(self) -> int:
+        completed_steps: list[SagaStep[Any]] = []
 
-        await self._run_final_step(completed_steps)
+        try:
+            for single_step in self._transaction_steps:
+                await self._run_transaction_step(single_step, completed_steps)
+
+            result = await self._run_final_step(completed_steps)
+            completed_steps.append(self._final_step)
+            return result
+        except Exception:
+            for step in reversed(completed_steps):
+                await self._run_compensation(step)
+            raise
 
     async def _run_transaction_step(
         self,
-        single_step: SagaStep,
-        completed_steps: list[SagaStep],
+        single_step: SagaStep[None],
+        completed_steps: list[SagaStep[Any]],
     ) -> None:
         try:
             logger.info("SAGA forward (transaction): %s", single_step.name)
@@ -63,13 +60,14 @@ class SagaCoordinator:
                 forward_exc,
                 len(completed_steps),
             )
-            await self._run_compensations(completed_steps)
             raise
 
-    async def _run_final_step(self, completed_steps: list[SagaStep]) -> None:
+    async def _run_final_step(self, completed_steps: list[SagaStep[Any]]) -> int:
         try:
             logger.info("SAGA forward (final): %s", self._final_step.name)
-            await self._final_step.forward()
+            latest_sequence = await self._final_step.forward()
+
+            return latest_sequence
         except Exception as forward_exc:
             logger.warning(
                 "SAGA final step '%s' failed: %s; rolling back %d transaction step(s)",
@@ -77,17 +75,15 @@ class SagaCoordinator:
                 forward_exc,
                 len(completed_steps),
             )
-            await self._run_compensations(completed_steps)
             raise
 
-    async def _run_compensations(self, completed_steps: list[SagaStep]) -> None:
-        for step in reversed(completed_steps):
-            try:
-                logger.info("SAGA compensate: %s", step.name)
-                await step.compensate()
-            except Exception as compensation_exc:
-                logger.critical(
-                    "SAGA compensation failed for step '%s'; orphan state likely",
-                    step.name,
-                    exc_info=compensation_exc,
-                )
+    async def _run_compensation(self, completed_step: SagaStep[Any]) -> None:
+        try:
+            logger.info("SAGA compensate: %s", completed_step.name)
+            await completed_step.compensate()
+        except Exception as compensation_exc:
+            logger.critical(
+                "SAGA compensation failed for step '%s'; orphan state likely",
+                completed_step.name,
+                exc_info=compensation_exc,
+            )

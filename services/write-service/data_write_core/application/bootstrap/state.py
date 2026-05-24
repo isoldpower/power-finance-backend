@@ -1,14 +1,14 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from data_write_core.application.interfaces import EventBus
-    from data_write_core.application.interfaces.repository import (
-        CurrencyRepository,
-        OutboxRepository,
-        TransactionRepository,
-        WalletRepository,
-    )
+from ..interfaces import (
+    CurrencyRepository,
+    EventBus,
+    OutboxRepository,
+    TransactionRepository,
+    UserRepository,
+    WalletRepository,
+)
 
 
 @dataclass(frozen=True)
@@ -23,6 +23,7 @@ class RepositoryRegistry:
     transaction_repository: "TransactionRepository"
     currency_repository: "CurrencyRepository"
     outbox_repository: "OutboxRepository"
+    user_repository: "UserRepository"
 
 
 @dataclass

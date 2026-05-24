@@ -1,12 +1,14 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, ClassVar
 from uuid import UUID, uuid4
 
+from data_write_core.application.interfaces import OutboxEventBase
+
 
 @dataclass(frozen=True)
-class OutboxEvent(ABC):
+class OutboxEvent(OutboxEventBase):
     """Wire-contract event for the transactional outbox / Kafka stream.
 
     Deliberately separate from domain events: domain events are

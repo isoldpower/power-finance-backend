@@ -8,6 +8,13 @@ from unittest import IsolatedAsyncioTestCase
 from rest_framework import status
 from rest_framework.response import Response
 
+from write_service.common.idempotency.atomic_redis import (
+    Acquired,
+    AlreadyCompleted,
+    InProgress,
+    Mismatch,
+    StoredResponse,
+)
 from write_service.common.idempotency.decorator import (
     IDEMPOTENCY_HEADER,
     get_store,
@@ -19,13 +26,6 @@ from write_service.common.idempotency.exceptions import (
     IdempotencyKeyRequired,
     IdempotencyKeyReused,
     IdempotencyUnavailable,
-)
-from write_service.common.idempotency.store import (
-    Acquired,
-    AlreadyCompleted,
-    InProgress,
-    Mismatch,
-    StoredResponse,
     StoreUnavailable,
 )
 
@@ -100,7 +100,7 @@ def _make_request(
         path=path,
         data=body if body is not None else {},
         headers=headers or {},
-        user=SimpleNamespace(id=user_id),
+        user=SimpleNamespace(unique_id=user_id),
     )
 
 
@@ -159,7 +159,9 @@ class IdempotentDecoratorTests(IsolatedAsyncioTestCase):
         body = {"amount": "10"}
         req = _make_request(headers={IDEMPOTENCY_HEADER: "k-3"}, body=body)
         h = fingerprint(req.method, req.path, body)
-        self.store.entries[f"{req.user.id}:k-3"] = _FakeEntry(request_hash=h, state="in_flight")
+        self.store.entries[f"{req.user.unique_id}:k-3"] = _FakeEntry(
+            request_hash=h, state="in_flight"
+        )
 
         with self.assertRaises(IdempotencyInFlight):
             await view(self, req)

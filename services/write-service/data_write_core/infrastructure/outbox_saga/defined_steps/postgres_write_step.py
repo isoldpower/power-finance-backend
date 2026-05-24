@@ -11,7 +11,7 @@ async def _noop() -> None:
     return
 
 
-class PostgresWriteStep(SagaStep):
+class PostgresWriteStep(SagaStep[None]):
     """Postgres business-write step for a SAGA."""
 
     def __init__(

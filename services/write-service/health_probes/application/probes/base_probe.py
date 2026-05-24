@@ -6,15 +6,6 @@ from ..interfaces import ServiceHealthChecker
 
 
 class BaseProbe:
-    """Runs a registered set of `ServiceHealthChecker`s concurrently and
-    aggregates the results. Subclasses just declare what to check; this
-    class owns the concurrency + roll-up logic.
-
-    `asyncio.gather(..., return_exceptions=True)` ensures one slow or
-    raising checker can't bring down the whole probe — its exception is
-    captured and the dependency reports as `degraded`.
-    """
-
     _checkers: dict[str, ServiceHealthChecker]
 
     def __init__(self, checkers: dict[str, ServiceHealthChecker]):

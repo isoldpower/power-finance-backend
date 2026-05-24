@@ -1,3 +1,5 @@
+import logging
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
@@ -11,7 +13,7 @@ from data_write_core.application.commands import (
     UpdateExistingWalletCommandHandler,
 )
 
-from ...mixins import trace_handler_flow
+from ...decorators import trace_handler_flow
 from ...presenters import (
     CommonHttpPresenter,
     MessageResultInfo,
@@ -22,10 +24,13 @@ from ...serializers import (
     UpdateWalletRequestSerializer,
     WalletResponseSerializer,
 )
+from ..mixins import CommandResponseMixin
 from .base import WalletView
 
+logger = logging.getLogger(__name__)
 
-class WalletResourceView(WalletView):
+
+class WalletResourceView(WalletView, CommandResponseMixin):
     @extend_schema(
         operation_id="wallets_partial_update",
         summary="Rename a wallet",
@@ -53,17 +58,26 @@ class WalletResourceView(WalletView):
         try:
             validated = serializer.validated_data
             handler = UpdateExistingWalletCommandHandler()
-            updated_wallet = await handler.handle(
+            updated_wallet, write_version = await handler.handle(
                 UpdateExistingWalletCommand(
-                    user_id=request.user.id,
+                    user_id=int(request.user.unique_id),
                     wallet_id=pk,
                     new_name=validated["new_name"],
                 )
             )
 
             payload = WalletHttpPresenter.present_one(updated_wallet)
-            return Response(payload, status=status.HTTP_200_OK)
+            return self.form_write_response(
+                status_code=status.HTTP_200_OK,
+                response_body=payload,
+                write_version=write_version,
+            )
         except Exception as exc:
+            logger.exception(
+                "WalletResourceView: patch failed for wallet ID %s, user ID %s",
+                pk,
+                request.user.unique_id,
+            )
             payload = CommonHttpPresenter.present_message_result(
                 MessageResultInfo(
                     message=f"Failed to update wallet with ID {pk}: {exc}",
@@ -98,9 +112,9 @@ class WalletResourceView(WalletView):
     async def delete(self, request, pk=None):
         try:
             handler = SoftDeleteWalletCommandHandler()
-            deleted_wallet = await handler.handle(
+            deleted_wallet, write_version = await handler.handle(
                 SoftDeleteWalletCommand(
-                    user_id=request.user.id,
+                    user_id=int(request.user.unique_id),
                     wallet_id=pk,
                 )
             )
@@ -111,8 +125,17 @@ class WalletResourceView(WalletView):
                     resource_id=str(deleted_wallet.id),
                 )
             )
-            return Response(payload, status=status.HTTP_200_OK)
+            return self.form_write_response(
+                status_code=status.HTTP_200_OK,
+                response_body=payload,
+                write_version=write_version,
+            )
         except Exception as exc:
+            logger.exception(
+                "WalletResourceView: delete failed for wallet ID %s, user ID %s",
+                pk,
+                request.user.unique_id,
+            )
             payload = CommonHttpPresenter.present_message_result(
                 MessageResultInfo(
                     message=f"Failed to delete wallet with ID {pk}: {exc}",

@@ -10,7 +10,7 @@ from data_write_core.application.commands import (
     CreateTransactionCommandHandler,
 )
 
-from ...mixins import trace_handler_flow
+from ...decorators import trace_handler_flow
 from ...presenters import (
     CommonHttpPresenter,
     MessageResultInfo,
@@ -21,12 +21,13 @@ from ...serializers import (
     MessageResponseSerializer,
     TransactionResponseSerializer,
 )
+from ..mixins import CommandResponseMixin
 from .base import TransactionView
 
 logger = logging.getLogger(__name__)
 
 
-class TransactionListView(TransactionView):
+class TransactionListView(TransactionView, CommandResponseMixin):
     @extend_schema(
         operation_id="transactions_create",
         summary="Create a new transaction",
@@ -46,21 +47,24 @@ class TransactionListView(TransactionView):
         try:
             validated = serializer.validated_data
             handler = CreateTransactionCommandHandler()
-            created_transaction = await handler.handle(
+            created_transaction, write_version = await handler.handle(
                 CreateTransactionCommand(
-                    user_id=request.user.id,
+                    user_id=int(request.user.unique_id),
                     source_wallet_id=validated["source_wallet_id"],
                     amount=validated["amount"],
                 )
             )
 
             payload = TransactionHttpPresenter.present_one(created_transaction)
-            return Response(payload, status=status.HTTP_201_CREATED)
+            return self.form_write_response(
+                status_code=status.HTTP_201_CREATED,
+                response_body=payload,
+                write_version=write_version,
+            )
         except Exception as exc:
-            logger.error(
-                "TransactionListView: create failed for User ID %s: %s",
-                request.user.id,
-                str(exc),
+            logger.exception(
+                "TransactionListView: create failed for User ID %s",
+                request.user.unique_id,
             )
             payload = CommonHttpPresenter.present_message_result(
                 MessageResultInfo(
@@ -68,4 +72,5 @@ class TransactionListView(TransactionView):
                     resource_id=None,
                 )
             )
+
             return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

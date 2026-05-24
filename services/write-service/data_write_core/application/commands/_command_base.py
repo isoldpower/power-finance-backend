@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Protocol
+from typing import Generic, Protocol, TypeVar
 
 from data_write_core.application.bootstrap import get_event_bus
 from data_write_core.domain.events import DomainEvent
@@ -9,9 +9,12 @@ class _EventSource(Protocol):
     def pull_events(self) -> list[DomainEvent]: ...
 
 
-class CommandHandlerBase(ABC):
+THandler = TypeVar("THandler")
+
+
+class CommandHandlerBase(ABC, Generic[THandler]):
     @abstractmethod
-    async def handle(self, command):
+    async def handle(self, command) -> tuple[THandler, int]:
         raise NotImplementedError()
 
     async def _publish_domain_events(self, *sources: _EventSource) -> None:

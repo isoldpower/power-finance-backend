@@ -5,14 +5,6 @@ from .base_probe import BaseProbe
 
 
 class CheckDependenciesReady(BaseProbe):
-    """Readiness probe: "can this Write Service serve traffic right now?".
-    Returns `degraded` if any wired downstream dependency is unreachable so
-    Kong/Kubernetes can stop routing requests to this pod.
-
-    Phase A wires only Postgres. Redis, ImmuDB, and Kafka checkers will be
-    added here as their adapters land in later phases.
-    """
-
     def __init__(self) -> None:
         super().__init__(
             {

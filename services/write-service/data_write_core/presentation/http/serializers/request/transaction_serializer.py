@@ -7,8 +7,4 @@ class CreateTransactionRequestSerializer(serializers.Serializer):
 
 
 class UpdateTransactionRequestSerializer(serializers.Serializer):
-    """Request body for adjusting an existing transaction's amount.
-    Update semantics changed from the monolith: the original transaction
-    stays untouched and a new adjustment transaction is appended."""
-
     new_amount = serializers.DecimalField(max_digits=18, decimal_places=2)

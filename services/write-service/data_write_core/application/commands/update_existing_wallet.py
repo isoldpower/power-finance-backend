@@ -6,8 +6,8 @@ from data_write_core.domain.aggregates import WalletAggregate
 from data_write_core.domain.entities import WalletEntity
 from data_write_core.domain.value_objects import WalletData
 from data_write_core.infrastructure.outbox_saga import (
-    OutboxEmissionStep,
     PostgresAction,
+    PostgresOutboxEmissionStep,
     PostgresWriteStep,
     SagaCoordinator,
     WalletUpdatedOutboxEvent,
@@ -30,7 +30,7 @@ class UpdateExistingWalletCommand:
     new_name: str
 
 
-class UpdateExistingWalletCommandHandler(CommandHandlerBase, LoadWalletMixin):
+class UpdateExistingWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWalletMixin):
     _wallet_repository: WalletRepository
     _transaction_repository: TransactionRepository
     _outbox_repository: OutboxRepository
@@ -52,7 +52,7 @@ class UpdateExistingWalletCommandHandler(CommandHandlerBase, LoadWalletMixin):
         self._transaction_repository = transaction_repository
         self._outbox_repository = outbox_repository
 
-    async def handle(self, command: UpdateExistingWalletCommand) -> WalletDTO:
+    async def handle(self, command: UpdateExistingWalletCommand) -> tuple[WalletDTO, int]:
         wallet_aggregate = await self.load_wallet_aggregate(
             wallet_id=command.wallet_id,
             user_id=command.user_id,
@@ -64,33 +64,36 @@ class UpdateExistingWalletCommandHandler(CommandHandlerBase, LoadWalletMixin):
             currency_code=wallet_aggregate.root.currency_code,
         )
         wallet_aggregate.rename(new_title=command.new_name, now=timestamp_now)
-        updated_wallet = await self._run_transactions_saga(
-            wallet_aggregate=wallet_aggregate, previous_state=previous_data, timestamp=timestamp_now
+        updated_wallet, latest_sequence = await self._run_transactions_saga(
+            wallet_aggregate=wallet_aggregate,
+            previous_state=previous_data,
+            timestamp=timestamp_now,
         )
-
-        await self._publish_domain_events(wallet_aggregate)
-        return wallet_to_dto(
+        wallet_dto = wallet_to_dto(
             wallet=updated_wallet,
             balance_amount=wallet_aggregate.balance,
         )
 
+        await self._publish_domain_events(wallet_aggregate)
+        return wallet_dto, latest_sequence
+
     async def _run_transactions_saga(
         self, wallet_aggregate: WalletAggregate, previous_state: WalletData, timestamp: datetime
-    ) -> WalletEntity:
+    ) -> tuple[WalletEntity, int]:
         wallet_holder: dict[str, WalletEntity] = {}
         persist_rename, undo_rename = self._get_save_unsave_lambdas(
             wallet_holder=wallet_holder,
             wallet_aggregate=wallet_aggregate,
         )
 
-        saga = SagaCoordinator(
+        saga_coordinator = SagaCoordinator(
             transaction_steps=[
                 PostgresWriteStep(
                     forward_action=persist_rename,
                     compensate_action=undo_rename,
                 ),
             ],
-            final_step=OutboxEmissionStep(
+            final_step=PostgresOutboxEmissionStep(
                 outbox_repository=self._outbox_repository,
                 events=[
                     WalletUpdatedOutboxEvent(
@@ -104,8 +107,8 @@ class UpdateExistingWalletCommandHandler(CommandHandlerBase, LoadWalletMixin):
             ),
         )
 
-        await saga.run_transaction()
-        return wallet_holder["wallet"]
+        latest_sequence = await saga_coordinator.run_transaction()
+        return wallet_holder["wallet"], latest_sequence
 
     def _get_save_unsave_lambdas(
         self,

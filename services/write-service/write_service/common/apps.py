@@ -6,8 +6,6 @@ infrastructure, not business logic — read-service / push-service would
 configure their own instances independently.
 """
 
-from __future__ import annotations
-
 from django.apps import AppConfig
 from django.conf import settings
 
@@ -19,8 +17,8 @@ class WriteServiceCommonConfig(AppConfig):
     def ready(self) -> None:
         from redis.asyncio import Redis
 
+        from .idempotency.atomic_redis import RedisIdempotencyStore
         from .idempotency.decorator import set_store
-        from .idempotency.store import RedisIdempotencyStore
 
         redis_settings = settings.REDIS
         idem_settings = settings.IDEMPOTENCY

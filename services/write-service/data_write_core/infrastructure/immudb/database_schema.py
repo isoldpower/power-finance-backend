@@ -33,11 +33,8 @@ def _initialize_schema(client: ImmudbClient) -> None:
     "
     )
 
-    # Non-unique index on cancels_other: immudb treats NULL as a real value
-    # in unique indexes, so a UNIQUE index here would reject every non-
-    # cancelling transaction after the first. Uniqueness ("a transaction
-    # can only be cancelled once") is enforced at the repository layer via
-    # `get_cancelling_transaction`.
+    # immudb treats NULL as a real value, so a UNIQUE index here would reject
+    # every non-cancelling transaction after the first.
     client.sqlExec(
         "\
         CREATE INDEX IF NOT EXISTS ON transactions(user_id); \

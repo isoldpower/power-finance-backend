@@ -13,6 +13,7 @@ Redis outage returns 503 (fail-closed). For non-money endpoints
 logged and the request proceeds.
 """
 
+from .atomic_redis import RedisIdempotencyStore, StoredResponse
 from .decorator import idempotent
 from .exceptions import (
     IdempotencyError,
@@ -21,7 +22,6 @@ from .exceptions import (
     IdempotencyKeyReused,
     IdempotencyUnavailable,
 )
-from .store import RedisIdempotencyStore, StoredResponse
 
 __all__ = [
     "IdempotencyError",

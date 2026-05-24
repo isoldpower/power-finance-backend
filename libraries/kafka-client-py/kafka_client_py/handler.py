@@ -1,46 +1,32 @@
-"""Error-routing wrapper around a user-supplied async message handler.
-
-Routing flow per message:
-
-    dedupe.seen(event_id)?  -> skip silently
-    user_handler(msg)       -> ok      -> done (caller commits offset)
-                              transient -> in-process retry (with backoff)
-                                          on exhaustion: events.retry  (if budget left)
-                                                         events.dlq    (if budget spent)
-                              poison    -> events.dlq immediately
-
-The handler does NOT commit Kafka offsets. The caller (consumer loop) commits
-after `handle()` returns *without raising*. If the handler raises, the loop
-should NOT commit — re-deliver on next poll. The handler raises only on
-internal failures (publisher down); business failures are always routed and
-swallowed.
-"""
-
-from __future__ import annotations
-
 import asyncio
-import logging
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
 
-from . import headers as H
 from ._message import ConsumedMessage
+from .attempt_outcome import (
+    AttemptOutcome,
+    HandlerRaisedNonRetryable,
+    HandlerRaisedPoison,
+    HandlerRaisedRetryable,
+    HandlerSucceeded,
+)
 from .dedupe import DedupeStore
+from .dedupe_gate import DedupeGate, EventIdExtractor
 from .dlq_publisher import DLQPublisher
 from .errors import PoisonError
+from .in_process_loop_state import InProcessLoopState
+from .retry_context import RetryContext
 from .retry_policy import RetryPolicy
 from .retry_publisher import RetryPublisher
-
-logger = logging.getLogger(__name__)
-
+from .terminal_router import TerminalRouter
 
 UserHandler = Callable[[ConsumedMessage], Awaitable[None]]
-EventIdExtractor = Callable[[ConsumedMessage], str | None]
+
+
+_IN_PROCESS_BACKOFF_SECONDS_PER_ATTEMPT = 0.1
+_IN_PROCESS_BACKOFF_CEILING_SECONDS = 1.0
 
 
 class MessageHandler:
-    """Wraps a user handler with retry / DLQ / dedupe routing."""
-
     def __init__(
         self,
         user_handler: UserHandler,
@@ -52,94 +38,76 @@ class MessageHandler:
         event_id: EventIdExtractor | None = None,
     ) -> None:
         self._user_handler = user_handler
-        self._policy = policy
-        self._retry = retry_publisher
-        self._dlq = dlq_publisher
-        self._dedupe = dedupe
-        self._event_id = event_id
+        self._retry_policy = policy
+        self._dedupe_gate = DedupeGate(
+            dedupe_store=dedupe,
+            event_id_extractor=event_id,
+        )
+        self._terminal_router = TerminalRouter(
+            retry_policy=policy,
+            retry_publisher=retry_publisher,
+            dlq_publisher=dlq_publisher,
+        )
 
-    async def handle(self, msg: ConsumedMessage) -> None:
-        # Dedupe — skip messages already processed by this consumer group.
-        if self._dedupe is not None and self._event_id is not None:
-            eid = self._event_id(msg)
-            if eid is not None and await self._dedupe.seen(eid):
-                logger.debug("kafka.dedupe.skip", extra={"event_id": eid})
-                return
-
-        retry_topic_attempt = H.get_int(msg.headers, H.HEADER_RETRY_COUNT, default=0)
-        first_failed_at = H.get_datetime(msg.headers, H.HEADER_FIRST_FAILED_AT)
-        last_error: BaseException | None = None
-
-        # In-process retry loop. Each iteration is a fresh user_handler call.
-        for in_proc_attempt in range(1, self._policy.max_in_process_attempts + 1):
-            try:
-                await self._user_handler(msg)
-                return
-            except PoisonError as exc:
-                # Terminal on first occurrence — straight to DLQ.
-                await self._dlq.publish(
-                    msg,
-                    error=exc,
-                    total_attempts=retry_topic_attempt + in_proc_attempt,
-                    first_failed_at=first_failed_at or datetime.now(UTC),
-                )
-                logger.warning(
-                    "kafka.handler.poison",
-                    extra={"topic": msg.topic, "error_class": type(exc).__name__},
-                )
-                return
-            except BaseException as exc:
-                if not self._policy.is_retryable(exc):
-                    await self._dlq.publish(
-                        msg,
-                        error=exc,
-                        total_attempts=retry_topic_attempt + in_proc_attempt,
-                        first_failed_at=first_failed_at or datetime.now(UTC),
-                    )
-                    logger.warning(
-                        "kafka.handler.non_retryable",
-                        extra={"topic": msg.topic, "error_class": type(exc).__name__},
-                    )
-                    return
-
-                last_error = exc
-                if in_proc_attempt < self._policy.max_in_process_attempts:
-                    # Short in-process backoff scaled by attempt number, capped
-                    # at 1 second — anything longer belongs on the retry topic.
-                    await asyncio.sleep(min(0.1 * in_proc_attempt, 1.0))
-
-        # In-process budget exhausted. Route based on retry-topic budget.
-        assert last_error is not None
-        total_in_proc = self._policy.max_in_process_attempts
-
-        if retry_topic_attempt < self._policy.max_retry_topic_attempts:
-            next_attempt = retry_topic_attempt + 1
-            retry_at = self._policy.compute_retry_at(next_attempt)
-            await self._retry.publish(
-                msg,
-                error=last_error,
-                next_retry_at=retry_at,
-                attempt=next_attempt,
-                first_failed_at=first_failed_at or datetime.now(UTC),
-            )
-            logger.info(
-                "kafka.handler.retry_scheduled",
-                extra={
-                    "topic": msg.topic,
-                    "retry_at": retry_at.isoformat(),
-                    "retry_topic_attempt": next_attempt,
-                },
-            )
+    async def handle(self, message: ConsumedMessage) -> None:
+        if await self._dedupe_gate.already_processed(message):
             return
 
-        # Retry-topic budget spent too — DLQ.
-        await self._dlq.publish(
-            msg,
-            error=last_error,
-            total_attempts=retry_topic_attempt + total_in_proc,
-            first_failed_at=first_failed_at or datetime.now(UTC),
+        retry_context = RetryContext.from_message(message)
+        last_retryable_exception = await self._run_in_process_attempts(
+            message,
+            retry_context,
         )
-        logger.warning(
-            "kafka.handler.exhausted",
-            extra={"topic": msg.topic, "total_attempts": retry_topic_attempt + total_in_proc},
+
+        if last_retryable_exception is None:
+            return
+        else:
+            await self._terminal_router.route_terminal_failure(
+                message,
+                last_exception=last_retryable_exception,
+                retry_context=retry_context,
+                in_process_attempts_made=self._retry_policy.max_in_process_attempts,
+            )
+
+    async def _run_in_process_attempts(
+        self,
+        message: ConsumedMessage,
+        retry_context: RetryContext,
+    ) -> BaseException | None:
+        loop_state = InProcessLoopState()
+
+        for attempt_number in range(1, self._retry_policy.max_in_process_attempts + 1):
+            attempt_outcome = await self._invoke_user_handler_once(message)
+            await attempt_outcome.apply(
+                loop_state=loop_state,
+                terminal_router=self._terminal_router,
+                message=message,
+                retry_context=retry_context,
+                attempt_number=attempt_number,
+            )
+            if loop_state.is_complete:
+                return None
+            if attempt_number < self._retry_policy.max_in_process_attempts:
+                await self._sleep_between_in_process_attempts(attempt_number)
+
+        return loop_state.last_retryable_exception
+
+    async def _invoke_user_handler_once(self, message: ConsumedMessage) -> AttemptOutcome:
+        try:
+            await self._user_handler(message)
+            return HandlerSucceeded()
+        except PoisonError as poison_exception:
+            return HandlerRaisedPoison(exception=poison_exception)
+        except BaseException as raised_exception:
+            if self._retry_policy.is_retryable(raised_exception):
+                return HandlerRaisedRetryable(exception=raised_exception)
+            return HandlerRaisedNonRetryable(exception=raised_exception)
+
+    @staticmethod
+    async def _sleep_between_in_process_attempts(attempt_number: int) -> None:
+        await asyncio.sleep(
+            min(
+                _IN_PROCESS_BACKOFF_SECONDS_PER_ATTEMPT * attempt_number,
+                _IN_PROCESS_BACKOFF_CEILING_SECONDS,
+            )
         )

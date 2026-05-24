@@ -5,8 +5,8 @@ from uuid import UUID
 from data_write_core.domain.aggregates import WalletAggregate
 from data_write_core.domain.entities import WalletEntity
 from data_write_core.infrastructure.outbox_saga import (
-    OutboxEmissionStep,
     PostgresAction,
+    PostgresOutboxEmissionStep,
     PostgresWriteStep,
     SagaCoordinator,
     WalletDeletedOutboxEvent,
@@ -25,7 +25,7 @@ class SoftDeleteWalletCommand:
     wallet_id: UUID
 
 
-class SoftDeleteWalletCommandHandler(CommandHandlerBase, LoadWalletMixin):
+class SoftDeleteWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWalletMixin):
     _wallet_repository: WalletRepository
     _transaction_repository: TransactionRepository
     _outbox_repository: OutboxRepository
@@ -47,7 +47,7 @@ class SoftDeleteWalletCommandHandler(CommandHandlerBase, LoadWalletMixin):
         self._transaction_repository = transaction_repository
         self._outbox_repository = outbox_repository
 
-    async def handle(self, command: SoftDeleteWalletCommand) -> WalletDTO:
+    async def handle(self, command: SoftDeleteWalletCommand) -> tuple[WalletDTO, int]:
         wallet_aggregate = await self.load_wallet_aggregate(
             wallet_id=command.wallet_id,
             user_id=command.user_id,
@@ -55,36 +55,34 @@ class SoftDeleteWalletCommandHandler(CommandHandlerBase, LoadWalletMixin):
 
         timestamp_now = datetime.now()
         wallet_aggregate.soft_delete(now=timestamp_now)
-        saved_wallet = await self._run_transactions_saga(
+        saved_wallet, latest_sequence = await self._run_transactions_saga(
             wallet_aggregate=wallet_aggregate,
             timestamp_now=timestamp_now,
         )
+        wallet_dto = wallet_to_dto(saved_wallet, balance_amount=wallet_aggregate.balance)
 
         await self._publish_domain_events(wallet_aggregate)
-        return wallet_to_dto(
-            saved_wallet,
-            balance_amount=wallet_aggregate.balance,
-        )
+        return wallet_dto, latest_sequence
 
     async def _run_transactions_saga(
         self,
         wallet_aggregate: WalletAggregate,
         timestamp_now: datetime,
-    ) -> WalletEntity:
+    ) -> tuple[WalletEntity, int]:
         saved_wallet_holder: dict[str, WalletEntity] = {}
         persist_soft_delete, undo_soft_delete = self._get_save_unsave_lambdas(
             wallet_holder=saved_wallet_holder,
             wallet_aggregate=wallet_aggregate,
         )
 
-        saga = SagaCoordinator(
+        saga_coordinator = SagaCoordinator(
             transaction_steps=[
                 PostgresWriteStep(
                     forward_action=persist_soft_delete,
                     compensate_action=undo_soft_delete,
                 ),
             ],
-            final_step=OutboxEmissionStep(
+            final_step=PostgresOutboxEmissionStep(
                 outbox_repository=self._outbox_repository,
                 events=[
                     WalletDeletedOutboxEvent(
@@ -96,8 +94,8 @@ class SoftDeleteWalletCommandHandler(CommandHandlerBase, LoadWalletMixin):
             ),
         )
 
-        await saga.run_transaction()
-        return saved_wallet_holder["wallet"]
+        latest_sequence = await saga_coordinator.run_transaction()
+        return saved_wallet_holder["wallet"], latest_sequence
 
     def _get_save_unsave_lambdas(
         self,

@@ -8,15 +8,6 @@ from .base_probe import BaseProbe
 
 
 class CheckApplicationStarted(BaseProbe):
-    """Startup probe: "is this process finished initializing?". Kubernetes
-    polls this until `ok`, then begins polling readiness; failures here
-    don't terminate the pod (unlike liveness) but delay it being considered
-    started.
-
-    Includes `migrations` so a deploy that ships unapplied schema changes
-    won't accept traffic until the migration step has completed.
-    """
-
     def __init__(self) -> None:
         super().__init__(
             {

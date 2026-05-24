@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regenerate Python bindings from proto/*.proto into kafka_messages_proto/_generated/.
+# Regenerate Python bindings from proto/*.proto into kafka_messages/_generated/.
 # The output is committed: consumers don't need protoc installed locally.
 #
 # Run from anywhere; the script resolves paths relative to itself.
@@ -7,7 +7,7 @@ set -euo pipefail
 
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROTO_DIR="${LIB_DIR}/proto"
-OUT_DIR="${LIB_DIR}/kafka_messages_proto/_generated"
+OUT_DIR="${LIB_DIR}/kafka_messages/_generated"
 
 rm -rf "${OUT_DIR}"
 mkdir -p "${OUT_DIR}"

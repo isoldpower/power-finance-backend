@@ -1,4 +1,4 @@
-from data_write_core.infrastructure.immudb.client import build_immudb_client
+from data_write_core.infrastructure.immudb import build_immudb_client
 
 from .state import ApplicationEnvironment, ImmudbConnection
 

@@ -28,6 +28,31 @@ services:
       - name: clerk-jwt
         config:
           issuer_url: "{vault://env/clerk-issuer-url}"
+          # JWKS cache lives in gateway-redis, keyed by issuer URL.
+          # Single-flight fetch lock still uses an nginx shared dict
+          # (see KONG_NGINX_HTTP_LUA_SHARED_DICT in compose.yaml).
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 100
+          redis_key_prefix: "clerk:jwks:"
+      # write-ral-version handles the response side of the consistency-token
+      # mechanism: it signs the raw X-Write-Version emitted by Write
+      # Service into the canonical {seq}:{hmac} form and best-effort
+      # records (user_id, seq) in gateway-redis so subsequent reads from
+      # the same user can get a default Read-At-Least header injected by
+      # the read-at-least plugin. Write Service stays ignorant of HMAC
+      # and Redis.
+      - name: write-ral-version
+        config:
+          hmac_secret: "{vault://env/read-at-least-hmac-secret}"
+          write_version_header: "X-Write-Version"
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 100
+          redis_key_prefix: "ral:user:"
+          redis_ttl_seconds: 604800
       # Tier 1 — IP floor. Applies to every request (anonymous and
       # authenticated). Generous enough to survive shared IPs (NAT,
       # corporate, mobile carriers) where many users share an egress.
@@ -51,6 +76,11 @@ services:
         config:
           per_minute: 60
           per_hour: 1000
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 1000
+          redis_key_prefix: "rl:user:"
 
   - name: read-service
     host: read-service
@@ -70,12 +100,26 @@ services:
       - name: clerk-jwt
         config:
           issuer_url: "{vault://env/clerk-issuer-url}"
-      # read-at-least only matters on the read path: it enforces the
-      # consistency contract between client and Read Service.
+          # JWKS cache lives in gateway-redis, keyed by issuer URL.
+          # Single-flight fetch lock still uses an nginx shared dict
+          # (see KONG_NGINX_HTTP_LUA_SHARED_DICT in compose.yaml).
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 100
+          redis_key_prefix: "clerk:jwks:"
+      # read-at-least handles the request side: verifies the HMAC of
+      # inbound Read-At-Least headers (which were signed earlier by
+      # write-ral-version on the write path) and injects a default from
+      # gateway-redis when the header is absent.
       - name: read-at-least
         config:
           hmac_secret: "{vault://env/read-at-least-hmac-secret}"
-          offset_claim_name: last_write_offset
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 100
+          redis_key_prefix: "ral:user:"
       # Tier 1 — IP floor on the read path. Reads are cheap; this cap is
       # mostly here as anti-flood for unauthenticated probes.
       - name: rate-limiting
@@ -97,6 +141,11 @@ services:
         config:
           per_minute: 600
           per_hour: 20000
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 1000
+          redis_key_prefix: "rl:user:"
 
   - name: push-service
     host: push-service
@@ -118,6 +167,14 @@ services:
       - name: clerk-jwt
         config:
           issuer_url: "{vault://env/clerk-issuer-url}"
+          # JWKS cache lives in gateway-redis, keyed by issuer URL.
+          # Single-flight fetch lock still uses an nginx shared dict
+          # (see KONG_NGINX_HTTP_LUA_SHARED_DICT in compose.yaml).
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 100
+          redis_key_prefix: "clerk:jwks:"
       # No rate-limiting on /events: SSE is connection-bound, not request-
       # bound, and a per-request counter would fire after the first event.
       # Concurrent-connection limits belong on the Push Service itself.

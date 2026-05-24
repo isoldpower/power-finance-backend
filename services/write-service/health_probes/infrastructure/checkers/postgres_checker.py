@@ -6,10 +6,6 @@ from health_probes.domain.entities import ProbeStatus
 
 
 class PostgresHealthChecker(ServiceHealthChecker):
-    """Reachability probe for the Write Service's Postgres. Uses a `SELECT 1`
-    on the default connection. Django's DB API is sync — `sync_to_async`
-    bridges it without blocking the event loop."""
-
     def _check_health(self) -> str:
         try:
             connection = connections["default"]

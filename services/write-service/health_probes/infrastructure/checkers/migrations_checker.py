@@ -7,10 +7,6 @@ from health_probes.domain.entities import ProbeStatus
 
 
 class MigrationsHealthChecker(ServiceHealthChecker):
-    """Reports `ok` only when every migration in the graph is applied.
-    Used by the startup probe so Kubernetes won't start routing traffic
-    after a deploy whose `migrate` step is still running."""
-
     def _check_health(self) -> str:
         try:
             connection = connections["default"]

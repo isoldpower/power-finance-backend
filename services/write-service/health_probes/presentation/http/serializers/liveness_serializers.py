@@ -7,6 +7,7 @@ LivenessResponseSerializer = inline_serializer(
         "status": serializers.CharField(),
     },
 )
+
 LivenessDegradedResponseSerializer = inline_serializer(
     name="LivenessDegradedResponse",
     fields={

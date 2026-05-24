@@ -13,7 +13,7 @@ from data_write_core.application.commands import (
     UpdateTransactionCommandHandler,
 )
 
-from ...mixins import trace_handler_flow
+from ...decorators import trace_handler_flow
 from ...presenters import (
     CommonHttpPresenter,
     MessageResultInfo,
@@ -24,12 +24,13 @@ from ...serializers import (
     TransactionResponseSerializer,
     UpdateTransactionRequestSerializer,
 )
+from ..mixins import CommandResponseMixin
 from .base import TransactionView
 
 logger = logging.getLogger(__name__)
 
 
-class TransactionResourceView(TransactionView):
+class TransactionResourceView(TransactionView, CommandResponseMixin):
     @extend_schema(
         operation_id="transactions_partial_update",
         summary="Adjust a transaction's amount",
@@ -60,23 +61,33 @@ class TransactionResourceView(TransactionView):
         try:
             validated = serializer.validated_data
             handler = UpdateTransactionCommandHandler()
-            adjusted = await handler.handle(
+            adjusted_transaction, write_version = await handler.handle(
                 UpdateTransactionCommand(
-                    user_id=request.user.id,
+                    user_id=int(request.user.unique_id),
                     transaction_id=pk,
                     new_amount=validated["new_amount"],
                 )
             )
 
-            payload = TransactionHttpPresenter.present_one(adjusted)
-            return Response(payload, status=status.HTTP_200_OK)
+            payload = TransactionHttpPresenter.present_one(adjusted_transaction)
+            return self.form_write_response(
+                status_code=status.HTTP_200_OK,
+                response_body=payload,
+                write_version=write_version,
+            )
         except Exception as exc:
+            logger.exception(
+                "TransactionResourceView: patch failed for transaction ID %s, user ID %s",
+                pk,
+                request.user.unique_id,
+            )
             payload = CommonHttpPresenter.present_message_result(
                 MessageResultInfo(
                     message=f"Failed to adjust transaction with ID {pk}: {exc}",
                     resource_id=str(pk),
                 )
             )
+
             return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @extend_schema(
@@ -104,25 +115,35 @@ class TransactionResourceView(TransactionView):
     async def delete(self, request, pk=None):
         try:
             handler = DeleteTransactionCommandHandler()
-            inverse = await handler.handle(
+            inverse_transaction, write_version = await handler.handle(
                 DeleteTransactionCommand(
                     transaction_id=pk,
-                    user_id=request.user.id,
+                    user_id=int(request.user.unique_id),
                 )
             )
 
             payload = CommonHttpPresenter.present_message_result(
                 MessageResultInfo(
                     message=f"Deleted transaction with ID {pk}",
-                    resource_id=str(inverse.id),
+                    resource_id=str(inverse_transaction.id),
                 )
             )
-            return Response(payload, status=status.HTTP_200_OK)
+            return self.form_write_response(
+                status_code=status.HTTP_200_OK,
+                response_body=payload,
+                write_version=write_version,
+            )
         except Exception as exc:
+            logger.exception(
+                "TransactionResourceView: delete failed for transaction ID %s, user ID %s",
+                pk,
+                request.user.unique_id,
+            )
             payload = CommonHttpPresenter.present_message_result(
                 MessageResultInfo(
                     message=f"Failed to delete transaction with ID {pk}: {exc}",
                     resource_id=str(pk),
                 )
             )
+
             return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
