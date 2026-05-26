@@ -2,14 +2,16 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+from kafka_messages import WalletDeleted
+
 from data_write_core.domain.aggregates import WalletAggregate
 from data_write_core.domain.entities import WalletEntity
+from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 from data_write_core.infrastructure.outbox_saga import (
     PostgresAction,
     PostgresOutboxEmissionStep,
     PostgresWriteStep,
     SagaCoordinator,
-    WalletDeletedOutboxEvent,
 )
 
 from ..bootstrap import get_repository_registry
@@ -84,11 +86,15 @@ class SoftDeleteWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWalletMi
             ],
             final_step=PostgresOutboxEmissionStep(
                 outbox_repository=self._outbox_repository,
-                events=[
-                    WalletDeletedOutboxEvent(
-                        wallet_id=UUID(wallet_aggregate.unique_id),
-                        user_id=int(wallet_aggregate.root.user_id),
-                        deleted_at=timestamp_now,
+                entries=[
+                    build_outbox_entry(
+                        WalletDeleted(
+                            wallet_id=wallet_aggregate.unique_id,
+                            user_id=int(wallet_aggregate.root.user_id),
+                            deleted_at=datetime_to_timestamp(timestamp_now),
+                        ),
+                        aggregate_type="wallet",
+                        aggregate_id=wallet_aggregate.unique_id,
                     )
                 ],
             ),

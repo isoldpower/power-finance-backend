@@ -2,15 +2,17 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+from kafka_messages import WalletUpdated
+
 from data_write_core.domain.aggregates import WalletAggregate
 from data_write_core.domain.entities import WalletEntity
 from data_write_core.domain.value_objects import WalletData
+from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 from data_write_core.infrastructure.outbox_saga import (
     PostgresAction,
     PostgresOutboxEmissionStep,
     PostgresWriteStep,
     SagaCoordinator,
-    WalletUpdatedOutboxEvent,
 )
 
 from ..bootstrap import get_repository_registry
@@ -95,13 +97,17 @@ class UpdateExistingWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWall
             ],
             final_step=PostgresOutboxEmissionStep(
                 outbox_repository=self._outbox_repository,
-                events=[
-                    WalletUpdatedOutboxEvent(
-                        wallet_id=UUID(wallet_aggregate.unique_id),
-                        user_id=int(wallet_aggregate.root.user_id),
-                        previous_title=previous_state.title,
-                        new_title=wallet_aggregate.root.title,
-                        updated_at=timestamp,
+                entries=[
+                    build_outbox_entry(
+                        WalletUpdated(
+                            wallet_id=wallet_aggregate.unique_id,
+                            user_id=int(wallet_aggregate.root.user_id),
+                            previous_title=previous_state.title,
+                            new_title=wallet_aggregate.root.title,
+                            updated_at=datetime_to_timestamp(timestamp),
+                        ),
+                        aggregate_type="wallet",
+                        aggregate_id=wallet_aggregate.unique_id,
                     )
                 ],
             ),

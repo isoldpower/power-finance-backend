@@ -2,15 +2,20 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from kafka_messages import WalletCreated
+
 from data_write_core.domain.entities import WalletEntity
 from data_write_core.domain.exceptions import UnsupportedCurrencyError
 from data_write_core.domain.value_objects import WalletData
+from data_write_core.infrastructure.messaging import (
+    build_outbox_entry,
+    datetime_to_timestamp,
+)
 from data_write_core.infrastructure.outbox_saga import (
     PostgresAction,
     PostgresOutboxEmissionStep,
     PostgresWriteStep,
     SagaCoordinator,
-    WalletCreatedOutboxEvent,
 )
 
 from ..bootstrap import get_repository_registry
@@ -79,13 +84,17 @@ class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
             ],
             final_step=PostgresOutboxEmissionStep(
                 outbox_repository=self._outbox_repository,
-                events=[
-                    WalletCreatedOutboxEvent(
-                        wallet_id=UUID(new_wallet.unique_id),
-                        user_id=int(new_wallet.user_id),
-                        title=new_wallet.title,
-                        currency_code=new_wallet.currency_code,
-                        created_at=new_wallet.created_at,
+                entries=[
+                    build_outbox_entry(
+                        WalletCreated(
+                            wallet_id=new_wallet.unique_id,
+                            user_id=int(new_wallet.user_id),
+                            title=new_wallet.title,
+                            currency_code=new_wallet.currency_code,
+                            created_at=datetime_to_timestamp(new_wallet.created_at),
+                        ),
+                        aggregate_type="wallet",
+                        aggregate_id=new_wallet.unique_id,
                     )
                 ],
             ),

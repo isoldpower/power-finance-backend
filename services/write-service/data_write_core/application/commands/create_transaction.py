@@ -2,12 +2,14 @@ from dataclasses import dataclass
 from decimal import Decimal
 from uuid import UUID
 
+from kafka_messages import TransactionCreated
+
 from data_write_core.domain.entities import TransactionEntity
+from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 from data_write_core.infrastructure.outbox_saga import (
     ImmudbTransactionStep,
     PostgresOutboxEmissionStep,
     SagaCoordinator,
-    TransactionCreatedOutboxEvent,
 )
 
 from ..bootstrap import get_repository_registry
@@ -72,13 +74,17 @@ class CreateTransactionCommandHandler(CommandHandlerBase[TransactionDTO], LoadWa
             ],
             final_step=PostgresOutboxEmissionStep(
                 outbox_repository=self._outbox_repository,
-                events=[
-                    TransactionCreatedOutboxEvent(
-                        transaction_id=UUID(new_transaction.unique_id),
-                        wallet_id=new_transaction.source_wallet_id,
-                        user_id=int(new_transaction.user_id),
-                        amount=new_transaction.amount,
-                        created_at=new_transaction.created_at,
+                entries=[
+                    build_outbox_entry(
+                        TransactionCreated(
+                            transaction_id=new_transaction.unique_id,
+                            wallet_id=str(new_transaction.source_wallet_id),
+                            user_id=int(new_transaction.user_id),
+                            amount=str(new_transaction.amount),
+                            created_at=datetime_to_timestamp(new_transaction.created_at),
+                        ),
+                        aggregate_type="transaction",
+                        aggregate_id=new_transaction.unique_id,
                     )
                 ],
             ),

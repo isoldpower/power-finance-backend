@@ -1,6 +1,8 @@
 import json
 from typing import Any
 
+from rest_framework.utils.encoders import JSONEncoder
+
 STATE_IN_FLIGHT = "in_flight"
 STATE_COMPLETED = "completed"
 
@@ -30,7 +32,7 @@ class EntryCodec:
                 "headers": headers,
             },
             separators=(",", ":"),
-            default=str,
+            cls=JSONEncoder,
         )
 
     @staticmethod

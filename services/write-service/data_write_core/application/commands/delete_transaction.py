@@ -1,13 +1,15 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+from kafka_messages import TransactionDeleted
+
 from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import TransactionEntity
+from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 from data_write_core.infrastructure.outbox_saga import (
     ImmudbTransactionStep,
     PostgresOutboxEmissionStep,
     SagaCoordinator,
-    TransactionDeletedOutboxEvent,
 )
 
 from ..bootstrap import get_repository_registry
@@ -80,14 +82,18 @@ class DeleteTransactionCommandHandler(
             ],
             final_step=PostgresOutboxEmissionStep(
                 outbox_repository=self._outbox_repository,
-                events=[
-                    TransactionDeletedOutboxEvent(
-                        transaction_id=UUID(transaction_aggregate.unique_id),
-                        wallet_id=transaction_aggregate.root.source_wallet_id,
-                        user_id=int(transaction_aggregate.root.user_id),
-                        amount=transaction_aggregate.root.amount,
-                        cancelled_by=UUID(inverse_transaction.unique_id),
-                        created_at=inverse_transaction.created_at,
+                entries=[
+                    build_outbox_entry(
+                        TransactionDeleted(
+                            transaction_id=transaction_aggregate.unique_id,
+                            wallet_id=str(transaction_aggregate.root.source_wallet_id),
+                            user_id=int(transaction_aggregate.root.user_id),
+                            amount=str(transaction_aggregate.root.amount),
+                            cancelled_by=inverse_transaction.unique_id,
+                            created_at=datetime_to_timestamp(inverse_transaction.created_at),
+                        ),
+                        aggregate_type="transaction",
+                        aggregate_id=transaction_aggregate.unique_id,
                     )
                 ],
             ),

@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 
-from ..outbox_event import OutboxEventBase
+from data_write_core.domain.value_objects import OutboxEntry
 
 
 class OutboxRepository(ABC):
     @abstractmethod
-    async def append(self, event: "OutboxEventBase") -> int:
+    async def append(self, entry: OutboxEntry) -> int:
         raise NotImplementedError()
 
     @abstractmethod
