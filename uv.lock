@@ -10,10 +10,8 @@ resolution-markers = [
 [manifest]
 members = [
     "correlation-py",
-    "events-py",
     "kafka-client-py",
     "kafka-messages-proto",
-    "observability-py",
     "power-finance-cqrs",
     "read-service",
     "write-service",
@@ -540,17 +538,6 @@ wheels = [
 ]
 
 [[package]]
-name = "events-py"
-version = "0.0.0"
-source = { editable = "libraries/events-py" }
-dependencies = [
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.12,<3.0" }]
-
-[[package]]
 name = "filelock"
 version = "3.29.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1060,11 +1047,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/24/bf/d1bda4f6168e0b2e9
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/b2/d0896bdcdc8d28a7fc5717c305f1a861c26e18c05047949fb371034d98bd/nodeenv-1.10.0-py2.py3-none-any.whl", hash = "sha256:5bb13e3eed2923615535339b3c620e76779af4cb4c6a90deccc9e36b274d3827", size = 23438, upload-time = "2025-12-20T14:08:52.782Z" },
 ]
-
-[[package]]
-name = "observability-py"
-version = "0.0.0"
-source = { editable = "libraries/observability-py" }
 
 [[package]]
 name = "packaging"

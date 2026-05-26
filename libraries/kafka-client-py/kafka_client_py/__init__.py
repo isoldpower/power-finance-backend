@@ -1,22 +1,22 @@
 from . import headers
-from ._message import ConsumedMessage
-from .dedupe import (
+from .consumer.dedupe.store import (
     CREATE_TABLE_SQL,
     DedupeStore,
     InMemoryDedupeStore,
     PostgresDedupeStore,
 )
-from .dlq_publisher import DLQPublisher
+from .consumer.handler import EventIdExtractor, MessageHandler, UserHandler
+from .consumer.message import ConsumedMessage
+from .consumer.retry_policy import RetryPolicy
 from .errors import (
     KafkaHandlerError,
     PoisonError,
     RetryExhaustedError,
     TransientError,
 )
-from .handler import EventIdExtractor, MessageHandler, UserHandler
-from .publisher import AsyncPublisher, ProducerConfig
-from .retry_policy import RetryPolicy
-from .retry_publisher import RetryPublisher
+from .publisher.dlq_publisher import DLQPublisher
+from .publisher.publisher import AsyncPublisher, ProducerConfig
+from .publisher.retry_publisher import RetryPublisher
 
 __all__ = [
     "CREATE_TABLE_SQL",
