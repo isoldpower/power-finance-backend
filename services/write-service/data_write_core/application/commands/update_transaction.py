@@ -7,9 +7,9 @@ from kafka_messages import TransactionCreated
 from data_write_core.domain.entities import TransactionEntity
 from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 from data_write_core.infrastructure.outbox_saga import (
+    FinalizedSagaCoordinator,
     ImmudbTransactionStep,
     PostgresOutboxEmissionStep,
-    SagaCoordinator,
 )
 
 from ..bootstrap import get_repository_registry
@@ -76,7 +76,7 @@ class UpdateTransactionCommandHandler(
         return transaction_dto, latest_sequence
 
     async def _run_transactions_saga(self, adjustment_transaction: TransactionEntity) -> int:
-        saga_coordinator = SagaCoordinator(
+        saga_coordinator = FinalizedSagaCoordinator(
             transaction_steps=[
                 ImmudbTransactionStep(self._transaction_repository, adjustment_transaction),
             ],

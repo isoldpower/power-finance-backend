@@ -1,0 +1,55 @@
+# Build context hygiene. The build context is the repo root (services build
+# with `context: ../..`), so anything not excluded here is shipped to the
+# Docker daemon on every build. Keep this list tight: exclude caches, local
+# virtualenvs, and VCS — never the workspace sources, generated protos,
+# pyproject.toml, or uv.lock, all of which the image build needs.
+
+# Virtualenvs — critical: a leaked .venv carries editable *.pth files with
+# absolute HOST paths that would shadow the image's own install.
+.venv/
+**/.venv/
+venv/
+env/
+
+# Python caches / build artifacts
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Tooling caches
+.mypy_cache/
+**/.mypy_cache/
+.pytest_cache/
+**/.pytest_cache/
+.ruff_cache/
+**/.ruff_cache/
+.cache/
+
+# VCS
+.git/
+.gitignore
+.gitattributes
+
+# Local databases / env / secrets
+*.sqlite3
+**/db.sqlite3
+.env
+.env.*
+*.local
+
+# Editor / OS cruft
+.idea/
+.vscode/
+.DS_Store
+
+# Docs and CI that the runtime image doesn't need
+*.md
+.github/
+
+# Node (Kong plugins etc. build separately)
+node_modules/
+**/node_modules/

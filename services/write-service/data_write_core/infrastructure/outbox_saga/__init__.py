@@ -1,17 +1,13 @@
-from .coordinator import SagaCoordinator
-from .defined_steps import (
-    ImmudbTransactionStep,
-    PostgresAction,
-    PostgresOutboxEmissionStep,
-    PostgresWriteStep,
-)
-from .saga_step import SagaStep
+from saga_pattern_py import FinalizedSagaCoordinator
+
+from .immudb_transaction_step import ImmudbTransactionStep
+from .postgres_outbox_step import PostgresOutboxEmissionStep
+from .postgres_write_step import PostgresAction, PostgresWriteStep
 
 __all__ = [
+    "FinalizedSagaCoordinator",
     "ImmudbTransactionStep",
-    "PostgresOutboxEmissionStep",
     "PostgresAction",
+    "PostgresOutboxEmissionStep",
     "PostgresWriteStep",
-    "SagaCoordinator",
-    "SagaStep",
 ]

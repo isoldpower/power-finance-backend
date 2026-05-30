@@ -117,6 +117,7 @@ volumes/
 schema.yml
 schema.yaml
 openapi.json
+.claude
 
 # =============================================================================
 # Kafka Connect / Debezium local working directories

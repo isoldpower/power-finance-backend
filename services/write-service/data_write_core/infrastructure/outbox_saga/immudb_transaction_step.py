@@ -1,8 +1,8 @@
+from saga_pattern_py import SagaStep
+
 from data_write_core.application.interfaces import TransactionRepository
 from data_write_core.domain.entities import TransactionEntity
 from data_write_core.domain.events import EventCollector
-
-from ..saga_step import SagaStep
 
 
 class ImmudbTransactionStep(SagaStep[None]):

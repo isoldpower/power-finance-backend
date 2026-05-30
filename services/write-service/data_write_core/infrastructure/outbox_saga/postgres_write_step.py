@@ -1,8 +1,8 @@
 from collections.abc import Awaitable, Callable
 
-from data_write_core.application.db_utils import aatomic
+from saga_pattern_py import SagaStep
 
-from ..saga_step import SagaStep
+from data_write_core.application.db_utils import aatomic
 
 PostgresAction = Callable[[], Awaitable[None]]
 

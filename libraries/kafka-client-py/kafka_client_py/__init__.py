@@ -1,4 +1,4 @@
-from . import headers
+from . import envelope, headers
 from .consumer.dedupe.store import (
     CREATE_TABLE_SQL,
     DedupeStore,
@@ -37,4 +37,5 @@ __all__ = [
     "TransientError",
     "UserHandler",
     "headers",
+    "envelope",
 ]

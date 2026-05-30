@@ -1,0 +1,69 @@
+# Read-service stack. Shared Kafka broker lives in
+# infrastructure/kafka/compose.yaml so this stack stays standalone-runnable
+# (`docker compose -f compose.yaml up` from this directory) while the root
+# compose pulls the same broker in transitively through this include.
+include:
+  - ../../infrastructure/kafka/compose.yaml
+
+services:
+  # Standalone, long-lived Kafka consumer. Not a web process — it tails the
+  # write-service outbox topic, projects events into the read store, and
+  # invalidates caches. `restart: unless-stopped` is the supervisor; on
+  # SIGTERM the consumer drains its loop and commits cleanly before exiting.
+  read-write-consumer:
+    build:
+      context: ../..
+      dockerfile: services/read-service/Dockerfile
+    image: power-finance/read-service:dev
+    restart: unless-stopped
+    command: ["python", "manage.py", "run_write_message_consumer"]
+    environment:
+      DJANGO_SETTINGS_MODULE: read_service.settings.local
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_OUTBOX_TOPIC: ${KAFKA_OUTBOX_TOPIC:-events.async}
+      # Stable consumer group so offsets survive restarts and the partition
+      # set can be shared if this service is scaled to multiple replicas.
+      KAFKA_READ_GROUP_ID: ${KAFKA_READ_GROUP_ID:-read-service.write-consumer}
+      # Read store — a SEPARATE Postgres instance from the write service's.
+      # The container env uses the standard DATABASE_* names the settings read;
+      # compose-level interpolation uses READ_DATABASE_* so it can't collide
+      # with the write stack's DATABASE_* in a shared root .env.
+      DATABASE_HOST: postgres-read
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
+      DATABASE_USER: ${READ_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres-read:
+        condition: service_healthy
+    # No port / healthcheck: this is a background worker, not an HTTP service.
+    # Liveness is delegated to `restart: unless-stopped` plus crash exit codes.
+    stop_grace_period: 30s
+
+  # Read-side Postgres. A distinct instance from postgres-write: its own
+  # volume and database, holding only denormalised projections built from the
+  # event stream. Reached as postgres-read:5432 over the compose network, and
+  # on 127.0.0.1:5434 from the host for local tests/tooling. Loopback-only, so
+  # it is not network-exposed.
+  postgres-read:
+    image: postgres:18.3
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${READ_DATABASE_PORT:-5434}:5432"
+    environment:
+      POSTGRES_DB: ${READ_DATABASE_NAME:-power_finance_read}
+      POSTGRES_USER: ${READ_DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_read_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${READ_DATABASE_USER:-postgres} -d ${READ_DATABASE_NAME:-power_finance_read}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_read_data:

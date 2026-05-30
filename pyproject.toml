@@ -14,6 +14,7 @@ members = [
     "libraries/kafka-client-py",
     "libraries/kafka-messages-proto",
     "libraries/observability-py",
+    "libraries/saga-pattern-py",
 ]
 
 # Note: services/push-service is a Go module and is intentionally excluded

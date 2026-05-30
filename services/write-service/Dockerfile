@@ -32,11 +32,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=services/write-service/pyproject.toml,target=services/write-service/pyproject.toml \
     --mount=type=bind,source=libraries/correlation-py/pyproject.toml,target=libraries/correlation-py/pyproject.toml \
     --mount=type=bind,source=libraries/kafka-messages-proto/pyproject.toml,target=libraries/kafka-messages-proto/pyproject.toml \
+    --mount=type=bind,source=libraries/saga-pattern-py/pyproject.toml,target=libraries/saga-pattern-py/pyproject.toml \
     uv sync --frozen --no-install-project --no-dev --package write-service
 
 # Layer 2: copy source for the service + every workspace lib it imports,
 # then install the project itself (editable install registers entrypoints).
 COPY libraries/correlation-py /app/libraries/correlation-py
+COPY libraries/saga-pattern-py /app/libraries/saga-pattern-py
 COPY libraries/kafka-messages-proto /app/libraries/kafka-messages-proto
 COPY services/write-service /app/services/write-service
 COPY pyproject.toml uv.lock /app/

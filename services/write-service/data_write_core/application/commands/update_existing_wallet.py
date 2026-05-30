@@ -9,10 +9,10 @@ from data_write_core.domain.entities import WalletEntity
 from data_write_core.domain.value_objects import WalletData
 from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 from data_write_core.infrastructure.outbox_saga import (
+    FinalizedSagaCoordinator,
     PostgresAction,
     PostgresOutboxEmissionStep,
     PostgresWriteStep,
-    SagaCoordinator,
 )
 
 from ..bootstrap import get_repository_registry
@@ -88,7 +88,7 @@ class UpdateExistingWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWall
             wallet_aggregate=wallet_aggregate,
         )
 
-        saga_coordinator = SagaCoordinator(
+        saga_coordinator = FinalizedSagaCoordinator(
             transaction_steps=[
                 PostgresWriteStep(
                     forward_action=persist_rename,

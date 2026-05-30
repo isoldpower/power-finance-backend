@@ -9,9 +9,7 @@ from uuid import UUID, uuid4
 
 from data_write_core.domain.entities import TransactionEntity
 from data_write_core.domain.value_objects import TransactionData
-from data_write_core.infrastructure.outbox_saga.defined_steps.immudb_transaction_step import (
-    ImmudbTransactionStep,
-)
+from data_write_core.infrastructure.outbox_saga import ImmudbTransactionStep
 
 
 class _RecordingTransactionRepo:

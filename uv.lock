@@ -14,6 +14,7 @@ members = [
     "kafka-messages-proto",
     "power-finance-cqrs",
     "read-service",
+    "saga-pattern-py",
     "write-service",
 ]
 
@@ -1497,28 +1498,36 @@ name = "read-service"
 version = "0.0.0"
 source = { editable = "services/read-service" }
 dependencies = [
+    { name = "aiokafka" },
     { name = "django" },
     { name = "django-cors-headers" },
     { name = "django-environ" },
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
     { name = "elasticsearch" },
+    { name = "kafka-client-py" },
+    { name = "kafka-messages-proto" },
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "pydantic" },
     { name = "redis" },
+    { name = "saga-pattern-py" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "aiokafka", specifier = ">=0.11,<0.13" },
     { name = "django", specifier = ">=5.2,<6.0" },
     { name = "django-cors-headers", specifier = ">=4.9,<5.0" },
     { name = "django-environ", specifier = ">=0.13,<0.14" },
     { name = "djangorestframework", specifier = ">=3.16,<4.0" },
     { name = "drf-spectacular", specifier = ">=0.29,<0.30" },
     { name = "elasticsearch", specifier = ">=8.13,<9.0" },
+    { name = "kafka-client-py", editable = "libraries/kafka-client-py" },
+    { name = "kafka-messages-proto", editable = "libraries/kafka-messages-proto" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.3,<4.0" },
     { name = "pydantic", specifier = ">=2.12,<3.0" },
     { name = "redis", specifier = ">=7.0,<8.0" },
+    { name = "saga-pattern-py", editable = "libraries/saga-pattern-py" },
 ]
 
 [[package]]
@@ -1675,6 +1684,25 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/d4/70/cfcb693dc294e034c6fed837fa2ec98b27cc97a26db5d049345364f504bf/ruff-0.8.6-py3-none-win32.whl", hash = "sha256:e169ea1b9eae61c99b257dc83b9ee6c76f89042752cb2d83486a7d6e48e8f764", size = 8799729, upload-time = "2025-01-04T12:22:49.016Z" },
     { url = "https://files.pythonhosted.org/packages/60/22/ae6bcaa0edc83af42751bd193138bfb7598b2990939d3e40494d6c00698c/ruff-0.8.6-py3-none-win_amd64.whl", hash = "sha256:f1d70bef3d16fdc897ee290d7d20da3cbe4e26349f62e8a0274e7a3f4ce7a905", size = 9673857, upload-time = "2025-01-04T12:22:53.052Z" },
     { url = "https://files.pythonhosted.org/packages/91/f8/3765e053acd07baa055c96b2065c7fab91f911b3c076dfea71006666f5b0/ruff-0.8.6-py3-none-win_arm64.whl", hash = "sha256:7d7fc2377a04b6e04ffe588caad613d0c460eb2ecba4c0ccbbfe2bc973cbc162", size = 9149556, upload-time = "2025-01-04T12:22:57.173Z" },
+]
+
+[[package]]
+name = "saga-pattern-py"
+version = "0.0.0"
+source = { editable = "libraries/saga-pattern-py" }
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.3,<9.0" },
+    { name = "pytest-asyncio", specifier = ">=0.24,<1.0" },
 ]
 
 [[package]]
@@ -1999,6 +2027,7 @@ dependencies = [
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "pydantic" },
     { name = "redis" },
+    { name = "saga-pattern-py" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "uvicorn-worker" },
 ]
@@ -2025,6 +2054,7 @@ requires-dist = [
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.3,<4.0" },
     { name = "pydantic", specifier = ">=2.12,<3.0" },
     { name = "redis", specifier = ">=7.0,<8.0" },
+    { name = "saga-pattern-py", editable = "libraries/saga-pattern-py" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.43,<0.44" },
     { name = "uvicorn-worker", specifier = ">=0.4,<0.5" },
 ]

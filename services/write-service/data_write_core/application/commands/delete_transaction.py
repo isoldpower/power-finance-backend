@@ -7,9 +7,9 @@ from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import TransactionEntity
 from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 from data_write_core.infrastructure.outbox_saga import (
+    FinalizedSagaCoordinator,
     ImmudbTransactionStep,
     PostgresOutboxEmissionStep,
-    SagaCoordinator,
 )
 
 from ..bootstrap import get_repository_registry
@@ -73,7 +73,7 @@ class DeleteTransactionCommandHandler(
     ) -> tuple[TransactionEntity, int]:
         inverse_transaction = transaction_aggregate.delete_self()
 
-        saga_coordinator = SagaCoordinator(
+        saga_coordinator = FinalizedSagaCoordinator(
             transaction_steps=[
                 ImmudbTransactionStep(
                     self._transaction_repository,

@@ -10,9 +10,14 @@ services:
     build:
       context: ../..
       dockerfile: services/write-service/Dockerfile
+    image: power-finance/write-service:dev
     restart: unless-stopped
-    ports:
-      - "${WRITE_SERVICE_PORT:-8000}:8000"
+    # No published host port: write-service is reachable only over the compose
+    # network, exclusively through the Kong API gateway (kong.yml routes to
+    # host: write-service, port: 8000). `expose` documents the internal port
+    # without binding it on the host.
+    expose:
+      - "8000"
     environment:
       DJANGO_SETTINGS_MODULE: write_service.settings.local
       SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
@@ -62,8 +67,12 @@ services:
   postgres-write:
     image: postgres:18.3
     restart: unless-stopped
+    # Loopback-only publish: reached as postgres-write:5432 over the compose
+    # network, and on 127.0.0.1:5433 from the host for local tests/tooling
+    # (write_service.settings.test points here). Bound to loopback, so it is
+    # not exposed to the network — the gateway stays the only 0.0.0.0 surface.
     ports:
-      - "${DATABASE_PORT:-5433}:5432"
+      - "127.0.0.1:${DATABASE_PORT:-5433}:5432"
     environment:
       POSTGRES_DB: ${DATABASE_NAME:-power_finance_write}
       POSTGRES_USER: ${DATABASE_USER:-postgres}
@@ -89,9 +98,11 @@ services:
   immudb:
     image: codenotary/immudb:1.10
     restart: unless-stopped
-    ports:
-      - "${IMMUDB_PORT:-3323}:3322"
-      - "${IMMUDB_METRICS_PORT:-9498}:9497"
+    # Internal-only: reached as immudb:3322 by write-service over the compose
+    # network. Not published to the host (3322 = API, 9497 = metrics).
+    expose:
+      - "3322"
+      - "9497"
     volumes:
       - immudb_data:/var/lib/immudb
 
@@ -127,8 +138,10 @@ services:
       VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
       CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
-    ports:
-      - "${KAFKA_CONNECT_PORT:-8083}:8083"
+    # Internal-only: the REST API is reached as kafka-connect:8083 by the
+    # debezium-bootstrap one-shot over the compose network. Not host-published.
+    expose:
+      - "8083"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8083/ >/dev/null"]
       interval: 10s

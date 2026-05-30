@@ -1,37 +1,40 @@
 import logging
-from typing import Any
+from typing import Any, Generic, TypeVar
 
-from .saga_step import OutboxSagaStep, SagaStep
+from .saga_step import SagaStep
 
 logger = logging.getLogger(__name__)
 
+TFinal = TypeVar("TFinal")
 
-class SagaCoordinator:
+
+class FinalizedSagaCoordinator(Generic[TFinal]):
     """Linear SAGA orchestrator with a distinguished final step.
 
     Two-phase run:
-    1. `transaction_steps` execute in order — the business writes
-       (e.g. ImmuDB append, future Postgres business-row insert).
-    2. `final_step` executes last — the broadcast / "announce it"
-       step (currently the outbox emission). Keeping it separate
-       leaves the broadcast adapter swappable (PG outbox today,
-       NoSQL outbox tomorrow) without touching the business pipeline."""
+      1. `transaction_steps` execute in order (the business writes).
+      2. `final_step` executes last (e.g. the broadcast / "announce it"),
+         and its forward result is returned from `run_transaction()`.
+
+    If any forward fails, the already-completed steps — final step included
+    if it had succeeded — are compensated in reverse order and the original
+    exception is re-raised. A compensation that itself fails is logged at
+    CRITICAL (orphan state) but does not stop the remaining compensations.
+    """
 
     def __init__(
         self,
         *,
-        transaction_steps: list[SagaStep[None]],
-        final_step: OutboxSagaStep,
+        transaction_steps: list[SagaStep[Any]],
+        final_step: SagaStep[TFinal],
     ) -> None:
         if not transaction_steps:
-            raise ValueError("SagaCoordinator requires at least one transaction step")
+            raise ValueError("FinalizedSagaCoordinator requires at least one transaction step")
+        self._transaction_steps: list[SagaStep[Any]] = list(transaction_steps)
+        self._final_step: SagaStep[TFinal] = final_step
 
-        self._transaction_steps: list[SagaStep[None]] = list(transaction_steps)
-        self._final_step: OutboxSagaStep = final_step
-
-    async def run_transaction(self) -> int:
+    async def run_transaction(self) -> TFinal:
         completed_steps: list[SagaStep[Any]] = []
-
         try:
             for single_step in self._transaction_steps:
                 await self._run_transaction_step(single_step, completed_steps)
@@ -46,7 +49,7 @@ class SagaCoordinator:
 
     async def _run_transaction_step(
         self,
-        single_step: SagaStep[None],
+        single_step: SagaStep[Any],
         completed_steps: list[SagaStep[Any]],
     ) -> None:
         try:
@@ -62,12 +65,10 @@ class SagaCoordinator:
             )
             raise
 
-    async def _run_final_step(self, completed_steps: list[SagaStep[Any]]) -> int:
+    async def _run_final_step(self, completed_steps: list[SagaStep[Any]]) -> TFinal:
         try:
             logger.info("SAGA forward (final): %s", self._final_step.name)
-            latest_sequence = await self._final_step.forward()
-
-            return latest_sequence
+            return await self._final_step.forward()
         except Exception as forward_exc:
             logger.warning(
                 "SAGA final step '%s' failed: %s; rolling back %d transaction step(s)",

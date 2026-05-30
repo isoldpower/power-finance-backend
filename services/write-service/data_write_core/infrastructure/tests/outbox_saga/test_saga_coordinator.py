@@ -1,4 +1,4 @@
-"""SagaCoordinator: forward execution + rollback contract.
+"""FinalizedSagaCoordinator: forward execution + rollback contract.
 
 Pins the four guarantees the rest of the codebase relies on:
 1. Steps run in order.
@@ -13,12 +13,9 @@ from __future__ import annotations
 from unittest import IsolatedAsyncioTestCase
 
 from django.test import SimpleTestCase
+from saga_pattern_py import FinalizedSagaCoordinator, SagaStep
 
-from data_write_core.infrastructure.outbox_saga.coordinator import SagaCoordinator
-from data_write_core.infrastructure.outbox_saga.saga_step import (
-    OutboxSagaStep,
-    SagaStep,
-)
+from data_write_core.infrastructure.outbox_saga.postgres_outbox_step import OutboxSagaStep
 
 
 class _RecordingStep(SagaStep[None]):
@@ -80,19 +77,19 @@ class _RecordingFinalStep(OutboxSagaStep):
         self._log.append(f"compensate:{self._label}")
 
 
-class SagaCoordinatorConstructionTests(SimpleTestCase):
+class FinalizedSagaCoordinatorConstructionTests(SimpleTestCase):
     def test_rejects_empty_transaction_steps(self) -> None:
         with self.assertRaises(ValueError):
-            SagaCoordinator(
+            FinalizedSagaCoordinator(
                 transaction_steps=[],
                 final_step=_RecordingFinalStep(log=[]),
             )
 
 
-class SagaCoordinatorHappyPathTests(IsolatedAsyncioTestCase):
+class FinalizedSagaCoordinatorHappyPathTests(IsolatedAsyncioTestCase):
     async def test_runs_steps_in_order_then_final_and_returns_sequence(self) -> None:
         log: list[str] = []
-        coordinator = SagaCoordinator(
+        coordinator = FinalizedSagaCoordinator(
             transaction_steps=[
                 _RecordingStep(log, "a"),
                 _RecordingStep(log, "b"),
@@ -107,7 +104,7 @@ class SagaCoordinatorHappyPathTests(IsolatedAsyncioTestCase):
 
     async def test_does_not_invoke_compensations_on_success(self) -> None:
         log: list[str] = []
-        coordinator = SagaCoordinator(
+        coordinator = FinalizedSagaCoordinator(
             transaction_steps=[_RecordingStep(log, "a")],
             final_step=_RecordingFinalStep(log),
         )
@@ -118,11 +115,11 @@ class SagaCoordinatorHappyPathTests(IsolatedAsyncioTestCase):
         self.assertNotIn("compensate:final", log)
 
 
-class SagaCoordinatorRollbackTests(IsolatedAsyncioTestCase):
+class FinalizedSagaCoordinatorRollbackTests(IsolatedAsyncioTestCase):
     async def test_rolls_back_completed_steps_in_reverse_when_middle_step_fails(self) -> None:
         log: list[str] = []
         boom = RuntimeError("step c broke")
-        coordinator = SagaCoordinator(
+        coordinator = FinalizedSagaCoordinator(
             transaction_steps=[
                 _RecordingStep(log, "a"),
                 _RecordingStep(log, "b"),
@@ -149,7 +146,7 @@ class SagaCoordinatorRollbackTests(IsolatedAsyncioTestCase):
     async def test_first_step_failure_compensates_nothing(self) -> None:
         log: list[str] = []
         boom = RuntimeError("first step")
-        coordinator = SagaCoordinator(
+        coordinator = FinalizedSagaCoordinator(
             transaction_steps=[
                 _RecordingStep(log, "a", forward_raises=boom),
                 _RecordingStep(log, "b"),
@@ -165,7 +162,7 @@ class SagaCoordinatorRollbackTests(IsolatedAsyncioTestCase):
     async def test_final_step_failure_compensates_all_transaction_steps(self) -> None:
         log: list[str] = []
         boom = RuntimeError("outbox down")
-        coordinator = SagaCoordinator(
+        coordinator = FinalizedSagaCoordinator(
             transaction_steps=[
                 _RecordingStep(log, "a"),
                 _RecordingStep(log, "b"),
@@ -194,7 +191,7 @@ class SagaCoordinatorRollbackTests(IsolatedAsyncioTestCase):
         # and the original forward exception must still propagate.
         log: list[str] = []
         forward_boom = RuntimeError("c forward")
-        coordinator = SagaCoordinator(
+        coordinator = FinalizedSagaCoordinator(
             transaction_steps=[
                 _RecordingStep(log, "a"),
                 _RecordingStep(log, "b", compensate_raises=RuntimeError("b comp")),
