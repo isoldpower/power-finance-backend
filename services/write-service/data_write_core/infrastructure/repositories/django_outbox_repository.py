@@ -10,6 +10,7 @@ class DjangoOutboxRepository(OutboxRepository):
             event_id=entry.event_id,
             aggregate_type=entry.aggregate_type,
             aggregate_id=entry.aggregate_id,
+            partition_key=entry.partition_key,
             event_type=entry.event_type,
             payload=entry.payload,
             occurred_at=entry.occurred_at,

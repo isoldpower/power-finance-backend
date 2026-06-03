@@ -105,7 +105,7 @@ clean: | $(HOOK_SENTINEL) ## Remove __pycache__ and bytecode artefacts
 # -----------------------------------------------------------------------------
 
 .PHONY: test
-test: test-correlation test-write ## Run every test suite
+test: test-correlation test-write test-read ## Run every test suite
 
 .PHONY: test-correlation
 test-correlation: | $(HOOK_SENTINEL) ## Run correlation-py library tests
@@ -115,6 +115,11 @@ test-correlation: | $(HOOK_SENTINEL) ## Run correlation-py library tests
 test-write: | $(HOOK_SENTINEL) ## Run Write Service tests (sqlite, hermetic)
 	cd $(WRITE_SERVICE_DIR) && uv run python manage.py test \
 		--settings=write_service.settings.test
+
+.PHONY: test-read
+test-read: | $(HOOK_SENTINEL) ## Run Read Service tests (postgres-read on host port 5434)
+	cd $(READ_SERVICE_DIR) && uv run python manage.py test \
+		--settings=read_service.settings.test
 
 # -----------------------------------------------------------------------------
 # Lint / format / typecheck

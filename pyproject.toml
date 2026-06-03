@@ -34,9 +34,14 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# force-exclude so generated protobuf bindings are skipped even when a runner
+# (pre-commit, editor-on-save) passes the file path explicitly. Without it,
+# ruff strips the side-effectful `timestamp_pb2` import from *_pb2.py as
+# "unused", which breaks descriptor-pool loading at runtime.
+force-exclude = true
 extend-exclude = [
     "**/migrations/**",
-    "**/_generated/**",
+    "**/generated/**",
     ".venv",
     "old-structure",
 ]
@@ -74,7 +79,7 @@ namespace_packages = true
 exclude = [
     "/migrations/",
     "/tests/",
-    "/_generated/",
+    "/generated/",
     ".venv",
     "manage\\.py$",
     "services/read-service/",

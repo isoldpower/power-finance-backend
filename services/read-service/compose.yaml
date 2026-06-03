@@ -6,6 +6,35 @@ include:
   - ../../infrastructure/kafka/compose.yaml
 
 services:
+  # Read-side HTTP app. Serves the query slices (e.g. GET wallet by id) behind
+  # Kong, which routes host: read-service, port: 8000 (see infrastructure/kong/
+  # kong.yml). No published host port: reachable only over the compose network
+  # through the gateway. The image's default CMD runs uvicorn on :8000.
+  read-service:
+    build:
+      context: ../..
+      dockerfile: services/read-service/Dockerfile
+    image: power-finance/read-service:dev
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: read_service.settings.local
+      SECRET_KEY: ${READ_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+      DEBUG: "true"
+      ALLOWED_HOSTS: "*"
+      DATABASE_HOST: postgres-read
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
+      DATABASE_USER: ${READ_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
+      REDIS_URL: ${READ_REDIS_URL:-redis://read-redis:6379/0}
+    depends_on:
+      postgres-read:
+        condition: service_healthy
+      read-redis:
+        condition: service_healthy
+
   # Standalone, long-lived Kafka consumer. Not a web process — it tails the
   # write-service outbox topic, projects events into the read store, and
   # invalidates caches. `restart: unless-stopped` is the supervisor; on
@@ -33,10 +62,14 @@ services:
       DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
       DATABASE_USER: ${READ_DATABASE_USER:-postgres}
       DATABASE_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
+      # Read-side cache. Reached as read-redis:6379 over the compose network.
+      REDIS_URL: ${READ_REDIS_URL:-redis://read-redis:6379/0}
     depends_on:
       kafka:
         condition: service_healthy
       postgres-read:
+        condition: service_healthy
+      read-redis:
         condition: service_healthy
     # No port / healthcheck: this is a background worker, not an HTTP service.
     # Liveness is delegated to `restart: unless-stopped` plus crash exit codes.
@@ -65,5 +98,23 @@ services:
       timeout: 3s
       retries: 10
 
+  # Read-side Redis cache. Holds denormalised single-wallet entries
+  # (key `read:wallet:<id>`) that the consumer's cache-eviction effects drop
+  # when a wallet is deleted. Reached as read-redis:6379 over the compose
+  # network, and on 127.0.0.1:6381 from the host for tooling. Loopback-only.
+  read-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${READ_REDIS_PORT:-6381}:6379"
+    volumes:
+      - redis_read_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   postgres_read_data:
+  redis_read_data:

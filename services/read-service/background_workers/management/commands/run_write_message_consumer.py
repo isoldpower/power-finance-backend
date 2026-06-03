@@ -1,38 +1,13 @@
 import asyncio
 import logging
-from datetime import UTC, datetime
 
-from data_read_core._shared.kafka_updates import (
-    ConsumerConfig,
-    EventMessage,
-    EventRouter,
-    KafkaEventRouter,
-    build_consumer_loop,
-)
+from data_read_core.shared.kafka_updates import ConsumerConfig
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from kafka_client_py import (
-    AsyncPublisher,
-    DLQPublisher,
-    ProducerConfig,
-    RetryPolicy,
-    RetryPublisher,
-)
+
+from background_workers.services.build_event_router import build_event_router
 
 logger = logging.getLogger("background_workers.write_message_consumer")
-
-
-class LoggingSettings:
-    @staticmethod
-    def enable_basic_config():
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        )
-
-    @staticmethod
-    def forward_missed_messages():
-        logging.getLogger("data_read_core._shared.kafka_updates").setLevel(logging.DEBUG)
 
 
 class Command(BaseCommand):
@@ -62,9 +37,6 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options) -> None:
-        LoggingSettings.enable_basic_config()
-        LoggingSettings.forward_missed_messages()
-
         topics = options["topics"] or [settings.KAFKA["OUTBOX_TOPIC"]]
         config = self._build_consumer_config(options, topics)
 
@@ -76,61 +48,14 @@ class Command(BaseCommand):
         )
 
         try:
-            asyncio.run(self._run(config))
+            asyncio.run(build_event_router(config))
         except KeyboardInterrupt:
             self.stdout.write(self.style.WARNING("Interrupted — shutting down."))
 
-    def _build_consumer_config(self, options, topics):
+    def _build_consumer_config(self, options, topics) -> ConsumerConfig:
         return ConsumerConfig(
             bootstrap_servers=options["bootstrap_servers"],
             group_id=options["group_id"],
             topics=topics,
             auto_offset_reset="earliest" if options["from_beginning"] else "latest",
-        )
-
-    async def _run(self, config: ConsumerConfig) -> None:
-        router = KafkaEventRouter()
-        self._subscribe_all_events(router)
-
-        publisher = AsyncPublisher(ProducerConfig(bootstrap_servers=config.bootstrap_servers))
-        await publisher.start()
-
-        try:
-            consumer_loop = build_consumer_loop(
-                config=config,
-                router=router,
-                retry_policy=RetryPolicy(),
-                retry_publisher=RetryPublisher(publisher),
-                dlq_publisher=DLQPublisher(publisher),
-            )
-            await consumer_loop.run()
-        finally:
-            await publisher.stop()
-
-    def _subscribe_all_events(self, router: EventRouter) -> None:
-        for event_type in (
-            "WalletCreated",
-            "WalletUpdated",
-            "WalletDeleted",
-            "TransactionCreated",
-            "TransactionDeleted",
-            "WebhookDeliveryStatusChanged",
-        ):
-            router.register(event_type, self._log_event)
-
-    async def _log_event(self, event: EventMessage) -> None:
-        received_at = datetime.now(UTC).isoformat()
-        logger.info(
-            "[%s] received %s | aggregate=%s/%s event_id=%s outbox_seq=%s "
-            "topic=%s partition=%s offset=%s payload_bytes=%d",
-            received_at,
-            event.event_type,
-            event.aggregate_type,
-            event.aggregate_id,
-            event.event_id,
-            event.outbox_seq,
-            event.topic,
-            event.partition,
-            event.offset,
-            len(event.payload),
         )

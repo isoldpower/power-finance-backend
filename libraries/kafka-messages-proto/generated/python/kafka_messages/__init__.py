@@ -7,7 +7,9 @@ from .envelope_pb2 import EventEnvelope
 from .transaction_pb2 import (
     TransactionCreated,
     TransactionDeleted,
+    TransactionUpdated,
 )
+from .user_pb2 import UserSynced
 from .wallet_pb2 import (
     WalletCreated,
     WalletDeleted,
@@ -22,6 +24,8 @@ __all__ = [
     "EventEnvelope",
     "TransactionCreated",
     "TransactionDeleted",
+    "TransactionUpdated",
+    "UserSynced",
     "WalletCreated",
     "WalletDeleted",
     "WalletUpdated",

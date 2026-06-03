@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package power_finance.events.v1;
+
+option go_package = "github.com/power-finance/kafka-messages-proto/gen/go/events/v1;eventsv1";
+
+import "google/protobuf/timestamp.proto";
+
+// Emitted by the write service when an internal user is first synced from a
+// gateway identity. Lets the read service project the same external -> internal
+// id mapping into its own user table, so read-side ownership checks resolve to
+// the same internal user_id the write service stamped on wallet/transaction
+// events.
+message UserSynced {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  int32 user_id = 10;
+  string external_id = 11;
+}

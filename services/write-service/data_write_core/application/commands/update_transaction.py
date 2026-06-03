@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from decimal import Decimal
 from uuid import UUID
 
-from kafka_messages import TransactionCreated
+from kafka_messages import TransactionUpdated
 
+from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import TransactionEntity
 from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 from data_write_core.infrastructure.outbox_saga import (
@@ -62,7 +63,11 @@ class UpdateTransactionCommandHandler(
 
         adjustment_transaction = transaction_aggregate.adjust_self(new_amount=command.new_amount)
         if adjustment_transaction is not transaction_aggregate.root:
-            latest_sequence = await self._run_transactions_saga(adjustment_transaction)
+            latest_sequence = await self._run_transactions_saga(
+                transaction_aggregate,
+                adjustment_transaction,
+                command.new_amount,
+            )
         else:
             latest_sequence = await self._outbox_repository.get_latest_sequence()
 
@@ -75,7 +80,13 @@ class UpdateTransactionCommandHandler(
         await self._publish_domain_events(transaction_aggregate)
         return transaction_dto, latest_sequence
 
-    async def _run_transactions_saga(self, adjustment_transaction: TransactionEntity) -> int:
+    async def _run_transactions_saga(
+        self,
+        transaction_aggregate: TransactionAggregate,
+        adjustment_transaction: TransactionEntity,
+        new_amount: Decimal,
+    ) -> int:
+        original_transaction = transaction_aggregate.root
         saga_coordinator = FinalizedSagaCoordinator(
             transaction_steps=[
                 ImmudbTransactionStep(self._transaction_repository, adjustment_transaction),
@@ -84,15 +95,16 @@ class UpdateTransactionCommandHandler(
                 outbox_repository=self._outbox_repository,
                 entries=[
                     build_outbox_entry(
-                        TransactionCreated(
-                            transaction_id=adjustment_transaction.unique_id,
-                            wallet_id=str(adjustment_transaction.source_wallet_id),
-                            user_id=int(adjustment_transaction.user_id),
-                            amount=str(adjustment_transaction.amount),
-                            created_at=datetime_to_timestamp(adjustment_transaction.created_at),
+                        TransactionUpdated(
+                            transaction_id=transaction_aggregate.unique_id,
+                            wallet_id=str(original_transaction.source_wallet_id),
+                            user_id=int(original_transaction.user_id),
+                            previous_amount=str(original_transaction.amount),
+                            new_amount=str(new_amount),
+                            updated_at=datetime_to_timestamp(adjustment_transaction.created_at),
                         ),
                         aggregate_type="transaction",
-                        aggregate_id=adjustment_transaction.unique_id,
+                        aggregate_id=transaction_aggregate.unique_id,
                     )
                 ],
             ),

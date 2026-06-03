@@ -8,6 +8,8 @@ from google.protobuf.timestamp_pb2 import Timestamp
 from data_write_core.domain.value_objects import OutboxEntry
 
 _DEFAULT_SCHEMA_VERSION = 1
+# Partition key for events that don't belong to any user
+GLOBAL_PARTITION_KEY = "GLOBAL"
 
 
 def datetime_to_timestamp(value: datetime) -> Timestamp:
@@ -21,6 +23,7 @@ def build_outbox_entry(
     *,
     aggregate_type: str,
     aggregate_id: str,
+    partition_key: str | None = None,
 ) -> OutboxEntry:
     """Stamp envelope fields onto a kafka_messages proto and project it to an OutboxEntry."""
 
@@ -37,6 +40,7 @@ def build_outbox_entry(
         event_type=message.DESCRIPTOR.name,
         aggregate_type=aggregate_type,
         aggregate_id=aggregate_id,
+        partition_key=partition_key or _resolve_partition_key(message),
         occurred_at=occurred_at,
         schema_version=message.schema_version,
         payload=MessageToDict(
@@ -45,3 +49,10 @@ def build_outbox_entry(
             always_print_fields_with_no_presence=True,
         ),
     )
+
+
+def _resolve_partition_key(message: Message) -> str:
+    has_user_field = "user_id" in message.DESCRIPTOR.fields_by_name
+    if has_user_field and message.user_id:
+        return str(message.user_id)
+    return GLOBAL_PARTITION_KEY

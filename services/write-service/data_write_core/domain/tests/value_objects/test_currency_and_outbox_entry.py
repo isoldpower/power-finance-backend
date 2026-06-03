@@ -41,6 +41,7 @@ class OutboxEntryTests(SimpleTestCase):
             event_type="TransactionCreated",
             aggregate_type="transaction",
             aggregate_id="abc",
+            partition_key="42",
             occurred_at=occurred_at,
             schema_version=1,
             payload=payload,
@@ -50,6 +51,7 @@ class OutboxEntryTests(SimpleTestCase):
         self.assertEqual(entry.event_type, "TransactionCreated")
         self.assertEqual(entry.aggregate_type, "transaction")
         self.assertEqual(entry.aggregate_id, "abc")
+        self.assertEqual(entry.partition_key, "42")
         self.assertEqual(entry.occurred_at, occurred_at)
         self.assertEqual(entry.schema_version, 1)
         self.assertEqual(entry.payload, payload)
@@ -60,6 +62,7 @@ class OutboxEntryTests(SimpleTestCase):
             event_type="WalletCreated",
             aggregate_type="wallet",
             aggregate_id="abc",
+            partition_key="42",
             occurred_at=datetime.now(UTC),
             schema_version=1,
             payload={},

@@ -23,7 +23,13 @@ services:
           - /api/v1
         strip_path: false
         preserve_host: false
-        methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+        methods: [POST, PUT, PATCH, DELETE, OPTIONS]
+      - name: write-api-v1-read
+        paths:
+          - /api/v1/fallback-reads
+        strip_path: false
+        preserve_host: false
+        methods: [GET, OPTIONS]
     plugins:
       - name: clerk-jwt
         config:

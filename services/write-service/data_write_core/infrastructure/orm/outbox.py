@@ -14,6 +14,10 @@ class OutboxEntryModel(models.Model):
     event_id = models.UUIDField(default=uuid4, editable=False, unique=True)
     aggregate_type = models.CharField(max_length=64, db_column="aggregatetype")
     aggregate_id = models.CharField(max_length=64, db_column="aggregateid")
+    # Kafka partition key. Set to the owning user id so every event for a user
+    # lands on one partition and is consumed in order, regardless of which
+    # aggregate it touches. Debezium's EventRouter keys messages off this column.
+    partition_key = models.CharField(max_length=64, db_column="partitionkey", default="")
     event_type = models.CharField(max_length=128, db_column="type")
     payload = models.JSONField()
     occurred_at = models.DateTimeField(default=timezone.now)

@@ -12,6 +12,7 @@ class OutboxEntry:
     event_type: str
     aggregate_type: str
     aggregate_id: str
+    partition_key: str
     occurred_at: datetime
     schema_version: int
     payload: dict[str, Any]

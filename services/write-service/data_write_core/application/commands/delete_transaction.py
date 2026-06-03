@@ -89,7 +89,6 @@ class DeleteTransactionCommandHandler(
                             wallet_id=str(transaction_aggregate.root.source_wallet_id),
                             user_id=int(transaction_aggregate.root.user_id),
                             amount=str(transaction_aggregate.root.amount),
-                            cancelled_by=inverse_transaction.unique_id,
                             created_at=datetime_to_timestamp(inverse_transaction.created_at),
                         ),
                         aggregate_type="transaction",
