@@ -5,6 +5,7 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 
+from data_read_core.shared.read_at_least import ensure_read_at_least
 from data_read_core.shared.rest_framework import async_api_view
 
 from ..dtos import GetWalletQuery
@@ -34,6 +35,10 @@ logger = logging.getLogger("query_slices.get_wallet")
 )
 @async_api_view(["GET"])
 async def get_wallet(request, pk=None):
+    # Read-your-writes gate — may raise 507 so the gateway falls back to the
+    # write service. Kept outside the try/except so it is not masked as a 400.
+    await ensure_read_at_least(request)
+
     try:
         logger.info(
             "get_wallet: Received GET request for wallet details (ID: %s) for User ID: %s",

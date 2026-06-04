@@ -22,39 +22,41 @@ class RemoveTransactionReadModel(Effect):
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, TransactionDeleted)
         await handle_database_errors(
-            _remove_transaction,
+            self._remove_transaction,
             payload,
             resource_id=payload.transaction_id,
         )
 
-
-async def _remove_transaction(payload: TransactionDeleted) -> None:
-    async with aatomic():
-        transaction_row = await (
-            TransactionReadModel.objects.select_for_update()
-            .filter(id=payload.transaction_id)
-            .afirst()
-        )
-
-        if transaction_row is None:
-            logger.info(
-                "Transaction %s not present; skipping balance reversal.",
-                payload.transaction_id,
+    async def _remove_transaction(
+        self,
+        payload: TransactionDeleted,
+    ) -> None:
+        async with aatomic():
+            transaction_row = await (
+                TransactionReadModel.objects.select_for_update()
+                .filter(id=payload.transaction_id)
+                .afirst()
             )
-            return
 
-        cancelled_amount = transaction_row.amount
-        await transaction_row.adelete()
-        await WalletReadModel.objects.filter(id=payload.wallet_id).aupdate(
-            balance=F("balance") - cancelled_amount
-        )
+            if transaction_row is None:
+                logger.info(
+                    "Transaction %s not present; skipping balance reversal.",
+                    payload.transaction_id,
+                )
+                return
 
-        logger.info(
-            "Removed transaction %s and reversed wallet %s balance by %s.",
-            payload.transaction_id,
-            payload.wallet_id,
-            cancelled_amount,
-        )
+            cancelled_amount = transaction_row.amount
+            await transaction_row.adelete()
+            await WalletReadModel.objects.filter(id=payload.wallet_id).aupdate(
+                balance=F("balance") - cancelled_amount
+            )
+
+            logger.info(
+                "Removed transaction %s and reversed wallet %s balance by %s.",
+                payload.transaction_id,
+                payload.wallet_id,
+                cancelled_amount,
+            )
 
 
 class EvictTransactionCache(Effect):

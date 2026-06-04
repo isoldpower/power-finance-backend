@@ -126,6 +126,22 @@ services:
           redis_database: 0
           redis_timeout_ms: 100
           redis_key_prefix: "ral:user:"
+      # read-fallback transparently redirects a 507 from the Read Service
+      # (its projection is behind the client's Read-At-Least) to the Write
+      # Service's always-consistent fallback-read endpoints. It self-proxies
+      # the read in the access phase — the only phase that both sees the
+      # upstream status and still permits the HTTP call needed to fall back.
+      # Priority 650 keeps it below read-at-least (700) so the resolved
+      # Read-At-Least header is already on the request when it forwards.
+      - name: read-fallback
+        config:
+          read_service_url: "http://read-service:8000"
+          write_service_url: "http://write-service:8000"
+          read_path_prefix: "/api/v1/reads"
+          fallback_path_prefix: "/api/v1/fallback-reads"
+          fallback_status: 507
+          read_timeout_ms: 10000
+          fallback_timeout_ms: 30000
       # Tier 1 — IP floor on the read path. Reads are cheap; this cap is
       # mostly here as anti-flood for unauthenticated probes.
       - name: rate-limiting

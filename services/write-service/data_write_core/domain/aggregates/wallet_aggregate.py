@@ -31,6 +31,7 @@ class WalletAggregate(AggregateRoot[WalletEntity]):
             (transaction.amount for transaction in self._unsettled_transactions),
             Decimal("0"),
         )
+
         return base + unsettled
 
     def apply_transaction(self, amount: Decimal) -> "TransactionEntity":

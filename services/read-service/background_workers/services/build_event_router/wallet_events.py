@@ -10,12 +10,14 @@ from data_read_core.shared.kafka_updates import (
     SyncProcessGroup,
 )
 from data_read_core.write_reactions import (
+    BumpWalletListVersion,
     CreateWalletReadModel,
     EvictWalletCache,
     RemoveWalletReadModel,
+    TrackAppliedSeq,
     UpdateWalletReadModel,
 )
-from kafka_messages import WalletUpdated
+from kafka_messages import WalletCreated, WalletDeleted, WalletUpdated
 
 
 def subscribe_wallet_deleted(
@@ -27,8 +29,9 @@ def subscribe_wallet_deleted(
         [
             SyncProcessGroup(
                 [
-                    RemoveWalletReadModel(),
+                    TrackAppliedSeq(RemoveWalletReadModel(), WalletDeleted),
                     EvictWalletCache(),
+                    BumpWalletListVersion(WalletDeleted),
                 ]
             ),
         ]
@@ -55,8 +58,9 @@ def subscribe_wallet_updated(
         [
             SyncProcessGroup(
                 [
-                    UpdateWalletReadModel(),
+                    TrackAppliedSeq(UpdateWalletReadModel(), WalletUpdated),
                     EvictWalletCache(WalletUpdated),
+                    BumpWalletListVersion(WalletUpdated),
                 ]
             ),
         ]
@@ -77,20 +81,26 @@ def subscribe_wallet_updated(
 def subscribe_wallet_created(
     router: EventRouter,
     postgres_probe: HealthProbe,
+    redis_probe: HealthProbe,
 ):
     wallet_created = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
-                    CreateWalletReadModel(),
+                    TrackAppliedSeq(CreateWalletReadModel(), WalletCreated),
+                    BumpWalletListVersion(WalletCreated),
                 ]
             ),
         ]
     )
     guarded_handler = HealthGuardedHandler(
-        wallet_created,
-        postgres_probe,
-        guarded_errors=POSTGRES_CONNECTIVITY_ERRORS,
+        HealthGuardedHandler(
+            wallet_created,
+            postgres_probe,
+            guarded_errors=POSTGRES_CONNECTIVITY_ERRORS,
+        ),
+        redis_probe,
+        guarded_errors=REDIS_CONNECTIVITY_ERRORS,
     )
 
     router.register("WalletCreated", guarded_handler)

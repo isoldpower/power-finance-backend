@@ -36,6 +36,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=libraries/kafka-client-py/pyproject.toml,target=libraries/kafka-client-py/pyproject.toml \
     --mount=type=bind,source=libraries/kafka-messages-proto/pyproject.toml,target=libraries/kafka-messages-proto/pyproject.toml \
     --mount=type=bind,source=libraries/saga-pattern-py/pyproject.toml,target=libraries/saga-pattern-py/pyproject.toml \
+    --mount=type=bind,source=libraries/read-at-least-py/pyproject.toml,target=libraries/read-at-least-py/pyproject.toml \
     uv sync --frozen --no-install-project --no-dev --package read-service
 
 # Layer 2: copy source for the service + every workspace lib it imports,
@@ -43,6 +44,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY libraries/kafka-client-py /app/libraries/kafka-client-py
 COPY libraries/saga-pattern-py /app/libraries/saga-pattern-py
 COPY libraries/kafka-messages-proto /app/libraries/kafka-messages-proto
+COPY libraries/read-at-least-py /app/libraries/read-at-least-py
 COPY services/read-service /app/services/read-service
 COPY pyproject.toml uv.lock /app/
 

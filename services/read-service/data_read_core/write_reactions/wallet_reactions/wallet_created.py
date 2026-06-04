@@ -15,25 +15,24 @@ class CreateWalletReadModel(Effect):
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, WalletCreated)
         await handle_database_errors(
-            _create_wallet,
+            self._create_wallet,
             payload,
             resource_id=payload.wallet_id,
         )
 
+    async def _create_wallet(self, payload: WalletCreated) -> WalletReadModel:
+        created_wallet = await WalletReadModel.objects.acreate(
+            id=payload.wallet_id,
+            user_id=payload.user_id,
+            title=payload.title,
+            currency_code=payload.currency_code,
+            balance=0,
+            created_at=payload.created_at.ToDatetime(tzinfo=UTC),
+            updated_at=None,
+        )
+        logger.info(
+            "Received WalletCreated payload for wallet %s.",
+            payload.wallet_id,
+        )
 
-async def _create_wallet(payload: WalletCreated) -> WalletReadModel:
-    created_wallet = await WalletReadModel.objects.acreate(
-        id=payload.wallet_id,
-        user_id=payload.user_id,
-        title=payload.title,
-        currency_code=payload.currency_code,
-        balance=0,
-        created_at=payload.created_at.ToDatetime(tzinfo=UTC),
-        updated_at=None,
-    )
-    logger.info(
-        "Received WalletCreated payload for wallet %s.",
-        payload.wallet_id,
-    )
-
-    return created_wallet
+        return created_wallet

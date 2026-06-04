@@ -1,5 +1,11 @@
 from django.urls import path
 
+from .views.fallback_read import (
+    FallbackTransactionListView,
+    FallbackTransactionResourceView,
+    FallbackWalletListView,
+    FallbackWalletResourceView,
+)
 from .views.transactions import TransactionListView, TransactionResourceView
 from .views.wallets import WalletListView, WalletResourceView
 
@@ -23,5 +29,27 @@ urlpatterns = [
         "wallets/<uuid:pk>/",
         WalletResourceView.as_view(),
         name="wallets-resource",
+    ),
+    # Always-consistent fallback reads. The gateway redirects here when the
+    # Read Service returns 507 (projection behind the client's Read-At-Least).
+    path(
+        "fallback-reads/wallets/",
+        FallbackWalletListView.as_view(),
+        name="fallback-wallets-list",
+    ),
+    path(
+        "fallback-reads/wallets/<uuid:pk>/",
+        FallbackWalletResourceView.as_view(),
+        name="fallback-wallets-resource",
+    ),
+    path(
+        "fallback-reads/transactions/",
+        FallbackTransactionListView.as_view(),
+        name="fallback-transactions-list",
+    ),
+    path(
+        "fallback-reads/transactions/<uuid:pk>/",
+        FallbackTransactionResourceView.as_view(),
+        name="fallback-transactions-resource",
     ),
 ]

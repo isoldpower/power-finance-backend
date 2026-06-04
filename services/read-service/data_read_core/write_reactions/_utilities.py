@@ -8,6 +8,7 @@ from google.protobuf.message import Message
 from kafka_client_py import PoisonError
 
 from data_read_core.shared.kafka_updates import EventMessage
+from data_read_core.shared.postgres_orm import aatomic
 
 logger = getLogger("background_workers.write_message_consumer")
 
@@ -24,7 +25,8 @@ async def handle_database_errors(
     """Run a read-model write, swallowing misaligned-data DB errors."""
 
     try:
-        return await effect(payload)
+        async with aatomic():
+            return await effect(payload)
     except IntegrityError:
         logger.fatal(
             "Received a resource (id %s) that is breaking read model's schema unique constraints. "

@@ -13,6 +13,7 @@ members = [
     "kafka-client-py",
     "kafka-messages-proto",
     "power-finance-cqrs",
+    "read-at-least-py",
     "read-service",
     "saga-pattern-py",
     "write-service",
@@ -1494,6 +1495,25 @@ wheels = [
 ]
 
 [[package]]
+name = "read-at-least-py"
+version = "0.0.0"
+source = { editable = "libraries/read-at-least-py" }
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.3,<9.0" },
+    { name = "pytest-asyncio", specifier = ">=0.24,<1.0" },
+]
+
+[[package]]
 name = "read-service"
 version = "0.0.0"
 source = { editable = "services/read-service" }
@@ -1509,9 +1529,17 @@ dependencies = [
     { name = "kafka-messages-proto" },
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "pydantic" },
+    { name = "read-at-least-py" },
     { name = "redis" },
     { name = "saga-pattern-py" },
     { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-django" },
 ]
 
 [package.metadata]
@@ -1527,9 +1555,17 @@ requires-dist = [
     { name = "kafka-messages-proto", editable = "libraries/kafka-messages-proto" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.3,<4.0" },
     { name = "pydantic", specifier = ">=2.12,<3.0" },
+    { name = "read-at-least-py", editable = "libraries/read-at-least-py" },
     { name = "redis", specifier = ">=7.0,<8.0" },
     { name = "saga-pattern-py", editable = "libraries/saga-pattern-py" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.43,<0.44" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.3,<9.0" },
+    { name = "pytest-asyncio", specifier = ">=0.24,<1.0" },
+    { name = "pytest-django", specifier = ">=4.9,<5.0" },
 ]
 
 [[package]]

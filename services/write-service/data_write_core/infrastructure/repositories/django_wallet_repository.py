@@ -15,6 +15,29 @@ class DjangoWalletRepository(WalletRepository):
 
         return WalletMapper.to_domain(requested_wallet)
 
+    async def get_user_wallets(
+        self,
+        user_id: int,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[WalletEntity]:
+        queryset = (
+            WalletModel.objects.select_related("currency")
+            .filter(user_id=user_id)
+            .order_by("-created_at")
+        )
+
+        start = offset or 0
+        if limit is not None:
+            queryset = queryset[start : start + limit]
+        elif offset is not None:
+            queryset = queryset[start:]
+
+        return [WalletMapper.to_domain(wallet) async for wallet in queryset]
+
+    async def count_user_wallets(self, user_id: int) -> int:
+        return await WalletModel.objects.filter(user_id=user_id).acount()
+
     async def get_user_wallet_for_update(self, wallet_id: UUID, user_id: int) -> WalletEntity:
         requested_wallet: WalletModel = await (
             WalletModel.objects.select_for_update()

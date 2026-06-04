@@ -34,7 +34,9 @@ services:
       #                     default header from per-user Redis on read routes
       #   write-ral-version — response-side: sign upstream X-Write-Version header
       #                       and record (user, offset) to Redis on write routes
-      KONG_PLUGINS: "bundled,clerk-jwt,read-at-least,write-ral-version,user-tier-rate-limit"
+      #   read-fallback   — redirect Read Service 507s to the Write Service's
+      #                     always-consistent fallback-read endpoints
+      KONG_PLUGINS: "bundled,clerk-jwt,read-at-least,write-ral-version,user-tier-rate-limit,read-fallback"
       # Locks dict for the clerk-jwt single-flight JWKS fetch (resty.lock
       # requires an nginx shared dict; the JWKS document itself lives in
       # Redis now). 1m is plenty — we only store one lock key per issuer.
@@ -51,6 +53,7 @@ services:
       - ./infrastructure/kong/plugins/read-at-least:/usr/local/share/lua/5.1/kong/plugins/read-at-least:ro
       - ./infrastructure/kong/plugins/write-ral-version:/usr/local/share/lua/5.1/kong/plugins/write-ral-version:ro
       - ./infrastructure/kong/plugins/user-tier-rate-limit:/usr/local/share/lua/5.1/kong/plugins/user-tier-rate-limit:ro
+      - ./infrastructure/kong/plugins/read-fallback:/usr/local/share/lua/5.1/kong/plugins/read-fallback:ro
     ports:
       - "${GATEWAY_PROXY_PORT:-8080}:8000"
       - "${GATEWAY_ADMIN_PORT:-8001}:8001"

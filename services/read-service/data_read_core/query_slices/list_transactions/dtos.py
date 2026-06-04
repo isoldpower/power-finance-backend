@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 from data_read_core.shared.postgres_orm import TransactionReadModel
@@ -7,6 +7,15 @@ from data_read_core.shared.postgres_orm import TransactionReadModel
 @dataclass(frozen=True)
 class ListTransactionsQuery:
     user_id: int
+    limit: int
+    offset: int
+    filters: dict = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class CacheOperationData:
+    user_id: int
+    filters: dict
     limit: int
     offset: int
 
@@ -32,6 +41,29 @@ class TransactionDTO:
             occurred_at=_to_iso(model.occurred_at),
             created_at=_to_iso(model.created_at),
         )
+
+    @classmethod
+    def from_cache(cls, raw: dict) -> "TransactionDTO":
+        return cls(
+            id=raw["id"],
+            user_id=raw["user_id"],
+            wallet_id=raw["wallet_id"],
+            amount=raw["amount"],
+            currency=raw["currency"],
+            occurred_at=raw["occurred_at"],
+            created_at=raw["created_at"],
+        )
+
+    def to_cache(self) -> dict:
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "wallet_id": self.wallet_id,
+            "amount": self.amount,
+            "currency": self.currency,
+            "occurred_at": self.occurred_at,
+            "created_at": self.created_at,
+        }
 
 
 def _to_iso(value: datetime | None) -> str | None:

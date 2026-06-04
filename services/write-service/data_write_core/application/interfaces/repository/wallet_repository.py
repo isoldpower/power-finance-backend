@@ -18,6 +18,19 @@ class WalletRepository(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    async def get_user_wallets(
+        self,
+        user_id: int,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[WalletEntity]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def count_user_wallets(self, user_id: int) -> int:
+        raise NotImplementedError()
+
+    @abstractmethod
     async def get_user_wallet_for_update(
         self,
         wallet_id: UUID,

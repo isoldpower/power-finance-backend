@@ -151,6 +151,7 @@ LOGGING = {
             "propagate": False,
         },
         "data_read_core": {"handlers": ["console"], "level": env("LOG_LEVEL"), "propagate": False},
+        "query_slices": {"handlers": ["console"], "level": env("LOG_LEVEL"), "propagate": False},
     },
 }
 

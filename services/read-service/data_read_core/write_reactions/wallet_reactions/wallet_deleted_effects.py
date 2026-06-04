@@ -20,19 +20,18 @@ class RemoveWalletReadModel(Effect):
     async def apply(self, event: EventMessage) -> None:
         event_payload = decode_payload(event, WalletDeleted)
         await handle_database_errors(
-            _remove_wallet,
+            self._remove_wallet,
             event_payload,
             resource_id=event_payload.wallet_id,
         )
 
-
-async def _remove_wallet(payload: WalletDeleted) -> None:
-    deleted, _ = await WalletReadModel.objects.filter(id=payload.wallet_id).adelete()
-    logger.info(
-        "Removed wallet %s from read store (rows=%s).",
-        payload.wallet_id,
-        deleted,
-    )
+    async def _remove_wallet(self, payload: WalletDeleted) -> None:
+        deleted, _ = await WalletReadModel.objects.filter(id=payload.wallet_id).adelete()
+        logger.info(
+            "Removed wallet %s from read store (rows=%s).",
+            payload.wallet_id,
+            deleted,
+        )
 
 
 class EvictWalletCache(Effect):

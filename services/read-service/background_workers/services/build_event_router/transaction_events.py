@@ -10,10 +10,13 @@ from data_read_core.shared.kafka_updates import (
     SyncProcessGroup,
 )
 from data_read_core.write_reactions import (
+    BumpTransactionListVersion,
+    BumpWalletListVersion,
     CreateTransactionReadModel,
     EvictTransactionCache,
     EvictWalletCache,
     RemoveTransactionReadModel,
+    TrackAppliedSeq,
     UpdateTransactionReadModel,
 )
 from kafka_messages import TransactionCreated, TransactionDeleted, TransactionUpdated
@@ -28,8 +31,10 @@ def subscribe_transaction_created(
         [
             SyncProcessGroup(
                 [
-                    CreateTransactionReadModel(),
+                    TrackAppliedSeq(CreateTransactionReadModel(), TransactionCreated),
                     EvictWalletCache(TransactionCreated),
+                    BumpTransactionListVersion(TransactionCreated),
+                    BumpWalletListVersion(TransactionCreated),
                 ]
             ),
         ]
@@ -56,9 +61,11 @@ def subscribe_transaction_deleted(
         [
             SyncProcessGroup(
                 [
-                    RemoveTransactionReadModel(),
+                    TrackAppliedSeq(RemoveTransactionReadModel(), TransactionDeleted),
                     EvictWalletCache(TransactionDeleted),
                     EvictTransactionCache(TransactionDeleted),
+                    BumpTransactionListVersion(TransactionDeleted),
+                    BumpWalletListVersion(TransactionDeleted),
                 ]
             ),
         ]
@@ -85,9 +92,11 @@ def subscribe_transaction_updated(
         [
             SyncProcessGroup(
                 [
-                    UpdateTransactionReadModel(),
+                    TrackAppliedSeq(UpdateTransactionReadModel(), TransactionUpdated),
                     EvictWalletCache(TransactionUpdated),
                     EvictTransactionCache(TransactionUpdated),
+                    BumpTransactionListVersion(TransactionUpdated),
+                    BumpWalletListVersion(TransactionUpdated),
                 ]
             ),
         ]

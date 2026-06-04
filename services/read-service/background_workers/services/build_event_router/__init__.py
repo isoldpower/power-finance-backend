@@ -56,7 +56,7 @@ def _subscribe_all_events(router: EventRouter) -> None:
     subscribe_user_synced(router, postgres_probe)
     subscribe_wallet_deleted(router, postgres_probe, redis_probe)
     subscribe_wallet_updated(router, postgres_probe, redis_probe)
-    subscribe_wallet_created(router, postgres_probe)
+    subscribe_wallet_created(router, postgres_probe, redis_probe)
     subscribe_transaction_created(router, postgres_probe, redis_probe)
     subscribe_transaction_updated(router, postgres_probe, redis_probe)
     subscribe_transaction_deleted(router, postgres_probe, redis_probe)
