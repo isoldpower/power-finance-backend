@@ -1,7 +1,6 @@
 from data_read_core.shared.health_guard import (
     POSTGRES_CONNECTIVITY_ERRORS,
     HealthGuardedHandler,
-    HealthProbe,
 )
 from data_read_core.shared.kafka_updates import (
     EventRouter,
@@ -10,10 +9,12 @@ from data_read_core.shared.kafka_updates import (
 )
 from data_read_core.write_reactions import ProjectUserReadModel
 
+from ._types import ProbesDictionary
+
 
 def subscribe_user_synced(
     router: EventRouter,
-    postgres_probe: HealthProbe,
+    probes: ProbesDictionary,
 ):
     user_synced = ExecutionPlan(
         [
@@ -26,7 +27,7 @@ def subscribe_user_synced(
     )
     guarded_handler = HealthGuardedHandler(
         user_synced,
-        postgres_probe,
+        probes.postgres_probe,
         guarded_errors=POSTGRES_CONNECTIVITY_ERRORS,
     )
 

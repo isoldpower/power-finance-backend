@@ -4,6 +4,17 @@
 # compose pulls the same broker in transitively through this include.
 include:
   - ../../infrastructure/kafka/compose.yaml
+  - ./compose.elastic.yaml
+
+# Shared Elasticsearch client config. The consumer indexes documents and the
+# HTTP app queries them; both reach the cluster as es01:9200 over TLS and verify
+# against the CA minted into the `certs` volume by the elastic setup service.
+x-elasticsearch-env: &elasticsearch-env
+  ELASTICSEARCH_HOSTS: https://es01:9200
+  ELASTICSEARCH_USERNAME: elastic
+  ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD:-changeme}
+  ELASTICSEARCH_CA_CERTS: /certs/ca/ca.crt
+  ELASTICSEARCH_VERIFY_CERTS: "true"
 
 services:
   # Read-side HTTP app. Serves the query slices (e.g. GET wallet by id) behind
@@ -29,10 +40,35 @@ services:
       DATABASE_USER: ${READ_DATABASE_USER:-postgres}
       DATABASE_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
       REDIS_URL: ${READ_REDIS_URL:-redis://read-redis:6379/0}
+      <<: *elasticsearch-env
+    volumes:
+      - certs:/certs:ro
     depends_on:
       postgres-read:
         condition: service_healthy
       read-redis:
+        condition: service_healthy
+      read-es-init:
+        condition: service_completed_successfully
+
+  # One-shot schema bootstrap. Creates the read-side Elasticsearch indices with
+  # their mappings, then exits. Kept as a distinct command (not folded into the
+  # consumer startup) so index DDL stays an explicit, idempotent operation; the
+  # consumer and HTTP app gate on its successful completion.
+  read-es-init:
+    build:
+      context: ../..
+      dockerfile: services/read-service/Dockerfile
+    image: power-finance/read-service:dev
+    restart: "no"
+    command: ["python", "manage.py", "init_elasticsearch_indices"]
+    environment:
+      DJANGO_SETTINGS_MODULE: read_service.settings.local
+      <<: *elasticsearch-env
+    volumes:
+      - certs:/certs:ro
+    depends_on:
+      es01:
         condition: service_healthy
 
   # Standalone, long-lived Kafka consumer. Not a web process — it tails the
@@ -64,6 +100,9 @@ services:
       DATABASE_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
       # Read-side cache. Reached as read-redis:6379 over the compose network.
       REDIS_URL: ${READ_REDIS_URL:-redis://read-redis:6379/0}
+      <<: *elasticsearch-env
+    volumes:
+      - certs:/certs:ro
     depends_on:
       kafka:
         condition: service_healthy
@@ -71,6 +110,8 @@ services:
         condition: service_healthy
       read-redis:
         condition: service_healthy
+      read-es-init:
+        condition: service_completed_successfully
     # No port / healthcheck: this is a background worker, not an HTTP service.
     # Liveness is delegated to `restart: unless-stopped` plus crash exit codes.
     stop_grace_period: 30s
@@ -105,8 +146,6 @@ services:
   read-redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:${READ_REDIS_PORT:-6381}:6379"
     volumes:
       - redis_read_data:/data
     healthcheck:

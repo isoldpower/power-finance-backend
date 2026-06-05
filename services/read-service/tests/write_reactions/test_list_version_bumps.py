@@ -1,11 +1,13 @@
 from data_read_core.write_reactions.transaction_reactions import (
-    transaction_list_version,
+    redis_increase_version as transaction_list_version,
 )
-from data_read_core.write_reactions.transaction_reactions.transaction_list_version import (
+from data_read_core.write_reactions.transaction_reactions.redis_increase_version import (
     BumpTransactionListVersion,
 )
-from data_read_core.write_reactions.wallet_reactions import wallet_list_version
-from data_read_core.write_reactions.wallet_reactions.wallet_list_version import (
+from data_read_core.write_reactions.wallet_reactions import (
+    redis_increase_version as wallet_list_version,
+)
+from data_read_core.write_reactions.wallet_reactions.redis_increase_version import (
     BumpWalletListVersion,
 )
 from kafka_messages import TransactionCreated, WalletCreated, WalletUpdated

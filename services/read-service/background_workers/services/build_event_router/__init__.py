@@ -1,7 +1,5 @@
-from data_read_core.shared.health_guard import (
-    PostgresHealthProbe,
-    RedisHealthProbe,
-)
+from collections.abc import Callable
+
 from data_read_core.shared.kafka_updates import (
     ConsumerConfig,
     EventRouter,
@@ -16,6 +14,7 @@ from kafka_client_py import (
     RetryPublisher,
 )
 
+from ._types import ProbesDictionary
 from .transaction_events import (
     subscribe_transaction_created,
     subscribe_transaction_deleted,
@@ -27,6 +26,16 @@ from .wallet_events import (
     subscribe_wallet_deleted,
     subscribe_wallet_updated,
 )
+
+_KNOWN_HANDLERS: list[Callable[[EventRouter, ProbesDictionary], None]] = [
+    subscribe_user_synced,
+    subscribe_wallet_deleted,
+    subscribe_wallet_updated,
+    subscribe_wallet_created,
+    subscribe_transaction_created,
+    subscribe_transaction_updated,
+    subscribe_transaction_deleted,
+]
 
 
 async def build_event_router(config: ConsumerConfig) -> None:
@@ -50,13 +59,10 @@ async def build_event_router(config: ConsumerConfig) -> None:
 
 
 def _subscribe_all_events(router: EventRouter) -> None:
-    postgres_probe = PostgresHealthProbe()
-    redis_probe = RedisHealthProbe()
+    probes = _build_probes()
+    for subscribe in _KNOWN_HANDLERS:
+        subscribe(router, probes)
 
-    subscribe_user_synced(router, postgres_probe)
-    subscribe_wallet_deleted(router, postgres_probe, redis_probe)
-    subscribe_wallet_updated(router, postgres_probe, redis_probe)
-    subscribe_wallet_created(router, postgres_probe, redis_probe)
-    subscribe_transaction_created(router, postgres_probe, redis_probe)
-    subscribe_transaction_updated(router, postgres_probe, redis_probe)
-    subscribe_transaction_deleted(router, postgres_probe, redis_probe)
+
+def _build_probes() -> ProbesDictionary:
+    return ProbesDictionary.build_probes()

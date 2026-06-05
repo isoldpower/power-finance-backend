@@ -1,3 +1,5 @@
+from collections.abc import Awaitable, Callable
+from functools import wraps
 from logging import getLogger
 
 from read_at_least_py import NotCaughtUp, ReadAtLeastGate, parse_read_at_least
@@ -10,6 +12,30 @@ logger = getLogger("query_slices.read_at_least")
 
 
 READ_AT_LEAST_HEADER = "Read-At-Least"
+
+type AsyncView = Callable[..., Awaitable]
+
+
+def read_at_least_gate(view: AsyncView) -> AsyncView:
+    """Enforce the Read-At-Least gate before the wrapped query view runs.
+
+    Applied *under* ``@async_api_view`` so it sees the authenticated request:
+
+        @async_api_view(["GET"])
+        @read_at_least_gate
+        async def get_wallet(request, pk=None): ...
+
+    A failed gate raises ``ReadModelNotCaughtUp`` (507), which propagates to DRF's
+    exception handling rather than the view's own try/except, so it is never
+    masked as a 400.
+    """
+
+    @wraps(view)
+    async def gated_view(request: Request, *args, **kwargs):
+        await ensure_read_at_least(request)
+        return await view(request, *args, **kwargs)
+
+    return gated_view
 
 
 async def ensure_read_at_least(request: Request) -> None:

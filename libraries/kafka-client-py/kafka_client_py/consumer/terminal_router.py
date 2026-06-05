@@ -38,7 +38,11 @@ class TerminalRouter:
             first_failed_at=retry_context.first_failed_at_or_now(),
         )
         logger.warning(
-            f"kafka.handler.{reason}",
+            "kafka.handler.%s topic=%s error=%s: %s",
+            reason,
+            message.topic,
+            type(exception).__name__,
+            exception,
             extra={"topic": message.topic, "error_class": type(exception).__name__},
         )
 
@@ -79,11 +83,17 @@ class TerminalRouter:
             first_failed_at=retry_context.first_failed_at_or_now(),
         )
         logger.info(
-            "kafka.handler.retry_scheduled",
+            "kafka.handler.retry_scheduled topic=%s retry_at=%s attempt=%s error=%s: %s",
+            message.topic,
+            next_retry_at.isoformat(),
+            next_retry_topic_attempt,
+            type(last_exception).__name__,
+            last_exception,
             extra={
                 "topic": message.topic,
                 "retry_at": next_retry_at.isoformat(),
                 "retry_topic_attempt": next_retry_topic_attempt,
+                "error_class": type(last_exception).__name__,
             },
         )
 
@@ -102,6 +112,14 @@ class TerminalRouter:
             first_failed_at=retry_context.first_failed_at_or_now(),
         )
         logger.warning(
-            "kafka.handler.exhausted",
-            extra={"topic": message.topic, "total_attempts": total_attempts},
+            "kafka.handler.exhausted topic=%s total_attempts=%s error=%s: %s",
+            message.topic,
+            total_attempts,
+            type(last_exception).__name__,
+            last_exception,
+            extra={
+                "topic": message.topic,
+                "total_attempts": total_attempts,
+                "error_class": type(last_exception).__name__,
+            },
         )

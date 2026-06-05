@@ -9,7 +9,7 @@ dependencies = [
     "uvicorn[standard]>=0.43,<0.44",
     "psycopg[binary,pool]>=3.3,<4.0",
     "redis>=7.0,<8.0",
-    "elasticsearch>=8.13,<9.0",
+    "elasticsearch[async]>=8.13,<9.0",
     "drf-spectacular>=0.29,<0.30",
     "django-environ>=0.13,<0.14",
     "django-cors-headers>=4.9,<5.0",
@@ -19,6 +19,7 @@ dependencies = [
     "saga-pattern-py",
     "kafka-messages-proto",
     "read-at-least-py",
+    "correlation-py",
 ]
 
 [dependency-groups]
@@ -33,6 +34,7 @@ kafka-client-py = { workspace = true }
 saga-pattern-py = { workspace = true }
 kafka-messages-proto = { workspace = true }
 read-at-least-py = { workspace = true }
+correlation-py = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

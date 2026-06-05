@@ -1,9 +1,3 @@
-from data_read_core.shared.health_guard import (
-    POSTGRES_CONNECTIVITY_ERRORS,
-    REDIS_CONNECTIVITY_ERRORS,
-    HealthGuardedHandler,
-    HealthProbe,
-)
 from data_read_core.shared.kafka_updates import (
     EventRouter,
     ExecutionPlan,
@@ -15,17 +9,22 @@ from data_read_core.write_reactions import (
     CreateTransactionReadModel,
     EvictTransactionCache,
     EvictWalletCache,
+    IndexTransactionDocument,
+    RemoveTransactionDocument,
     RemoveTransactionReadModel,
     TrackAppliedSeq,
+    UpdateTransactionDocument,
     UpdateTransactionReadModel,
 )
 from kafka_messages import TransactionCreated, TransactionDeleted, TransactionUpdated
 
+from ._health_guards import guard_all
+from ._types import ProbesDictionary
+
 
 def subscribe_transaction_created(
     router: EventRouter,
-    postgres_probe: HealthProbe,
-    redis_probe: HealthProbe,
+    probes: ProbesDictionary,
 ):
     transaction_created = ExecutionPlan(
         [
@@ -37,25 +36,19 @@ def subscribe_transaction_created(
                     BumpWalletListVersion(TransactionCreated),
                 ]
             ),
+            SyncProcessGroup([IndexTransactionDocument()]),
         ]
     )
-    guarded_handler = HealthGuardedHandler(
-        HealthGuardedHandler(
-            transaction_created,
-            postgres_probe,
-            guarded_errors=POSTGRES_CONNECTIVITY_ERRORS,
-        ),
-        redis_probe,
-        guarded_errors=REDIS_CONNECTIVITY_ERRORS,
-    )
 
-    router.register("TransactionCreated", guarded_handler)
+    router.register(
+        "TransactionCreated",
+        guard_all(transaction_created, probes),
+    )
 
 
 def subscribe_transaction_deleted(
     router: EventRouter,
-    postgres_probe: HealthProbe,
-    redis_probe: HealthProbe,
+    probes: ProbesDictionary,
 ):
     transaction_deleted = ExecutionPlan(
         [
@@ -68,25 +61,19 @@ def subscribe_transaction_deleted(
                     BumpWalletListVersion(TransactionDeleted),
                 ]
             ),
+            SyncProcessGroup([RemoveTransactionDocument()]),
         ]
     )
-    guarded_handler = HealthGuardedHandler(
-        HealthGuardedHandler(
-            transaction_deleted,
-            postgres_probe,
-            guarded_errors=POSTGRES_CONNECTIVITY_ERRORS,
-        ),
-        redis_probe,
-        guarded_errors=REDIS_CONNECTIVITY_ERRORS,
-    )
 
-    router.register("TransactionDeleted", guarded_handler)
+    router.register(
+        "TransactionDeleted",
+        guard_all(transaction_deleted, probes),
+    )
 
 
 def subscribe_transaction_updated(
     router: EventRouter,
-    postgres_probe: HealthProbe,
-    redis_probe: HealthProbe,
+    probes: ProbesDictionary,
 ):
     transaction_updated = ExecutionPlan(
         [
@@ -99,16 +86,11 @@ def subscribe_transaction_updated(
                     BumpWalletListVersion(TransactionUpdated),
                 ]
             ),
+            SyncProcessGroup([UpdateTransactionDocument()]),
         ]
     )
-    guarded_handler = HealthGuardedHandler(
-        HealthGuardedHandler(
-            transaction_updated,
-            postgres_probe,
-            guarded_errors=POSTGRES_CONNECTIVITY_ERRORS,
-        ),
-        redis_probe,
-        guarded_errors=REDIS_CONNECTIVITY_ERRORS,
-    )
 
-    router.register("TransactionUpdated", guarded_handler)
+    router.register(
+        "TransactionUpdated",
+        guard_all(transaction_updated, probes),
+    )

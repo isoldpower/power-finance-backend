@@ -1,9 +1,3 @@
-from data_read_core.shared.health_guard import (
-    POSTGRES_CONNECTIVITY_ERRORS,
-    REDIS_CONNECTIVITY_ERRORS,
-    HealthGuardedHandler,
-    HealthProbe,
-)
 from data_read_core.shared.kafka_updates import (
     EventRouter,
     ExecutionPlan,
@@ -13,17 +7,26 @@ from data_read_core.write_reactions import (
     BumpWalletListVersion,
     CreateWalletReadModel,
     EvictWalletCache,
+    IndexWalletDocument,
+    RemoveWalletDocument,
     RemoveWalletReadModel,
     TrackAppliedSeq,
+    UpdateWalletDocument,
     UpdateWalletReadModel,
 )
-from kafka_messages import WalletCreated, WalletDeleted, WalletUpdated
+from kafka_messages import (
+    WalletCreated,
+    WalletDeleted,
+    WalletUpdated,
+)
+
+from ._health_guards import guard_all
+from ._types import ProbesDictionary
 
 
 def subscribe_wallet_deleted(
     router: EventRouter,
-    postgres_probe: HealthProbe,
-    redis_probe: HealthProbe,
+    probes: ProbesDictionary,
 ):
     wallet_deleted = ExecutionPlan(
         [
@@ -34,25 +37,19 @@ def subscribe_wallet_deleted(
                     BumpWalletListVersion(WalletDeleted),
                 ]
             ),
+            SyncProcessGroup([RemoveWalletDocument()]),
         ]
     )
-    guarded_handler = HealthGuardedHandler(
-        HealthGuardedHandler(
-            wallet_deleted,
-            postgres_probe,
-            guarded_errors=POSTGRES_CONNECTIVITY_ERRORS,
-        ),
-        redis_probe,
-        guarded_errors=REDIS_CONNECTIVITY_ERRORS,
-    )
 
-    router.register("WalletDeleted", guarded_handler)
+    router.register(
+        "WalletDeleted",
+        guard_all(wallet_deleted, probes),
+    )
 
 
 def subscribe_wallet_updated(
     router: EventRouter,
-    postgres_probe: HealthProbe,
-    redis_probe: HealthProbe,
+    probes: ProbesDictionary,
 ):
     wallet_updated = ExecutionPlan(
         [
@@ -63,25 +60,19 @@ def subscribe_wallet_updated(
                     BumpWalletListVersion(WalletUpdated),
                 ]
             ),
+            SyncProcessGroup([UpdateWalletDocument()]),
         ]
     )
-    guarded_handler = HealthGuardedHandler(
-        HealthGuardedHandler(
-            wallet_updated,
-            postgres_probe,
-            guarded_errors=POSTGRES_CONNECTIVITY_ERRORS,
-        ),
-        redis_probe,
-        guarded_errors=REDIS_CONNECTIVITY_ERRORS,
-    )
 
-    router.register("WalletUpdated", guarded_handler)
+    router.register(
+        "WalletUpdated",
+        guard_all(wallet_updated, probes),
+    )
 
 
 def subscribe_wallet_created(
     router: EventRouter,
-    postgres_probe: HealthProbe,
-    redis_probe: HealthProbe,
+    probes: ProbesDictionary,
 ):
     wallet_created = ExecutionPlan(
         [
@@ -91,16 +82,11 @@ def subscribe_wallet_created(
                     BumpWalletListVersion(WalletCreated),
                 ]
             ),
+            SyncProcessGroup([IndexWalletDocument()]),
         ]
     )
-    guarded_handler = HealthGuardedHandler(
-        HealthGuardedHandler(
-            wallet_created,
-            postgres_probe,
-            guarded_errors=POSTGRES_CONNECTIVITY_ERRORS,
-        ),
-        redis_probe,
-        guarded_errors=REDIS_CONNECTIVITY_ERRORS,
-    )
 
-    router.register("WalletCreated", guarded_handler)
+    router.register(
+        "WalletCreated",
+        guard_all(wallet_created, probes),
+    )

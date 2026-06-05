@@ -24,6 +24,11 @@ env = environ.Env(
     KAFKA_OUTBOX_TOPIC=(str, "events.async"),
     KAFKA_READ_GROUP_ID=(str, "read-service.test-consumer"),
     REDIS_URL=(str, "redis://localhost:6379/0"),
+    ELASTICSEARCH_HOSTS=(list, ["https://localhost:9200"]),
+    ELASTICSEARCH_USERNAME=(str, "elastic"),
+    ELASTICSEARCH_PASSWORD=(str, "changeme"),
+    ELASTICSEARCH_CA_CERTS=(str, ""),
+    ELASTICSEARCH_VERIFY_CERTS=(bool, True),
     LOG_LEVEL=(str, "INFO"),
 )
 if ENV_FILE.exists():
@@ -56,6 +61,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Stamp the correlation id early so every downstream log record (and the
+    # Kafka headers it propagates into) carries it. Matches the write service.
+    "correlation.CorrelationIDMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -104,6 +112,19 @@ DATABASES = {
 # environment; the default targets a local Redis.
 REDIS_URL = env("REDIS_URL")
 
+# Elasticsearch — search/analytics projection of the read models. The consumer
+# indexes wallet/transaction documents alongside the Postgres writes; the
+# schema-init management command creates the indices. `CA_CERTS` points at the
+# cluster CA so TLS verifies; leave it empty and set `VERIFY_CERTS=false` to talk
+# to a self-signed local cluster without wiring the cert in.
+ELASTICSEARCH = {
+    "HOSTS": env("ELASTICSEARCH_HOSTS"),
+    "USERNAME": env("ELASTICSEARCH_USERNAME"),
+    "PASSWORD": env("ELASTICSEARCH_PASSWORD"),
+    "CA_CERTS": env("ELASTICSEARCH_CA_CERTS") or None,
+    "VERIFY_CERTS": env("ELASTICSEARCH_VERIFY_CERTS"),
+}
+
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -134,15 +155,27 @@ KAFKA = {
 
 # Logging. Django leaves the root logger at WARNING by default, which hides
 # INFO from the background_workers consumers. Route app + consumer logs to the
-# console at LOG_LEVEL so projection activity is visible in `docker logs`.
+# console at LOG_LEVEL so projection activity is visible in `docker logs`. Every
+# record carries the correlation id (cid=) via the shared correlation filter,
+# matching the write service's format so logs correlate across services.
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "correlation_id": {"()": "correlation.CorrelationIDFilter"},
+    },
     "formatters": {
-        "standard": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"},
+        "standard": {
+            "format": "{levelname} {asctime} cid={correlation_id} {name} {message}",
+            "style": "{",
+        },
     },
     "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "standard"},
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+            "filters": ["correlation_id"],
+        },
     },
     "loggers": {
         "background_workers": {

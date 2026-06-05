@@ -5,7 +5,12 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 
-from data_read_core.shared.read_at_least import ensure_read_at_least
+from data_read_core.shared.query_logging import (
+    log_request_failed,
+    log_request_received,
+    log_request_served,
+)
+from data_read_core.shared.read_at_least import read_at_least_gate
 from data_read_core.shared.rest_framework import (
     StandardResultsPagination,
     async_api_view,
@@ -46,16 +51,10 @@ logger = logging.getLogger("query_slices.list_transactions")
     },
 )
 @async_api_view(["GET"])
+@read_at_least_gate
 async def list_transactions(request):
-    # Read-your-writes gate — may raise 507 so the gateway falls back to the
-    # write service. Kept outside the try/except so it is not masked as a 400.
-    await ensure_read_at_least(request)
-
     try:
-        logger.info(
-            "list_transactions: Received GET request to list transactions for User ID: %s",
-            request.user.id,
-        )
+        log_request_received(logger, "list_transactions", user_id=request.user.id)
 
         paginator = StandardResultsPagination()
         paginator.limit = paginator.get_limit(request)
@@ -70,10 +69,7 @@ async def list_transactions(request):
         )
 
         paginator.count = total
-        logger.info(
-            "list_transactions: Successfully listed transactions for User ID: %s",
-            request.user.id,
-        )
+        log_request_served(logger, "list_transactions", user_id=request.user.id, total=total)
 
         payload = present_many(transactions)
         return paginator.get_paginated_response(payload)
@@ -82,10 +78,6 @@ async def list_transactions(request):
             "message": f"Failed to list transactions: {error}",
             "resource_id": None,
         }
-        logger.error(
-            "list_transactions: Error listing transactions for User ID: %s - %s",
-            request.user.id,
-            str(error),
-        )
+        log_request_failed(logger, "list_transactions", error, user_id=request.user.id)
 
         return Response(payload, status=status.HTTP_400_BAD_REQUEST)
