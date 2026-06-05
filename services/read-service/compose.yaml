@@ -17,6 +17,13 @@ x-elasticsearch-env: &elasticsearch-env
   ELASTICSEARCH_VERIFY_CERTS: "true"
 
 services:
+  # Reduce healthcheck polling period so that it lands on a period when
+  # setup container is still active and haven't exited yet
+  setup:
+    healthcheck:
+      interval: 250ms
+      start_period: 0s
+
   # Read-side HTTP app. Serves the query slices (e.g. GET wallet by id) behind
   # Kong, which routes host: read-service, port: 8000 (see infrastructure/kong/
   # kong.yml). No published host port: reachable only over the compose network
@@ -27,6 +34,10 @@ services:
       dockerfile: services/read-service/Dockerfile
     image: power-finance/read-service:dev
     restart: unless-stopped
+    # Root needed only to read the elastic `setup`-minted CA in the shared
+    # `certs` volume (root:root, dir 0750). The cert mount is read-only, so this
+    # grants read access without letting the app write the volume.
+    user: "0"
     expose:
       - "8000"
     environment:
@@ -61,6 +72,8 @@ services:
       dockerfile: services/read-service/Dockerfile
     image: power-finance/read-service:dev
     restart: "no"
+    # Root to read the root:root 0750 CA in the shared `certs` volume (ro mount).
+    user: "0"
     command: ["python", "manage.py", "init_elasticsearch_indices"]
     environment:
       DJANGO_SETTINGS_MODULE: read_service.settings.local
@@ -81,6 +94,8 @@ services:
       dockerfile: services/read-service/Dockerfile
     image: power-finance/read-service:dev
     restart: unless-stopped
+    # Root to read the root:root 0750 CA in the shared `certs` volume (ro mount).
+    user: "0"
     command: ["python", "manage.py", "run_write_message_consumer"]
     environment:
       DJANGO_SETTINGS_MODULE: read_service.settings.local
