@@ -1,14 +1,12 @@
 from datetime import UTC
-from logging import getLogger
 
 from kafka_messages import WalletCreated
 
 from data_read_core.shared.elasticsearch import WALLETS_INDEX, get_elasticsearch
 from data_read_core.shared.kafka_updates import Effect, EventMessage
 
+from .._logger_shortcuts import log_wallet_elastic_created
 from .._utilities import decode_payload
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class IndexWalletDocument(Effect):
@@ -31,8 +29,4 @@ class IndexWalletDocument(Effect):
             id=payload.wallet_id,
             document=document,
         )
-        logger.info(
-            "Indexed wallet %s into %s.",
-            payload.wallet_id,
-            WALLETS_INDEX,
-        )
+        log_wallet_elastic_created(payload.wallet_id, WALLETS_INDEX)

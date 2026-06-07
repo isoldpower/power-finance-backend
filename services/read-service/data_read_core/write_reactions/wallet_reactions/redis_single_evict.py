@@ -1,5 +1,3 @@
-from logging import getLogger
-
 from google.protobuf.message import Message
 from kafka_messages import WalletDeleted
 
@@ -8,9 +6,8 @@ from data_read_core.shared.kafka_updates.processing import Effect
 from data_read_core.shared.redis_cache import get_redis
 
 from .._cache_keys import get_single_wallet_key
+from .._logger_shortcuts import log_wallet_cache_evicted
 from .._utilities import decode_payload
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class EvictWalletCache(Effect):
@@ -24,8 +21,4 @@ class EvictWalletCache(Effect):
         key = get_single_wallet_key(event_payload.wallet_id)
         removed_resource = await get_redis().delete(key)
 
-        logger.info(
-            "Evicted cache key %s (removed=%s).",
-            key,
-            removed_resource,
-        )
+        log_wallet_cache_evicted(key, removed_resource)

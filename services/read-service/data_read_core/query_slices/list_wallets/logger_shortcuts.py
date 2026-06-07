@@ -1,8 +1,6 @@
-from logging import getLogger
+from data_read_core.shared.logging import get_query_logger
 
 from .dtos import WalletDTO
-
-logger = getLogger("query_slices.list_wallets")
 
 
 def log_served_from_store(
@@ -10,6 +8,7 @@ def log_served_from_store(
     wallets: list[WalletDTO],
     total: int,
 ):
+    logger = get_query_logger("list_wallets")
     logger.info(
         "Served %d of %d wallets for user %s from read store.",
         len(wallets),
@@ -19,6 +18,7 @@ def log_served_from_store(
 
 
 def log_served_from_cache(user_id: int):
+    logger = get_query_logger("list_wallets")
     logger.info(
         "Served wallet list for user %s from cache.",
         user_id,

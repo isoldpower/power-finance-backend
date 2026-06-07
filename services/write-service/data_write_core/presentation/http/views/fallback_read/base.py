@@ -5,13 +5,7 @@ from ...pagination import StandardResultsPagination
 
 
 class FallbackReadView(BaseAsyncAPIView):
-    """Base for the always-consistent fallback-read routes.
-
-    The gateway redirects here when the Read Service answers 507 (its projection
-    has not caught up to the client's ``Read-At-Least``). These reads hit the
-    write side's source of truth (Postgres wallets + ImmuDB ledger), so they are
-    slower but never stale.
-    """
+    """Base for the always-consistent fallback-read routes."""
 
     permission_classes = [IsGatewayAuthenticated]
     pagination_class = StandardResultsPagination

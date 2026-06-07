@@ -1,13 +1,10 @@
-from logging import getLogger
-
 from kafka_messages import WalletDeleted
 
 from data_read_core.shared.elasticsearch import WALLETS_INDEX, get_elasticsearch
 from data_read_core.shared.kafka_updates import Effect, EventMessage
 
+from .._logger_shortcuts import log_wallet_elastic_removed
 from .._utilities import decode_payload
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class RemoveWalletDocument(Effect):
@@ -23,4 +20,4 @@ class RemoveWalletDocument(Effect):
                 id=payload.wallet_id,
             )
         )
-        logger.info("Removed wallet %s from %s.", payload.wallet_id, WALLETS_INDEX)
+        log_wallet_elastic_removed(payload.wallet_id, WALLETS_INDEX)

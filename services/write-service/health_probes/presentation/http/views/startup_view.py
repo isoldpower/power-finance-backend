@@ -1,9 +1,8 @@
-import logging
-
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from write_service.common.base_async_api_view import BaseAsyncAPIView
+from write_service.common.logging import get_http_logger, log_request_failed
 
 from health_probes.application.probes import CheckApplicationStarted
 from health_probes.domain.entities import ProbeStatus
@@ -11,7 +10,7 @@ from health_probes.domain.entities import ProbeStatus
 from ..presenters import HealthCheckPresenter
 from ..serializers import StartupDegradedResponseSerializer, StartupResponseSerializer
 
-logger = logging.getLogger(__name__)
+logger = get_http_logger("health")
 
 
 class StartupView(BaseAsyncAPIView):
@@ -43,7 +42,7 @@ class StartupView(BaseAsyncAPIView):
                 status=http_status,
             )
         except Exception as exc:
-            logger.exception("startup probe raised unexpectedly")
+            log_request_failed(logger, "startup_probe", exc)
 
             return Response(
                 HealthCheckPresenter.present_degraded(exc),

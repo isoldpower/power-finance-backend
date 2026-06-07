@@ -1,8 +1,7 @@
 import asyncio
 from abc import ABC, abstractmethod
-from logging import getLogger
 
-logger = getLogger("background_workers.health")
+from .logger_shortcuts import log_probe_available_again, warn_probe_unavailable
 
 
 class HealthProbe(ABC):
@@ -31,11 +30,7 @@ class HealthProbe(ABC):
     async def wait_until_healthy(self) -> None:
         poll_seconds = self._initial_poll_seconds
         while not await self.is_healthy():
-            logger.warning(
-                "%s still unavailable; next health check in %.1fs.",
-                self.name,
-                poll_seconds,
-            )
+            warn_probe_unavailable(self.name, poll_seconds)
 
             await asyncio.sleep(poll_seconds)
             poll_seconds = min(
@@ -43,4 +38,4 @@ class HealthProbe(ABC):
                 self._max_poll_seconds,
             )
 
-        logger.info("%s available again; resuming.", self.name)
+        log_probe_available_again(self.name)

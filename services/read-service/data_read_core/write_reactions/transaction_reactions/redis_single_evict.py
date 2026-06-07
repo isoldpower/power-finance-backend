@@ -1,5 +1,3 @@
-from logging import getLogger
-
 from google.protobuf.message import Message
 from kafka_messages import TransactionDeleted
 
@@ -7,9 +5,8 @@ from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.redis_cache import get_redis
 
 from .._cache_keys import get_single_transaction_key
+from .._logger_shortcuts import log_transaction_cache_evicted
 from .._utilities import decode_payload
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class EvictTransactionCache(Effect):
@@ -21,8 +18,4 @@ class EvictTransactionCache(Effect):
         key = get_single_transaction_key(event_payload.transaction_id)
         removed_resource = await get_redis().delete(key)
 
-        logger.info(
-            "Evicted cache key %s (removed=%s).",
-            key,
-            removed_resource,
-        )
+        log_transaction_cache_evicted(key, removed_resource)

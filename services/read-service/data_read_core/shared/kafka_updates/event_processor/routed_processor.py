@@ -1,12 +1,9 @@
-import logging
-
 from kafka_client_py import ConsumedMessage
 from kafka_client_py.publisher.dlq_publisher import DLQPublisher
 
 from ..exceptions import MalformedEnvelope
+from ..logger_shortcuts import debug_no_event_handler, warn_routed_to_dlq
 from ..types import EnvelopeDecoder, EventRouter
-
-logger = logging.getLogger(__name__)
 
 
 class RoutedMessageProcessor:
@@ -29,20 +26,11 @@ class RoutedMessageProcessor:
                 error=decode_error,
                 total_attempts=1,
             )
-            logger.warning(
-                "malformed envelope routed to DLQ; topic=%s partition=%s offset=%s",
-                message.topic,
-                message.partition,
-                message.offset,
-            )
+            warn_routed_to_dlq(message)
             return
 
         if not self._router.has(event.event_type):
-            logger.debug(
-                "no handler registered; event_type=%s offset=%s — skipping",
-                event.event_type,
-                message.offset,
-            )
+            debug_no_event_handler(event.event_type, message)
             return
 
         await self._router.dispatch(event)

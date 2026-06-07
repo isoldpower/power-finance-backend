@@ -1,6 +1,5 @@
 from datetime import UTC, datetime
 from decimal import Decimal
-from logging import getLogger
 
 from django.db.models import F
 from kafka_messages import TransactionCreated
@@ -8,10 +7,13 @@ from kafka_messages import TransactionCreated
 from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import TransactionReadModel, WalletReadModel, aatomic
 
+from .._logger_shortcuts import (
+    log_transaction_postgres_created,
+    log_transaction_postgres_duplication,
+    log_transaction_postgres_wallet_update,
+)
 from .._utilities import decode_payload, handle_database_errors
 from ._utilities import _wallet_currency
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class CreateTransactionReadModel(Effect):
@@ -70,17 +72,9 @@ class CreateTransactionReadModel(Effect):
         )
 
         if not resource_created:
-            logger.info(
-                "Transaction %s already projected; skipping balance adjustment.",
-                payload.transaction_id,
-            )
+            log_transaction_postgres_duplication(payload.transaction_id)
         else:
-            logger.info(
-                "Recorded transaction %s with value %d.",
-                new_resource.id,
-                new_resource.amount,
-            )
-
+            log_transaction_postgres_created(new_resource.id, new_resource.amount)
         return new_resource
 
     async def _apply_wallet_update(
@@ -93,9 +87,8 @@ class CreateTransactionReadModel(Effect):
         adjusted_count = await WalletReadModel.objects.filter(id=transaction_row.wallet_id).aupdate(
             balance=F("balance") + transaction_row.amount
         )
-        logger.info(
-            "Adjusted wallet %s balance by %s (rows=%s).",
-            transaction_row.wallet_id,
+        log_transaction_postgres_wallet_update(
+            transaction_row.id,
             transaction_row.amount,
             adjusted_count,
         )

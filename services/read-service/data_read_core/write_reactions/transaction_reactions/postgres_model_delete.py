@@ -1,5 +1,4 @@
 from decimal import Decimal
-from logging import getLogger
 
 from django.db.models import F
 from kafka_messages import TransactionDeleted
@@ -11,9 +10,12 @@ from data_read_core.shared.postgres_orm import (
     aatomic,
 )
 
+from .._logger_shortcuts import (
+    log_transaction_postgres_absent_on_delete,
+    log_transaction_postgres_removed,
+    log_transaction_postgres_wallet_reversal,
+)
 from .._utilities import decode_payload, handle_database_errors
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class RemoveTransactionReadModel(Effect):
@@ -47,19 +49,12 @@ class RemoveTransactionReadModel(Effect):
         )
 
         if transaction_row is None:
-            logger.info(
-                "Transaction %s not present; skipping balance reversal.",
-                transaction_id,
-            )
+            log_transaction_postgres_absent_on_delete(transaction_id)
 
             return None
 
         await transaction_row.adelete()
-        logger.info(
-            "Removed transaction %s with value of %d.",
-            transaction_id,
-            transaction_row.amount,
-        )
+        log_transaction_postgres_removed(transaction_id, transaction_row.amount)
 
         return transaction_row
 
@@ -74,8 +69,4 @@ class RemoveTransactionReadModel(Effect):
             )
         )
 
-        logger.info(
-            "Reversed wallet %s balance by %s.",
-            wallet_id,
-            cancelled_amount,
-        )
+        log_transaction_postgres_wallet_reversal(wallet_id, cancelled_amount)

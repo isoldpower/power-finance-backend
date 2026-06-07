@@ -1,13 +1,10 @@
-from logging import getLogger
-
 from django.contrib.auth import get_user_model
 from kafka_messages import UserSynced
 
 from data_read_core.shared.kafka_updates import Effect, EventMessage
 
+from .._logger_shortcuts import log_user_projected
 from .._utilities import decode_payload, handle_database_errors
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class ProjectUserReadModel(Effect):
@@ -25,8 +22,4 @@ class ProjectUserReadModel(Effect):
             id=payload.user_id,
             defaults={"username": payload.external_id},
         )
-        logger.info(
-            "Projected user %s (external %s).",
-            payload.user_id,
-            payload.external_id,
-        )
+        log_user_projected(payload.user_id, payload.external_id)

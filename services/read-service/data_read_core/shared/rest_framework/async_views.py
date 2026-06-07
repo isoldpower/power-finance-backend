@@ -3,7 +3,7 @@ from rest_framework import exceptions
 from rest_framework.views import APIView
 
 
-async def _call(func, *args, **kwargs):
+async def _always_async_call(func, *args, **kwargs):
     if iscoroutinefunction(func):
         return await func(*args, **kwargs)
     return await sync_to_async(func)(*args, **kwargs)
@@ -15,7 +15,10 @@ class AsyncAPIView(APIView):
     async def perform_authentication(self, request):
         for authenticator in request.authenticators:
             try:
-                user_auth_tuple = await _call(authenticator.authenticate, request)
+                user_auth_tuple = await _always_async_call(
+                    authenticator.authenticate,
+                    request,
+                )
             except exceptions.APIException:
                 request._not_authenticated()
                 raise
@@ -23,6 +26,7 @@ class AsyncAPIView(APIView):
                 request._authenticator = authenticator
                 request.user, request.auth = user_auth_tuple
                 return
+
         request._not_authenticated()
 
     async def check_permissions(self, request):
@@ -79,11 +83,21 @@ class AsyncAPIView(APIView):
             else:
                 handler = self.http_method_not_allowed
 
-            response = await _call(handler, self.request, *args, **kwargs)
+            response = await _always_async_call(
+                handler,
+                self.request,
+                *args,
+                **kwargs,
+            )
         except Exception as exc:
             response = self.handle_exception(exc)
 
-        self.response = self.finalize_response(self.request, response, *args, **kwargs)
+        self.response = self.finalize_response(
+            self.request,
+            response,
+            *args,
+            **kwargs,
+        )
         return self.response
 
 

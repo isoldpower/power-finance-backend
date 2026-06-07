@@ -9,6 +9,7 @@ from django.db import transaction
 async def aatomic(using=None):
     atom = transaction.atomic(using=using)
     await sync_to_async(atom.__enter__, thread_sensitive=True)()
+
     try:
         yield
     except Exception:

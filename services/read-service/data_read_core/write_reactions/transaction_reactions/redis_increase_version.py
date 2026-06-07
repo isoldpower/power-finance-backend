@@ -1,14 +1,11 @@
-from logging import getLogger
-
 from google.protobuf.message import Message
 
 from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.redis_cache import get_redis
 
 from .._cache_keys import get_transaction_list_version_key
+from .._logger_shortcuts import log_transaction_list_version_bumped
 from .._utilities import decode_payload
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class BumpTransactionListVersion(Effect):
@@ -23,8 +20,4 @@ class BumpTransactionListVersion(Effect):
         key = get_transaction_list_version_key(event_payload.user_id)
         new_version = await get_redis().incr(key)
 
-        logger.info(
-            "Bumped transaction list version for user %s to %s.",
-            event_payload.user_id,
-            new_version,
-        )
+        log_transaction_list_version_bumped(event_payload.user_id, new_version)

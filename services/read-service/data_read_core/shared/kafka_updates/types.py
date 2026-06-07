@@ -7,11 +7,7 @@ from kafka_client_py import ConsumedMessage
 
 @dataclass(frozen=True, slots=True)
 class EventMessage:
-    """Decoded Kafka message exposed to handlers.
-
-    `payload` is left as raw bytes; each handler deserializes into the proto type
-    it owns. The consumer stays ignorant of business schemas.
-    """
+    """Decoded Kafka message exposed to handlers."""
 
     event_id: str
     event_type: str

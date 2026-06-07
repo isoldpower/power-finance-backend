@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -19,12 +18,14 @@ from .exceptions import (
     IdempotencyUnavailable,
     StoreUnavailable,
 )
+from .logger_shortcuts import (
+    warn_store_not_configured,
+    warn_store_unavailable_on_acquire,
+    warn_store_unavailable_on_store,
+)
 from .replay_response import ReplayResponseBuilder
 from .request_hash import fingerprint
 from .request_inspector import RequestInspector
-
-logger = logging.getLogger(__name__)
-
 
 AsyncViewMethod = Callable[..., Awaitable[Response]]
 
@@ -71,7 +72,7 @@ class IdempotencyWorkflow:
     async def _handle_missing_store(self) -> Response:
         if self._required:
             raise IdempotencyUnavailable()
-        logger.warning("idempotency.store_not_configured — skipping dedup")
+        warn_store_not_configured()
         return await self._invoke_view()
 
     async def _run_under_lock(self, idempotency_key: str) -> Response:
@@ -107,11 +108,7 @@ class IdempotencyWorkflow:
         try:
             return await store.try_acquire(user_id, idempotency_key, request_hash)
         except StoreUnavailable as exc:
-            logger.warning(
-                "idempotency.store_unavailable on acquire: %s (required=%s)",
-                exc,
-                self._required,
-            )
+            warn_store_unavailable_on_acquire(exc, self._required)
             if self._required:
                 raise IdempotencyUnavailable() from exc
             return None
@@ -155,7 +152,7 @@ class IdempotencyWorkflow:
                 headers=dict(view_response.headers),
             )
         except StoreUnavailable as exc:
-            logger.warning("idempotency.store_unavailable on store: %s", exc)
+            warn_store_unavailable_on_store(exc)
 
     async def _invoke_view(self) -> Response:
         return await self._view_callable(

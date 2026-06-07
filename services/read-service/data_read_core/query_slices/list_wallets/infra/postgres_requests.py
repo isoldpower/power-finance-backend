@@ -9,6 +9,7 @@ async def fetch_owned_wallets(
     queryset = WalletReadModel.objects.filter(user_id=user_id).order_by("-created_at")[
         offset : offset + limit
     ]
+
     return [wallet async for wallet in queryset]
 
 

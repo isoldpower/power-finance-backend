@@ -45,5 +45,5 @@ packages = ["read_service", "data_read_core", "background_workers"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["tests"]
+testpaths = ["data_read_core"]
 DJANGO_SETTINGS_MODULE = "read_service.settings.test"

@@ -1,11 +1,10 @@
-import logging
-
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 
-from data_read_core.shared.query_logging import (
+from data_read_core.shared.logging import (
+    get_query_logger,
     log_request_failed,
     log_request_received,
     log_request_served,
@@ -23,8 +22,6 @@ from ._serializers import (
     MessageResponseSerializer,
     PaginatedTransactionResponseSerializer,
 )
-
-logger = logging.getLogger("query_slices.list_transactions")
 
 
 @extend_schema(
@@ -53,6 +50,8 @@ logger = logging.getLogger("query_slices.list_transactions")
 @async_api_view(["GET"])
 @read_at_least_gate
 async def list_transactions(request):
+    logger = get_query_logger("list_transactions")
+
     try:
         log_request_received(logger, "list_transactions", user_id=request.user.id)
 
@@ -74,10 +73,10 @@ async def list_transactions(request):
         payload = present_many(transactions)
         return paginator.get_paginated_response(payload)
     except Exception as error:
+        log_request_failed(logger, "list_transactions", error, user_id=request.user.id)
         payload = {
             "message": f"Failed to list transactions: {error}",
             "resource_id": None,
         }
-        log_request_failed(logger, "list_transactions", error, user_id=request.user.id)
 
         return Response(payload, status=status.HTTP_400_BAD_REQUEST)

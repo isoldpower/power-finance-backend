@@ -1,0 +1,1 @@
+GATEWAY_USER_HEADER = "X-User-Id"

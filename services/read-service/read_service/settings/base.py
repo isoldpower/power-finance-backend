@@ -61,8 +61,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    # Stamp the correlation id early so every downstream log record (and the
-    # Kafka headers it propagates into) carries it. Matches the write service.
     "correlation.CorrelationIDMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -87,8 +85,6 @@ TEMPLATES = [
     },
 ]
 
-# Read store — a separate Postgres instance from the write service's,
-# holding only denormalised projections built from the event stream.
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -107,16 +103,8 @@ DATABASES = {
     }
 }
 
-# Redis — backing store for read-side caches (single-wallet entries, etc.).
-# Used by the cache-eviction effects in the Kafka consumer. Sourced from the
-# environment; the default targets a local Redis.
 REDIS_URL = env("REDIS_URL")
 
-# Elasticsearch — search/analytics projection of the read models. The consumer
-# indexes wallet/transaction documents alongside the Postgres writes; the
-# schema-init management command creates the indices. `CA_CERTS` points at the
-# cluster CA so TLS verifies; leave it empty and set `VERIFY_CERTS=false` to talk
-# to a self-signed local cluster without wiring the cert in.
 ELASTICSEARCH = {
     "HOSTS": env("ELASTICSEARCH_HOSTS"),
     "USERNAME": env("ELASTICSEARCH_USERNAME"),
@@ -143,21 +131,12 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# Kafka consumer configuration. Read by the background_workers Kafka consumers
-# (e.g. the run_write_message_consumer management command). Sourced from the
-# environment so each deployment sets it via compose; the defaults target a
-# local broker.
 KAFKA = {
     "BOOTSTRAP_SERVERS": env("KAFKA_BOOTSTRAP_SERVERS"),
     "OUTBOX_TOPIC": env("KAFKA_OUTBOX_TOPIC"),
     "READ_GROUP_ID": env("KAFKA_READ_GROUP_ID"),
 }
 
-# Logging. Django leaves the root logger at WARNING by default, which hides
-# INFO from the background_workers consumers. Route app + consumer logs to the
-# console at LOG_LEVEL so projection activity is visible in `docker logs`. Every
-# record carries the correlation id (cid=) via the shared correlation filter,
-# matching the write service's format so logs correlate across services.
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -183,8 +162,16 @@ LOGGING = {
             "level": env("LOG_LEVEL"),
             "propagate": False,
         },
-        "data_read_core": {"handlers": ["console"], "level": env("LOG_LEVEL"), "propagate": False},
-        "query_slices": {"handlers": ["console"], "level": env("LOG_LEVEL"), "propagate": False},
+        "data_read_core": {
+            "handlers": ["console"],
+            "level": env("LOG_LEVEL"),
+            "propagate": False,
+        },
+        "query_slices": {
+            "handlers": ["console"],
+            "level": env("LOG_LEVEL"),
+            "propagate": False,
+        },
     },
 }
 

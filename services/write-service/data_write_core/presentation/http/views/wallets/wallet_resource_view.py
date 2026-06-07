@@ -1,10 +1,9 @@
-import logging
-
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from write_service.common.idempotency import idempotent
+from write_service.common.logging import get_http_logger, log_request_failed
 
 from data_write_core.application.commands import (
     SoftDeleteWalletCommand,
@@ -27,7 +26,7 @@ from ...serializers import (
 from ..mixins import CommandResponseMixin
 from .base import WalletView
 
-logger = logging.getLogger(__name__)
+logger = get_http_logger("wallets")
 
 
 class WalletResourceView(WalletView, CommandResponseMixin):
@@ -73,10 +72,12 @@ class WalletResourceView(WalletView, CommandResponseMixin):
                 write_version=write_version,
             )
         except Exception as exc:
-            logger.exception(
-                "WalletResourceView: patch failed for wallet ID %s, user ID %s",
-                pk,
-                request.user.unique_id,
+            log_request_failed(
+                logger,
+                "update_wallet",
+                exc,
+                wallet_id=pk,
+                user_id=request.user.unique_id,
             )
             payload = CommonHttpPresenter.present_message_result(
                 MessageResultInfo(
@@ -131,10 +132,12 @@ class WalletResourceView(WalletView, CommandResponseMixin):
                 write_version=write_version,
             )
         except Exception as exc:
-            logger.exception(
-                "WalletResourceView: delete failed for wallet ID %s, user ID %s",
-                pk,
-                request.user.unique_id,
+            log_request_failed(
+                logger,
+                "delete_wallet",
+                exc,
+                wallet_id=pk,
+                user_id=request.user.unique_id,
             )
             payload = CommonHttpPresenter.present_message_result(
                 MessageResultInfo(

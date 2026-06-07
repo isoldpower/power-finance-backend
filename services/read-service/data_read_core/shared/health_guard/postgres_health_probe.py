@@ -8,7 +8,10 @@ from django.db import (
 
 from .health_probe import HealthProbe
 
-POSTGRES_CONNECTIVITY_ERRORS: tuple[type[BaseException], ...] = (OperationalError, InterfaceError)
+POSTGRES_CONNECTIVITY_ERRORS: tuple[type[BaseException], ...] = (
+    OperationalError,
+    InterfaceError,
+)
 
 
 class PostgresHealthProbe(HealthProbe):
@@ -16,6 +19,7 @@ class PostgresHealthProbe(HealthProbe):
 
     def __init__(self, alias: str = DEFAULT_DB_ALIAS, **kwargs) -> None:
         super().__init__(**kwargs)
+
         self._alias = alias
 
     @property
@@ -33,6 +37,6 @@ class PostgresHealthProbe(HealthProbe):
                 cursor.execute("SELECT 1")
                 cursor.fetchone()
             return True
-        except Exception:
+        except POSTGRES_CONNECTIVITY_ERRORS:
             connection.close()
             return False

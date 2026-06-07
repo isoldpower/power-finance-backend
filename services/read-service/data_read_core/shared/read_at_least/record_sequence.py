@@ -1,19 +1,16 @@
-from logging import getLogger
-
 from django.db import IntegrityError
 from django.db.models import Value
 from django.db.models.functions import Greatest
 
+from .logger_shortcuts import log_recorded_outbox_sequence
 from .models import AppliedOutboxSeq
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 async def record_applied_seq(user_id: int, outbox_seq: int) -> None:
     """Bump the user's applied outbox seq to ``max(current, outbox_seq)``."""
 
     updated_record = await AppliedOutboxSeq.objects.filter(user_id=user_id).aupdate(
-        applied_seq=Greatest("applied_seq", Value(outbox_seq)),
+        applied_seq=Greatest("applied_seq", Value(outbox_seq))
     )
 
     if not updated_record:
@@ -31,4 +28,4 @@ async def _create_new_record(user_id: int, outbox_seq: int) -> None:
             applied_seq=Greatest("applied_seq", Value(outbox_seq)),
         )
     finally:
-        logger.debug("Recorded applied outbox seq %s for user %s.", outbox_seq, user_id)
+        log_recorded_outbox_sequence(outbox_seq, user_id)

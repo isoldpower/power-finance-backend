@@ -26,9 +26,18 @@ class StandardResultsPagination(LimitOffsetPagination):
                 "meta": {
                     "type": "object",
                     "properties": {
-                        "limit": {"type": "integer", "example": 20},
-                        "offset": {"type": "integer", "example": 0},
-                        "total": {"type": "integer", "example": 100},
+                        "limit": {
+                            "type": "integer",
+                            "example": 20,
+                        },
+                        "offset": {
+                            "type": "integer",
+                            "example": 0,
+                        },
+                        "total": {
+                            "type": "integer",
+                            "example": 100,
+                        },
                     },
                     "required": ["limit", "offset", "total"],
                 },

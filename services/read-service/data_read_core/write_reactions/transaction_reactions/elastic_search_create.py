@@ -1,16 +1,14 @@
 from datetime import UTC
 from decimal import Decimal
-from logging import getLogger
 
 from kafka_messages import TransactionCreated
 
 from data_read_core.shared.elasticsearch import TRANSACTIONS_INDEX, get_elasticsearch
 from data_read_core.shared.kafka_updates import Effect, EventMessage
 
+from .._logger_shortcuts import log_transaction_elastic_created
 from .._utilities import decode_payload
 from ._utilities import _wallet_currency
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class IndexTransactionDocument(Effect):
@@ -34,8 +32,4 @@ class IndexTransactionDocument(Effect):
             id=payload.transaction_id,
             document=document,
         )
-        logger.info(
-            "Indexed transaction %s into %s.",
-            payload.transaction_id,
-            TRANSACTIONS_INDEX,
-        )
+        log_transaction_elastic_created(payload.transaction_id, TRANSACTIONS_INDEX)

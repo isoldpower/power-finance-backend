@@ -1,11 +1,10 @@
-import logging
-
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 
-from data_read_core.shared.query_logging import (
+from data_read_core.shared.logging import (
+    get_query_logger,
     log_request_failed,
     log_request_received,
     log_request_served,
@@ -18,8 +17,6 @@ from ..exceptions import WalletNotFoundError
 from ..query_handler import GetWalletQueryHandler
 from ._presenters import present_one
 from ._serializers import MessageResponseSerializer, WalletResponseSerializer
-
-logger = logging.getLogger("query_slices.get_wallet")
 
 
 @extend_schema(
@@ -43,6 +40,8 @@ logger = logging.getLogger("query_slices.get_wallet")
 @async_api_view(["GET"])
 @read_at_least_gate
 async def get_wallet(request, pk=None):
+    logger = get_query_logger("get_wallet")
+
     try:
         log_request_received(logger, "get_wallet", id=pk, user_id=request.user.id)
 

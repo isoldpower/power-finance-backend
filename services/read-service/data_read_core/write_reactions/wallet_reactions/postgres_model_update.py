@@ -1,14 +1,12 @@
 from datetime import UTC
-from logging import getLogger
 
 from kafka_messages import WalletUpdated
 
 from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import WalletReadModel
 
+from .._logger_shortcuts import log_wallet_postgres_updated
 from .._utilities import decode_payload, handle_database_errors
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class UpdateWalletReadModel(Effect):
@@ -25,8 +23,4 @@ class UpdateWalletReadModel(Effect):
             title=payload.new_title,
             updated_at=payload.updated_at.ToDatetime(tzinfo=UTC),
         )
-        logger.info(
-            "Updated wallet %s in read store (rows=%s).",
-            payload.wallet_id,
-            updated,
-        )
+        log_wallet_postgres_updated(payload.wallet_id, updated)

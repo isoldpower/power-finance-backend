@@ -194,5 +194,9 @@ LOGGING = {
         "": {"handlers": ["console"], "level": "INFO", "propagate": True},
         "write_service": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
         "apps": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        # Namespaced roots produced by write_service.common.logging factories.
+        "data_write_core": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "http": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "background_workers": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
     },
 }

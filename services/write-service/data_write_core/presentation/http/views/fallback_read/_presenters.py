@@ -1,11 +1,3 @@
-"""Response shaping for the fallback-read routes.
-
-These deliberately mirror the Read Service's payloads (``data_read_core``'s
-``_presenters``) rather than the write side's command responses, so the gateway
-can swap a 507'd read for a fallback read transparently — the client sees the
-same object shape either way.
-"""
-
 from datetime import datetime
 
 from data_write_core.application.dtos import TransactionPlainDTO, WalletDTO

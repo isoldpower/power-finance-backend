@@ -1,8 +1,9 @@
 import asyncio
 import functools
-import logging
 
-logger = logging.getLogger(__name__)
+from write_service.common.logging import get_http_logger
+
+logger = get_http_logger("trace")
 
 
 def _safe_request(args: tuple):

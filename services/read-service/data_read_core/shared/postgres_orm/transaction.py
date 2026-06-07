@@ -2,7 +2,7 @@ from django.db import models
 
 
 class TransactionReadModel(models.Model):
-    """Denormalised transaction projection."""
+    """Denormalized transaction projection."""
 
     id = models.UUIDField(primary_key=True)
     wallet_id = models.UUIDField()

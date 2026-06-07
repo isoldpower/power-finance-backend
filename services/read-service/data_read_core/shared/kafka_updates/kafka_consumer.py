@@ -1,13 +1,16 @@
-import logging
-
 from aiokafka import AIOKafkaConsumer
 from aiokafka.structs import ConsumerRecord
 from kafka_client_py import MessageHandler
 
+from .logger_shortcuts import (
+    except_commit_failed,
+    except_event_handler_crashed,
+    log_consumer_shutdown_signal,
+    log_kafka_consumer_started,
+    log_kafka_consumer_stopped,
+)
 from .shutdown_aware_runner import ShutdownAwareRunner
 from .types import ShutdownSignal
-
-logger = logging.getLogger(__name__)
 
 
 class KafkaConsumerLoop:
@@ -27,7 +30,7 @@ class KafkaConsumerLoop:
 
     async def run(self) -> None:
         await self._consumer.start()
-        logger.info("Kafka consumer started")
+        log_kafka_consumer_started()
 
         try:
             while not self._shutdown.is_stop_requested():
@@ -45,18 +48,12 @@ class KafkaConsumerLoop:
                             return
         finally:
             await self._consumer.stop()
-            logger.info("Kafka consumer stopped")
+            log_kafka_consumer_stopped()
 
     async def _process_or_shutdown(self, record: ConsumerRecord) -> bool:
         interrupted = await self._runner.run(self._safe_process(record))
         if interrupted:
-            logger.info(
-                "shutdown requested; abandoned in-flight record "
-                "topic=%s partition=%s offset=%s — will redeliver",
-                record.topic,
-                record.partition,
-                record.offset,
-            )
+            log_consumer_shutdown_signal(record)
 
         return interrupted
 
@@ -64,13 +61,7 @@ class KafkaConsumerLoop:
         try:
             await self._message_handler.handle(record)
         except Exception:
-            logger.exception(
-                "message_handler crashed; topic=%s partition=%s offset=%s "
-                "— not committing, message will be redelivered",
-                record.topic,
-                record.partition,
-                record.offset,
-            )
+            except_event_handler_crashed(record)
             return
         await self._commit(record)
 
@@ -78,9 +69,4 @@ class KafkaConsumerLoop:
         try:
             await self._consumer.commit()
         except Exception:
-            logger.exception(
-                "commit failed; topic=%s partition=%s offset=%s",
-                record.topic,
-                record.partition,
-                record.offset,
-            )
+            except_commit_failed(record)

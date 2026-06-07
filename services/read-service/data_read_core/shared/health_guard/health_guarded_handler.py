@@ -1,10 +1,7 @@
-from logging import getLogger
-
 from data_read_core.shared.kafka_updates import EventMessage, Handler
 
 from .health_probe import HealthProbe
-
-logger = getLogger("background_workers.health")
+from .logger_shortcuts import warn_projection_unavailable
 
 
 class HealthGuardedHandler:
@@ -28,11 +25,5 @@ class HealthGuardedHandler:
 
                 return
             except self._guarded_errors as error:
-                logger.warning(
-                    "%s unavailable while projecting event %s; "
-                    "blocking consumption until recovery (%s).",
-                    self._health_probe.name,
-                    event.event_id,
-                    error,
-                )
+                warn_projection_unavailable(self._health_probe.name, event.event_id, error)
                 await self._health_probe.wait_until_healthy()

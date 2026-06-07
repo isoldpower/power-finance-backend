@@ -1,14 +1,12 @@
 from datetime import UTC
-from logging import getLogger
 
 from kafka_messages import WalletUpdated
 
 from data_read_core.shared.elasticsearch import WALLETS_INDEX, get_elasticsearch
 from data_read_core.shared.kafka_updates import Effect, EventMessage
 
+from .._logger_shortcuts import log_wallet_elastic_updated
 from .._utilities import decode_payload
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class UpdateWalletDocument(Effect):
@@ -30,8 +28,4 @@ class UpdateWalletDocument(Effect):
             doc=partial,
             doc_as_upsert=True,
         )
-        logger.info(
-            "Updated wallet %s in %s.",
-            payload.wallet_id,
-            WALLETS_INDEX,
-        )
+        log_wallet_elastic_updated(payload.wallet_id, WALLETS_INDEX)

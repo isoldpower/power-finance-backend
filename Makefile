@@ -109,7 +109,7 @@ test: test-correlation test-write test-read ## Run every test suite
 
 .PHONY: test-correlation
 test-correlation: | $(HOOK_SENTINEL) ## Run correlation-py library tests
-	uv run python -m unittest discover -s $(CORRELATION_LIB_DIR)/tests -t $(CORRELATION_LIB_DIR)
+	uv run python -m unittest discover -s $(CORRELATION_LIB_DIR)/correlation/__tests__ -t $(CORRELATION_LIB_DIR)
 
 .PHONY: test-write
 test-write: | $(HOOK_SENTINEL) ## Run Write Service tests (sqlite, hermetic)

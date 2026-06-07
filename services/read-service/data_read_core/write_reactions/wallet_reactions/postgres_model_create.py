@@ -1,14 +1,12 @@
 from datetime import UTC
-from logging import getLogger
 
 from kafka_messages import WalletCreated
 
 from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import WalletReadModel
 
+from .._logger_shortcuts import log_wallet_postgres_created
 from .._utilities import decode_payload, handle_database_errors
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class CreateWalletReadModel(Effect):
@@ -30,9 +28,6 @@ class CreateWalletReadModel(Effect):
             created_at=payload.created_at.ToDatetime(tzinfo=UTC),
             updated_at=None,
         )
-        logger.info(
-            "Received WalletCreated payload for wallet %s.",
-            payload.wallet_id,
-        )
+        log_wallet_postgres_created(payload.wallet_id)
 
         return created_wallet

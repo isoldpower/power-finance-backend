@@ -1,12 +1,10 @@
-import logging
 from collections.abc import Awaitable, Callable
 from functools import wraps
 from typing import ParamSpec, TypeVar
 
 from data_write_core.application.db_utils import aatomic
 
-logger = logging.getLogger(__name__)
-
+from .logger_shortcuts import log_command_finished, log_command_started
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -24,10 +22,10 @@ def atomic_command(
 
         @wraps(function)
         async def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
-            logger.info("%s: handle() start args=%s kwargs=%s", label, args, kwargs)
+            log_command_started(label, args, kwargs)
             async with aatomic(using=using):
                 result = await function(*args, **kwargs)
-            logger.info("%s: handle() done", label)
+            log_command_finished(label)
             return result
 
         return wrapped

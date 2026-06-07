@@ -1,10 +1,9 @@
 from django.contrib.auth import get_user_model
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 
-GATEWAY_USER_HEADER = "X-User-Id"
+from .headers import GATEWAY_USER_HEADER
 
 
 class GatewayUserHeaderAuthentication(BaseAuthentication):
@@ -23,7 +22,6 @@ class GatewayUserHeaderAuthentication(BaseAuthentication):
             )
 
         internal_user = await self._user_model.objects.filter(username=external_user_id).afirst()
-
         if internal_user is None:
             raise AuthenticationFailed("User is not yet provisioned in the read store.")
 
@@ -31,8 +29,3 @@ class GatewayUserHeaderAuthentication(BaseAuthentication):
 
     def authenticate_header(self, request: Request) -> str:
         return "Bearer"
-
-
-class IsGatewayAuthenticated(BasePermission):
-    def has_permission(self, request: Request, view) -> bool:
-        return bool(request.user and request.user.is_authenticated)

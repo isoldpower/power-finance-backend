@@ -1,11 +1,10 @@
-import logging
-
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 
-from data_read_core.shared.query_logging import (
+from data_read_core.shared.logging import (
+    get_query_logger,
     log_request_failed,
     log_request_received,
     log_request_served,
@@ -18,8 +17,6 @@ from ..exceptions import TransactionNotFoundError
 from ..query_handler import GetTransactionQueryHandler
 from ._presenters import present_one
 from ._serializers import MessageResponseSerializer, TransactionResponseSerializer
-
-logger = logging.getLogger("query_slices.get_transaction")
 
 
 @extend_schema(
@@ -43,6 +40,8 @@ logger = logging.getLogger("query_slices.get_transaction")
 @async_api_view(["GET"])
 @read_at_least_gate
 async def get_transaction(request, pk=None):
+    logger = get_query_logger("get_transaction")
+
     try:
         log_request_received(logger, "get_transaction", id=pk, user_id=request.user.id)
 
@@ -52,9 +51,9 @@ async def get_transaction(request, pk=None):
                 transaction_id=pk,
             )
         )
-        payload = present_one(retrieved_transaction)
         log_request_served(logger, "get_transaction", id=pk)
 
+        payload = present_one(retrieved_transaction)
         return Response(payload, status=status.HTTP_200_OK)
     except TransactionNotFoundError:
         logger.info(
@@ -66,6 +65,7 @@ async def get_transaction(request, pk=None):
             "message": f"Transaction with ID {pk} not found.",
             "resource_id": f"{pk}",
         }
+
         return Response(payload, status=status.HTTP_404_NOT_FOUND)
     except Exception as error:
         payload = {

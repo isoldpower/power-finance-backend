@@ -1,14 +1,11 @@
-from logging import getLogger
-
 from google.protobuf.message import Message
 
 from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import aatomic
 from data_read_core.shared.read_at_least import record_applied_seq
 
+from ._logger_shortcuts import warn_no_outbox_sequence
 from ._utilities import decode_payload
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class TrackAppliedSeq(Effect):
@@ -25,19 +22,15 @@ class TrackAppliedSeq(Effect):
 
     async def apply(self, event: EventMessage) -> None:
         if event.outbox_seq is None:
-            logger.warning(
-                "Event %s carries no outbox seq; projecting without advancing "
-                "read-your-writes progress.",
-                event.event_id,
-            )
+            warn_no_outbox_sequence(event.event_id)
 
-            await self._inner.apply(event)
-            return
+            return await self._inner.apply(event)
 
         decoded_payload = decode_payload(event, self._payload_type)
         async with aatomic():
             await self._inner.apply(event)
-            await record_applied_seq(
+
+            return await record_applied_seq(
                 decoded_payload.user_id,
                 event.outbox_seq,
             )

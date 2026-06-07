@@ -1,9 +1,8 @@
-import logging
-
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
+from write_service.common.logging import get_http_logger, log_request_failed
 
 from data_write_core.application.queries import (
     GetFallbackWalletQuery,
@@ -16,7 +15,7 @@ from ...decorators import trace_handler_flow
 from ._presenters import present_wallet, present_wallets
 from .base import FallbackReadView
 
-logger = logging.getLogger(__name__)
+logger = get_http_logger("fallback_read")
 
 
 class FallbackWalletListView(FallbackReadView):
@@ -28,8 +27,16 @@ class FallbackWalletListView(FallbackReadView):
             "gateway routes here when the Read Service is not caught up."
         ),
         parameters=[
-            OpenApiParameter("limit", OpenApiTypes.INT, OpenApiParameter.QUERY),
-            OpenApiParameter("offset", OpenApiTypes.INT, OpenApiParameter.QUERY),
+            OpenApiParameter(
+                "limit",
+                OpenApiTypes.INT,
+                OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                "offset",
+                OpenApiTypes.INT,
+                OpenApiParameter.QUERY,
+            ),
         ],
     )
     @trace_handler_flow
@@ -50,12 +57,17 @@ class FallbackWalletListView(FallbackReadView):
             paginator.count = total
             return paginator.get_paginated_response(present_wallets(wallets))
         except Exception as error:
-            logger.exception(
-                "FallbackWalletListView: list failed for user ID %s",
-                request.user.unique_id,
+            log_request_failed(
+                logger,
+                "list_fallback_wallets",
+                error,
+                user_id=request.user.unique_id,
             )
             return Response(
-                {"message": f"Failed to list owned wallets: {error}", "resource_id": None},
+                {
+                    "message": f"Failed to list owned wallets: {error}",
+                    "resource_id": None,
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -85,10 +97,12 @@ class FallbackWalletResourceView(FallbackReadView):
 
             return Response(present_wallet(wallet), status=status.HTTP_200_OK)
         except Exception as error:
-            logger.exception(
-                "FallbackWalletResourceView: retrieve failed for wallet ID %s, user ID %s",
-                pk,
-                request.user.unique_id,
+            log_request_failed(
+                logger,
+                "get_fallback_wallet",
+                error,
+                wallet_id=pk,
+                user_id=request.user.unique_id,
             )
             return Response(
                 {

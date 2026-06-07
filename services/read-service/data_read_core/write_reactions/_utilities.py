@@ -1,5 +1,4 @@
 from collections.abc import Awaitable, Callable
-from logging import getLogger
 from typing import TypeVar
 
 from django.db import DataError, IntegrityError
@@ -10,7 +9,10 @@ from kafka_client_py import PoisonError
 from data_read_core.shared.kafka_updates import EventMessage
 from data_read_core.shared.postgres_orm import aatomic
 
-logger = getLogger("background_workers.write_message_consumer")
+from ._logger_shortcuts import (
+    except_constraint_violation,
+    except_service_model_mismatch,
+)
 
 TParams = TypeVar("TParams")
 TReturn = TypeVar("TReturn")
@@ -28,17 +30,9 @@ async def handle_database_errors(
         async with aatomic():
             return await effect(payload)
     except IntegrityError:
-        logger.fatal(
-            "Received a resource (id %s) that is breaking read model's schema unique constraints. "
-            "It may mean that models are not properly aligned or deduplication failed.",
-            resource_id,
-        )
+        except_service_model_mismatch(resource_id)
     except DataError:
-        logger.fatal(
-            "Received a resource (id %s) that is breaking read model's boundaries. "
-            "It probably means that models are not aligned correctly or noise added to the Kafka message.",
-            resource_id,
-        )
+        except_constraint_violation(resource_id)
 
     return None
 

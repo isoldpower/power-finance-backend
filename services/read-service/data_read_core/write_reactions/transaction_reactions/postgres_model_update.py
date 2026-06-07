@@ -1,5 +1,4 @@
 from decimal import Decimal
-from logging import getLogger
 
 from django.db.models import F
 from kafka_messages import TransactionUpdated
@@ -11,9 +10,12 @@ from data_read_core.shared.postgres_orm import (
     aatomic,
 )
 
+from .._logger_shortcuts import (
+    log_transaction_postgres_absent_on_update,
+    log_transaction_postgres_unchanged,
+    log_transaction_postgres_updated,
+)
 from .._utilities import decode_payload, handle_database_errors
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class UpdateTransactionReadModel(Effect):
@@ -46,52 +48,43 @@ class UpdateTransactionReadModel(Effect):
         )
 
         if transaction_row is not None:
-            transaction_row = await self._apply_transaction_update(
+            amount_delta = await self._apply_transaction_update(
                 transaction_row,
                 new_amount,
             )
-            await self._apply_wallet_update(transaction_row, new_amount)
+            await self._apply_wallet_update(transaction_row.wallet_id, amount_delta)
         else:
-            logger.info(
-                "Transaction %s not present; skipping update.",
-                transaction_id,
-            )
+            log_transaction_postgres_absent_on_update(transaction_id)
 
     async def _apply_transaction_update(
         self,
-        transaction_row: TransactionReadModel | None,
+        transaction_row: TransactionReadModel,
         new_amount: Decimal,
-    ) -> TransactionReadModel | None:
+    ) -> Decimal | None:
         if transaction_row.amount == new_amount:
-            logger.info(
-                "Transaction %s already at amount %s; skipping.",
-                transaction_row.id,
-                new_amount,
-            )
+            log_transaction_postgres_unchanged(transaction_row.id, new_amount)
             return None
 
         amount_delta = new_amount - transaction_row.amount
         transaction_row.amount = new_amount
         await transaction_row.asave(update_fields=["amount"])
 
-        logger.info(
-            "Updated transaction %s amount to %s and adjusted wallet %s balance by %s.",
+        log_transaction_postgres_updated(
             transaction_row.id,
             new_amount,
             transaction_row.wallet_id,
             amount_delta,
         )
-        return transaction_row
+        return amount_delta
 
     async def _apply_wallet_update(
         self,
-        transaction_row: TransactionReadModel | None,
-        new_amount: Decimal,
+        wallet_id: str,
+        amount_delta: Decimal | None,
     ) -> None:
-        if not transaction_row:
+        if not amount_delta:
             return
 
-        amount_delta = new_amount - transaction_row.amount
-        await WalletReadModel.objects.filter(id=transaction_row.wallet_id).aupdate(
+        await WalletReadModel.objects.filter(id=wallet_id).aupdate(
             balance=F("balance") + amount_delta
         )

@@ -1,14 +1,11 @@
-from logging import getLogger
-
 from kafka_messages import WalletDeleted
 
 from data_read_core.shared.kafka_updates import EventMessage
 from data_read_core.shared.kafka_updates.processing import Effect
 from data_read_core.shared.postgres_orm import WalletReadModel
 
+from .._logger_shortcuts import log_wallet_postgres_removed
 from .._utilities import decode_payload, handle_database_errors
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class RemoveWalletReadModel(Effect):
@@ -24,8 +21,4 @@ class RemoveWalletReadModel(Effect):
 
     async def _remove_wallet(self, payload: WalletDeleted) -> None:
         deleted, _ = await WalletReadModel.objects.filter(id=payload.wallet_id).adelete()
-        logger.info(
-            "Removed wallet %s from read store (rows=%s).",
-            payload.wallet_id,
-            deleted,
-        )
+        log_wallet_postgres_removed(payload.wallet_id, deleted)

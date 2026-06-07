@@ -1,13 +1,10 @@
-from logging import getLogger
-
 from kafka_messages import TransactionDeleted
 
 from data_read_core.shared.elasticsearch import TRANSACTIONS_INDEX, get_elasticsearch
 from data_read_core.shared.kafka_updates import Effect, EventMessage
 
+from .._logger_shortcuts import log_transaction_elastic_removed
 from .._utilities import decode_payload
-
-logger = getLogger("background_workers.write_message_consumer")
 
 
 class RemoveTransactionDocument(Effect):
@@ -24,8 +21,4 @@ class RemoveTransactionDocument(Effect):
             )
         )
 
-        logger.info(
-            "Removed transaction %s from %s.",
-            payload.transaction_id,
-            TRANSACTIONS_INDEX,
-        )
+        log_transaction_elastic_removed(payload.transaction_id, TRANSACTIONS_INDEX)

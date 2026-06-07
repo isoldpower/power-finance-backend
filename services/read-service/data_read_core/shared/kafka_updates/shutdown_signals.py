@@ -1,8 +1,7 @@
 import asyncio
-import logging
 import signal
 
-logger = logging.getLogger(__name__)
+from .logger_shortcuts import log_shutdown_signal_received
 
 
 class SigtermShutdownSignal:
@@ -12,12 +11,16 @@ class SigtermShutdownSignal:
         self._event = asyncio.Event()
 
     def install(self) -> None:
-        loop = asyncio.get_running_loop()
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(sig, self._on_signal, sig)
+        running_loop = asyncio.get_running_loop()
+        for signal_code in (signal.SIGINT, signal.SIGTERM):
+            running_loop.add_signal_handler(
+                signal_code,
+                self._on_signal,
+                signal_code,
+            )
 
-    def _on_signal(self, sig: int) -> None:
-        logger.info("received signal %s; requesting shutdown", sig)
+    def _on_signal(self, signal_code: int) -> None:
+        log_shutdown_signal_received(signal_code)
         self._event.set()
 
     def request_stop(self) -> None:

@@ -6,13 +6,7 @@ from .types import ShutdownSignal
 
 
 class ShutdownAwareRunner:
-    """Runs an awaitable, cancelling it if shutdown is requested first.
-
-    Decouples "do this work" from "but stop promptly on shutdown": the work
-    stays ignorant of the lifecycle, while this unit owns the race and the
-    cancellation. Cancelled work is left incomplete — callers should treat that
-    as "not done" (e.g. leave a Kafka offset uncommitted so it is redelivered).
-    """
+    """Runs an awaitable, cancelling it if shutdown is requested first."""
 
     def __init__(self, shutdown: ShutdownSignal) -> None:
         self._shutdown = shutdown
