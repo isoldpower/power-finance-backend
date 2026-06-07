@@ -28,6 +28,7 @@ def test_all_lists_the_documented_names():
         "RetryPublisher",
         "TransientError",
         "UserHandler",
+        "envelope",
         "headers",
     }
 

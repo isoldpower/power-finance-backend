@@ -18,6 +18,9 @@ unexport VIRTUAL_ENV
 WRITE_SERVICE_DIR   := services/write-service
 READ_SERVICE_DIR    := services/read-service
 CORRELATION_LIB_DIR := libraries/correlation-py
+KAFKA_CLIENT_LIB_DIR := libraries/kafka-client-py
+SAGA_LIB_DIR         := libraries/saga-pattern-py
+READ_AT_LEAST_LIB_DIR := libraries/read-at-least-py
 
 UVICORN_HOST := 0.0.0.0
 UVICORN_PORT := 8000
@@ -105,21 +108,26 @@ clean: | $(HOOK_SENTINEL) ## Remove __pycache__ and bytecode artefacts
 # -----------------------------------------------------------------------------
 
 .PHONY: test
-test: test-correlation test-write test-read ## Run every test suite
+test: test-correlation test-libraries test-write test-read ## Run every test suite
 
 .PHONY: test-correlation
-test-correlation: | $(HOOK_SENTINEL) ## Run correlation-py library tests
+test-correlation: | $(HOOK_SENTINEL) ## Run correlation-py library tests (unittest)
 	uv run python -m unittest discover -s $(CORRELATION_LIB_DIR)/correlation/__tests__ -t $(CORRELATION_LIB_DIR)
 
+.PHONY: test-libraries
+test-libraries: | $(HOOK_SENTINEL) ## Run the pytest library suites (kafka-client, saga, read-at-least)
+	cd $(KAFKA_CLIENT_LIB_DIR) && uv run pytest -q
+	cd $(SAGA_LIB_DIR) && uv run pytest -q
+	cd $(READ_AT_LEAST_LIB_DIR) && uv run pytest -q
+
 .PHONY: test-write
-test-write: | $(HOOK_SENTINEL) ## Run Write Service tests (sqlite, hermetic)
+test-write: | $(HOOK_SENTINEL) ## Run Write Service tests (Django runner, postgres-write on host port 5433)
 	cd $(WRITE_SERVICE_DIR) && uv run python manage.py test \
 		--settings=write_service.settings.test
 
 .PHONY: test-read
-test-read: | $(HOOK_SENTINEL) ## Run Read Service tests (postgres-read on host port 5434)
-	cd $(READ_SERVICE_DIR) && uv run python manage.py test \
-		--settings=read_service.settings.test
+test-read: | $(HOOK_SENTINEL) ## Run Read Service tests (pytest, postgres-read on host port 5434)
+	cd $(READ_SERVICE_DIR) && uv run pytest -q
 
 # -----------------------------------------------------------------------------
 # Lint / format / typecheck

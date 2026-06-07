@@ -32,7 +32,7 @@ repos:
         files: \.py$
 
       - id: project-tests
-        name: project tests (write-service + correlation-py)
+        name: project tests (all services + libraries)
         language: system
         entry: make test
         pass_filenames: false
