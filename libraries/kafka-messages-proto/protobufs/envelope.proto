@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package power_finance.events.v1;
 
-option go_package = "github.com/power-finance/kafka-messages-proto/gen/go/events/v1;eventsv1";
+option go_package = "github.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1";
 
 import "google/protobuf/timestamp.proto";
 

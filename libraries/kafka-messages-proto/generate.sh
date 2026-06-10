@@ -11,6 +11,7 @@ set -euo pipefail
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROTO_DIR="${LIB_DIR}/protobufs"
 PYTHON_PKG_DIR="${LIB_DIR}/generated/python/kafka_messages"
+GO_OUT_DIR="${LIB_DIR}/generated/go"
 
 rm -rf "${PYTHON_PKG_DIR}"
 mkdir -p "${PYTHON_PKG_DIR}"
@@ -42,3 +43,19 @@ done
 uv run --group dev python "${LIB_DIR}/_gen_init.py" "${PYTHON_PKG_DIR}"
 
 echo "Generated Python bindings in ${PYTHON_PKG_DIR}"
+
+# --- Go ---
+# --go_opt=module=<module path> strips that prefix from each file's
+# go_package and writes the remainder relative to --go_out, so files land
+# at generated/go/events/v1/*.pb.go. Requires protoc-gen-go on PATH
+# (go install google.golang.org/protobuf/cmd/protoc-gen-go@latest).
+rm -rf "${GO_OUT_DIR}"
+mkdir -p "${GO_OUT_DIR}"
+
+protoc \
+    --proto_path="${PROTO_DIR}" \
+    --go_out="${LIB_DIR}" \
+    --go_opt=module=github.com/power-finance/kafka-messages-proto \
+    "${PROTO_DIR}"/*.proto
+
+echo "Generated Go bindings in ${GO_OUT_DIR}"

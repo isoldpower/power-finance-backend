@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package power_finance.events.v1;
 
-option go_package = "github.com/power-finance/kafka-messages-proto/gen/go/events/v1;eventsv1";
+option go_package = "github.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1";
 
 import "google/protobuf/timestamp.proto";
 
@@ -14,9 +14,8 @@ message TransactionCreated {
   string transaction_id = 10;
   string wallet_id = 11;
   int32 user_id = 12;
-  // Decimal as string — proto has no native arbitrary-precision number
-  // type and floats lose money precision.
   string amount = 13;
+
   google.protobuf.Timestamp created_at = 14;
 }
 
@@ -25,8 +24,7 @@ message TransactionDeleted {
   google.protobuf.Timestamp occurred_at = 2;
   int32 schema_version = 3;
 
-  // 14 was cancelled_by — the inverse transaction id, a write-internal
-  // detail that no longer leaks to consumers.
+  // 14 was cancelled_by — the inverse transaction id
   reserved 14;
 
   string transaction_id = 10;
@@ -44,8 +42,8 @@ message TransactionUpdated {
   string transaction_id = 10;
   string wallet_id = 11;
   int32 user_id = 12;
-  // Decimals as strings — proto has no arbitrary-precision number type.
   string previous_amount = 13;
   string new_amount = 14;
+
   google.protobuf.Timestamp updated_at = 15;
 }
