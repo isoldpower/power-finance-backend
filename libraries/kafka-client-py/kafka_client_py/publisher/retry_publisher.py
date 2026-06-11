@@ -1,12 +1,14 @@
-import traceback
 from datetime import UTC, datetime
 
 from .. import headers as Headers
-from ..consumer.message import ConsumedMessage
+from ..message import ConsumedMessage
+from ._error_details import (
+    ERROR_MESSAGE_MAX_BYTES,
+    ERROR_STACK_MAX_BYTES,
+    format_exception_traceback,
+    truncate_utf8,
+)
 from .publisher import AsyncPublisher
-
-_ERROR_MESSAGE_MAX_LENGTH = 1024
-_ERROR_STACK_MAX_LENGTH = 8192
 
 
 class RetryPublisher:
@@ -52,13 +54,13 @@ class RetryPublisher:
             (Headers.HEADER_FIRST_FAILED_AT, resolved_first_failed_at),
             (Headers.HEADER_FAILED_AT, datetime.now(UTC)),
             (Headers.HEADER_ERROR_CLASS, type(error).__name__),
-            (Headers.HEADER_ERROR_MESSAGE, str(error)[:_ERROR_MESSAGE_MAX_LENGTH]),
+            (Headers.HEADER_ERROR_MESSAGE, truncate_utf8(str(error), ERROR_MESSAGE_MAX_BYTES)),
             (
                 Headers.HEADER_ERROR_STACK,
-                _format_exception_traceback(error)[:_ERROR_STACK_MAX_LENGTH],
+                truncate_utf8(format_exception_traceback(error), ERROR_STACK_MAX_BYTES),
             ),
         )
-        if resolved_correlation_id is not None:
+        if resolved_correlation_id:
             republish_headers = Headers.merge(
                 republish_headers,
                 (Headers.HEADER_CORRELATION_ID, resolved_correlation_id),
@@ -70,13 +72,3 @@ class RetryPublisher:
             value=message.value or b"",
             headers=republish_headers,
         )
-
-
-def _format_exception_traceback(exception: BaseException) -> str:
-    return "".join(
-        traceback.format_exception(
-            type(exception),
-            exception,
-            exception.__traceback__,
-        )
-    )

@@ -1,24 +1,26 @@
 package services
 
 import (
+	"errors"
+
 	"services/push-service/internal/log"
 )
 
 type EventsProjectionService struct {
-	eventsChannel chan struct{}
+	eventsChannel chan OutboxEvent
 }
 
 func NewEventsProjectionService() *EventsProjectionService {
 	return &EventsProjectionService{
-		eventsChannel: make(chan struct{}),
+		eventsChannel: make(chan OutboxEvent),
 	}
 }
 
-func (eps *EventsProjectionService) Events() <-chan struct{} {
+func (eps *EventsProjectionService) Events() <-chan OutboxEvent {
 	return eps.eventsChannel
 }
 
-func (eps *EventsProjectionService) RunKafkaReceiver(kafkaChannel <-chan []byte) {
+func (eps *EventsProjectionService) RunKafkaReceiver(kafkaChannel <-chan OutboxEvent) {
 	defer close(eps.eventsChannel)
 
 	for kafkaMessage := range kafkaChannel {
@@ -35,6 +37,15 @@ func (eps *EventsProjectionService) RunKafkaReceiver(kafkaChannel <-chan []byte)
 	}
 }
 
-func (eps *EventsProjectionService) translateKafkaMessage(kafkaMessage []byte) ([]struct{}, error) {
-	return make([]struct{}, 0), nil
+func (eps *EventsProjectionService) translateKafkaMessage(
+	kafkaMessage OutboxEvent,
+) ([]OutboxEvent, error) {
+	if kafkaMessage.EventType == "" {
+		return nil, errors.New("outbox event is missing the event_type header")
+	}
+	if len(kafkaMessage.Payload) == 0 {
+		return nil, errors.New("outbox event carries an empty payload")
+	}
+
+	return []OutboxEvent{kafkaMessage}, nil
 }

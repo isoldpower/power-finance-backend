@@ -1,3 +1,4 @@
+from ..message import ConsumedMessage
 from .attempt_outcome import (
     AttemptOutcome,
     HandlerRaisedNonRetryable,
@@ -7,7 +8,6 @@ from .attempt_outcome import (
 )
 from .handler import EventIdExtractor, MessageHandler, UserHandler
 from .in_process_loop_state import InProcessLoopState
-from .message import ConsumedMessage
 from .retry_context import RetryContext
 from .retry_policy import RetryPolicy
 from .terminal_router import TerminalRouter

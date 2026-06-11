@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from ..headers import KafkaHeaders
+from .headers import KafkaHeaders
 
 
 class ConsumedMessage(Protocol):

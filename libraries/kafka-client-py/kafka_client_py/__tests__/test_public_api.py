@@ -43,7 +43,6 @@ def test_re_exports_are_the_same_objects_as_their_modules():
         PostgresDedupeStore,
     )
     from kafka_client_py.consumer.handler import MessageHandler
-    from kafka_client_py.consumer.message import ConsumedMessage
     from kafka_client_py.consumer.retry_policy import RetryPolicy
     from kafka_client_py.errors import (
         KafkaHandlerError,
@@ -51,6 +50,7 @@ def test_re_exports_are_the_same_objects_as_their_modules():
         RetryExhaustedError,
         TransientError,
     )
+    from kafka_client_py.message import ConsumedMessage
     from kafka_client_py.publisher.dlq_publisher import DLQPublisher
     from kafka_client_py.publisher.publisher import AsyncPublisher, ProducerConfig
     from kafka_client_py.publisher.retry_publisher import RetryPublisher

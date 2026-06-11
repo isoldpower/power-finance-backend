@@ -1,8 +1,8 @@
 import logging
 
+from ..message import ConsumedMessage
 from ..publisher.dlq_publisher import DLQPublisher
 from ..publisher.retry_publisher import RetryPublisher
-from .message import ConsumedMessage
 from .retry_context import RetryContext
 from .retry_policy import RetryPolicy
 

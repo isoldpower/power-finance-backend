@@ -2,7 +2,19 @@ module services/push-service
 
 go 1.26
 
-// Local, unpublished workspace library. The filesystem replace lets `go mod
-// tidy` and standalone (non-workspace) builds resolve it without a network
-// fetch; go.work at the repo root covers multi-module local development.
-replace github.com/power-finance/kafka-messages-proto => ../../libraries/kafka-messages-proto
+require (
+	github.com/power-finance/kafka-client-go v0.0.0
+	github.com/twmb/franz-go v1.21.3
+)
+
+require (
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/pgx/v5 v5.10.0 // indirect
+	github.com/klauspost/compress v1.18.6 // indirect
+	github.com/pierrec/lz4/v4 v4.1.26 // indirect
+	github.com/twmb/franz-go/pkg/kmsg v1.13.1 // indirect
+	golang.org/x/text v0.29.0 // indirect
+)
+
+replace github.com/power-finance/kafka-client-go => ../../libraries/kafka-client-go

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from .. import headers as Headers
-from .message import ConsumedMessage
+from ..message import ConsumedMessage
 
 
 @dataclass(frozen=True, slots=True)

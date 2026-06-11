@@ -6,7 +6,6 @@ from .consumer.dedupe.store import (
     PostgresDedupeStore,
 )
 from .consumer.handler import EventIdExtractor, MessageHandler, UserHandler
-from .consumer.message import ConsumedMessage
 from .consumer.retry_policy import RetryPolicy
 from .errors import (
     KafkaHandlerError,
@@ -14,6 +13,7 @@ from .errors import (
     RetryExhaustedError,
     TransientError,
 )
+from .message import ConsumedMessage
 from .publisher.dlq_publisher import DLQPublisher
 from .publisher.publisher import AsyncPublisher, ProducerConfig
 from .publisher.retry_publisher import RetryPublisher

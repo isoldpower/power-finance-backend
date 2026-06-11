@@ -1,20 +1,20 @@
 package handlers
 
 import (
-	"services/push-service/internal/log"
-	"services/push-service/internal/utilities"
 	"services/push-service/push_service/services"
 )
 
 type SSENotificationsHandler struct {
 	poolService       *services.ClientsPoolService
 	projectionService *services.EventsProjectionService
+	kafkaChannel      chan services.OutboxEvent
 }
 
 func NewSSENotificationsHandler() *SSENotificationsHandler {
 	handler := &SSENotificationsHandler{
 		poolService:       services.NewClientsPoolService(),
 		projectionService: services.NewEventsProjectionService(),
+		kafkaChannel:      make(chan services.OutboxEvent),
 	}
 	handler.startBackgroundServices()
 
@@ -22,13 +22,15 @@ func NewSSENotificationsHandler() *SSENotificationsHandler {
 }
 
 func (snh *SSENotificationsHandler) startBackgroundServices() {
-	kafkaChannel := make(chan []byte)
-
-	go snh.projectionService.RunKafkaReceiver(kafkaChannel)
+	go snh.projectionService.RunKafkaReceiver(snh.kafkaChannel)
 	go snh.poolService.FanoutEvents(snh.projectionService.Events())
 }
 
-func (snh *SSENotificationsHandler) Subscribe() (<-chan struct{}, func(), bool) {
+func (snh *SSENotificationsHandler) KafkaSink() chan<- services.OutboxEvent {
+	return snh.kafkaChannel
+}
+
+func (snh *SSENotificationsHandler) Subscribe() (<-chan services.OutboxEvent, func(), bool) {
 	client, registered := snh.poolService.Register()
 	if !registered {
 		return nil, func() {}, false
@@ -39,7 +41,7 @@ func (snh *SSENotificationsHandler) Subscribe() (<-chan struct{}, func(), bool) 
 
 func (snh *SSENotificationsHandler) SpinUntilDone(
 	goneChannel <-chan struct{},
-	eventsChannel <-chan struct{},
+	eventsChannel <-chan services.OutboxEvent,
 	responseChannel chan<- []byte,
 ) {
 	heartbeatService := services.NewHeartbeatService(HEARTBEAT_INTERVAL)
@@ -55,13 +57,7 @@ func (snh *SSENotificationsHandler) SpinUntilDone(
 				return
 			}
 
-			buffer, encodeErr := utilities.EncodeStructToBytes(receivedEvent)
-			if encodeErr != nil {
-				log.PrintError("Failed to encode the Kafka event to byte level", encodeErr)
-				continue
-			}
-
-			responseChannel <- buffer
+			responseChannel <- formatServerSentEvent(receivedEvent)
 		}
 	}
 }

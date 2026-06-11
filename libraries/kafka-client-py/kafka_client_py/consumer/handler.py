@@ -2,6 +2,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 
 from ..errors import PoisonError
+from ..message import ConsumedMessage
 from ..publisher.dlq_publisher import DLQPublisher
 from ..publisher.retry_publisher import RetryPublisher
 from .attempt_outcome import (
@@ -14,7 +15,6 @@ from .attempt_outcome import (
 from .dedupe.gate import DedupeGate, EventIdExtractor
 from .dedupe.store import DedupeStore
 from .in_process_loop_state import InProcessLoopState
-from .message import ConsumedMessage
 from .retry_context import RetryContext
 from .retry_policy import RetryPolicy
 from .terminal_router import TerminalRouter

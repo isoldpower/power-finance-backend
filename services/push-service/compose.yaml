@@ -1,0 +1,30 @@
+# Push-service stack. Shared Kafka broker lives in
+# infrastructure/kafka/compose.yaml so this stack stays standalone-runnable
+# (`docker compose -f compose.yaml up` from this directory) while the root
+# compose pulls the same broker in transitively through this include.
+include:
+  - ../../infrastructure/kafka/compose.yaml
+
+services:
+  # SSE push notifications. Consumes the write-service outbox topic over the
+  # compose network (kafka:9092 — the broker publishes no host ports) and
+  # fans events out to connected SSE clients. The host port is published for
+  # direct SSE testing until a Kong route is added.
+  push-service:
+    build:
+      context: ../..
+      dockerfile: services/push-service/Dockerfile
+    image: power-finance/push-service:dev
+    restart: unless-stopped
+    environment:
+      PUSH_SERVICE_HOST: 0.0.0.0
+      PUSH_SERVICE_PORT: "8001"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_OUTBOX_TOPIC: ${KAFKA_OUTBOX_TOPIC:-events.async}
+      KAFKA_PUSH_GROUP_ID: ${KAFKA_PUSH_GROUP_ID:-push-service.notifications}
+    ports:
+      - "127.0.0.1:${PUSH_SERVICE_PORT:-8002}:8001"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    stop_grace_period: 30s

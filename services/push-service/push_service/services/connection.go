@@ -7,10 +7,10 @@ import (
 const clientEventBufferSize = 16
 
 type PoolClient struct {
-	eventsChannel chan struct{}
+	eventsChannel chan OutboxEvent
 }
 
-func (pc *PoolClient) Events() <-chan struct{} {
+func (pc *PoolClient) Events() <-chan OutboxEvent {
 	return pc.eventsChannel
 }
 
@@ -30,7 +30,7 @@ func NewClientsPoolService() *ClientsPoolService {
 	}
 }
 
-func (cps *ClientsPoolService) FanoutEvents(eventsChannel <-chan struct{}) {
+func (cps *ClientsPoolService) FanoutEvents(eventsChannel <-chan OutboxEvent) {
 	defer close(cps.doneChannel)
 
 	for {
@@ -50,7 +50,7 @@ func (cps *ClientsPoolService) FanoutEvents(eventsChannel <-chan struct{}) {
 }
 
 func (cps *ClientsPoolService) Register() (*PoolClient, bool) {
-	client := &PoolClient{eventsChannel: make(chan struct{}, clientEventBufferSize)}
+	client := &PoolClient{eventsChannel: make(chan OutboxEvent, clientEventBufferSize)}
 	select {
 	case cps.registerChan <- client:
 		return client, true
@@ -66,7 +66,7 @@ func (cps *ClientsPoolService) Unregister(client *PoolClient) {
 	}
 }
 
-func (cps *ClientsPoolService) broadcast(event struct{}) {
+func (cps *ClientsPoolService) broadcast(event OutboxEvent) {
 	for client := range cps.clients {
 		select {
 		case client.eventsChannel <- event:

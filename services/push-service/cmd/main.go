@@ -5,10 +5,8 @@ import (
 )
 
 //TODO:
-// 1) Implement server with connections pooling
-// 2) Implement Kafka listener
-// 3) Implement Go version of Python Kafka consumer library to support DLQ and more
-// 4) Implement messages projection using step 3
+// 1) Implement messages projection: decode proto envelopes in
+//    EventsProjectionService.translateKafkaMessage and fan out typed events
 
 func main() {
 	push_service.StartPushService()

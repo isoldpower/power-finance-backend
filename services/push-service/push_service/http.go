@@ -20,9 +20,11 @@ type pushServiceHttpServer struct {
 	*httpServer.HTTPServer
 }
 
-func NewPushHTTPServer(config *pushServiceHttpServerConfig) internalServer.Server {
-	serverHandler := handlers.NewSSENotificationsHandler()
-	serverDefinition := httpPresenter.NewHttpPresenterDefinition(serverHandler)
+func NewPushHTTPServer(
+	config *pushServiceHttpServerConfig,
+	sseHandler *handlers.SSENotificationsHandler,
+) internalServer.Server {
+	serverDefinition := httpPresenter.NewHttpPresenterDefinition(sseHandler)
 
 	basicServer, serverErr := httpServer.NewHTTPServer(config.EstablishedHTTPProcessConfig)
 	if serverErr != nil {
@@ -33,7 +35,7 @@ func NewPushHTTPServer(config *pushServiceHttpServerConfig) internalServer.Serve
 	}
 
 	return &pushServiceHttpServer{
-		sseHandler: handlers.NewSSENotificationsHandler(),
+		sseHandler: sseHandler,
 		definition: serverDefinition,
 		HTTPServer: basicServer,
 	}

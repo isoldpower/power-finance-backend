@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Callable
 
-from ..message import ConsumedMessage
+from ...message import ConsumedMessage
 from .store import DedupeStore
 
 logger = logging.getLogger(__name__)

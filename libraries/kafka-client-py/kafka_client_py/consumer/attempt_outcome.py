@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from ..message import ConsumedMessage
 from .in_process_loop_state import InProcessLoopState
-from .message import ConsumedMessage
 from .retry_context import RetryContext
 from .terminal_router import TerminalRouter
 
