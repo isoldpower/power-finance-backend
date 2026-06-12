@@ -1,0 +1,13 @@
+# Push-service configuration sample.
+#
+# Copy to `config.yaml` (gitignored) for local runs, or point
+# PUSH_SERVICE_CONFIG_FILE at another path.
+# Env vars override file keys (dots→underscores, uppercased); LOG_LEVEL is env-only.
+push_service:
+  host: localhost
+  port: 8001
+  heartbeat_interval_seconds: 15
+
+kafka:
+  bootstrap_servers: localhost:9092
+  outbox_topic: events.async

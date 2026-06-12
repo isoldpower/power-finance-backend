@@ -3,10 +3,12 @@ package services
 import (
 	"testing"
 	"time"
+
+	"services/push-service/push_service/types"
 )
 
-func validOutboxEvent() OutboxEvent {
-	return OutboxEvent{
+func validOutboxEvent() types.OutboxEvent {
+	return types.OutboxEvent{
 		EventID:       "evt-1",
 		EventType:     "WalletCreated",
 		AggregateType: "wallet",
@@ -17,7 +19,7 @@ func validOutboxEvent() OutboxEvent {
 
 func TestProjectionForwardsValidEvents(t *testing.T) {
 	projection := NewEventsProjectionService()
-	kafkaChannel := make(chan OutboxEvent)
+	kafkaChannel := make(chan types.OutboxEvent)
 	go projection.RunKafkaReceiver(kafkaChannel)
 
 	kafkaChannel <- validOutboxEvent()
@@ -36,7 +38,7 @@ func TestProjectionForwardsValidEvents(t *testing.T) {
 
 func TestProjectionDropsEventsWithoutEventType(t *testing.T) {
 	projection := NewEventsProjectionService()
-	kafkaChannel := make(chan OutboxEvent)
+	kafkaChannel := make(chan types.OutboxEvent)
 	go projection.RunKafkaReceiver(kafkaChannel)
 
 	missingType := validOutboxEvent()
@@ -51,7 +53,7 @@ func TestProjectionDropsEventsWithoutEventType(t *testing.T) {
 
 func TestProjectionDropsEventsWithEmptyPayload(t *testing.T) {
 	projection := NewEventsProjectionService()
-	kafkaChannel := make(chan OutboxEvent)
+	kafkaChannel := make(chan types.OutboxEvent)
 	go projection.RunKafkaReceiver(kafkaChannel)
 
 	emptyPayload := validOutboxEvent()
@@ -66,16 +68,16 @@ func TestProjectionDropsEventsWithEmptyPayload(t *testing.T) {
 
 func TestPoolDeliversOnlyToTheEventOwner(t *testing.T) {
 	pool := NewClientsPoolService()
-	eventsChannel := make(chan OutboxEvent)
+	eventsChannel := make(chan types.OutboxEvent)
 	go pool.FanoutEvents(eventsChannel)
 
-	ownerClient, registered := pool.Register("user_2abc")
+	ownerClient, registered := pool.Subscribe("user_2abc")
 	if !registered {
-		t.Fatal("expected owner client to register")
+		t.Fatal("expected owner client to subscribe")
 	}
-	strangerClient, registered := pool.Register("user_other")
+	strangerClient, registered := pool.Subscribe("user_other")
 	if !registered {
-		t.Fatal("expected stranger client to register")
+		t.Fatal("expected stranger client to subscribe")
 	}
 
 	eventsChannel <- validOutboxEvent()
@@ -100,23 +102,23 @@ func TestPoolDeliversOnlyToTheEventOwner(t *testing.T) {
 
 func TestPoolBroadcastsGlobalEventsToEverySubscriber(t *testing.T) {
 	pool := NewClientsPoolService()
-	eventsChannel := make(chan OutboxEvent)
+	eventsChannel := make(chan types.OutboxEvent)
 	go pool.FanoutEvents(eventsChannel)
 
-	firstClient, registered := pool.Register("user_2abc")
+	firstClient, registered := pool.Subscribe("user_2abc")
 	if !registered {
-		t.Fatal("expected first client to register")
+		t.Fatal("expected first client to subscribe")
 	}
-	secondClient, registered := pool.Register("user_other")
+	secondClient, registered := pool.Subscribe("user_other")
 	if !registered {
-		t.Fatal("expected second client to register")
+		t.Fatal("expected second client to subscribe")
 	}
 
 	globalEvent := validOutboxEvent()
-	globalEvent.UserID = GlobalPartitionKey
+	globalEvent.UserID = types.GlobalPartitionKey
 	eventsChannel <- globalEvent
 
-	for _, client := range []*PoolClient{firstClient, secondClient} {
+	for _, client := range []types.ClientSubscription{firstClient, secondClient} {
 		select {
 		case received := <-client.Events():
 			if received.EventID != "evt-1" {
@@ -125,6 +127,30 @@ func TestPoolBroadcastsGlobalEventsToEverySubscriber(t *testing.T) {
 		case <-time.After(time.Second):
 			t.Fatal("expected global broadcast to reach every client")
 		}
+	}
+
+	close(eventsChannel)
+}
+
+func TestCancelledSubscriptionStopsReceivingEvents(t *testing.T) {
+	pool := NewClientsPoolService()
+	eventsChannel := make(chan types.OutboxEvent)
+	go pool.FanoutEvents(eventsChannel)
+
+	subscription, registered := pool.Subscribe("user_2abc")
+	if !registered {
+		t.Fatal("expected client to subscribe")
+	}
+
+	subscription.Cancel()
+
+	select {
+	case _, isOpen := <-subscription.Events():
+		if isOpen {
+			t.Fatal("expected cancelled subscription channel to be closed")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected cancelled subscription channel to close")
 	}
 
 	close(eventsChannel)

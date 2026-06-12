@@ -4,14 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os/signal"
-	"services/push-service/internal/color"
-	"services/push-service/internal/log"
 	"services/push-service/internal/server"
 	"services/push-service/internal/signals"
-	"services/push-service/internal/utilities"
 	"sync"
 	"syscall"
 	"time"
@@ -23,7 +21,6 @@ type HTTPServer struct {
 	listener    net.Listener
 	server      *http.Server
 
-	doneChannel             chan error
 	gracefulShutdownChannel chan bool
 	cancelRequests          context.CancelFunc
 }
@@ -32,7 +29,6 @@ func NewHTTPServer(basicConfig EstablishedHTTPProcessConfig) (*HTTPServer, error
 	serveAddress := fmt.Sprintf("%s:%d", basicConfig.Host, basicConfig.Port)
 	listener, listenerErr := createListener(serveAddress, basicConfig.NetworkType)
 	if listenerErr != nil {
-		log.PrintError("Failed to create HTTP listener", listenerErr)
 		return nil, listenerErr
 	}
 
@@ -50,14 +46,13 @@ func NewHTTPServer(basicConfig EstablishedHTTPProcessConfig) (*HTTPServer, error
 				return baseContext
 			},
 		},
-		doneChannel:             make(chan error, 1),
 		gracefulShutdownChannel: make(chan bool, 1),
 		cancelRequests:          cancelRequests,
 	}, nil
 }
 
 func (hs *HTTPServer) Run(config server.ProcessBootstrapConfig) {
-	keyboardShutdown := signals.NewKeyboardSignalHandler(hs.stopServerFromKeyboard)
+	keyboardShutdown := signals.NewKeyboardSignalHandler(hs.stopServerOnSignal)
 
 	waitGroup := sync.WaitGroup{}
 	waitGroup.Go(func() {
@@ -66,21 +61,6 @@ func (hs *HTTPServer) Run(config server.ProcessBootstrapConfig) {
 
 	signals.TrackSignalSafe(keyboardShutdown, hs.gracefulShutdownChannel)
 	waitGroup.Wait()
-}
-
-func (hs *HTTPServer) Shutdown() server.ShutdownRoutine {
-	shutdownTimestamp := time.Now()
-	enforceShutdown := make(chan struct{}, 1)
-
-	return server.ShutdownRoutine{
-		StartedAt: shutdownTimestamp,
-		ForceStop: func(message string) error {
-			log.Warnln("%s server shutdown enforced through code: %s", color.Blue("HTTP"), message)
-
-			enforceShutdown <- struct{}{}
-			return nil
-		},
-	}
 }
 
 func (hs *HTTPServer) RegisterMiddleware(middleware *RouteMiddleware) {
@@ -109,37 +89,29 @@ func (hs *HTTPServer) AddRoute(
 	hs.router.HandleFunc(pattern, handlerWithMiddleware)
 }
 
-func (hs *HTTPServer) GetDoneChannel() <-chan error {
-	return hs.doneChannel
+// AddPublicRoute registers a handler that bypasses the middleware chain (for health probes).
+func (hs *HTTPServer) AddPublicRoute(
+	pattern string,
+	handler func(http.ResponseWriter, *http.Request),
+) {
+	hs.router.HandleFunc(pattern, handler)
 }
 
 func (hs *HTTPServer) serveRouter() {
 	serveErr := hs.server.Serve(hs.listener)
 	if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
-		log.PrintError("Error occurred while serving HTTP listener", serveErr)
+		slog.Error("http listener serve failed", "error", serveErr)
 	}
 }
 
-func (hs *HTTPServer) stopServerFromKeyboard(ctx context.Context) error {
-	log.Processln("Shutting down %s server gracefully", color.Blue("HTTP"))
-	log.RaiseLog(func() {
-		log.Debugln("%s Interrupted by %s context", log.GetIcon(log.GearIcon), ctx)
-	})
+func (hs *HTTPServer) stopServerOnSignal(ctx context.Context) error {
+	slog.Info("shutting down http server gracefully")
 
 	forceShutdown, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 	hs.shutdownWithContextAndTimeout(forceShutdown)
 
 	return nil
-}
-
-func (hs *HTTPServer) shutdownWithChannelAndTimeout(forceShutdownChannel <-chan struct{}) {
-	timeoutContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	channelContext, cancel2 := utilities.ChannelToContext(timeoutContext, forceShutdownChannel)
-	defer cancel()
-	defer cancel2()
-
-	hs.shutdownWithContext(channelContext)
 }
 
 func (hs *HTTPServer) shutdownWithContextAndTimeout(passedContext context.Context) {
@@ -153,9 +125,6 @@ func (hs *HTTPServer) shutdownWithContext(cancelContext context.Context) {
 	hs.gracefulShutdownChannel <- true
 	hs.cancelRequests()
 	if shutdownErr := hs.server.Shutdown(cancelContext); shutdownErr != nil {
-		log.PrintError("Server forced to shutdown with error", shutdownErr)
-		hs.doneChannel <- shutdownErr
-	} else {
-		hs.doneChannel <- nil
+		slog.Error("http server forced shutdown", "error", shutdownErr)
 	}
 }

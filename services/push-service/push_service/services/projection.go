@@ -2,44 +2,53 @@ package services
 
 import (
 	"errors"
+	"log/slog"
 
-	"services/push-service/internal/log"
+	"services/push-service/push_service/types"
 )
 
 type EventsProjectionService struct {
-	eventsChannel chan OutboxEvent
+	eventsChannel chan types.OutboxEvent
 }
 
 func NewEventsProjectionService() *EventsProjectionService {
 	return &EventsProjectionService{
-		eventsChannel: make(chan OutboxEvent),
+		eventsChannel: make(chan types.OutboxEvent),
 	}
 }
 
-func (eps *EventsProjectionService) Events() <-chan OutboxEvent {
+func (eps *EventsProjectionService) Events() <-chan types.OutboxEvent {
 	return eps.eventsChannel
 }
 
-func (eps *EventsProjectionService) RunKafkaReceiver(kafkaChannel <-chan OutboxEvent) {
+func (eps *EventsProjectionService) RunKafkaReceiver(kafkaChannel <-chan types.OutboxEvent) {
 	defer close(eps.eventsChannel)
 
 	for kafkaMessage := range kafkaChannel {
 		projectedEvents, translateErr := eps.translateKafkaMessage(kafkaMessage)
 		if translateErr != nil {
-			log.PrintError("Error translating Kafka message", translateErr)
+			slog.Warn(
+				"dropping malformed kafka message",
+				"event_id", kafkaMessage.EventID,
+				"error", translateErr,
+			)
 			continue
 		}
 
-		log.Infoln("Received new valid Kafka message")
 		for _, projectedEvent := range projectedEvents {
+			slog.Debug(
+				"kafka message projected",
+				"event_id", projectedEvent.EventID,
+				"event_type", projectedEvent.EventType,
+			)
 			eps.eventsChannel <- projectedEvent
 		}
 	}
 }
 
 func (eps *EventsProjectionService) translateKafkaMessage(
-	kafkaMessage OutboxEvent,
-) ([]OutboxEvent, error) {
+	kafkaMessage types.OutboxEvent,
+) ([]types.OutboxEvent, error) {
 	if kafkaMessage.EventType == "" {
 		return nil, errors.New("outbox event is missing the event_type header")
 	}
@@ -47,5 +56,5 @@ func (eps *EventsProjectionService) translateKafkaMessage(
 		return nil, errors.New("outbox event carries an empty payload")
 	}
 
-	return []OutboxEvent{kafkaMessage}, nil
+	return []types.OutboxEvent{kafkaMessage}, nil
 }

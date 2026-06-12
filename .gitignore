@@ -52,6 +52,9 @@ local_settings.py
 !.env.example
 !.env.*.example
 
+# Service config files (viper) — samples are committed, real configs are not
+services/*/config.yaml
+
 # =============================================================================
 # Go (services/push_service)
 # =============================================================================

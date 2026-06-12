@@ -1,59 +1,91 @@
 package http
 
 import (
+	"log/slog"
 	"net/http"
-	"services/push-service/internal/log"
-	"services/push-service/push_service/handlers"
+
+	"services/push-service/internal/correlation"
+	"services/push-service/internal/health"
 	"services/push-service/push_service/presentation"
+	"services/push-service/push_service/types"
 )
 
 type HttpPresentation struct {
-	notificationsHandler *handlers.SSENotificationsHandler
+	notificationsStream types.NotificationsStream
+	readinessProbe      *health.Probe
 }
 
 func NewHttpPresentation(
-	notificationsHandler *handlers.SSENotificationsHandler,
+	notificationsStream types.NotificationsStream,
+	readinessProbe *health.Probe,
 ) *HttpPresentation {
 	return &HttpPresentation{
-		notificationsHandler: notificationsHandler,
+		notificationsStream: notificationsStream,
+		readinessProbe:      readinessProbe,
 	}
+}
+
+func (hp *HttpPresentation) HandleHealthCheck(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	writer.Header().Set("Content-Type", "text/plain")
+	writer.WriteHeader(http.StatusOK)
+	_, _ = writer.Write([]byte("ok"))
+}
+
+func (hp *HttpPresentation) HandleReadinessCheck(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	writer.Header().Set("Content-Type", "text/plain")
+	if !hp.readinessProbe.IsReady() {
+		writer.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = writer.Write([]byte("kafka consumer not running"))
+		return
+	}
+
+	writer.WriteHeader(http.StatusOK)
+	_, _ = writer.Write([]byte("ready"))
 }
 
 func (hp *HttpPresentation) HandleGetNotifications(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
-	externalUserID, authenticated := handlers.AuthenticatedUserID(request)
+	externalUserID, authenticated := AuthenticatedUserID(request)
 	if !authenticated {
 		http.Error(writer, "Authenticated user is required", http.StatusUnauthorized)
 		return
 	}
 
+	requestLogger := correlation.Logger(request.Context()).With("user_id", externalUserID)
+
 	httpConnection := NewSseHttpConnection(writer, request)
 	goneChannel := httpConnection.ClientGoneChannel()
 
-	eventsChannel, unsubscribe, subscribed := hp.notificationsHandler.Subscribe(externalUserID)
+	eventsChannel, unsubscribe, subscribed := hp.notificationsStream.Subscribe(externalUserID)
 	if subscribed {
 		defer unsubscribe()
+		requestLogger.Info("sse connection established")
 		responseChannel := make(chan []byte)
 
-		go hp.consumeResponseMessages(httpConnection, responseChannel)
-		hp.notificationsHandler.SpinUntilDone(goneChannel, eventsChannel, responseChannel)
+		go hp.consumeResponseMessages(requestLogger, httpConnection, responseChannel)
+		hp.notificationsStream.SpinUntilDone(goneChannel, eventsChannel, responseChannel)
 
 		close(responseChannel)
+		requestLogger.Info("sse connection closed")
 	}
 }
 
 func (hp *HttpPresentation) consumeResponseMessages(
+	requestLogger *slog.Logger,
 	httpConnection presentation.ConnectionPresentation,
 	responseChannel chan []byte,
 ) {
 	for buffer := range responseChannel {
-		transportErr := httpConnection.SendMessageOverConnection(buffer)
-		if transportErr != nil {
-			log.PrintError("Failed to send the Kafka event to the connection consumer", transportErr)
-		} else {
-			log.Successln("Successfully sent the Kafka event to the connection consumer")
+		if transportErr := httpConnection.SendMessageOverConnection(buffer); transportErr != nil {
+			requestLogger.Warn("failed to write sse frame", "error", transportErr)
 		}
 	}
 }

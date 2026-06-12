@@ -3,11 +3,11 @@ package handlers
 import (
 	"testing"
 
-	"services/push-service/push_service/services"
+	"services/push-service/push_service/types"
 )
 
 func TestFormatServerSentEventFrame(t *testing.T) {
-	frame := formatServerSentEvent(services.OutboxEvent{
+	frame := formatServerSentEvent(types.OutboxEvent{
 		EventID:   "evt-1",
 		EventType: "WalletCreated",
 		Payload:   []byte(`{"wallet_id":"wallet-1"}`),
@@ -23,7 +23,7 @@ func TestFormatServerSentEventFrame(t *testing.T) {
 }
 
 func TestFormatServerSentEventSplitsMultilinePayload(t *testing.T) {
-	frame := formatServerSentEvent(services.OutboxEvent{
+	frame := formatServerSentEvent(types.OutboxEvent{
 		EventType: "WalletCreated",
 		Payload:   []byte("{\n  \"wallet_id\": \"wallet-1\"\n}"),
 	})
@@ -39,7 +39,7 @@ func TestFormatServerSentEventSplitsMultilinePayload(t *testing.T) {
 }
 
 func TestFormatServerSentEventOmitsIDWhenAbsent(t *testing.T) {
-	frame := formatServerSentEvent(services.OutboxEvent{
+	frame := formatServerSentEvent(types.OutboxEvent{
 		EventType: "WalletCreated",
 		Payload:   []byte("{}"),
 	})

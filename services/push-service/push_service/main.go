@@ -2,66 +2,61 @@ package push_service
 
 import (
 	"context"
-	"os"
-	"strconv"
 
-	"services/push-service/internal/log"
+	"services/push-service/internal/health"
 	"services/push-service/internal/server"
 	httpServer "services/push-service/internal/server/http"
 	"services/push-service/internal/utilities"
 	"services/push-service/push_service/handlers"
 	"services/push-service/push_service/infrastructure/kafka"
+	"services/push-service/push_service/services"
+	"services/push-service/push_service/types"
 )
 
-const (
-	defaultServerHost = "localhost"
-	defaultServerPort = 8001
-)
-
-func StartPushService() {
+// StartPushService wires the service and blocks until shutdown; wiring errors fail fast.
+func StartPushService(serviceConfig types.PushServiceConfig) error {
 	backgroundContext, stopBackgroundServices := context.WithCancel(context.Background())
 	defer stopBackgroundServices()
 
-	notificationsHandler := handlers.NewSSENotificationsHandler()
-	kafka.StartKafkaConsumer(backgroundContext, notificationsHandler.KafkaSink())
+	newHeartbeat := func() types.Heartbeat {
+		return services.NewHeartbeatService(serviceConfig.Server.HeartbeatInterval)
+	}
+	notificationsHandler := handlers.NewSSENotificationsHandler(
+		services.NewClientsPoolService(),
+		services.NewEventsProjectionService(),
+		newHeartbeat,
+	)
+	notificationsHandler.Start()
 
-	serverErrorChannel := make(chan error, 1)
+	readinessProbe := health.NewProbe()
+	kafkaErr := kafka.StartKafkaConsumer(
+		backgroundContext,
+		serviceConfig.Kafka,
+		notificationsHandler.KafkaSink(),
+		readinessProbe,
+	)
+	if kafkaErr != nil {
+		return kafkaErr
+	}
+
 	establishedConfig := httpServer.EstablishHTTPProcessConfig(httpServer.HTTPProcessConfig{
 		ProcessConfig: server.ProcessConfig{
-			Host:         utilities.BuildOption(serverHostFromEnv()),
-			Port:         utilities.BuildOption(serverPortFromEnv()),
-			ErrorChannel: utilities.BuildOption(serverErrorChannel),
+			Host: utilities.BuildOption(serviceConfig.Server.Host),
+			Port: utilities.BuildOption(serviceConfig.Server.Port),
 		},
 	})
 
-	pushHttpServer := NewPushHTTPServer(&pushServiceHttpServerConfig{
+	pushHttpServer, serverErr := NewPushHTTPServer(&pushServiceHttpServerConfig{
 		EstablishedHTTPProcessConfig: establishedConfig,
-	}, notificationsHandler)
+	}, notificationsHandler, readinessProbe)
+	if serverErr != nil {
+		return serverErr
+	}
+
 	pushHttpServer.Run(server.ProcessBootstrapConfig{
 		WithGracefulShutdown: true,
 		Silent:               false,
 	})
-}
 
-func serverHostFromEnv() string {
-	if host := os.Getenv("PUSH_SERVICE_HOST"); host != "" {
-		return host
-	}
-
-	return defaultServerHost
-}
-
-func serverPortFromEnv() int {
-	rawPort := os.Getenv("PUSH_SERVICE_PORT")
-	if rawPort == "" {
-		return defaultServerPort
-	}
-
-	port, parseErr := strconv.Atoi(rawPort)
-	if parseErr != nil {
-		log.Warnln("Invalid PUSH_SERVICE_PORT %q; using default %d", rawPort, defaultServerPort)
-		return defaultServerPort
-	}
-
-	return port
+	return nil
 }

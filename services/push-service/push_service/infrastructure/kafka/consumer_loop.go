@@ -3,48 +3,58 @@ package kafka
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	kafkaclient "github.com/power-finance/kafka-client-go"
 	"github.com/power-finance/kafka-client-go/consumer"
 	"github.com/twmb/franz-go/pkg/kgo"
 
-	"services/push-service/internal/log"
+	"services/push-service/internal/health"
 )
 
-type groupConsumer interface {
+type broadcastConsumer interface {
 	PollFetches(ctx context.Context) kgo.Fetches
-	CommitRecords(ctx context.Context, records ...*kgo.Record) error
 	Close()
 }
 
-type messageHandler interface {
-	Handle(ctx context.Context, message kafkaclient.ConsumedMessage) error
-}
+type MessageHandlerFunc func(ctx context.Context, message kafkaclient.ConsumedMessage) error
 
+// ConsumerLoop drains a groupless broadcast consumer; no commits, at-most-once delivery.
 type ConsumerLoop struct {
-	consumer groupConsumer
-	handler  messageHandler
+	consumer       broadcastConsumer
+	handle         MessageHandlerFunc
+	readinessProbe *health.Probe
 }
 
-func NewConsumerLoop(consumer groupConsumer, handler messageHandler) *ConsumerLoop {
-	return &ConsumerLoop{consumer: consumer, handler: handler}
+func NewConsumerLoop(
+	consumer broadcastConsumer,
+	handle MessageHandlerFunc,
+	readinessProbe *health.Probe,
+) *ConsumerLoop {
+	return &ConsumerLoop{
+		consumer:       consumer,
+		handle:         handle,
+		readinessProbe: readinessProbe,
+	}
 }
 
 func (cl *ConsumerLoop) Run(ctx context.Context) {
 	defer cl.consumer.Close()
-	log.Successln("Kafka consumer started")
+	cl.readinessProbe.MarkReady()
+	defer cl.readinessProbe.MarkUnready()
+	slog.Info("kafka consumer started")
 
 	for {
 		fetches := cl.consumer.PollFetches(ctx)
 		if ctx.Err() != nil || fetches.IsClientClosed() {
-			log.Infoln("Kafka consumer stopped")
+			slog.Info("kafka consumer stopped")
 			return
 		}
 
 		cl.logFetchErrors(fetches)
 		for _, record := range fetches.Records() {
 			if ctx.Err() != nil {
-				log.Infoln("Kafka consumer stopped mid-batch")
+				slog.Info("kafka consumer stopped mid-batch")
 				return
 			}
 
@@ -56,16 +66,8 @@ func (cl *ConsumerLoop) Run(ctx context.Context) {
 func (cl *ConsumerLoop) processRecord(ctx context.Context, record *kgo.Record) {
 	message := consumer.MessageFromRecord(record)
 
-	if handleErr := cl.handler.Handle(ctx, message); handleErr != nil {
-		log.PrintError(
-			"Kafka handler failed; offset not committed, message will be redelivered",
-			handleErr,
-		)
-		return
-	}
-
-	if commitErr := cl.consumer.CommitRecords(ctx, record); commitErr != nil {
-		log.PrintError("Failed to commit Kafka offset", commitErr)
+	if handleErr := cl.handle(ctx, message); handleErr != nil && !errors.Is(handleErr, context.Canceled) {
+		slog.Error("kafka handler failed, event dropped", "error", handleErr)
 	}
 }
 
@@ -75,6 +77,11 @@ func (cl *ConsumerLoop) logFetchErrors(fetches kgo.Fetches) {
 			return
 		}
 
-		log.Errorln("Kafka fetch error topic=%s partition=%d: %v", topic, partition, fetchErr)
+		slog.Error(
+			"kafka fetch error",
+			"topic", topic,
+			"partition", partition,
+			"error", fetchErr,
+		)
 	})
 }

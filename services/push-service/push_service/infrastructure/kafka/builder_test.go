@@ -9,7 +9,8 @@ import (
 	"github.com/power-finance/kafka-client-go/envelope"
 	"github.com/power-finance/kafka-client-go/headers"
 
-	"services/push-service/push_service/services"
+	"services/push-service/internal/health"
+	"services/push-service/push_service/types"
 )
 
 func outboxKafkaMessage() kafkaclient.ConsumedMessage {
@@ -26,7 +27,7 @@ func outboxKafkaMessage() kafkaclient.ConsumedMessage {
 }
 
 func TestEventsSinkHandlerDeliversOutboxEvent(t *testing.T) {
-	eventsSink := make(chan services.OutboxEvent, 1)
+	eventsSink := make(chan types.OutboxEvent, 1)
 	sinkHandler := newEventsSinkHandler(eventsSink)
 
 	err := sinkHandler(context.Background(), outboxKafkaMessage())
@@ -47,7 +48,7 @@ func TestEventsSinkHandlerDeliversOutboxEvent(t *testing.T) {
 }
 
 func TestEventsSinkHandlerAbortsWhenContextCancelled(t *testing.T) {
-	blockedSink := make(chan services.OutboxEvent)
+	blockedSink := make(chan types.OutboxEvent)
 	sinkHandler := newEventsSinkHandler(blockedSink)
 	cancelledContext, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -73,35 +74,20 @@ func TestOutboxEventFromMessageWithoutHeaders(t *testing.T) {
 	}
 }
 
-func TestExtractEnvelopeEventID(t *testing.T) {
-	message := kafkaclient.ConsumedMessage{
-		Headers: headers.KafkaHeaders{headers.String(envelope.EventID, "evt-1")},
-	}
-
-	eventID, found := extractEnvelopeEventID(message)
-
-	if !found || eventID != "evt-1" {
-		t.Fatalf("expected evt-1, got %q/%v", eventID, found)
-	}
-}
-
-func TestExtractEnvelopeEventIDMissing(t *testing.T) {
-	if _, found := extractEnvelopeEventID(kafkaclient.ConsumedMessage{}); found {
-		t.Fatal("expected missing event_id to report not found")
-	}
-}
-
 func TestBuildFailsFastWhenBrokerUnreachable(t *testing.T) {
 	cancelledContext, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	config := LoadConsumerConfigFromEnv()
-	config.BootstrapServers = "localhost:1"
+	kafkaConfig := types.KafkaConfig{
+		BootstrapServers: "localhost:1",
+		OutboxTopics:     []string{"events.async"},
+	}
 
 	_, err := BuildNotificationsConsumerLoop(
 		cancelledContext,
-		config,
-		make(chan services.OutboxEvent),
+		kafkaConfig,
+		make(chan types.OutboxEvent),
+		health.NewProbe(),
 	)
 
 	if err == nil {

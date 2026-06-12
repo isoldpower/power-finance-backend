@@ -10,25 +10,21 @@ type ProcessBootstrapConfig struct {
 }
 
 type ProcessConfig struct {
-	Host         utilities.Option[string]
-	Port         utilities.Option[int]
-	ErrorChannel utilities.Option[chan error]
+	Host utilities.Option[string]
+	Port utilities.Option[int]
 }
 
 type EstablishedProcessConfig struct {
-	Host         string
-	Port         int
-	errorChannel chan error
+	Host string
+	Port int
 }
 
 func EstablishProcessConfig(config ProcessConfig) EstablishedProcessConfig {
 	config.Port.DefaultOption(8080)
 	config.Host.DefaultOption("localhost")
-	config.ErrorChannel.DefaultOption(make(chan error, 1))
 
 	return EstablishedProcessConfig{
-		Host:         config.Host.Value,
-		Port:         config.Port.Value,
-		errorChannel: config.ErrorChannel.Value,
+		Host: config.Host.Value,
+		Port: config.Port.Value,
 	}
 }

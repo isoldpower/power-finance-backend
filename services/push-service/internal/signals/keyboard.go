@@ -2,8 +2,8 @@ package signals
 
 import (
 	"context"
+	"log/slog"
 	"os/signal"
-	"services/push-service/internal/log"
 	"syscall"
 )
 
@@ -23,7 +23,7 @@ func (ksh *KeyboardSignalHandler) GetContext() (context.Context, context.CancelF
 
 func (ksh *KeyboardSignalHandler) GetOnShutdown() SignalHandlerFunc {
 	return func(ctx context.Context) error {
-		log.Debugln("Context interrupted by keyboard input. Handling action...")
+		slog.Debug("shutdown signal received, handling action")
 
 		return ksh.handler(ctx)
 	}

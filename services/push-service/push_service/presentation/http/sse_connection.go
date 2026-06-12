@@ -2,7 +2,7 @@ package http
 
 import (
 	"net/http"
-	"services/push-service/internal/log"
+
 	"services/push-service/push_service/presentation"
 )
 
@@ -12,6 +12,7 @@ type SseHttpConnection struct {
 	controller     *http.ResponseController
 }
 
+// CORS headers are deliberately absent — the API gateway owns CORS policy.
 func NewSseHttpConnection(
 	writer http.ResponseWriter,
 	request *http.Request,
@@ -19,7 +20,6 @@ func NewSseHttpConnection(
 	writer.Header().Set("Content-Type", "text/event-stream")
 	writer.Header().Set("Cache-Control", "no-cache")
 	writer.Header().Set("Connection", "keep-alive")
-	writer.Header().Set("Access-Control-Allow-Origin", "*")
 
 	responseController := http.NewResponseController(writer)
 
@@ -35,17 +35,9 @@ func (hc *SseHttpConnection) ClientGoneChannel() <-chan struct{} {
 }
 
 func (hc *SseHttpConnection) SendMessageOverConnection(message []byte) error {
-	_, writeError := hc.responseWriter.Write(message)
-	if writeError != nil {
-		log.Warnln("Failed to write response %s", message)
+	if _, writeError := hc.responseWriter.Write(message); writeError != nil {
 		return writeError
 	}
 
-	flushError := hc.controller.Flush()
-	if flushError != nil {
-		log.Warnln("Failed to flush response %s to client at %s", message, hc.request.Host)
-		return flushError
-	}
-
-	return nil
+	return hc.controller.Flush()
 }

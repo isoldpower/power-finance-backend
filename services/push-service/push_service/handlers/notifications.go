@@ -1,52 +1,56 @@
 package handlers
 
 import (
-	"services/push-service/push_service/services"
+	"services/push-service/push_service/types"
 )
 
 type SSENotificationsHandler struct {
-	poolService       *services.ClientsPoolService
-	projectionService *services.EventsProjectionService
-	kafkaChannel      chan services.OutboxEvent
+	poolService       types.ClientsPool
+	projectionService types.EventsProjector
+	newHeartbeat      types.HeartbeatFactory
+	kafkaChannel      chan types.OutboxEvent
 }
 
-func NewSSENotificationsHandler() *SSENotificationsHandler {
-	handler := &SSENotificationsHandler{
-		poolService:       services.NewClientsPoolService(),
-		projectionService: services.NewEventsProjectionService(),
-		kafkaChannel:      make(chan services.OutboxEvent),
+func NewSSENotificationsHandler(
+	poolService types.ClientsPool,
+	projectionService types.EventsProjector,
+	newHeartbeat types.HeartbeatFactory,
+) *SSENotificationsHandler {
+	return &SSENotificationsHandler{
+		poolService:       poolService,
+		projectionService: projectionService,
+		newHeartbeat:      newHeartbeat,
+		kafkaChannel:      make(chan types.OutboxEvent),
 	}
-	handler.startBackgroundServices()
-
-	return handler
 }
 
-func (snh *SSENotificationsHandler) startBackgroundServices() {
+// Start launches the projection and fanout pipelines.
+func (snh *SSENotificationsHandler) Start() {
 	go snh.projectionService.RunKafkaReceiver(snh.kafkaChannel)
 	go snh.poolService.FanoutEvents(snh.projectionService.Events())
 }
 
-func (snh *SSENotificationsHandler) KafkaSink() chan<- services.OutboxEvent {
+func (snh *SSENotificationsHandler) KafkaSink() chan<- types.OutboxEvent {
 	return snh.kafkaChannel
 }
 
 func (snh *SSENotificationsHandler) Subscribe(
 	externalUserID string,
-) (<-chan services.OutboxEvent, func(), bool) {
-	client, registered := snh.poolService.Register(externalUserID)
+) (<-chan types.OutboxEvent, func(), bool) {
+	subscription, registered := snh.poolService.Subscribe(externalUserID)
 	if !registered {
 		return nil, func() {}, false
 	}
 
-	return client.Events(), func() { snh.poolService.Unregister(client) }, true
+	return subscription.Events(), subscription.Cancel, true
 }
 
 func (snh *SSENotificationsHandler) SpinUntilDone(
 	goneChannel <-chan struct{},
-	eventsChannel <-chan services.OutboxEvent,
+	eventsChannel <-chan types.OutboxEvent,
 	responseChannel chan<- []byte,
 ) {
-	heartbeatService := services.NewHeartbeatService(HEARTBEAT_INTERVAL)
+	heartbeatService := snh.newHeartbeat()
 	go heartbeatService.SpawnHeartbeatMessages(responseChannel)
 	defer heartbeatService.StopTicker()
 

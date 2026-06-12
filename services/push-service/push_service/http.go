@@ -1,12 +1,13 @@
 package push_service
 
 import (
-	"services/push-service/internal/color"
-	"services/push-service/internal/log"
+	"log/slog"
+
+	"services/push-service/internal/health"
 	internalServer "services/push-service/internal/server"
 	httpServer "services/push-service/internal/server/http"
-	"services/push-service/push_service/handlers"
 	httpPresenter "services/push-service/push_service/presentation/http"
+	"services/push-service/push_service/types"
 )
 
 type pushServiceHttpServerConfig struct {
@@ -14,7 +15,6 @@ type pushServiceHttpServerConfig struct {
 }
 
 type pushServiceHttpServer struct {
-	sseHandler *handlers.SSENotificationsHandler
 	definition *httpPresenter.HttpPresenterDefinition
 
 	*httpServer.HTTPServer
@@ -22,34 +22,24 @@ type pushServiceHttpServer struct {
 
 func NewPushHTTPServer(
 	config *pushServiceHttpServerConfig,
-	sseHandler *handlers.SSENotificationsHandler,
-) internalServer.Server {
-	serverDefinition := httpPresenter.NewHttpPresenterDefinition(sseHandler)
+	notificationsStream types.NotificationsStream,
+	readinessProbe *health.Probe,
+) (internalServer.Server, error) {
+	serverDefinition := httpPresenter.NewHttpPresenterDefinition(notificationsStream, readinessProbe)
 
 	basicServer, serverErr := httpServer.NewHTTPServer(config.EstablishedHTTPProcessConfig)
 	if serverErr != nil {
-		log.PrintError(
-			"Failed to create new http server with specified config",
-			serverErr,
-		)
+		return nil, serverErr
 	}
 
 	return &pushServiceHttpServer{
-		sseHandler: sseHandler,
 		definition: serverDefinition,
 		HTTPServer: basicServer,
-	}
+	}, nil
 }
 
 func (pshs *pushServiceHttpServer) Run(config internalServer.ProcessBootstrapConfig) {
-	log.Processln("Running %s HTTP server", log.GetIcon(log.PencilIcon))
-	log.RaiseLog(func() {
-		log.Logln(
-			"%s Press %s to exit",
-			log.GetIcon(log.AttentionIcon),
-			color.Red("Ctrl+C"),
-		)
-	})
+	slog.Info("http server starting")
 
 	pshs.resolveHttpDefinition()
 	pshs.HTTPServer.Run(config)
@@ -60,6 +50,6 @@ func (pshs *pushServiceHttpServer) resolveHttpDefinition() {
 
 	routerErr := pshs.definition.InitialiseRoutes(pshs.HTTPServer)
 	if routerErr != nil {
-		log.PrintError("Failed to initialise http server", routerErr)
+		slog.Error("failed to initialise http routes", "error", routerErr)
 	}
 }

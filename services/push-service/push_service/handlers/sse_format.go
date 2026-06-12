@@ -3,10 +3,10 @@ package handlers
 import (
 	"bytes"
 
-	"services/push-service/push_service/services"
+	"services/push-service/push_service/types"
 )
 
-func formatServerSentEvent(event services.OutboxEvent) []byte {
+func formatServerSentEvent(event types.OutboxEvent) []byte {
 	var frame bytes.Buffer
 
 	frame.WriteString("event: ")

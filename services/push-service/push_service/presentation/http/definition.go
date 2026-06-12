@@ -1,8 +1,9 @@
 package http
 
 import (
+	"services/push-service/internal/health"
 	httpServer "services/push-service/internal/server/http"
-	"services/push-service/push_service/handlers"
+	"services/push-service/push_service/types"
 )
 
 type HttpPresenterDefinition struct {
@@ -10,10 +11,11 @@ type HttpPresenterDefinition struct {
 }
 
 func NewHttpPresenterDefinition(
-	handler *handlers.SSENotificationsHandler,
+	notificationsStream types.NotificationsStream,
+	readinessProbe *health.Probe,
 ) *HttpPresenterDefinition {
 	return &HttpPresenterDefinition{
-		presentation: NewHttpPresentation(handler),
+		presentation: NewHttpPresentation(notificationsStream, readinessProbe),
 	}
 }
 
@@ -23,9 +25,16 @@ func (hpd *HttpPresenterDefinition) InitialiseRoutes(
 	routes := []*httpServer.HttpServerRoute{
 		{Pattern: "GET /events", Handler: hpd.presentation.HandleGetNotifications},
 	}
+	publicRoutes := []*httpServer.HttpServerRoute{
+		{Pattern: "GET /healthz", Handler: hpd.presentation.HandleHealthCheck},
+		{Pattern: "GET /readyz", Handler: hpd.presentation.HandleReadinessCheck},
+	}
 
 	for _, route := range routes {
 		sourceServer.AddRoute(route.Pattern, route.Handler)
+	}
+	for _, route := range publicRoutes {
+		sourceServer.AddPublicRoute(route.Pattern, route.Handler)
 	}
 
 	return nil
@@ -35,6 +44,7 @@ func (hpd *HttpPresenterDefinition) ConfigureMiddlewares(
 	sourceServer *httpServer.HTTPServer,
 ) {
 	middlewares := []*httpServer.RouteMiddleware{
+		httpServer.NewRouteMiddleware(CorrelationIDMiddleware, correlationMiddlewarePriority),
 		httpServer.NewRouteMiddleware(GatewayAuthMiddleware, gatewayAuthMiddlewarePriority),
 	}
 

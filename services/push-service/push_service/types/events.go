@@ -1,4 +1,4 @@
-package services
+package types
 
 const GlobalPartitionKey = "GLOBAL"
 
@@ -8,8 +8,4 @@ type OutboxEvent struct {
 	AggregateType string
 	UserID        string
 	Payload       []byte
-}
-
-func (event OutboxEvent) IsAddressedTo(externalUserID string) bool {
-	return event.UserID == externalUserID || event.UserID == GlobalPartitionKey
 }

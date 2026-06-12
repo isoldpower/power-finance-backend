@@ -1,23 +1,22 @@
 package signals
 
-import "services/push-service/internal/log"
+import "log/slog"
 
-func TrackSignalSafe[T interface{}](signal SignalHandler, stopChannel <-chan T) {
+func TrackSignalSafe[T any](signal SignalHandler, stopChannel <-chan T) {
 	signalContext, cancel := signal.GetContext()
 	defer cancel()
 
 	select {
 	case <-stopChannel:
-		log.Debugln("Signal interrupted by stop channel")
+		slog.Debug("signal tracking interrupted by stop channel")
 
 		return
 	case <-signalContext.Done():
-		log.Debugln("Signal context done received")
+		slog.Debug("shutdown signal context done")
 
 		shutdownHandler := signal.GetOnShutdown()
-		handlerErr := shutdownHandler(signalContext)
-		if handlerErr != nil {
-			log.Debugln("shutdown handler error", handlerErr)
+		if handlerErr := shutdownHandler(signalContext); handlerErr != nil {
+			slog.Error("shutdown handler failed", "error", handlerErr)
 		}
 	}
 }

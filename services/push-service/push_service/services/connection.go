@@ -1,22 +1,29 @@
 package services
 
 import (
-	"services/push-service/internal/log"
+	"log/slog"
+
+	"services/push-service/push_service/types"
 )
 
 const clientEventBufferSize = 16
 
 type PoolClient struct {
 	externalUserID string
-	eventsChannel  chan OutboxEvent
+	eventsChannel  chan types.OutboxEvent
+	cancel         func()
 }
 
-func (pc *PoolClient) Events() <-chan OutboxEvent {
+func (pc *PoolClient) Events() <-chan types.OutboxEvent {
 	return pc.eventsChannel
 }
 
+func (pc *PoolClient) Cancel() {
+	pc.cancel()
+}
+
 type ClientsPoolService struct {
-	clients        map[*PoolClient]struct{}
+	clientsByUser  map[string]map[*PoolClient]struct{}
 	registerChan   chan *PoolClient
 	unregisterChan chan *PoolClient
 	doneChannel    chan struct{}
@@ -24,20 +31,20 @@ type ClientsPoolService struct {
 
 func NewClientsPoolService() *ClientsPoolService {
 	return &ClientsPoolService{
-		clients:        make(map[*PoolClient]struct{}),
+		clientsByUser:  make(map[string]map[*PoolClient]struct{}),
 		registerChan:   make(chan *PoolClient),
 		unregisterChan: make(chan *PoolClient),
 		doneChannel:    make(chan struct{}),
 	}
 }
 
-func (cps *ClientsPoolService) FanoutEvents(eventsChannel <-chan OutboxEvent) {
+func (cps *ClientsPoolService) FanoutEvents(eventsChannel <-chan types.OutboxEvent) {
 	defer close(cps.doneChannel)
 
 	for {
 		select {
 		case client := <-cps.registerChan:
-			cps.clients[client] = struct{}{}
+			cps.addClient(client)
 		case client := <-cps.unregisterChan:
 			cps.removeClient(client)
 		case event, isOpen := <-eventsChannel:
@@ -45,16 +52,18 @@ func (cps *ClientsPoolService) FanoutEvents(eventsChannel <-chan OutboxEvent) {
 				cps.removeAllClients()
 				return
 			}
-			cps.broadcast(event)
+			cps.dispatch(event)
 		}
 	}
 }
 
-func (cps *ClientsPoolService) Register(externalUserID string) (*PoolClient, bool) {
+func (cps *ClientsPoolService) Subscribe(externalUserID string) (types.ClientSubscription, bool) {
 	client := &PoolClient{
 		externalUserID: externalUserID,
-		eventsChannel:  make(chan OutboxEvent, clientEventBufferSize),
+		eventsChannel:  make(chan types.OutboxEvent, clientEventBufferSize),
 	}
+	client.cancel = func() { cps.unregister(client) }
+
 	select {
 	case cps.registerChan <- client:
 		return client, true
@@ -63,37 +72,72 @@ func (cps *ClientsPoolService) Register(externalUserID string) (*PoolClient, boo
 	}
 }
 
-func (cps *ClientsPoolService) Unregister(client *PoolClient) {
+func (cps *ClientsPoolService) unregister(client *PoolClient) {
 	select {
 	case cps.unregisterChan <- client:
 	case <-cps.doneChannel:
 	}
 }
 
-func (cps *ClientsPoolService) broadcast(event OutboxEvent) {
-	for client := range cps.clients {
-		if !event.IsAddressedTo(client.externalUserID) {
-			continue
+func (cps *ClientsPoolService) dispatch(event types.OutboxEvent) {
+	if event.UserID == types.GlobalPartitionKey {
+		for _, userClients := range cps.clientsByUser {
+			for client := range userClients {
+				cps.deliver(client, event)
+			}
 		}
-
-		select {
-		case client.eventsChannel <- event:
-		default:
-			log.Warnln("Dropping event for a slow client")
-		}
+		return
 	}
+
+	for client := range cps.clientsByUser[event.UserID] {
+		cps.deliver(client, event)
+	}
+}
+
+func (cps *ClientsPoolService) deliver(client *PoolClient, event types.OutboxEvent) {
+	select {
+	case client.eventsChannel <- event:
+	default:
+		slog.Warn(
+			"dropping event for slow client",
+			"user_id", client.externalUserID,
+			"event_id", event.EventID,
+			"event_type", event.EventType,
+		)
+	}
+}
+
+func (cps *ClientsPoolService) addClient(client *PoolClient) {
+	userClients, known := cps.clientsByUser[client.externalUserID]
+	if !known {
+		userClients = make(map[*PoolClient]struct{})
+		cps.clientsByUser[client.externalUserID] = userClients
+	}
+
+	userClients[client] = struct{}{}
 }
 
 func (cps *ClientsPoolService) removeClient(client *PoolClient) {
-	if _, ok := cps.clients[client]; ok {
-		delete(cps.clients, client)
-		close(client.eventsChannel)
+	userClients, known := cps.clientsByUser[client.externalUserID]
+	if !known {
+		return
 	}
+	if _, ok := userClients[client]; !ok {
+		return
+	}
+
+	delete(userClients, client)
+	if len(userClients) == 0 {
+		delete(cps.clientsByUser, client.externalUserID)
+	}
+	close(client.eventsChannel)
 }
 
 func (cps *ClientsPoolService) removeAllClients() {
-	for client := range cps.clients {
-		delete(cps.clients, client)
-		close(client.eventsChannel)
+	for userID, userClients := range cps.clientsByUser {
+		for client := range userClients {
+			close(client.eventsChannel)
+		}
+		delete(cps.clientsByUser, userID)
 	}
 }

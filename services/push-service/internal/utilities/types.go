@@ -12,12 +12,6 @@ func BuildOption[T any](value T) Option[T] {
 	}
 }
 
-func EmptyOption[T any]() Option[T] {
-	return Option[T]{
-		IsSet: false,
-	}
-}
-
 func (opt *Option[T]) DefaultOption(fallback T) {
 	if opt.IsSet == false {
 		opt.Value = fallback

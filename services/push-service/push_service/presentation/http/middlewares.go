@@ -5,10 +5,29 @@ import (
 	"net/http"
 	"strings"
 
-	"services/push-service/push_service/handlers"
+	"services/push-service/internal/correlation"
 )
 
-const gatewayAuthMiddlewarePriority = 0
+const (
+	correlationMiddlewarePriority = -10
+	gatewayAuthMiddlewarePriority = 0
+)
+
+// CorrelationIDMiddleware propagates X-Correlation-ID into context and response, generating a fallback id when absent.
+func CorrelationIDMiddleware(
+	writer http.ResponseWriter,
+	request *http.Request,
+) (*http.Request, bool) {
+	correlationID := strings.TrimSpace(request.Header.Get(correlation.Header))
+	if correlationID == "" {
+		correlationID = correlation.NewID()
+	}
+
+	writer.Header().Set(correlation.Header, correlationID)
+	correlatedContext := correlation.WithID(request.Context(), correlationID)
+
+	return request.WithContext(correlatedContext), true
+}
 
 func GatewayAuthMiddleware(
 	writer http.ResponseWriter,
@@ -18,18 +37,18 @@ func GatewayAuthMiddleware(
 		return request, true
 	}
 
-	externalUserID := strings.TrimSpace(request.Header.Get(handlers.GatewayUserHeader))
+	externalUserID := strings.TrimSpace(request.Header.Get(GatewayUserHeader))
 	if externalUserID == "" {
 		rejectionMessage := fmt.Sprintf(
 			"Missing %s header — request must traverse the API gateway",
-			handlers.GatewayUserHeader,
+			GatewayUserHeader,
 		)
 		http.Error(writer, rejectionMessage, http.StatusUnauthorized)
 
 		return request, false
 	}
 
-	authenticatedContext := handlers.WithAuthenticatedUserID(request.Context(), externalUserID)
+	authenticatedContext := WithAuthenticatedUserID(request.Context(), externalUserID)
 
 	return request.WithContext(authenticatedContext), true
 }
