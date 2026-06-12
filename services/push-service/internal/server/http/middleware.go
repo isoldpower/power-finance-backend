@@ -19,6 +19,8 @@ func NewRouteMiddleware(
 	}
 }
 
+// ServeHTTP is a function that connects middleware handler with http-defined
+// method signature.
 func (rm *RouteMiddleware) ServeHTTP(
 	writer http.ResponseWriter,
 	request *http.Request,

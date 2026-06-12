@@ -25,6 +25,8 @@ type HTTPServer struct {
 	cancelRequests          context.CancelFunc
 }
 
+// NewHTTPServer creates fresh HTTP server using `basicConfig` options as a single
+// source of configuration.
 func NewHTTPServer(basicConfig EstablishedHTTPProcessConfig) (*HTTPServer, error) {
 	serveAddress := fmt.Sprintf("%s:%d", basicConfig.Host, basicConfig.Port)
 	listener, listenerErr := createListener(serveAddress, basicConfig.NetworkType)
@@ -51,6 +53,7 @@ func NewHTTPServer(basicConfig EstablishedHTTPProcessConfig) (*HTTPServer, error
 	}, nil
 }
 
+// Run bootstraps the server and blocks until the server is done (interrupted by signal).
 func (hs *HTTPServer) Run(config server.ProcessBootstrapConfig) {
 	keyboardShutdown := signals.NewKeyboardSignalHandler(hs.stopServerOnSignal)
 
@@ -63,12 +66,14 @@ func (hs *HTTPServer) Run(config server.ProcessBootstrapConfig) {
 	waitGroup.Wait()
 }
 
+// RegisterMiddleware adds route middleware to the global list to intercept all requests.
 func (hs *HTTPServer) RegisterMiddleware(middleware *RouteMiddleware) {
 	hs.basicConfig.Middlewares = sortMiddlewares(
 		append(hs.basicConfig.Middlewares, middleware),
 	)
 }
 
+// AddRoute adds new HTTP route that is handled by server.
 func (hs *HTTPServer) AddRoute(
 	pattern string,
 	handler func(http.ResponseWriter, *http.Request),

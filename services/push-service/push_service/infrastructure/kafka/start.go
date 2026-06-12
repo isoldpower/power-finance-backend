@@ -7,6 +7,8 @@ import (
 	"services/push-service/push_service/types"
 )
 
+// StartKafkaConsumer runs a consumer that receives messages from Kafka partitions and
+// fans them out to Go channels.
 func StartKafkaConsumer(
 	ctx context.Context,
 	kafkaConfig types.KafkaConfig,

@@ -23,6 +23,7 @@ const (
 	outboxTopicKey      = "kafka.outbox_topic"
 )
 
+// Load resolves and composes all the Viper-based project configurations.
 func Load() types.PushServiceConfig {
 	viperInstance := viper.New()
 	registerDefaults(viperInstance)

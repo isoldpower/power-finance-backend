@@ -12,7 +12,8 @@ type SseHttpConnection struct {
 	controller     *http.ResponseController
 }
 
-// CORS headers are deliberately absent — the API gateway owns CORS policy.
+// NewSseHttpConnection CORS headers are deliberately absent.
+// The API gateway owns CORS policy.
 func NewSseHttpConnection(
 	writer http.ResponseWriter,
 	request *http.Request,
@@ -30,10 +31,12 @@ func NewSseHttpConnection(
 	}
 }
 
+// ClientGoneChannel returns connection's channel representing disconnection signal.
 func (hc *SseHttpConnection) ClientGoneChannel() <-chan struct{} {
 	return hc.request.Context().Done()
 }
 
+// SendMessageOverConnection is a helper method to send the payload over an established connection.
 func (hc *SseHttpConnection) SendMessageOverConnection(message []byte) error {
 	if _, writeError := hc.responseWriter.Write(message); writeError != nil {
 		return writeError

@@ -14,6 +14,8 @@ func NewHeartbeatService(interval time.Duration) *HeartbeatService {
 	}
 }
 
+// SpawnHeartbeatMessages routine that spawns heartbeat messages each 'interval' period.
+// Useful as some browsers prohibit never-closing channels and it will help connection alive.
 func (hs *HeartbeatService) SpawnHeartbeatMessages(receiver chan<- []byte) {
 	ticker := time.NewTicker(hs.interval)
 	defer ticker.Stop()
@@ -28,6 +30,7 @@ func (hs *HeartbeatService) SpawnHeartbeatMessages(receiver chan<- []byte) {
 	}
 }
 
+// StopTicker stops spawning heartbeat messages.
 func (hs *HeartbeatService) StopTicker() {
 	hs.doneChannel <- struct{}{}
 }

@@ -1,4 +1,4 @@
-package push_service
+package http
 
 import (
 	"log/slog"
@@ -6,7 +6,6 @@ import (
 	"services/push-service/internal/health"
 	internalServer "services/push-service/internal/server"
 	httpServer "services/push-service/internal/server/http"
-	httpPresenter "services/push-service/push_service/presentation/http"
 	"services/push-service/push_service/types"
 )
 
@@ -14,8 +13,14 @@ type pushServiceHttpServerConfig struct {
 	httpServer.EstablishedHTTPProcessConfig
 }
 
+func NewPushHTTPConfig(config httpServer.EstablishedHTTPProcessConfig) *pushServiceHttpServerConfig {
+	return &pushServiceHttpServerConfig{
+		EstablishedHTTPProcessConfig: config,
+	}
+}
+
 type pushServiceHttpServer struct {
-	definition *httpPresenter.HttpPresenterDefinition
+	definition *HttpPresenterDefinition
 
 	*httpServer.HTTPServer
 }
@@ -25,7 +30,7 @@ func NewPushHTTPServer(
 	notificationsStream types.NotificationsStream,
 	readinessProbe *health.Probe,
 ) (internalServer.Server, error) {
-	serverDefinition := httpPresenter.NewHttpPresenterDefinition(notificationsStream, readinessProbe)
+	serverDefinition := NewHttpPresenterDefinition(notificationsStream, readinessProbe)
 
 	basicServer, serverErr := httpServer.NewHTTPServer(config.EstablishedHTTPProcessConfig)
 	if serverErr != nil {

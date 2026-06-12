@@ -1,6 +1,7 @@
 package http
 
 import (
+	"log"
 	"log/slog"
 	"net/http"
 
@@ -25,6 +26,7 @@ func NewHttpPresentation(
 	}
 }
 
+// HandleHealthCheck checks whether connection is healthy.
 func (hp *HttpPresentation) HandleHealthCheck(
 	writer http.ResponseWriter,
 	request *http.Request,
@@ -34,6 +36,8 @@ func (hp *HttpPresentation) HandleHealthCheck(
 	_, _ = writer.Write([]byte("ok"))
 }
 
+// HandleReadinessCheck checks whether connection is ready
+// to send/receive new data.
 func (hp *HttpPresentation) HandleReadinessCheck(
 	writer http.ResponseWriter,
 	request *http.Request,
@@ -41,41 +45,65 @@ func (hp *HttpPresentation) HandleReadinessCheck(
 	writer.Header().Set("Content-Type", "text/plain")
 	if !hp.readinessProbe.IsReady() {
 		writer.WriteHeader(http.StatusServiceUnavailable)
-		_, _ = writer.Write([]byte("kafka consumer not running"))
+		_, writeErr := writer.Write([]byte("kafka consumer not running"))
+		if writeErr != nil {
+			log.Printf("Response write failed: %v", writeErr)
+		}
+
 		return
 	}
 
 	writer.WriteHeader(http.StatusOK)
-	_, _ = writer.Write([]byte("ready"))
+	_, writeErr := writer.Write([]byte("ready"))
+	if writeErr != nil {
+		log.Printf("Response write failed: %v", writeErr)
+	}
 }
 
+// HandleGetNotifications is a presentation method for subscribing a connection
+// to receiving events via SSE long-lived connection.
 func (hp *HttpPresentation) HandleGetNotifications(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
-	externalUserID, authenticated := AuthenticatedUserID(request)
-	if !authenticated {
+	externalUserID, isAuthenticated := AuthenticatedUserID(request)
+	if !isAuthenticated {
 		http.Error(writer, "Authenticated user is required", http.StatusUnauthorized)
 		return
 	}
 
-	requestLogger := correlation.Logger(request.Context()).With("user_id", externalUserID)
-
+	requestLogger := correlation.
+		Logger(request.Context()).
+		With("user_id", externalUserID)
 	httpConnection := NewSseHttpConnection(writer, request)
 	goneChannel := httpConnection.ClientGoneChannel()
 
-	eventsChannel, unsubscribe, subscribed := hp.notificationsStream.Subscribe(externalUserID)
-	if subscribed {
+	eventsChannel, unsubscribe, isSubscribed := hp.notificationsStream.Subscribe(externalUserID)
+	if isSubscribed {
 		defer unsubscribe()
-		requestLogger.Info("sse connection established")
-		responseChannel := make(chan []byte)
-
-		go hp.consumeResponseMessages(requestLogger, httpConnection, responseChannel)
-		hp.notificationsStream.SpinUntilDone(goneChannel, eventsChannel, responseChannel)
-
-		close(responseChannel)
-		requestLogger.Info("sse connection closed")
+		hp.runNotificationsStream(
+			requestLogger,
+			httpConnection,
+			eventsChannel,
+			goneChannel,
+		)
 	}
+}
+
+func (hp *HttpPresentation) runNotificationsStream(
+	requestLogger *slog.Logger,
+	connection presentation.ConnectionPresentation,
+	eventsChannel <-chan types.OutboxEvent,
+	goneChannel <-chan struct{},
+) {
+	requestLogger.Info("sse connection established")
+	responseChannel := make(chan []byte)
+
+	go hp.consumeResponseMessages(requestLogger, connection, responseChannel)
+	hp.notificationsStream.SpinUntilDone(goneChannel, eventsChannel, responseChannel)
+
+	close(responseChannel)
+	requestLogger.Info("sse connection closed")
 }
 
 func (hp *HttpPresentation) consumeResponseMessages(

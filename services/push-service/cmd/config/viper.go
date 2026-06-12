@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// ResolveViper is used to configure Viper paths to be further utilised.
 func ResolveViper(viperInstance *viper.Viper, configPath string) {
 	configDir, configName, configType := SplitViperPath(configPath)
 
@@ -16,20 +17,21 @@ func ResolveViper(viperInstance *viper.Viper, configPath string) {
 	viperInstance.SetConfigType(configType)
 }
 
+// TryResolveConfig is used after ResolveViper to try reading
+// Viper config at configured paths.
 func TryResolveConfig(viperInstance *viper.Viper) error {
 	viperInstance.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viperInstance.AutomaticEnv()
 
 	readErr := viperInstance.ReadInConfig()
-
-	var missingConfigFile viper.ConfigFileNotFoundError
-	if errors.As(readErr, &missingConfigFile) {
+	if _, isOk := errors.AsType[viper.ConfigFileNotFoundError](readErr); isOk {
 		return nil
 	}
 
 	return readErr
 }
 
+// SplitViperPath breaks down the path to directory, file name and file type.
 func SplitViperPath(path string) (configDir string, configName string, configType string) {
 	configDir = filepath.Dir(path)
 	configFullName := filepath.Base(path)

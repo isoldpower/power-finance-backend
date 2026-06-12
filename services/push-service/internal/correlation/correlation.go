@@ -12,10 +12,12 @@ const Header = "X-Correlation-ID"
 
 type contextKey struct{}
 
+// WithID returns a context with pre-populated Correlation-ID value.
 func WithID(parent context.Context, correlationID string) context.Context {
 	return context.WithValue(parent, contextKey{}, correlationID)
 }
 
+// ID retrieves Correlation-ID value from context populated by WithID.
 func ID(ctx context.Context) (string, bool) {
 	correlationID, present := ctx.Value(contextKey{}).(string)
 

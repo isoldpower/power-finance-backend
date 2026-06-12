@@ -2,6 +2,7 @@ package push_service
 
 import (
 	"context"
+	"services/push-service/push_service/presentation/http"
 
 	"services/push-service/internal/health"
 	"services/push-service/internal/server"
@@ -46,17 +47,18 @@ func StartPushService(serviceConfig types.PushServiceConfig) error {
 		},
 	})
 
-	pushHttpServer, serverErr := NewPushHTTPServer(&pushServiceHttpServerConfig{
-		EstablishedHTTPProcessConfig: establishedConfig,
-	}, notificationsHandler, readinessProbe)
-	if serverErr != nil {
-		return serverErr
+	pushHttpServer, serverErr := http.NewPushHTTPServer(
+		http.NewPushHTTPConfig(establishedConfig),
+		notificationsHandler,
+		readinessProbe,
+	)
+
+	if serverErr == nil {
+		pushHttpServer.Run(server.ProcessBootstrapConfig{
+			WithGracefulShutdown: true,
+			Silent:               false,
+		})
 	}
 
-	pushHttpServer.Run(server.ProcessBootstrapConfig{
-		WithGracefulShutdown: true,
-		Silent:               false,
-	})
-
-	return nil
+	return serverErr
 }

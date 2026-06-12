@@ -17,10 +17,13 @@ func NewEventsProjectionService() *EventsProjectionService {
 	}
 }
 
+// Events exposes events fanout channel assigned to the service.
 func (eps *EventsProjectionService) Events() <-chan types.OutboxEvent {
 	return eps.eventsChannel
 }
 
+// RunKafkaReceiver runs a receiver that handles received Kafka messages and
+// translates them to related client-oriented notifications.
 func (eps *EventsProjectionService) RunKafkaReceiver(kafkaChannel <-chan types.OutboxEvent) {
 	defer close(eps.eventsChannel)
 

@@ -13,7 +13,8 @@ const (
 	gatewayAuthMiddlewarePriority = 0
 )
 
-// CorrelationIDMiddleware propagates X-Correlation-ID into context and response, generating a fallback id when absent.
+// CorrelationIDMiddleware propagates X-Correlation-ID into context and response,
+// generating a fallback id when absent.
 func CorrelationIDMiddleware(
 	writer http.ResponseWriter,
 	request *http.Request,
@@ -29,6 +30,8 @@ func CorrelationIDMiddleware(
 	return request.WithContext(correlatedContext), true
 }
 
+// GatewayAuthMiddleware propagates gateway authentication results (state)
+// to requests so that they can consume it from context.
 func GatewayAuthMiddleware(
 	writer http.ResponseWriter,
 	request *http.Request,
@@ -48,7 +51,10 @@ func GatewayAuthMiddleware(
 		return request, false
 	}
 
-	authenticatedContext := WithAuthenticatedUserID(request.Context(), externalUserID)
+	authenticatedContext := WithAuthenticatedUserID(
+		request.Context(),
+		externalUserID,
+	)
 
 	return request.WithContext(authenticatedContext), true
 }

@@ -19,7 +19,8 @@ type broadcastConsumer interface {
 
 type MessageHandlerFunc func(ctx context.Context, message kafkaclient.ConsumedMessage) error
 
-// ConsumerLoop drains a groupless broadcast consumer; no commits, at-most-once delivery.
+// ConsumerLoop drains a groupless broadcast consumer.
+// No commits, selected at-most-once delivery strategy.
 type ConsumerLoop struct {
 	consumer       broadcastConsumer
 	handle         MessageHandlerFunc

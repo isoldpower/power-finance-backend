@@ -16,7 +16,8 @@ import (
 
 const clientID = "push-service"
 
-// BuildNotificationsConsumerLoop builds a groupless broadcast consumer: each replica reads all partitions from the log end, since a shared group would starve SSE connections on other replicas.
+// BuildNotificationsConsumerLoop builds a groupless broadcast consumer.
+// Serves as a way to prevent racing for events between replicas.
 func BuildNotificationsConsumerLoop(
 	ctx context.Context,
 	kafkaConfig types.KafkaConfig,

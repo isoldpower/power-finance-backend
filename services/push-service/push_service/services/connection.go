@@ -14,10 +14,12 @@ type PoolClient struct {
 	cancel         func()
 }
 
+// Events returns read-only processed events channel.
 func (pc *PoolClient) Events() <-chan types.OutboxEvent {
 	return pc.eventsChannel
 }
 
+// Cancel blocks receiving SSE notifications from the server.
 func (pc *PoolClient) Cancel() {
 	pc.cancel()
 }
@@ -38,6 +40,8 @@ func NewClientsPoolService() *ClientsPoolService {
 	}
 }
 
+// FanoutEvents provides a way to specify a sink channel that will be used
+// to fanout all the events processed by pool.
 func (cps *ClientsPoolService) FanoutEvents(eventsChannel <-chan types.OutboxEvent) {
 	defer close(cps.doneChannel)
 
@@ -57,6 +61,7 @@ func (cps *ClientsPoolService) FanoutEvents(eventsChannel <-chan types.OutboxEve
 	}
 }
 
+// Subscribe creates new pool-oriented connection that will consume events from this pool.
 func (cps *ClientsPoolService) Subscribe(externalUserID string) (types.ClientSubscription, bool) {
 	client := &PoolClient{
 		externalUserID: externalUserID,
@@ -118,8 +123,8 @@ func (cps *ClientsPoolService) addClient(client *PoolClient) {
 }
 
 func (cps *ClientsPoolService) removeClient(client *PoolClient) {
-	userClients, known := cps.clientsByUser[client.externalUserID]
-	if !known {
+	userClients, knownClient := cps.clientsByUser[client.externalUserID]
+	if !knownClient {
 		return
 	}
 	if _, ok := userClients[client]; !ok {

@@ -29,6 +29,8 @@ type EstablishedHTTPProcessConfig struct {
 	server.EstablishedProcessConfig
 }
 
+// EstablishHTTPProcessConfig serves as a way to populate default values to
+// server config so the process can run safely without failing due to missed variable.
 func EstablishHTTPProcessConfig(config HTTPProcessConfig) EstablishedHTTPProcessConfig {
 	config.NetworkType.DefaultOption(NetworkTypeTCP)
 	config.Middlewares.DefaultOption(make([]*RouteMiddleware, 0))

@@ -30,10 +30,12 @@ func (snh *SSENotificationsHandler) Start() {
 	go snh.poolService.FanoutEvents(snh.projectionService.Events())
 }
 
+// KafkaSink returns the Kafka event channel associated with handler.
 func (snh *SSENotificationsHandler) KafkaSink() chan<- types.OutboxEvent {
 	return snh.kafkaChannel
 }
 
+// Subscribe allows to subscribe to user-based events fanout.
 func (snh *SSENotificationsHandler) Subscribe(
 	externalUserID string,
 ) (<-chan types.OutboxEvent, func(), bool) {
@@ -45,6 +47,8 @@ func (snh *SSENotificationsHandler) Subscribe(
 	return subscription.Events(), subscription.Cancel, true
 }
 
+// SpinUntilDone runs a loop which handles events and fans them out to related channel
+// until the connection is gone (client disconnected).
 func (snh *SSENotificationsHandler) SpinUntilDone(
 	goneChannel <-chan struct{},
 	eventsChannel <-chan types.OutboxEvent,
