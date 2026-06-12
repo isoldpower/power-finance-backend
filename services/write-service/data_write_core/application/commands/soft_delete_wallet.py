@@ -24,6 +24,7 @@ from ._loader_mixins import LoadWalletMixin
 @dataclass(frozen=True)
 class SoftDeleteWalletCommand:
     user_id: int
+    user_external_id: str
     wallet_id: UUID
 
 
@@ -60,6 +61,7 @@ class SoftDeleteWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWalletMi
         saved_wallet, latest_sequence = await self._run_transactions_saga(
             wallet_aggregate=wallet_aggregate,
             timestamp_now=timestamp_now,
+            partition_key=command.user_external_id,
         )
         wallet_dto = wallet_to_dto(saved_wallet, balance_amount=wallet_aggregate.balance)
 
@@ -70,6 +72,7 @@ class SoftDeleteWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWalletMi
         self,
         wallet_aggregate: WalletAggregate,
         timestamp_now: datetime,
+        partition_key: str,
     ) -> tuple[WalletEntity, int]:
         saved_wallet_holder: dict[str, WalletEntity] = {}
         persist_soft_delete, undo_soft_delete = self._get_save_unsave_lambdas(
@@ -95,6 +98,7 @@ class SoftDeleteWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWalletMi
                         ),
                         aggregate_type="wallet",
                         aggregate_id=wallet_aggregate.unique_id,
+                        partition_key=partition_key,
                     )
                 ],
             ),

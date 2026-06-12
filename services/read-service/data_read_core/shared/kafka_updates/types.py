@@ -12,7 +12,7 @@ class EventMessage:
     event_id: str
     event_type: str
     aggregate_type: str
-    aggregate_id: str
+    partition_key: str
     outbox_seq: int | None
     payload: bytes
     headers: dict[str, bytes]

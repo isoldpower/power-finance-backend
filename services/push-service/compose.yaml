@@ -8,8 +8,9 @@ include:
 services:
   # SSE push notifications. Consumes the write-service outbox topic over the
   # compose network (kafka:9092 — the broker publishes no host ports) and
-  # fans events out to connected SSE clients. The host port is published for
-  # direct SSE testing until a Kong route is added.
+  # fans events out to connected SSE clients. No host ports: the service is
+  # reachable only through the Kong gateway (`GET /events`), which validates
+  # the Clerk JWT and injects the trusted X-User-Id header.
   push-service:
     build:
       context: ../..
@@ -22,8 +23,6 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_OUTBOX_TOPIC: ${KAFKA_OUTBOX_TOPIC:-events.async}
       KAFKA_PUSH_GROUP_ID: ${KAFKA_PUSH_GROUP_ID:-push-service.notifications}
-    ports:
-      - "127.0.0.1:${PUSH_SERVICE_PORT:-8002}:8001"
     depends_on:
       kafka:
         condition: service_healthy

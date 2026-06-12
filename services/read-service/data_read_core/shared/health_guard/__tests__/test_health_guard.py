@@ -24,7 +24,7 @@ def _event() -> EventMessage:
         event_id="evt-1",
         event_type="WalletCreated",
         aggregate_type="wallet",
-        aggregate_id="w1",
+        partition_key="w1",
         outbox_seq=1,
         payload=b"{}",
         headers={},

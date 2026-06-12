@@ -27,6 +27,7 @@ from ._command_base import CommandHandlerBase
 @dataclass(frozen=True)
 class CreateNewWalletCommand:
     user_id: int
+    user_external_id: str
     name: str
     currency: str
 
@@ -63,12 +64,19 @@ class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
             created_at=timestamp_now,
             updated_at=timestamp_now,
         )
-        persisted_wallet, write_version = await self._run_transactions_saga(new_wallet)
+        persisted_wallet, write_version = await self._run_transactions_saga(
+            new_wallet,
+            partition_key=command.user_external_id,
+        )
 
         await self._publish_domain_events(new_wallet)
         return wallet_to_dto(persisted_wallet), write_version
 
-    async def _run_transactions_saga(self, new_wallet: WalletEntity) -> tuple[WalletEntity, int]:
+    async def _run_transactions_saga(
+        self,
+        new_wallet: WalletEntity,
+        partition_key: str,
+    ) -> tuple[WalletEntity, int]:
         created_wallet_holder: dict[str, WalletEntity] = {}
         persist_wallet, undo_persisted_wallet = self._get_save_unsave_lambdas(
             wallet_holder=created_wallet_holder,
@@ -95,6 +103,7 @@ class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
                         ),
                         aggregate_type="wallet",
                         aggregate_id=new_wallet.unique_id,
+                        partition_key=partition_key,
                     )
                 ],
             ),

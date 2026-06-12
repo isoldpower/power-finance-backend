@@ -206,7 +206,7 @@ Writes to business tables and outbox happen in the same Postgres transaction, gu
 
 Streams new outbox rows to Async Kafka via Postgres logical decoding. Decoupled from the Write Service request path and process lifecycle.
 
-**Implementation:** Debezium Postgres connector running on a Kafka Connect cluster. Uses Postgres logical replication (`pgoutput` plugin, dedicated replication slot + publication scoped to the `outbox` table). Debezium's **Outbox Event Router** SMT (Single Message Transformer) extracts `aggregate_id` (→ Kafka partition key), `event_type` (→ topic name or header), and `payload` (→ message value), so consumers see clean business events rather than raw row-change records.
+**Implementation:** Debezium Postgres connector running on a Kafka Connect cluster. Uses Postgres logical replication (`pgoutput` plugin, dedicated replication slot + publication scoped to the `outbox` table). Debezium's **Outbox Event Router** SMT (Single Message Transformer) extracts `partitionkey` (→ Kafka message key; the owning user's external Clerk id, or `GLOBAL` for unowned events), `event_type` (→ topic name or header), and `payload` (→ message value), so consumers see clean business events rather than raw row-change records.
 
 **Postgres prerequisites:**
 - `wal_level = logical`
@@ -675,7 +675,7 @@ All Kafka consumers must process events idempotently. Idempotency key is the eve
 - **Write side:** linearizable within a Postgres transaction; eventually consistent with ImmuDB (SAGA)
 - **Async pipeline:** at-least-once delivery, idempotent consumers
 - **Read side:** eventually consistent by default; read-your-writes available via header
-- **Ordering:** preserved per partition key (aggregate ID); no global ordering
+- **Ordering:** preserved per partition key (the owning user's external Clerk id); no global ordering
 
 ### Observability
 

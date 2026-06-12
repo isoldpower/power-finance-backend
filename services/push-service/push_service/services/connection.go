@@ -7,7 +7,8 @@ import (
 const clientEventBufferSize = 16
 
 type PoolClient struct {
-	eventsChannel chan OutboxEvent
+	externalUserID string
+	eventsChannel  chan OutboxEvent
 }
 
 func (pc *PoolClient) Events() <-chan OutboxEvent {
@@ -49,8 +50,11 @@ func (cps *ClientsPoolService) FanoutEvents(eventsChannel <-chan OutboxEvent) {
 	}
 }
 
-func (cps *ClientsPoolService) Register() (*PoolClient, bool) {
-	client := &PoolClient{eventsChannel: make(chan OutboxEvent, clientEventBufferSize)}
+func (cps *ClientsPoolService) Register(externalUserID string) (*PoolClient, bool) {
+	client := &PoolClient{
+		externalUserID: externalUserID,
+		eventsChannel:  make(chan OutboxEvent, clientEventBufferSize),
+	}
 	select {
 	case cps.registerChan <- client:
 		return client, true
@@ -68,6 +72,10 @@ func (cps *ClientsPoolService) Unregister(client *PoolClient) {
 
 func (cps *ClientsPoolService) broadcast(event OutboxEvent) {
 	for client := range cps.clients {
+		if !event.IsAddressedTo(client.externalUserID) {
+			continue
+		}
+
 		select {
 		case client.eventsChannel <- event:
 		default:

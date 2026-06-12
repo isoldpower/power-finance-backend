@@ -8,6 +8,7 @@ class UserMapper:
     def to_domain(model: Any) -> InternalUserEntity:
         return InternalUserEntity(
             user_id=str(model.id),
+            external_id=model.username,
             email=model.email,
             first_name=model.first_name,
             last_name=model.last_name,

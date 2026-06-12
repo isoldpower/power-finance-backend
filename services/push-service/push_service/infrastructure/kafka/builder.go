@@ -87,7 +87,7 @@ func outboxEventFromMessage(message kafkaclient.ConsumedMessage) services.Outbox
 		EventID:       eventID,
 		EventType:     eventType,
 		AggregateType: aggregateType,
-		AggregateID:   string(message.Key),
+		UserID:        string(message.Key),
 		Payload:       message.Value,
 	}
 }

@@ -24,7 +24,7 @@ def test_decode_payload_raises_poison_on_garbage_body():
         event_id="evt-bad",
         event_type="WalletCreated",
         aggregate_type="wallet",
-        aggregate_id="w1",
+        partition_key="w1",
         outbox_seq=1,
         payload=b"not-json",
         headers={},

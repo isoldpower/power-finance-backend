@@ -35,6 +35,7 @@ class DjangoUserRepository(UserRepository):
             UserSynced(user_id=user_id, external_id=external_id),
             aggregate_type="user",
             aggregate_id=str(user_id),
+            partition_key=external_id,
         )
         OutboxEntryModel.objects.create(
             event_id=entry.event_id,

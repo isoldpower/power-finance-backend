@@ -23,9 +23,16 @@ def build_outbox_entry(
     *,
     aggregate_type: str,
     aggregate_id: str,
-    partition_key: str | None = None,
+    partition_key: str,
 ) -> OutboxEntry:
-    """Stamp envelope fields onto a kafka_messages proto and project it to an OutboxEntry."""
+    """Stamp envelope fields onto a kafka_messages proto and project it to an OutboxEntry.
+
+    The partition key becomes the Kafka message key (Debezium routes the
+    `partitionkey` column there). For user-scoped events it must be the
+    user's external (Clerk) id so per-user consumers can match it against
+    the gateway-authenticated identity; events without a user owner use
+    GLOBAL_PARTITION_KEY.
+    """
 
     event_id = uuid4()
     occurred_at = datetime.now(UTC)
@@ -40,7 +47,7 @@ def build_outbox_entry(
         event_type=message.DESCRIPTOR.name,
         aggregate_type=aggregate_type,
         aggregate_id=aggregate_id,
-        partition_key=partition_key or _resolve_partition_key(message),
+        partition_key=partition_key or GLOBAL_PARTITION_KEY,
         occurred_at=occurred_at,
         schema_version=message.schema_version,
         payload=MessageToDict(
@@ -49,10 +56,3 @@ def build_outbox_entry(
             always_print_fields_with_no_presence=True,
         ),
     )
-
-
-def _resolve_partition_key(message: Message) -> str:
-    has_user_field = "user_id" in message.DESCRIPTOR.fields_by_name
-    if has_user_field and message.user_id:
-        return str(message.user_id)
-    return GLOBAL_PARTITION_KEY

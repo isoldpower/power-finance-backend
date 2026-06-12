@@ -60,6 +60,7 @@ class WalletResourceView(WalletView, CommandResponseMixin):
             updated_wallet, write_version = await handler.handle(
                 UpdateExistingWalletCommand(
                     user_id=int(request.user.unique_id),
+                    user_external_id=request.user.external_id,
                     wallet_id=pk,
                     new_name=validated["new_name"],
                 )
@@ -116,6 +117,7 @@ class WalletResourceView(WalletView, CommandResponseMixin):
             deleted_wallet, write_version = await handler.handle(
                 SoftDeleteWalletCommand(
                     user_id=int(request.user.unique_id),
+                    user_external_id=request.user.external_id,
                     wallet_id=pk,
                 )
             )

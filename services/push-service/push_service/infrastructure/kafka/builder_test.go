@@ -15,7 +15,7 @@ import (
 func outboxKafkaMessage() kafkaclient.ConsumedMessage {
 	return kafkaclient.ConsumedMessage{
 		Topic: "events.async",
-		Key:   []byte("wallet-1"),
+		Key:   []byte("user_2abc"),
 		Value: []byte(`{"wallet_id":"wallet-1"}`),
 		Headers: headers.KafkaHeaders{
 			headers.String(envelope.EventID, "evt-1"),
@@ -38,8 +38,8 @@ func TestEventsSinkHandlerDeliversOutboxEvent(t *testing.T) {
 	if delivered.EventID != "evt-1" || delivered.EventType != "WalletCreated" {
 		t.Fatalf("expected envelope headers to be extracted, got %+v", delivered)
 	}
-	if delivered.AggregateType != "wallet" || delivered.AggregateID != "wallet-1" {
-		t.Fatalf("expected aggregate metadata, got %+v", delivered)
+	if delivered.AggregateType != "wallet" || delivered.UserID != "user_2abc" {
+		t.Fatalf("expected aggregate type and partition-key user id, got %+v", delivered)
 	}
 	if string(delivered.Payload) != `{"wallet_id":"wallet-1"}` {
 		t.Fatalf("expected payload passthrough, got %q", delivered.Payload)
@@ -68,8 +68,8 @@ func TestOutboxEventFromMessageWithoutHeaders(t *testing.T) {
 	if event.EventID != "" || event.EventType != "" || event.AggregateType != "" {
 		t.Fatalf("expected empty envelope metadata, got %+v", event)
 	}
-	if event.AggregateID != "" {
-		t.Fatalf("expected empty aggregate id for nil key, got %q", event.AggregateID)
+	if event.UserID != "" {
+		t.Fatalf("expected empty user id for nil key, got %q", event.UserID)
 	}
 }
 

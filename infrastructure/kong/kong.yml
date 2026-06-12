@@ -5,8 +5,7 @@ _transform: true
 # Upstream services
 #
 # Kong proxies requests to these by their docker-compose service names on the
-# internal network. read-service and push-service are stubs — declared so the
-# routing surface is stable, but their containers aren't up yet.
+# internal network.
 # -----------------------------------------------------------------------------
 
 services:
@@ -171,7 +170,7 @@ services:
 
   - name: push-service
     host: push-service
-    port: 8000
+    port: 8001
     protocol: http
     connect_timeout: 5000
     # Long timeouts — SSE connections are long-lived. Buffering disabled at

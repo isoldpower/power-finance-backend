@@ -28,6 +28,7 @@ class UpdateExistingWalletCommand:
     transaction history and cannot be patched here."""
 
     user_id: int
+    user_external_id: str
     wallet_id: UUID
     new_name: str
 
@@ -70,6 +71,7 @@ class UpdateExistingWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWall
             wallet_aggregate=wallet_aggregate,
             previous_state=previous_data,
             timestamp=timestamp_now,
+            partition_key=command.user_external_id,
         )
         wallet_dto = wallet_to_dto(
             wallet=updated_wallet,
@@ -80,7 +82,11 @@ class UpdateExistingWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWall
         return wallet_dto, latest_sequence
 
     async def _run_transactions_saga(
-        self, wallet_aggregate: WalletAggregate, previous_state: WalletData, timestamp: datetime
+        self,
+        wallet_aggregate: WalletAggregate,
+        previous_state: WalletData,
+        timestamp: datetime,
+        partition_key: str,
     ) -> tuple[WalletEntity, int]:
         wallet_holder: dict[str, WalletEntity] = {}
         persist_rename, undo_rename = self._get_save_unsave_lambdas(
@@ -108,6 +114,7 @@ class UpdateExistingWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWall
                         ),
                         aggregate_type="wallet",
                         aggregate_id=wallet_aggregate.unique_id,
+                        partition_key=partition_key,
                     )
                 ],
             ),

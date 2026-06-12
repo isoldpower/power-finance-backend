@@ -30,8 +30,10 @@ func (snh *SSENotificationsHandler) KafkaSink() chan<- services.OutboxEvent {
 	return snh.kafkaChannel
 }
 
-func (snh *SSENotificationsHandler) Subscribe() (<-chan services.OutboxEvent, func(), bool) {
-	client, registered := snh.poolService.Register()
+func (snh *SSENotificationsHandler) Subscribe(
+	externalUserID string,
+) (<-chan services.OutboxEvent, func(), bool) {
+	client, registered := snh.poolService.Register(externalUserID)
 	if !registered {
 		return nil, func() {}, false
 	}

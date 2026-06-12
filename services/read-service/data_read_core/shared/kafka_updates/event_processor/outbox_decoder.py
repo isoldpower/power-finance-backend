@@ -26,7 +26,7 @@ class OutboxEnvelopeDecoder:
             event_id=event_id,
             event_type=event_type,
             aggregate_type=self._extract_aggregate_type(message),
-            aggregate_id=self._extract_aggregate_id(message),
+            partition_key=self._extract_partition_key(message),
             outbox_seq=self._extract_outbox_sequence(message),
             payload=self._extract_value_safe(message),
             headers=self._copy_headers_safe(message),
@@ -44,7 +44,7 @@ class OutboxEnvelopeDecoder:
     def _extract_aggregate_type(self, message: ConsumedMessage) -> str:
         return KafkaHeaders.get(message.headers, KafkaEnvelope.HEADER_AGGREGATE_TYPE) or ""
 
-    def _extract_aggregate_id(self, message: ConsumedMessage) -> str:
+    def _extract_partition_key(self, message: ConsumedMessage) -> str:
         return message.key.decode("utf-8") if message.key else ""
 
     def _extract_outbox_sequence(self, message: ConsumedMessage) -> int | None:

@@ -39,6 +39,7 @@ class BuildOutboxEntryTests(SimpleTestCase):
             message,
             aggregate_type="transaction",
             aggregate_id="t-1",
+            partition_key="user_2abc",
         )
 
         self.assertEqual(entry.event_id, UUID(message.event_id))
@@ -51,7 +52,9 @@ class BuildOutboxEntryTests(SimpleTestCase):
             currency_code="USD",
         )
 
-        entry = build_outbox_entry(message, aggregate_type="wallet", aggregate_id="w-1")
+        entry = build_outbox_entry(
+            message, aggregate_type="wallet", aggregate_id="w-1", partition_key="user_2abc"
+        )
 
         self.assertIsInstance(entry, OutboxEntry)
         self.assertEqual(entry.event_type, "WalletCreated")
@@ -61,7 +64,9 @@ class BuildOutboxEntryTests(SimpleTestCase):
     def test_default_schema_version_is_set_when_unset(self) -> None:
         message = TransactionCreated(transaction_id="t-1", wallet_id="w-1", user_id=1, amount="1")
 
-        entry = build_outbox_entry(message, aggregate_type="transaction", aggregate_id="t-1")
+        entry = build_outbox_entry(
+            message, aggregate_type="transaction", aggregate_id="t-1", partition_key="user_2abc"
+        )
 
         self.assertEqual(entry.schema_version, 1)
         self.assertEqual(message.schema_version, 1)
@@ -70,7 +75,9 @@ class BuildOutboxEntryTests(SimpleTestCase):
         message = TransactionCreated(transaction_id="t-1", wallet_id="w-1", user_id=1, amount="1")
         message.schema_version = 42
 
-        entry = build_outbox_entry(message, aggregate_type="transaction", aggregate_id="t-1")
+        entry = build_outbox_entry(
+            message, aggregate_type="transaction", aggregate_id="t-1", partition_key="user_2abc"
+        )
 
         self.assertEqual(entry.schema_version, 42)
 
@@ -78,7 +85,9 @@ class BuildOutboxEntryTests(SimpleTestCase):
         before = datetime.now(UTC)
         message = TransactionCreated(transaction_id="t-1", wallet_id="w-1", user_id=1, amount="1")
 
-        entry = build_outbox_entry(message, aggregate_type="transaction", aggregate_id="t-1")
+        entry = build_outbox_entry(
+            message, aggregate_type="transaction", aggregate_id="t-1", partition_key="user_2abc"
+        )
         after = datetime.now(UTC)
 
         self.assertEqual(entry.occurred_at.tzinfo, UTC)
@@ -96,18 +105,45 @@ class BuildOutboxEntryTests(SimpleTestCase):
             amount="1.50",
         )
 
-        entry = build_outbox_entry(message, aggregate_type="transaction", aggregate_id="t-9")
+        entry = build_outbox_entry(
+            message, aggregate_type="transaction", aggregate_id="t-9", partition_key="user_2abc"
+        )
 
         self.assertEqual(entry.payload["transaction_id"], "t-9")
         self.assertEqual(entry.payload["wallet_id"], "w-9")
         self.assertIn("user_id", entry.payload)
         self.assertIn("amount", entry.payload)
 
+    def test_partition_key_is_the_user_external_id_verbatim(self) -> None:
+        # The partition key becomes the Kafka message key; push-service
+        # matches it against the gateway's X-User-Id (Clerk sub) — pin
+        # that it passes through untouched.
+        message = WalletCreated(wallet_id="w-1", user_id=2, title="Main", currency_code="USD")
+
+        entry = build_outbox_entry(
+            message, aggregate_type="wallet", aggregate_id="w-1", partition_key="user_2abc"
+        )
+
+        self.assertEqual(entry.partition_key, "user_2abc")
+
+    def test_empty_partition_key_falls_back_to_global(self) -> None:
+        message = WalletCreated(wallet_id="w-1", user_id=2, title="Main", currency_code="USD")
+
+        entry = build_outbox_entry(
+            message, aggregate_type="wallet", aggregate_id="w-1", partition_key=""
+        )
+
+        self.assertEqual(entry.partition_key, "GLOBAL")
+
     def test_two_calls_produce_distinct_event_ids(self) -> None:
         m1 = TransactionCreated(transaction_id="a", wallet_id="w", user_id=1, amount="1")
         m2 = TransactionCreated(transaction_id="b", wallet_id="w", user_id=1, amount="1")
 
-        e1 = build_outbox_entry(m1, aggregate_type="transaction", aggregate_id="a")
-        e2 = build_outbox_entry(m2, aggregate_type="transaction", aggregate_id="b")
+        e1 = build_outbox_entry(
+            m1, aggregate_type="transaction", aggregate_id="a", partition_key="user_2abc"
+        )
+        e2 = build_outbox_entry(
+            m2, aggregate_type="transaction", aggregate_id="b", partition_key="user_2abc"
+        )
 
         self.assertNotEqual(e1.event_id, e2.event_id)

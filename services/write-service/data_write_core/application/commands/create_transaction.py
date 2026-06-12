@@ -22,6 +22,7 @@ from ._loader_mixins import LoadWalletMixin
 @dataclass(frozen=True)
 class CreateTransactionCommand:
     user_id: int
+    user_external_id: str
     source_wallet_id: UUID
     amount: Decimal
 
@@ -57,14 +58,21 @@ class CreateTransactionCommandHandler(CommandHandlerBase[TransactionDTO], LoadWa
             amount=command.amount,
         )
 
-        latest_version = await self._write_with_saga(new_transaction)
+        latest_version = await self._write_with_saga(
+            new_transaction,
+            partition_key=command.user_external_id,
+        )
         wallet_dto = wallet_to_dto(wallet_aggregate.root, balance_amount=wallet_aggregate.balance)
         transaction_dto = transaction_to_dto(new_transaction, wallet_dto)
 
         await self._publish_domain_events(wallet_aggregate)
         return transaction_dto, latest_version
 
-    async def _write_with_saga(self, new_transaction: TransactionEntity) -> int:
+    async def _write_with_saga(
+        self,
+        new_transaction: TransactionEntity,
+        partition_key: str,
+    ) -> int:
         saga_coordinator = FinalizedSagaCoordinator(
             transaction_steps=[
                 ImmudbTransactionStep(
@@ -85,6 +93,7 @@ class CreateTransactionCommandHandler(CommandHandlerBase[TransactionDTO], LoadWa
                         ),
                         aggregate_type="transaction",
                         aggregate_id=new_transaction.unique_id,
+                        partition_key=partition_key,
                     )
                 ],
             ),

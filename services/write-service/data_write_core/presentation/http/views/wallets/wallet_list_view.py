@@ -49,6 +49,7 @@ class WalletListView(WalletView, CommandResponseMixin):
             created_wallet, write_version = await handler.handle(
                 CreateNewWalletCommand(
                     user_id=int(request.user.unique_id),
+                    user_external_id=request.user.external_id,
                     name=validated["name"],
                     currency=validated["currency"],
                 )

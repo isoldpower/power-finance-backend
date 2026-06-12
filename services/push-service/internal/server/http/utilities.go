@@ -2,6 +2,7 @@ package http
 
 import (
 	"net"
+	"slices"
 )
 
 func createListener(address string, network HTTPNetworkType) (net.Listener, error) {
@@ -11,4 +12,12 @@ func createListener(address string, network HTTPNetworkType) (net.Listener, erro
 	}
 
 	return listener, nil
+}
+
+func sortMiddlewares(middlewares []*RouteMiddleware) []*RouteMiddleware {
+	slices.SortStableFunc(middlewares, func(first *RouteMiddleware, second *RouteMiddleware) int {
+		return first.priority - second.priority
+	})
+
+	return middlewares
 }

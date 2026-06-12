@@ -17,21 +17,25 @@ const (
 
 type HTTPProcessConfig struct {
 	NetworkType utilities.Option[HTTPNetworkType]
+	Middlewares utilities.Option[[]*RouteMiddleware]
 
 	server.ProcessConfig
 }
 
 type EstablishedHTTPProcessConfig struct {
 	NetworkType HTTPNetworkType
+	Middlewares []*RouteMiddleware
 
 	server.EstablishedProcessConfig
 }
 
 func EstablishHTTPProcessConfig(config HTTPProcessConfig) EstablishedHTTPProcessConfig {
 	config.NetworkType.DefaultOption(NetworkTypeTCP)
+	config.Middlewares.DefaultOption(make([]*RouteMiddleware, 0))
 
 	return EstablishedHTTPProcessConfig{
 		EstablishedProcessConfig: server.EstablishProcessConfig(config.ProcessConfig),
+		Middlewares:              sortMiddlewares(config.Middlewares.Value),
 		NetworkType:              config.NetworkType.Value,
 	}
 }

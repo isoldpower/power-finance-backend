@@ -63,6 +63,7 @@ class TransactionResourceView(TransactionView, CommandResponseMixin):
             adjusted_transaction, write_version = await handler.handle(
                 UpdateTransactionCommand(
                     user_id=int(request.user.unique_id),
+                    user_external_id=request.user.external_id,
                     transaction_id=pk,
                     new_amount=validated["new_amount"],
                 )
@@ -120,6 +121,7 @@ class TransactionResourceView(TransactionView, CommandResponseMixin):
                 DeleteTransactionCommand(
                     transaction_id=pk,
                     user_id=int(request.user.unique_id),
+                    user_external_id=request.user.external_id,
                 )
             )
 

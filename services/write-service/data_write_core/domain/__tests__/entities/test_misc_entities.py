@@ -64,6 +64,7 @@ class InternalUserEntityTests(SimpleTestCase):
     def test_unique_id_is_provided_user_id(self) -> None:
         user = InternalUserEntity(
             user_id="42",
+            external_id="user_2abc",
             email="user@example.com",
             first_name="A",
             last_name="B",
@@ -72,7 +73,11 @@ class InternalUserEntityTests(SimpleTestCase):
         self.assertEqual(user.unique_id, "42")
 
     def test_default_collector_is_independent_per_instance(self) -> None:
-        a = InternalUserEntity(user_id="1", email="a@x", first_name="A", last_name="A")
-        b = InternalUserEntity(user_id="2", email="b@x", first_name="B", last_name="B")
+        a = InternalUserEntity(
+            user_id="1", external_id="user_a", email="a@x", first_name="A", last_name="A"
+        )
+        b = InternalUserEntity(
+            user_id="2", external_id="user_b", email="b@x", first_name="B", last_name="B"
+        )
 
         self.assertIsNot(a.event_collector, b.event_collector)

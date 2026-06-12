@@ -23,10 +23,16 @@ func (hp *HttpPresentation) HandleGetNotifications(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
+	externalUserID, authenticated := handlers.AuthenticatedUserID(request)
+	if !authenticated {
+		http.Error(writer, "Authenticated user is required", http.StatusUnauthorized)
+		return
+	}
+
 	httpConnection := NewSseHttpConnection(writer, request)
 	goneChannel := httpConnection.ClientGoneChannel()
 
-	eventsChannel, unsubscribe, subscribed := hp.notificationsHandler.Subscribe()
+	eventsChannel, unsubscribe, subscribed := hp.notificationsHandler.Subscribe(externalUserID)
 	if subscribed {
 		defer unsubscribe()
 		responseChannel := make(chan []byte)

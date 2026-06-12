@@ -49,6 +49,7 @@ class TransactionListView(TransactionView, CommandResponseMixin):
             created_transaction, write_version = await handler.handle(
                 CreateTransactionCommand(
                     user_id=int(request.user.unique_id),
+                    user_external_id=request.user.external_id,
                     source_wallet_id=validated["source_wallet_id"],
                     amount=validated["amount"],
                 )

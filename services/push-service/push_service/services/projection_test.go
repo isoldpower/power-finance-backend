@@ -10,7 +10,7 @@ func validOutboxEvent() OutboxEvent {
 		EventID:       "evt-1",
 		EventType:     "WalletCreated",
 		AggregateType: "wallet",
-		AggregateID:   "wallet-1",
+		UserID:        "user_2abc",
 		Payload:       []byte(`{"wallet_id":"wallet-1"}`),
 	}
 }
@@ -64,21 +64,57 @@ func TestProjectionDropsEventsWithEmptyPayload(t *testing.T) {
 	}
 }
 
-func TestPoolBroadcastsToEverySubscriber(t *testing.T) {
+func TestPoolDeliversOnlyToTheEventOwner(t *testing.T) {
 	pool := NewClientsPoolService()
 	eventsChannel := make(chan OutboxEvent)
 	go pool.FanoutEvents(eventsChannel)
 
-	firstClient, registered := pool.Register()
+	ownerClient, registered := pool.Register("user_2abc")
+	if !registered {
+		t.Fatal("expected owner client to register")
+	}
+	strangerClient, registered := pool.Register("user_other")
+	if !registered {
+		t.Fatal("expected stranger client to register")
+	}
+
+	eventsChannel <- validOutboxEvent()
+
+	select {
+	case received := <-ownerClient.Events():
+		if received.EventID != "evt-1" {
+			t.Fatalf("expected evt-1, got %+v", received)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected event to reach its owner")
+	}
+
+	select {
+	case leaked := <-strangerClient.Events():
+		t.Fatalf("expected no delivery to another user, got %+v", leaked)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	close(eventsChannel)
+}
+
+func TestPoolBroadcastsGlobalEventsToEverySubscriber(t *testing.T) {
+	pool := NewClientsPoolService()
+	eventsChannel := make(chan OutboxEvent)
+	go pool.FanoutEvents(eventsChannel)
+
+	firstClient, registered := pool.Register("user_2abc")
 	if !registered {
 		t.Fatal("expected first client to register")
 	}
-	secondClient, registered := pool.Register()
+	secondClient, registered := pool.Register("user_other")
 	if !registered {
 		t.Fatal("expected second client to register")
 	}
 
-	eventsChannel <- validOutboxEvent()
+	globalEvent := validOutboxEvent()
+	globalEvent.UserID = GlobalPartitionKey
+	eventsChannel <- globalEvent
 
 	for _, client := range []*PoolClient{firstClient, secondClient} {
 		select {
@@ -87,7 +123,7 @@ func TestPoolBroadcastsToEverySubscriber(t *testing.T) {
 				t.Fatalf("expected evt-1, got %+v", received)
 			}
 		case <-time.After(time.Second):
-			t.Fatal("expected broadcast to reach every client")
+			t.Fatal("expected global broadcast to reach every client")
 		}
 	}
 

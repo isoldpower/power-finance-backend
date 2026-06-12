@@ -26,6 +26,7 @@ class UpdateTransactionCommand:
     immutable adjustment transaction; the original is preserved."""
 
     user_id: int
+    user_external_id: str
     transaction_id: UUID
     new_amount: Decimal
 
@@ -67,6 +68,7 @@ class UpdateTransactionCommandHandler(
                 transaction_aggregate,
                 adjustment_transaction,
                 command.new_amount,
+                partition_key=command.user_external_id,
             )
         else:
             latest_sequence = await self._outbox_repository.get_latest_sequence()
@@ -85,6 +87,7 @@ class UpdateTransactionCommandHandler(
         transaction_aggregate: TransactionAggregate,
         adjustment_transaction: TransactionEntity,
         new_amount: Decimal,
+        partition_key: str,
     ) -> int:
         original_transaction = transaction_aggregate.root
         saga_coordinator = FinalizedSagaCoordinator(
@@ -105,6 +108,7 @@ class UpdateTransactionCommandHandler(
                         ),
                         aggregate_type="transaction",
                         aggregate_id=transaction_aggregate.unique_id,
+                        partition_key=partition_key,
                     )
                 ],
             ),

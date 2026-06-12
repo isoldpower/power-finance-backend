@@ -23,6 +23,7 @@ from ._loader_mixins import LoadTransactionMixin, LoadWalletMixin
 class DeleteTransactionCommand:
     transaction_id: UUID
     user_id: int
+    user_external_id: str
 
 
 class DeleteTransactionCommandHandler(
@@ -57,6 +58,7 @@ class DeleteTransactionCommandHandler(
         )
         inverse_transaction, latest_sequence = await self._run_transactions_saga(
             transaction_aggregate,
+            partition_key=command.user_external_id,
         )
         wallet_dto = await self.load_wallet_dto(
             wallet_id=transaction_aggregate.root.source_wallet_id,
@@ -70,6 +72,7 @@ class DeleteTransactionCommandHandler(
     async def _run_transactions_saga(
         self,
         transaction_aggregate: TransactionAggregate,
+        partition_key: str,
     ) -> tuple[TransactionEntity, int]:
         inverse_transaction = transaction_aggregate.delete_self()
 
@@ -93,6 +96,7 @@ class DeleteTransactionCommandHandler(
                         ),
                         aggregate_type="transaction",
                         aggregate_id=transaction_aggregate.unique_id,
+                        partition_key=partition_key,
                     )
                 ],
             ),

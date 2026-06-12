@@ -21,7 +21,7 @@ func (hpd *HttpPresenterDefinition) InitialiseRoutes(
 	sourceServer *httpServer.HTTPServer,
 ) error {
 	routes := []*httpServer.HttpServerRoute{
-		{Pattern: "POST /notifications", Handler: hpd.presentation.HandleGetNotifications},
+		{Pattern: "GET /events", Handler: hpd.presentation.HandleGetNotifications},
 	}
 
 	for _, route := range routes {
@@ -29,4 +29,16 @@ func (hpd *HttpPresenterDefinition) InitialiseRoutes(
 	}
 
 	return nil
+}
+
+func (hpd *HttpPresenterDefinition) ConfigureMiddlewares(
+	sourceServer *httpServer.HTTPServer,
+) {
+	middlewares := []*httpServer.RouteMiddleware{
+		httpServer.NewRouteMiddleware(GatewayAuthMiddleware, gatewayAuthMiddlewarePriority),
+	}
+
+	for _, middleware := range middlewares {
+		sourceServer.RegisterMiddleware(middleware)
+	}
 }

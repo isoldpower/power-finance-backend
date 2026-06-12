@@ -83,11 +83,30 @@ func (hs *HTTPServer) Shutdown() server.ShutdownRoutine {
 	}
 }
 
+func (hs *HTTPServer) RegisterMiddleware(middleware *RouteMiddleware) {
+	hs.basicConfig.Middlewares = sortMiddlewares(
+		append(hs.basicConfig.Middlewares, middleware),
+	)
+}
+
 func (hs *HTTPServer) AddRoute(
 	pattern string,
 	handler func(http.ResponseWriter, *http.Request),
 ) {
-	hs.router.HandleFunc(pattern, handler)
+	handlerWithMiddleware := func(writer http.ResponseWriter, request *http.Request) {
+		for _, middleware := range hs.basicConfig.Middlewares {
+			requestAfterMiddleware, shouldContinue := middleware.ServeHTTP(writer, request)
+			if !shouldContinue {
+				return
+			}
+
+			request = requestAfterMiddleware
+		}
+
+		handler(writer, request)
+	}
+
+	hs.router.HandleFunc(pattern, handlerWithMiddleware)
 }
 
 func (hs *HTTPServer) GetDoneChannel() <-chan error {

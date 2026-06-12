@@ -143,14 +143,21 @@ class CurrencyMapperTests(SimpleTestCase):
 
 class UserMapperTests(SimpleTestCase):
     def test_to_domain_builds_internal_user_entity(self) -> None:
-        model = SimpleNamespace(id=42, email="user@example.com", first_name="A", last_name="B")
+        model = SimpleNamespace(
+            id=42,
+            username="user_2abc",
+            email="user@example.com",
+            first_name="A",
+            last_name="B",
+        )
 
         entity = UserMapper.to_domain(model)
 
         self.assertIsInstance(entity, InternalUserEntity)
         self.assertEqual(entity.unique_id, "42")
+        self.assertEqual(entity.external_id, "user_2abc")
 
     def test_id_coerced_to_string(self) -> None:
-        model = SimpleNamespace(id=7, email="x@x", first_name="x", last_name="x")
+        model = SimpleNamespace(id=7, username="user_7", email="x@x", first_name="x", last_name="x")
 
         self.assertEqual(UserMapper.to_domain(model).unique_id, "7")

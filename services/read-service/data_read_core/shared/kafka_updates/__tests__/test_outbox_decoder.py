@@ -25,7 +25,7 @@ def test_decode_maps_headers_key_and_metadata():
     assert event.event_id == "evt-9"
     assert event.event_type == "WalletCreated"
     assert event.aggregate_type == "wallet"
-    assert event.aggregate_id == "w1"  # decoded from the key
+    assert event.partition_key == "w1"  # decoded from the key
     assert event.outbox_seq == 42
     assert event.payload == b'{"wallet_id": "w1"}'
     assert (event.topic, event.partition, event.offset) == ("events.async", 3, 100)
@@ -46,9 +46,9 @@ def test_decode_absent_outbox_seq_becomes_none():
     assert event.outbox_seq is None
 
 
-def test_decode_absent_key_yields_empty_aggregate_id():
+def test_decode_absent_key_yields_empty_partition_key():
     event = OutboxEnvelopeDecoder().decode(make_consumed_message(key=None))
-    assert event.aggregate_id == ""
+    assert event.partition_key == ""
 
 
 def test_decode_absent_value_yields_empty_payload():

@@ -56,6 +56,8 @@ func (pshs *pushServiceHttpServer) Run(config internalServer.ProcessBootstrapCon
 }
 
 func (pshs *pushServiceHttpServer) resolveHttpDefinition() {
+	pshs.definition.ConfigureMiddlewares(pshs.HTTPServer)
+
 	routerErr := pshs.definition.InitialiseRoutes(pshs.HTTPServer)
 	if routerErr != nil {
 		log.PrintError("Failed to initialise http server", routerErr)
