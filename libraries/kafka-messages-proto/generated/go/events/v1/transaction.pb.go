@@ -30,8 +30,6 @@ type TransactionCreated struct {
 	TransactionId string                 `protobuf:"bytes,10,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
 	WalletId      string                 `protobuf:"bytes,11,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
 	UserId        int32                  `protobuf:"varint,12,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// Decimal as string — proto has no native arbitrary-precision number
-	// type and floats lose money precision.
 	Amount        string                 `protobuf:"bytes,13,opt,name=amount,proto3" json:"amount,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -225,14 +223,13 @@ func (x *TransactionDeleted) GetCreatedAt() *timestamppb.Timestamp {
 }
 
 type TransactionUpdated struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
-	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
-	SchemaVersion int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
-	TransactionId string                 `protobuf:"bytes,10,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
-	WalletId      string                 `protobuf:"bytes,11,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
-	UserId        int32                  `protobuf:"varint,12,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// Decimals as strings — proto has no arbitrary-precision number type.
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	EventId        string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	SchemaVersion  int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	TransactionId  string                 `protobuf:"bytes,10,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	WalletId       string                 `protobuf:"bytes,11,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
+	UserId         int32                  `protobuf:"varint,12,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	PreviousAmount string                 `protobuf:"bytes,13,opt,name=previous_amount,json=previousAmount,proto3" json:"previous_amount,omitempty"`
 	NewAmount      string                 `protobuf:"bytes,14,opt,name=new_amount,json=newAmount,proto3" json:"new_amount,omitempty"`
 	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`

@@ -29,7 +29,6 @@ class DomainEventEnvelopeTests(SimpleTestCase):
         self.assertNotEqual(a.event_id, b.event_id)
 
     def test_occurred_at_is_timezone_aware_utc(self) -> None:
-        # Naive datetimes have bitten this codebase before — guard the contract.
         event = _Sample()
 
         self.assertEqual(event.occurred_at.tzinfo, UTC)

@@ -1,9 +1,5 @@
-"""Base settings shared by all environments. Concrete environments (local,
-production) extend this module and override values that differ.
-
-Environment variables are loaded via django-environ from a `.env` file at
-the service root. See `.env.example` for the full list of recognised keys.
-"""
+"""Base settings shared by all environments; concrete environments extend and
+override. Env vars load via django-environ from a `.env` file."""
 
 from pathlib import Path
 
@@ -36,6 +32,8 @@ env = environ.Env(
     KAFKA_BOOTSTRAP_SERVERS=(str, "localhost:9092"),
     KAFKA_OUTBOX_TOPIC=(str, "events.async"),
     KAFKA_FRAUD_SIGNALS_TOPIC=(str, "fraud.signals"),
+    KAFKA_NOTIFICATIONS_INBOUND_TOPIC=(str, "notifications.inbound"),
+    KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID=(str, "write-service.notifications-inbound"),
     CORRELATION_ID_HEADER=(str, "X-Correlation-ID"),
 )
 if ENV_FILE.exists():
@@ -62,6 +60,7 @@ INSTALLED_APPS = [
     "health_probes.apps.HealthProbesConfig",
     "data_write_core.apps.DataWriteCoreConfig",
     "write_service.common.apps.WriteServiceCommonConfig",
+    "background_workers.apps.BackgroundWorkersConfig",
 ]
 
 MIGRATION_MODULES = {
@@ -101,9 +100,6 @@ DATABASES = {
             "pool": {
                 "min_size": 2,
                 "max_size": 10,
-                # Liveness probe (SELECT 1) on checkout is added by
-                # Django 5.2+ automatically via ConnectionPool.check_connection;
-                # passing it here too raises "multiple values for 'check'".
             },
         },
     }
@@ -117,13 +113,7 @@ REDIS = {
 
 IDEMPOTENCY = {
     "REDIS_DB": env("IDEMPOTENCY_REDIS_DB"),
-    # In-flight lock TTL — bounds how long a stuck/crashed handler can hold
-    # a key before another request is allowed through. Must comfortably
-    # exceed worst-case request latency (SAGA + ImmuDB + outbox).
     "LOCK_TTL_SECONDS": env("IDEMPOTENCY_LOCK_TTL_SECONDS"),
-    # Cached-response TTL after success. 24h matches the Stripe convention
-    # — long enough for offline-client retries, short enough that key reuse
-    # past a day processes again as a fresh request.
     "RESPONSE_TTL_SECONDS": env("IDEMPOTENCY_RESPONSE_TTL_SECONDS"),
 }
 
@@ -138,6 +128,8 @@ KAFKA = {
     "BOOTSTRAP_SERVERS": env("KAFKA_BOOTSTRAP_SERVERS"),
     "OUTBOX_TOPIC": env("KAFKA_OUTBOX_TOPIC"),
     "FRAUD_SIGNALS_TOPIC": env("KAFKA_FRAUD_SIGNALS_TOPIC"),
+    "NOTIFICATIONS_INBOUND_TOPIC": env("KAFKA_NOTIFICATIONS_INBOUND_TOPIC"),
+    "NOTIFICATIONS_INBOUND_GROUP_ID": env("KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID"),
 }
 
 CORRELATION_ID_HEADER = env("CORRELATION_ID_HEADER")
@@ -194,7 +186,6 @@ LOGGING = {
         "": {"handlers": ["console"], "level": "INFO", "propagate": True},
         "write_service": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
         "apps": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
-        # Namespaced roots produced by write_service.common.logging factories.
         "data_write_core": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
         "http": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
         "background_workers": {"handlers": ["console"], "level": "DEBUG", "propagate": False},

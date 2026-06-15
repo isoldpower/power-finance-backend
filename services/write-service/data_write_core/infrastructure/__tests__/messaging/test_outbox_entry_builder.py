@@ -26,8 +26,6 @@ class DatetimeToTimestampTests(SimpleTestCase):
 
 class BuildOutboxEntryTests(SimpleTestCase):
     def test_stamps_event_id_on_message_and_outbox_entry_consistently(self) -> None:
-        # event_id is stamped onto the proto AND echoed into the entry —
-        # consumers correlate by matching these.
         message = TransactionCreated(
             transaction_id="t-1",
             wallet_id="w-1",
@@ -95,9 +93,6 @@ class BuildOutboxEntryTests(SimpleTestCase):
         self.assertLessEqual(entry.occurred_at, after)
 
     def test_payload_preserves_proto_field_names_and_includes_default_fields(self) -> None:
-        # preserving_proto_field_name=True ⇒ snake_case in payload.
-        # always_print_fields_with_no_presence=True ⇒ defaults included
-        # (consumers should never get KeyError on a known field).
         message = TransactionCreated(
             transaction_id="t-9",
             wallet_id="w-9",
@@ -115,9 +110,6 @@ class BuildOutboxEntryTests(SimpleTestCase):
         self.assertIn("amount", entry.payload)
 
     def test_partition_key_is_the_user_external_id_verbatim(self) -> None:
-        # The partition key becomes the Kafka message key; push-service
-        # matches it against the gateway's X-User-Id (Clerk sub) — pin
-        # that it passes through untouched.
         message = WalletCreated(wallet_id="w-1", user_id=2, title="Main", currency_code="USD")
 
         entry = build_outbox_entry(

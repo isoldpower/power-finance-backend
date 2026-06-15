@@ -50,8 +50,6 @@ class TransactionEntityCreateTests(SimpleTestCase):
         self.assertNotEqual(a.unique_id, b.unique_id)
 
     def test_create_falls_back_to_default_collector_when_none_provided(self) -> None:
-        # Default collector swallows the event; this guards the
-        # `or EventCollector()` branch from accidental removal.
         txn = TransactionEntity.create(user_id=1, data=_txn_data())
 
         self.assertIsInstance(txn.event_collector, EventCollector)
@@ -60,14 +58,12 @@ class TransactionEntityCreateTests(SimpleTestCase):
         txn = TransactionEntity.create(user_id=99, data=_txn_data())
 
         self.assertEqual(txn.user_id, "99")
-        # Pull and inspect the previously emitted event:
         events = txn.event_collector.pull_events()
         self.assertEqual(events[0].user_id, 99)
 
 
 class TransactionEntityFromPersistenceTests(SimpleTestCase):
     def test_from_persistence_does_not_emit_creation_event(self) -> None:
-        # Reconstituting a stored transaction must be event-silent.
         collector = EventCollector()
 
         TransactionEntity.from_persistence(
@@ -107,7 +103,7 @@ class TransactionEntityFromPersistenceTests(SimpleTestCase):
 class TransactionEntityInverseTests(SimpleTestCase):
     def test_create_inverse_negates_amount(self) -> None:
         original = TransactionEntity.create(user_id=1, data=_txn_data(amount=Decimal("15")))
-        original.event_collector.pull_events()  # discard creation event
+        original.event_collector.pull_events()
 
         inverse = original.create_inverse(event_collector=EventCollector())
 
@@ -133,8 +129,6 @@ class TransactionEntityInverseTests(SimpleTestCase):
         self.assertEqual(inverse.user_id, "88")
 
     def test_create_inverse_emits_creation_event_for_inverse(self) -> None:
-        # Inverse is a brand-new transaction; it deserves its own
-        # TransactionCreatedEvent on its own collector.
         original = TransactionEntity.create(user_id=1, data=_txn_data())
         inverse_collector = EventCollector()
 

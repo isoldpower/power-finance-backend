@@ -15,15 +15,8 @@ EventHandler = AsyncEventHandler
 
 
 class EventBus(ABC):
-    """In-process pub/sub for domain events.
-
-    Subscribers see only events whose underlying state changes have
-    already committed (handlers call `publish` after the SAGA + outbox
-    writes succeed). Used for cross-aggregate reactions: cache
-    invalidations, fraud-counter bumps, derived projections — NOT
-    for inter-service messaging. Inter-service communication goes
-    through the outbox / Kafka (`application/outbox/events`); the
-    two pipelines are deliberately disjoint."""
+    """In-process pub/sub for committed domain events: cross-aggregate
+    reactions only, never inter-service messaging (that goes via the outbox)."""
 
     @abstractmethod
     async def publish(self, events: list[DomainEvent]) -> None:

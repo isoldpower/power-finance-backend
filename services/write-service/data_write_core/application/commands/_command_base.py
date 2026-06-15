@@ -18,10 +18,8 @@ class CommandHandlerBase(ABC, Generic[THandler]):
         raise NotImplementedError()
 
     async def _publish_domain_events(self, *sources: _EventSource) -> None:
-        """Pulls domain events from each source and publishes them on
-        the in-process EventBus. Call this AFTER the SAGA + outbox
-        writes have committed — subscribers must only ever see events
-        whose underlying state changes durably succeeded."""
+        """Publishes pulled domain events on the in-process EventBus. Call
+        AFTER SAGA + outbox commit so subscribers only see durable events."""
 
         event_bus = get_event_bus()
         for source in sources:

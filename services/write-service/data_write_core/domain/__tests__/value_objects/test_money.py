@@ -1,10 +1,5 @@
-"""Money / NonNegativeMoney: arithmetic and currency-binding rules.
-
-The intent of Money is to make currency mismatches and accidental negative
-balances unrepresentable at the type level. These tests pin that intent:
-addition/subtraction across currencies must raise, NonNegativeMoney must
-reject negative construction, and arithmetic must preserve precision.
-"""
+"""Money / NonNegativeMoney arithmetic and currency-binding rules: cross-currency
+ops raise, negative NonNegativeMoney is rejected, precision is preserved."""
 
 from __future__ import annotations
 
@@ -31,7 +26,6 @@ class MoneyArithmeticTests(SimpleTestCase):
         self.assertEqual(result, Money(Decimal("6.25"), "USD"))
 
     def test_subtraction_can_produce_negative_amount(self) -> None:
-        # Plain Money permits negatives — only NonNegativeMoney refuses them.
         result = Money(Decimal("1"), "USD") - Money(Decimal("5"), "USD")
 
         self.assertEqual(result.amount, Decimal("-4"))
@@ -52,7 +46,6 @@ class MoneyArithmeticTests(SimpleTestCase):
         self.assertEqual(ctx.exception.to_currency, "EUR")
 
     def test_decimal_precision_is_preserved_across_operations(self) -> None:
-        # Decimal arithmetic is exact — guard against silent float coercion.
         result = Money(Decimal("0.1"), "USD") + Money(Decimal("0.2"), "USD")
 
         self.assertEqual(result.amount, Decimal("0.3"))
@@ -64,7 +57,6 @@ class MoneyArithmeticTests(SimpleTestCase):
         self.assertNotEqual(Money(Decimal("5"), "USD"), Money(Decimal("5"), "EUR"))
 
     def test_money_is_hashable_and_usable_in_sets(self) -> None:
-        # @dataclass(frozen=True) implies hashable; pin that contract.
         self.assertEqual(
             {Money(Decimal("1"), "USD"), Money(Decimal("1"), "USD")},
             {Money(Decimal("1"), "USD")},
@@ -92,9 +84,6 @@ class NonNegativeMoneyTests(SimpleTestCase):
         self.assertEqual(ctx.exception.amount, Decimal("-0.01"))
 
     def test_non_negative_money_inherits_money_arithmetic(self) -> None:
-        # Sum of two NonNegativeMoney returns plain Money (not re-validated).
-        # This is intentional: callers wanting persistent non-negativity
-        # must re-wrap. The test pins this so subtle changes don't sneak by.
         result = NonNegativeMoney(Decimal("3"), "USD") + NonNegativeMoney(Decimal("2"), "USD")
 
         self.assertIsInstance(result, Money)

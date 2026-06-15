@@ -1,0 +1,31 @@
+# Kafka topic inventory (documentation).
+#
+# The dev broker runs with KAFKA_AUTO_CREATE_TOPICS_ENABLE=true, so these
+# topics are created on first produce/consume — this file is the catalogue of
+# what flows where, not a provisioning manifest. A production cluster would
+# turn auto-create off and provision these explicitly with per-topic partition
+# and retention settings.
+
+topics:
+  # Primary event stream. Debezium's Outbox Event Router publishes every
+  # write-service outbox row here, keyed by the owning user's external (Clerk)
+  # id for per-user ordering. Consumed by read-service (projections),
+  # push-service (SSE fan-out) and webhook-service (config projection +
+  # delivery dispatch).
+  - name: events.async
+
+  # Inbound notification requests. Other services (webhook-service after a
+  # delivery) produce NotificationRequested messages here; the write-service
+  # inbound-notifications consumer persists each one, which then re-enters
+  # events.async as a NotificationCreated event through the outbox.
+  - name: notifications.inbound
+
+  # Shared retry/DLQ topics for the kafka-client retry pipeline.
+  - name: events.retry
+  - name: events.dlq
+
+  # webhook-service's own retry/DLQ topics — kept separate from the shared
+  # events.* ones so webhook delivery backpressure can't interfere with the
+  # read/push projection pipelines.
+  - name: webhooks.retry
+  - name: webhooks.dlq

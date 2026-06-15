@@ -1,9 +1,5 @@
-"""Mappers for wallet/currency/user: ORM model ⇄ domain entity.
-
-These mappers are thin but load-bearing: every read path goes through
-them. The tests use lightweight stand-ins for Django models (SimpleNamespace)
-to avoid touching the database — to_domain only consumes attributes.
-"""
+"""Mappers for wallet/currency/user: ORM model ⇄ domain entity. Thin but
+load-bearing — every read path goes through them."""
 
 from __future__ import annotations
 
@@ -26,8 +22,6 @@ from data_write_core.infrastructure.repositories.mappers.wallet_mapper import (
 
 class WalletMapperToDomainTests(SimpleTestCase):
     def _model(self, **overrides) -> SimpleNamespace:
-        # WalletMapper reads only the attributes — a SimpleNamespace
-        # is enough, no DB round-trip required.
         defaults = {
             "id": "11111111-1111-1111-1111-111111111111",
             "name": "Main",
@@ -110,8 +104,6 @@ class WalletMapperApplyToModelTests(SimpleTestCase):
         self.assertIsNone(model.deleted_at)
 
     def test_apply_writes_deleted_at_unconditionally(self) -> None:
-        # Soft-delete and restore both flow through this. If the writer
-        # were conditional, restore could silently leave deleted_at set.
         model = SimpleNamespace(id=None, name="x", currency_id="x", user_id=None, deleted_at=None)
         entity = self._entity(deleted_at=datetime(2026, 3, 1))
 

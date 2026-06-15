@@ -8,7 +8,6 @@ from google.protobuf.timestamp_pb2 import Timestamp
 from data_write_core.domain.value_objects import OutboxEntry
 
 _DEFAULT_SCHEMA_VERSION = 1
-# Partition key for events that don't belong to any user
 GLOBAL_PARTITION_KEY = "GLOBAL"
 
 
@@ -25,14 +24,8 @@ def build_outbox_entry(
     aggregate_id: str,
     partition_key: str,
 ) -> OutboxEntry:
-    """Stamp envelope fields onto a kafka_messages proto and project it to an OutboxEntry.
-
-    The partition key becomes the Kafka message key (Debezium routes the
-    `partitionkey` column there). For user-scoped events it must be the
-    user's external (Clerk) id so per-user consumers can match it against
-    the gateway-authenticated identity; events without a user owner use
-    GLOBAL_PARTITION_KEY.
-    """
+    """Stamp envelope fields onto a kafka_messages proto and project it to an
+    OutboxEntry; the partition key becomes the Kafka message key."""
 
     event_id = uuid4()
     occurred_at = datetime.now(UTC)

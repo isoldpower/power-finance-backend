@@ -1,9 +1,5 @@
-"""TransactionData: a transaction can be a cancellation OR an adjustment, not both.
-
-Pins the only validation TransactionData enforces — if a future change
-adds a second guard or relaxes this one, these tests should be the
-first thing to break.
-"""
+"""TransactionData: a transaction can be a cancellation OR an adjustment, not
+both — pins the only validation it enforces."""
 
 from __future__ import annotations
 
@@ -56,8 +52,6 @@ class TransactionDataTests(SimpleTestCase):
         self.assertIsNone(data.cancels_other)
 
     def test_simultaneous_cancellation_and_adjustment_is_rejected(self) -> None:
-        # A transaction must have one role: either it undoes another, or
-        # it patches another's amount. Both together is nonsense.
         with self.assertRaises(ConflictingTransactionDataError):
             TransactionData(
                 source_wallet_id=uuid4(),

@@ -15,6 +15,11 @@ from kafka_client_py import (
 )
 
 from ._types import ProbesDictionary
+from .notification_events import (
+    subscribe_notification_created,
+    subscribe_notification_deleted,
+    subscribe_notifications_acknowledged,
+)
 from .transaction_events import (
     subscribe_transaction_created,
     subscribe_transaction_deleted,
@@ -26,6 +31,13 @@ from .wallet_events import (
     subscribe_wallet_deleted,
     subscribe_wallet_updated,
 )
+from .webhook_events import (
+    subscribe_webhook_created,
+    subscribe_webhook_deleted,
+    subscribe_webhook_subscription_added,
+    subscribe_webhook_subscription_removed,
+    subscribe_webhook_updated,
+)
 
 _KNOWN_HANDLERS: list[Callable[[EventRouter, ProbesDictionary], None]] = [
     subscribe_user_synced,
@@ -35,6 +47,14 @@ _KNOWN_HANDLERS: list[Callable[[EventRouter, ProbesDictionary], None]] = [
     subscribe_transaction_created,
     subscribe_transaction_updated,
     subscribe_transaction_deleted,
+    subscribe_notification_created,
+    subscribe_notifications_acknowledged,
+    subscribe_notification_deleted,
+    subscribe_webhook_created,
+    subscribe_webhook_updated,
+    subscribe_webhook_deleted,
+    subscribe_webhook_subscription_added,
+    subscribe_webhook_subscription_removed,
 ]
 
 

@@ -33,8 +33,6 @@ def _initialize_schema(client: ImmudbClient) -> None:
     "
     )
 
-    # immudb treats NULL as a real value, so a UNIQUE index here would reject
-    # every non-cancelling transaction after the first.
     client.sqlExec(
         "\
         CREATE INDEX IF NOT EXISTS ON transactions(user_id); \

@@ -58,7 +58,6 @@ class ImmudbTransactionStepTests(IsolatedAsyncioTestCase):
         self.assertEqual(inverse.cancels_other, UUID(original.unique_id))
 
     async def test_compensate_does_not_replay_forward(self) -> None:
-        # Compensation should NOT also re-create the original.
         repo = _RecordingTransactionRepo()
         original = _txn()
         step = ImmudbTransactionStep(repository=repo, transaction=original)  # type: ignore[arg-type]

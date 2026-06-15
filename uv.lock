@@ -2463,6 +2463,7 @@ name = "write-service"
 version = "0.0.0"
 source = { editable = "services/write-service" }
 dependencies = [
+    { name = "aiokafka" },
     { name = "celery" },
     { name = "correlation-py" },
     { name = "django" },
@@ -2472,6 +2473,7 @@ dependencies = [
     { name = "drf-spectacular" },
     { name = "gunicorn" },
     { name = "immudb-py" },
+    { name = "kafka-client-py" },
     { name = "kafka-messages-proto" },
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "pydantic" },
@@ -2490,6 +2492,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiokafka", specifier = ">=0.11,<0.13" },
     { name = "celery", specifier = ">=5.6,<6.0" },
     { name = "correlation-py", editable = "libraries/correlation-py" },
     { name = "django", specifier = ">=5.2,<6.0" },
@@ -2499,6 +2502,7 @@ requires-dist = [
     { name = "drf-spectacular", specifier = ">=0.29,<0.30" },
     { name = "gunicorn", specifier = ">=25.3,<26.0" },
     { name = "immudb-py", specifier = ">=1.5,<2.0" },
+    { name = "kafka-client-py", editable = "libraries/kafka-client-py" },
     { name = "kafka-messages-proto", editable = "libraries/kafka-messages-proto" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.3,<4.0" },
     { name = "pydantic", specifier = ">=2.12,<3.0" },

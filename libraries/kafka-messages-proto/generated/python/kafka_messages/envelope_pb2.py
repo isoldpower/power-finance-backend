@@ -25,14 +25,14 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x65nvelope.proto\x12\x17power_finance.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"j\n\rEventEnvelope\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12/\n\x0boccurred_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x16\n\x0eschema_version\x18\x03 \x01(\x05\x42IZGgithub.com/power-finance/kafka-messages-proto/gen/go/events/v1;eventsv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x65nvelope.proto\x12\x17power_finance.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"j\n\rEventEnvelope\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12/\n\x0boccurred_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x16\n\x0eschema_version\x18\x03 \x01(\x05\x42OZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'envelope_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'ZGgithub.com/power-finance/kafka-messages-proto/gen/go/events/v1;eventsv1'
+  _globals['DESCRIPTOR']._serialized_options = b'ZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1'
   _globals['_EVENTENVELOPE']._serialized_start=76
   _globals['_EVENTENVELOPE']._serialized_end=182
 # @@protoc_insertion_point(module_scope)

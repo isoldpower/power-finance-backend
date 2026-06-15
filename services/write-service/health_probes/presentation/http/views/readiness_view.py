@@ -14,9 +14,8 @@ logger = get_http_logger("health")
 
 
 class ReadinessView(BaseAsyncAPIView):
-    """Readiness probe: 200 when every downstream dependency is reachable,
-    503 otherwise. Kong/Kubernetes use this signal to gate traffic; failing
-    here does not restart the pod (that's liveness's job)."""
+    """Readiness probe: 200 when every dependency is reachable, 503 otherwise;
+    gates traffic without restarting the pod."""
 
     authentication_classes: list = []
     permission_classes: list = []

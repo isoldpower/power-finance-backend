@@ -39,7 +39,6 @@ class ExtractIdempotencyKeyTests(SimpleTestCase):
         )
 
     def test_truncates_to_255_chars(self) -> None:
-        # Bounded length protects Redis from giant keys.
         very_long = "x" * 1000
         key = RequestInspector.extract_idempotency_key(
             _request(headers={IDEMPOTENCY_HEADER: very_long})

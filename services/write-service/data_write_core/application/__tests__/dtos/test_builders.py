@@ -61,7 +61,6 @@ def _txn_entity(
 
 class WalletToDtoTests(SimpleTestCase):
     def test_balance_defaults_to_zero_when_not_provided(self) -> None:
-        # Important guard: None != 0; the builder explicitly coerces.
         dto = wallet_to_dto(_wallet_entity())
 
         self.assertEqual(dto.balance_amount, Decimal("0"))
@@ -72,8 +71,6 @@ class WalletToDtoTests(SimpleTestCase):
         self.assertEqual(dto.balance_amount, Decimal("123.45"))
 
     def test_negative_balance_is_passed_through(self) -> None:
-        # `balance_amount or 0` would silently zero out negatives;
-        # pin the `is not None` check instead.
         dto = wallet_to_dto(_wallet_entity(), balance_amount=Decimal("-50"))
 
         self.assertEqual(dto.balance_amount, Decimal("-50"))
@@ -141,8 +138,6 @@ class TransactionToDtoTests(SimpleTestCase):
         self.assertEqual(dto.adjusts_other, adjusted_id)
 
     def test_currency_code_taken_from_wallet_dto_not_entity(self) -> None:
-        # If the wallet's currency ever drifts from the txn's stored
-        # currency, the DTO must mirror the wallet — authoritative source.
         wallet = _wallet_entity(currency="JPY")
         txn = _txn_entity(wallet_id=UUID(wallet.unique_id))
 

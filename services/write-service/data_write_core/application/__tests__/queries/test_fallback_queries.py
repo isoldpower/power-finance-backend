@@ -78,7 +78,6 @@ async def test_list_wallets_returns_dtos_with_balances_and_total():
     dtos, total = await handler.handle(ListFallbackWalletsQuery(user_id=7, limit=20, offset=0))
 
     assert total == 2
-    # Newest-first ordering (WALLET_A created later).
     assert [str(dto.id) for dto in dtos] == [WALLET_A, WALLET_B]
     assert dtos[0].balance_amount == Decimal("10")
 
@@ -115,7 +114,7 @@ async def test_get_transaction_degrades_currency_when_wallet_gone():
     transaction = make_transaction(TX_1, WALLET_A, "12.50")
     handler = GetFallbackTransactionQueryHandler(
         FakeTransactionRepository(user_transactions=[transaction]),
-        FakeWalletRepository([]),  # wallet soft-deleted / unresolvable
+        FakeWalletRepository([]),
     )
 
     dto = await handler.handle(GetFallbackTransactionQuery(user_id=7, transaction_id=UUID(TX_1)))
@@ -142,7 +141,6 @@ async def test_list_transactions_sorts_desc_paginates_and_maps_currency():
     dtos, total = await handler.handle(ListFallbackTransactionsQuery(user_id=7, limit=1, offset=0))
 
     assert total == 2
-    # Newest first, then paginated to one item.
     assert str(dtos[0].id) == TX_2
     assert dtos[0].currency_code == "USD"
 
@@ -174,7 +172,7 @@ async def test_list_transactions_folds_adjustment_into_original():
     adjustment = make_transaction(
         TX_EFFECT,
         WALLET_A,
-        "5",  # delta: 20 -> 25
+        "5",
         created_at=datetime(2026, 1, 2),
         adjusts_other=UUID(TX_1),
     )

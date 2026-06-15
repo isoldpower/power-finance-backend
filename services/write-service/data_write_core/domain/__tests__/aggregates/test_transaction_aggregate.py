@@ -1,10 +1,5 @@
-"""TransactionAggregate: delete_self / adjust_self guards and inverse/adjustment construction.
-
-The aggregate owns the rules around what can be cancelled and adjusted:
-inverse transactions can't be cancelled, already-cancelled originals can't
-be cancelled twice, adjustment transactions can't themselves be adjusted,
-and a no-op adjustment to the same amount must short-circuit.
-"""
+"""TransactionAggregate: delete_self / adjust_self guards and inverse /
+adjustment construction rules."""
 
 from __future__ import annotations
 
@@ -76,7 +71,6 @@ class DeleteSelfTests(SimpleTestCase):
         self.assertEqual(evt.amount, original.amount)
 
     def test_cancelling_an_inverse_transaction_is_rejected(self) -> None:
-        # cancels_other != None means this IS an inverse; can't cancel it.
         inverse = _txn(cancels_other=uuid4())
         aggregate = TransactionAggregate(inverse, cancelled_by=None, adjusted_by=None)
 
@@ -96,8 +90,6 @@ class DeleteSelfTests(SimpleTestCase):
         self.assertEqual(ctx.exception.transaction_id, UUID(original.unique_id))
 
     def test_delete_self_updates_internal_cancelled_by_to_prevent_double_cancel(self) -> None:
-        # First delete succeeds; immediately calling again on the same
-        # aggregate must raise because state advanced in-memory.
         original = _txn()
         aggregate = TransactionAggregate(original, cancelled_by=None, adjusted_by=None)
 
@@ -109,8 +101,6 @@ class DeleteSelfTests(SimpleTestCase):
 
 class AdjustSelfTests(SimpleTestCase):
     def test_emits_delta_adjustment_transaction(self) -> None:
-        # Adjustment is an append, not a mutation: a new transaction
-        # carrying the *delta* (new - old) and linked via adjusts_other.
         original = _txn(amount=Decimal("100"))
         aggregate = TransactionAggregate(original, cancelled_by=None, adjusted_by=None)
 
@@ -130,7 +120,6 @@ class AdjustSelfTests(SimpleTestCase):
         self.assertEqual(adjustment.amount, Decimal("-20"))
 
     def test_adjustment_to_same_amount_returns_original_without_event(self) -> None:
-        # Short-circuit: nothing changes ⇒ no new transaction, no event.
         collector = EventCollector()
         original = _txn(amount=Decimal("50"), collector=collector)
         aggregate = TransactionAggregate(original, cancelled_by=None, adjusted_by=None)

@@ -24,3 +24,79 @@ message WebhookDeliveryStatusChanged {
   int32 user_id = 12;
   WebhookDeliveryStatus status = 13;
 }
+
+// Webhook endpoint configuration events. Consumed by the read-service
+// (projection for reads — MUST NOT project the secret) and by the
+// webhook-service (local delivery config, including the signing secret).
+message WebhookEndpointCreated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string webhook_id = 10;
+  int32 user_id = 11;
+  string title = 12;
+  string url = 13;
+  // HMAC-SHA256 signing secret. Travels only on creation/rotation so the
+  // webhook-service can sign deliveries; the owning user already saw it in
+  // the HTTP response.
+  string secret = 14;
+  google.protobuf.Timestamp created_at = 15;
+}
+
+message WebhookEndpointUpdated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string webhook_id = 10;
+  int32 user_id = 11;
+  string title = 12;
+  string url = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+message WebhookEndpointDeleted {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string webhook_id = 10;
+  int32 user_id = 11;
+  google.protobuf.Timestamp deleted_at = 12;
+}
+
+message WebhookSecretRotated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string webhook_id = 10;
+  int32 user_id = 11;
+  string secret = 12;
+  google.protobuf.Timestamp rotated_at = 13;
+}
+
+message WebhookSubscriptionAdded {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string subscription_id = 10;
+  string webhook_id = 11;
+  int32 user_id = 12;
+  // One of the WebhookType values (e.g. "transaction.created").
+  string event_type = 13;
+  google.protobuf.Timestamp created_at = 14;
+}
+
+message WebhookSubscriptionRemoved {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string subscription_id = 10;
+  string webhook_id = 11;
+  int32 user_id = 12;
+  google.protobuf.Timestamp removed_at = 13;
+}

@@ -100,7 +100,10 @@ services:
           - /api/v1/reads
         strip_path: false
         preserve_host: false
-        methods: [GET, OPTIONS]
+        # POST is allowed for the search endpoints (wallets/transactions/
+        # webhooks /search/), which carry a filter tree in the request body.
+        # All other read endpoints are GET; a POST to them 405s at the service.
+        methods: [GET, POST, OPTIONS]
     plugins:
       - name: clerk-jwt
         config:

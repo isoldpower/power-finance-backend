@@ -1,10 +1,5 @@
-"""EntryCodec: JSON encode/decode for in-flight and completed slots.
-
-EntryCodec defines the wire format the entire idempotency layer round-trips
-through Redis. These tests pin both the structural shape and the lenient
-decode behavior (junk → None) so callers can safely treat decode failure
-as "no entry".
-"""
+"""EntryCodec: JSON encode/decode for in-flight and completed slots — pins the
+wire format and lenient decode (junk -> None)."""
 
 from __future__ import annotations
 
@@ -29,7 +24,6 @@ class EncodeLockEntryTests(SimpleTestCase):
         )
 
     def test_is_compact_json_without_whitespace(self) -> None:
-        # Pin compact form — Redis storage cost matters at scale.
         encoded = EntryCodec.encode_lock_entry("h")
 
         self.assertNotIn(" ", encoded)
@@ -52,8 +46,6 @@ class EncodeCompletedEntryTests(SimpleTestCase):
         self.assertEqual(decoded["headers"], {"X-Foo": "bar"})
 
     def test_serializes_complex_drf_types_via_drf_json_encoder(self) -> None:
-        # DRF responses can contain UUIDs / Decimals / datetimes.
-        # Pin that the codec uses DRF's encoder (which stringifies them).
         from datetime import datetime
         from decimal import Decimal
         from uuid import UUID
@@ -73,11 +65,7 @@ class EncodeCompletedEntryTests(SimpleTestCase):
 
         decoded = json.loads(encoded)
         self.assertEqual(decoded["body"]["id"], "11111111-1111-1111-1111-111111111111")
-        # DRF's JSONEncoder serializes Decimal via float() — preserves
-        # number-ness but loses trailing-zero precision. Pin this so a
-        # future swap to a string-preserving encoder is intentional.
         self.assertEqual(decoded["body"]["amount"], 12.5)
-        # datetime is rendered as ISO string by DRF's encoder
         self.assertIn("2026-01-01", decoded["body"]["at"])
 
 
@@ -101,9 +89,7 @@ class DecodeEntryTests(SimpleTestCase):
         )
 
     def test_invalid_json_returns_none_not_raise(self) -> None:
-        # Lenient: callers treat None as "no usable entry".
         self.assertIsNone(EntryCodec.decode_entry("not-json"))
 
     def test_invalid_json_bytes_returns_none(self) -> None:
-        # Valid UTF-8 but not valid JSON: decode → None.
         self.assertIsNone(EntryCodec.decode_entry(b"not json either"))

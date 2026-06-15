@@ -1,11 +1,5 @@
-"""
-WSGI config for write_service project.
-
-It exposes the WSGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/5.2/howto/deployment/wsgi/
-"""
+"""WSGI config for write_service: exposes the WSGI callable as a module-level
+variable named ``application``."""
 
 import os
 

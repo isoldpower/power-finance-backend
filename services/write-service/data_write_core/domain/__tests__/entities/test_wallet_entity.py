@@ -88,7 +88,6 @@ class WalletEntityMutationTests(SimpleTestCase):
         self.assertEqual(wallet.updated_at, restored_at)
 
     def test_restore_emits_no_events(self) -> None:
-        # Compensation hook — domain-silent on purpose. Pin this.
         collector = EventCollector()
         wallet = _make_wallet(deleted_at=datetime(2026, 1, 2), collector=collector)
 
@@ -97,7 +96,6 @@ class WalletEntityMutationTests(SimpleTestCase):
         self.assertEqual(collector.pull_events(), [])
 
     def test_mark_deleted_emits_no_events_directly(self) -> None:
-        # Event emission is the aggregate's job, not the entity's.
         collector = EventCollector()
         wallet = _make_wallet(collector=collector)
 

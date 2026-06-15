@@ -1,9 +1,6 @@
 class ApplicationError(Exception):
-    """Base class for application-layer (use-case / query) errors.
-
-    Mirrors `domain.exceptions.DomainError`: each layer raises through its own
-    base so callers can catch a whole layer's failures with one `except`.
-    """
+    """Base class for application-layer (use-case / query) errors. Each layer
+    raises through its own base so one `except` catches the whole layer."""
 
 
 class FallbackTransactionNotVisibleError(ApplicationError):

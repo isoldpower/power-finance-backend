@@ -36,7 +36,6 @@ class TransactionMapperTests(SimpleTestCase):
         self.assertEqual(entity.amount, Decimal("12.50"))
         self.assertIsNone(entity.cancels_other)
         self.assertIsNone(entity.adjusts_other)
-        # parse_datetime returns aware datetime when offset is present
         self.assertEqual(entity.created_at.year, 2026)
 
     def test_cancels_other_string_is_parsed_to_uuid(self) -> None:
@@ -74,7 +73,6 @@ class TransactionMapperTests(SimpleTestCase):
         self.assertIsNone(entity.cancels_other)
 
     def test_missing_link_keys_default_to_none(self) -> None:
-        # row.get(...) tolerates absent keys; reproduce that path.
         row = {
             "id": _ID,
             "user_id": "1",
@@ -89,8 +87,6 @@ class TransactionMapperTests(SimpleTestCase):
         self.assertIsNone(entity.adjusts_other)
 
     def test_from_persistence_does_not_emit_creation_event(self) -> None:
-        # Mapping a stored row must not trigger a TransactionCreatedEvent
-        # — that would re-publish history every time we read.
         row = {
             "id": _ID,
             "user_id": "1",

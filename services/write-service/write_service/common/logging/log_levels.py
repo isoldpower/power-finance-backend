@@ -17,8 +17,6 @@ def log_request_failed(
     error: Exception,
     **context: object,
 ) -> None:
-    # exc_info=error keeps the stack trace the write views previously emitted
-    # via logger.exception(), while matching the read-service helper signature.
     logger.error(
         "%s: request failed%s — %s",
         action,

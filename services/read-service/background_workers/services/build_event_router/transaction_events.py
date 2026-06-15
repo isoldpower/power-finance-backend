@@ -13,6 +13,7 @@ from data_read_core.write_reactions import (
     RemoveTransactionDocument,
     RemoveTransactionReadModel,
     TrackAppliedSeq,
+    TrackEsAppliedSeq,
     UpdateTransactionDocument,
     UpdateTransactionReadModel,
 )
@@ -36,7 +37,7 @@ def subscribe_transaction_created(
                     BumpWalletListVersion(TransactionCreated),
                 ]
             ),
-            SyncProcessGroup([IndexTransactionDocument()]),
+            SyncProcessGroup([TrackEsAppliedSeq(IndexTransactionDocument(), TransactionCreated)]),
         ]
     )
 
@@ -61,7 +62,7 @@ def subscribe_transaction_deleted(
                     BumpWalletListVersion(TransactionDeleted),
                 ]
             ),
-            SyncProcessGroup([RemoveTransactionDocument()]),
+            SyncProcessGroup([TrackEsAppliedSeq(RemoveTransactionDocument(), TransactionDeleted)]),
         ]
     )
 
@@ -86,7 +87,7 @@ def subscribe_transaction_updated(
                     BumpWalletListVersion(TransactionUpdated),
                 ]
             ),
-            SyncProcessGroup([UpdateTransactionDocument()]),
+            SyncProcessGroup([TrackEsAppliedSeq(UpdateTransactionDocument(), TransactionUpdated)]),
         ]
     )
 

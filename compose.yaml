@@ -8,6 +8,7 @@ include:
   - services/write-service/compose.yaml
   - services/read-service/compose.yaml
   - services/push-service/compose.yaml
+  - services/webhook-service/compose.yaml
 
 services:
   api-gateway:

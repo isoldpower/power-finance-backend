@@ -20,15 +20,11 @@ from write_service.common.idempotency.atomic_redis.outcomes import (
 
 class EntryClassifierTests(SimpleTestCase):
     def test_missing_entry_is_treated_as_in_progress(self) -> None:
-        # Defensive choice: if Redis lost the slot between try_acquire
-        # and re-read, behave as if another request is mid-flight rather
-        # than racing past it.
         outcome = EntryClassifier.classify(existing_entry=None, request_hash="h")
 
         self.assertIsInstance(outcome, InProgress)
 
     def test_different_hash_returns_mismatch_with_stored_hash(self) -> None:
-        # Same key, different body = client misuse → reject.
         outcome = EntryClassifier.classify(
             existing_entry={"state": STATE_IN_FLIGHT, "request_hash": "stored"},
             request_hash="incoming",
@@ -80,7 +76,6 @@ class EntryClassifierTests(SimpleTestCase):
         self.assertEqual(outcome.response.headers, {})
 
     def test_status_code_is_coerced_to_int(self) -> None:
-        # Stored as string after a sloppy round-trip — still classify as completed.
         outcome = EntryClassifier.classify(
             existing_entry={
                 "state": STATE_COMPLETED,
@@ -95,9 +90,6 @@ class EntryClassifierTests(SimpleTestCase):
         self.assertEqual(outcome.response.status_code, 201)
 
     def test_empty_stored_hash_falls_through_to_state_check(self) -> None:
-        # `if stored_hash and stored_hash != request_hash` short-circuits
-        # when the stored hash is empty — useful for legacy/forced entries
-        # without hashes. Pin this behavior.
         outcome = EntryClassifier.classify(
             existing_entry={"state": STATE_IN_FLIGHT, "request_hash": ""},
             request_hash="any",

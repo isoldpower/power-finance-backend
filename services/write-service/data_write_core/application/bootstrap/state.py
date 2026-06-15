@@ -4,10 +4,12 @@ from typing import Any
 from ..interfaces import (
     CurrencyRepository,
     EventBus,
+    NotificationRepository,
     OutboxRepository,
     TransactionRepository,
     UserRepository,
     WalletRepository,
+    WebhookRepository,
 )
 
 
@@ -24,6 +26,8 @@ class RepositoryRegistry:
     currency_repository: "CurrencyRepository"
     outbox_repository: "OutboxRepository"
     user_repository: "UserRepository"
+    notification_repository: "NotificationRepository"
+    webhook_repository: "WebhookRepository"
 
 
 @dataclass

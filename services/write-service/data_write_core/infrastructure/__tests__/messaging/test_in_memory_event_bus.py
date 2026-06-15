@@ -23,7 +23,7 @@ class InMemoryEventBusTests(IsolatedAsyncioTestCase):
     async def test_publish_with_no_subscribers_is_a_silent_noop(self) -> None:
         bus = InMemoryEventBus()
 
-        await bus.publish([_AlphaEvent(payload="x")])  # should not raise
+        await bus.publish([_AlphaEvent(payload="x")])
 
     async def test_handler_receives_event_of_its_subscribed_type(self) -> None:
         bus = InMemoryEventBus()
@@ -81,8 +81,6 @@ class InMemoryEventBusTests(IsolatedAsyncioTestCase):
         self.assertEqual(seen, ["a", "b", "c"])
 
     async def test_handler_exception_propagates_and_halts_remaining_dispatch(self) -> None:
-        # Pin current behavior: a raising handler aborts the rest of the batch.
-        # Documented here so a future "swallow & continue" change is intentional.
         bus = InMemoryEventBus()
         seen: list[str] = []
 
@@ -98,6 +96,4 @@ class InMemoryEventBusTests(IsolatedAsyncioTestCase):
         with self.assertRaises(RuntimeError):
             await bus.publish([_AlphaEvent(payload="a"), _AlphaEvent(payload="b")])
 
-        # First handler ran for event "a"; the explosion in handler #2
-        # short-circuits the remaining event "b".
         self.assertEqual(seen, ["a"])

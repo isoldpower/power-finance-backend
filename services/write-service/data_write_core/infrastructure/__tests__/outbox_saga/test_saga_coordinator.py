@@ -1,12 +1,5 @@
-"""FinalizedSagaCoordinator: forward execution + rollback contract.
-
-Pins the four guarantees the rest of the codebase relies on:
-1. Steps run in order.
-2. On forward failure of step N, only steps 0..N-1 are compensated, in reverse.
-3. On final-step failure, ALL transaction steps are compensated.
-4. Compensation exceptions are swallowed (logged), never re-raised
-   over the original error.
-"""
+"""FinalizedSagaCoordinator forward execution + rollback contract: ordered
+steps, reverse compensation on failure, swallowed compensation errors."""
 
 from __future__ import annotations
 
@@ -131,7 +124,6 @@ class FinalizedSagaCoordinatorRollbackTests(IsolatedAsyncioTestCase):
         with self.assertRaises(RuntimeError):
             await coordinator.run_transaction()
 
-        # 'c' failed mid-forward; only a and b were completed and must be compensated in reverse.
         self.assertEqual(
             log,
             [
@@ -173,8 +165,6 @@ class FinalizedSagaCoordinatorRollbackTests(IsolatedAsyncioTestCase):
         with self.assertRaises(RuntimeError):
             await coordinator.run_transaction()
 
-        # Final step is NOT appended to completed_steps on failure,
-        # so only a + b compensate (reverse order).
         self.assertEqual(
             log,
             [
@@ -187,8 +177,6 @@ class FinalizedSagaCoordinatorRollbackTests(IsolatedAsyncioTestCase):
         )
 
     async def test_compensation_exception_is_swallowed_and_others_run(self) -> None:
-        # If compensation N raises, compensation N-1 must still execute,
-        # and the original forward exception must still propagate.
         log: list[str] = []
         forward_boom = RuntimeError("c forward")
         coordinator = FinalizedSagaCoordinator(

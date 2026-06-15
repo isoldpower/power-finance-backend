@@ -4,10 +4,7 @@ from django.conf import settings
 
 class DataWriteCoreConfig(AppConfig):
     """Single Django app holding all write-side business logic and
-    cross-cutting infrastructure: domain aggregates (accounts, finances),
-    the transactional outbox, the ImmuDB SAGA adapter, and the Fraud Redis
-    fast-path client. Will be split into multiple apps if/when the surface
-    area justifies it."""
+    cross-cutting infrastructure (outbox, SAGA adapter, fraud client)."""
 
     default_auto_field = "django.db.models.BigAutoField"
     name = "data_write_core"

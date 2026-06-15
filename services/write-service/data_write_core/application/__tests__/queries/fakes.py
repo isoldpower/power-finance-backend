@@ -101,7 +101,6 @@ class FakeTransactionRepository:
         self._unsettled = unsettled or {}
         self._user_transactions = user_transactions or []
         self._by_id = {str(tx.unique_id): tx for tx in self._user_transactions}
-        # Derived from the ledger so fakes mirror the real repo's queries.
         self._cancelling = {
             str(tx.cancels_other): tx
             for tx in self._user_transactions

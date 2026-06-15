@@ -44,10 +44,11 @@ class UpdateExistingWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWall
         transaction_repository: TransactionRepository | None = None,
         outbox_repository: OutboxRepository | None = None,
     ) -> None:
-        registry = get_repository_registry()
-        wallet_repository = wallet_repository or registry.wallet_repository
-        transaction_repository = transaction_repository or registry.transaction_repository
-        outbox_repository = outbox_repository or registry.outbox_repository
+        if wallet_repository is None or transaction_repository is None or outbox_repository is None:
+            registry = get_repository_registry()
+            wallet_repository = wallet_repository or registry.wallet_repository
+            transaction_repository = transaction_repository or registry.transaction_repository
+            outbox_repository = outbox_repository or registry.outbox_repository
 
         LoadWalletMixin.__init__(self, wallet_repository, transaction_repository)
 
@@ -61,6 +62,13 @@ class UpdateExistingWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWall
             user_id=command.user_id,
         )
 
+        return await self.rename_and_emit(wallet_aggregate, command)
+
+    async def rename_and_emit(
+        self,
+        wallet_aggregate: WalletAggregate,
+        command: UpdateExistingWalletCommand,
+    ) -> tuple[WalletDTO, int]:
         timestamp_now = datetime.now()
         previous_data = WalletData(
             title=wallet_aggregate.root.title,

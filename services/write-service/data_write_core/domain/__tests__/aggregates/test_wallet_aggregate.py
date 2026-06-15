@@ -1,10 +1,5 @@
-"""WalletAggregate: balance derivation, apply_transaction, rename, soft_delete.
-
-The wallet aggregate is the only place balance arithmetic happens; these
-tests pin the contract: balance = checkpoint + sum(unsettled), zero-amount
-transactions are rejected, mutations emit the correct events, and idempotent
-no-op mutations stay silent.
-"""
+"""WalletAggregate: balance derivation, apply_transaction, rename, soft_delete
+(balance = checkpoint + sum(unsettled), idempotent no-op mutations)."""
 
 from __future__ import annotations
 
@@ -112,9 +107,6 @@ class WalletAggregateBalanceTests(SimpleTestCase):
         self.assertEqual(aggregate.balance, Decimal("275"))
 
     def test_balance_handles_negative_drift_below_zero(self) -> None:
-        # Aggregate doesn't enforce non-negativity; that's a higher-level
-        # business rule. Pin the math so a future "clamp to zero" tweak
-        # is a conscious decision, not an accident.
         wallet = _wallet()
         wallet_id = UUID(wallet.unique_id)
 
@@ -131,8 +123,6 @@ class WalletAggregateBalanceTests(SimpleTestCase):
         self.assertEqual(aggregate.balance, Decimal("-40"))
 
     def test_unsettled_transactions_list_is_copied_not_aliased(self) -> None:
-        # Caller-provided list must not be mutated when the aggregate
-        # records new transactions.
         wallet = _wallet()
         external_list: list[TransactionEntity] = []
 
@@ -169,8 +159,6 @@ class WalletAggregateApplyTransactionTests(SimpleTestCase):
     def test_apply_transaction_emits_transaction_created_event_via_aggregate_collector(
         self,
     ) -> None:
-        # Both wallet and transaction share the aggregate's collector,
-        # so the event surfaces when pulling from the aggregate.
         collector = EventCollector()
         wallet = _wallet(collector=collector)
         aggregate = WalletAggregate(wallet, [], None)
@@ -252,7 +240,6 @@ class WalletAggregateSoftDeleteTests(SimpleTestCase):
 
         aggregate.soft_delete(datetime(2026, 2, 1))
 
-        # deleted_at unchanged + no second event
         self.assertEqual(wallet.deleted_at, datetime(2026, 1, 5))
         self.assertEqual(aggregate.pull_events(), [])
 

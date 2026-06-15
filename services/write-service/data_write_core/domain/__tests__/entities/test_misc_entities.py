@@ -42,8 +42,6 @@ class BalanceCheckpointEntityTests(SimpleTestCase):
 
 class CurrencyEntityTests(SimpleTestCase):
     def test_unique_id_equals_currency_code(self) -> None:
-        # CurrencyEntity uses the ISO code as its identity. Read-side
-        # joins rely on this — pin it.
         entity = CurrencyEntity(
             currency_data=Currency(code="USD", name="US Dollar", numeric="840", digits=2)
         )

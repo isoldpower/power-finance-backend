@@ -169,6 +169,589 @@ func (x *WebhookDeliveryStatusChanged) GetStatus() WebhookDeliveryStatus {
 	return WebhookDeliveryStatus_WEBHOOK_DELIVERY_STATUS_UNSPECIFIED
 }
 
+// Webhook endpoint configuration events. Consumed by the read-service
+// (projection for reads — MUST NOT project the secret) and by the
+// webhook-service (local delivery config, including the signing secret).
+type WebhookEndpointCreated struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	SchemaVersion int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	WebhookId     string                 `protobuf:"bytes,10,opt,name=webhook_id,json=webhookId,proto3" json:"webhook_id,omitempty"`
+	UserId        int32                  `protobuf:"varint,11,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Title         string                 `protobuf:"bytes,12,opt,name=title,proto3" json:"title,omitempty"`
+	Url           string                 `protobuf:"bytes,13,opt,name=url,proto3" json:"url,omitempty"`
+	// HMAC-SHA256 signing secret. Travels only on creation/rotation so the
+	// webhook-service can sign deliveries; the owning user already saw it in
+	// the HTTP response.
+	Secret        string                 `protobuf:"bytes,14,opt,name=secret,proto3" json:"secret,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WebhookEndpointCreated) Reset() {
+	*x = WebhookEndpointCreated{}
+	mi := &file_webhook_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WebhookEndpointCreated) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WebhookEndpointCreated) ProtoMessage() {}
+
+func (x *WebhookEndpointCreated) ProtoReflect() protoreflect.Message {
+	mi := &file_webhook_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WebhookEndpointCreated.ProtoReflect.Descriptor instead.
+func (*WebhookEndpointCreated) Descriptor() ([]byte, []int) {
+	return file_webhook_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *WebhookEndpointCreated) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *WebhookEndpointCreated) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *WebhookEndpointCreated) GetSchemaVersion() int32 {
+	if x != nil {
+		return x.SchemaVersion
+	}
+	return 0
+}
+
+func (x *WebhookEndpointCreated) GetWebhookId() string {
+	if x != nil {
+		return x.WebhookId
+	}
+	return ""
+}
+
+func (x *WebhookEndpointCreated) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *WebhookEndpointCreated) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *WebhookEndpointCreated) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *WebhookEndpointCreated) GetSecret() string {
+	if x != nil {
+		return x.Secret
+	}
+	return ""
+}
+
+func (x *WebhookEndpointCreated) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type WebhookEndpointUpdated struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	SchemaVersion int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	WebhookId     string                 `protobuf:"bytes,10,opt,name=webhook_id,json=webhookId,proto3" json:"webhook_id,omitempty"`
+	UserId        int32                  `protobuf:"varint,11,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Title         string                 `protobuf:"bytes,12,opt,name=title,proto3" json:"title,omitempty"`
+	Url           string                 `protobuf:"bytes,13,opt,name=url,proto3" json:"url,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WebhookEndpointUpdated) Reset() {
+	*x = WebhookEndpointUpdated{}
+	mi := &file_webhook_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WebhookEndpointUpdated) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WebhookEndpointUpdated) ProtoMessage() {}
+
+func (x *WebhookEndpointUpdated) ProtoReflect() protoreflect.Message {
+	mi := &file_webhook_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WebhookEndpointUpdated.ProtoReflect.Descriptor instead.
+func (*WebhookEndpointUpdated) Descriptor() ([]byte, []int) {
+	return file_webhook_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *WebhookEndpointUpdated) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *WebhookEndpointUpdated) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *WebhookEndpointUpdated) GetSchemaVersion() int32 {
+	if x != nil {
+		return x.SchemaVersion
+	}
+	return 0
+}
+
+func (x *WebhookEndpointUpdated) GetWebhookId() string {
+	if x != nil {
+		return x.WebhookId
+	}
+	return ""
+}
+
+func (x *WebhookEndpointUpdated) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *WebhookEndpointUpdated) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *WebhookEndpointUpdated) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *WebhookEndpointUpdated) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type WebhookEndpointDeleted struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	SchemaVersion int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	WebhookId     string                 `protobuf:"bytes,10,opt,name=webhook_id,json=webhookId,proto3" json:"webhook_id,omitempty"`
+	UserId        int32                  `protobuf:"varint,11,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	DeletedAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WebhookEndpointDeleted) Reset() {
+	*x = WebhookEndpointDeleted{}
+	mi := &file_webhook_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WebhookEndpointDeleted) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WebhookEndpointDeleted) ProtoMessage() {}
+
+func (x *WebhookEndpointDeleted) ProtoReflect() protoreflect.Message {
+	mi := &file_webhook_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WebhookEndpointDeleted.ProtoReflect.Descriptor instead.
+func (*WebhookEndpointDeleted) Descriptor() ([]byte, []int) {
+	return file_webhook_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *WebhookEndpointDeleted) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *WebhookEndpointDeleted) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *WebhookEndpointDeleted) GetSchemaVersion() int32 {
+	if x != nil {
+		return x.SchemaVersion
+	}
+	return 0
+}
+
+func (x *WebhookEndpointDeleted) GetWebhookId() string {
+	if x != nil {
+		return x.WebhookId
+	}
+	return ""
+}
+
+func (x *WebhookEndpointDeleted) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *WebhookEndpointDeleted) GetDeletedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DeletedAt
+	}
+	return nil
+}
+
+type WebhookSecretRotated struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	SchemaVersion int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	WebhookId     string                 `protobuf:"bytes,10,opt,name=webhook_id,json=webhookId,proto3" json:"webhook_id,omitempty"`
+	UserId        int32                  `protobuf:"varint,11,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Secret        string                 `protobuf:"bytes,12,opt,name=secret,proto3" json:"secret,omitempty"`
+	RotatedAt     *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=rotated_at,json=rotatedAt,proto3" json:"rotated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WebhookSecretRotated) Reset() {
+	*x = WebhookSecretRotated{}
+	mi := &file_webhook_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WebhookSecretRotated) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WebhookSecretRotated) ProtoMessage() {}
+
+func (x *WebhookSecretRotated) ProtoReflect() protoreflect.Message {
+	mi := &file_webhook_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WebhookSecretRotated.ProtoReflect.Descriptor instead.
+func (*WebhookSecretRotated) Descriptor() ([]byte, []int) {
+	return file_webhook_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *WebhookSecretRotated) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *WebhookSecretRotated) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *WebhookSecretRotated) GetSchemaVersion() int32 {
+	if x != nil {
+		return x.SchemaVersion
+	}
+	return 0
+}
+
+func (x *WebhookSecretRotated) GetWebhookId() string {
+	if x != nil {
+		return x.WebhookId
+	}
+	return ""
+}
+
+func (x *WebhookSecretRotated) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *WebhookSecretRotated) GetSecret() string {
+	if x != nil {
+		return x.Secret
+	}
+	return ""
+}
+
+func (x *WebhookSecretRotated) GetRotatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RotatedAt
+	}
+	return nil
+}
+
+type WebhookSubscriptionAdded struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	EventId        string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	SchemaVersion  int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	SubscriptionId string                 `protobuf:"bytes,10,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
+	WebhookId      string                 `protobuf:"bytes,11,opt,name=webhook_id,json=webhookId,proto3" json:"webhook_id,omitempty"`
+	UserId         int32                  `protobuf:"varint,12,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// One of the WebhookType values (e.g. "transaction.created").
+	EventType     string                 `protobuf:"bytes,13,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WebhookSubscriptionAdded) Reset() {
+	*x = WebhookSubscriptionAdded{}
+	mi := &file_webhook_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WebhookSubscriptionAdded) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WebhookSubscriptionAdded) ProtoMessage() {}
+
+func (x *WebhookSubscriptionAdded) ProtoReflect() protoreflect.Message {
+	mi := &file_webhook_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WebhookSubscriptionAdded.ProtoReflect.Descriptor instead.
+func (*WebhookSubscriptionAdded) Descriptor() ([]byte, []int) {
+	return file_webhook_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *WebhookSubscriptionAdded) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *WebhookSubscriptionAdded) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *WebhookSubscriptionAdded) GetSchemaVersion() int32 {
+	if x != nil {
+		return x.SchemaVersion
+	}
+	return 0
+}
+
+func (x *WebhookSubscriptionAdded) GetSubscriptionId() string {
+	if x != nil {
+		return x.SubscriptionId
+	}
+	return ""
+}
+
+func (x *WebhookSubscriptionAdded) GetWebhookId() string {
+	if x != nil {
+		return x.WebhookId
+	}
+	return ""
+}
+
+func (x *WebhookSubscriptionAdded) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *WebhookSubscriptionAdded) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *WebhookSubscriptionAdded) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type WebhookSubscriptionRemoved struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	EventId        string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	SchemaVersion  int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	SubscriptionId string                 `protobuf:"bytes,10,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
+	WebhookId      string                 `protobuf:"bytes,11,opt,name=webhook_id,json=webhookId,proto3" json:"webhook_id,omitempty"`
+	UserId         int32                  `protobuf:"varint,12,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	RemovedAt      *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=removed_at,json=removedAt,proto3" json:"removed_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *WebhookSubscriptionRemoved) Reset() {
+	*x = WebhookSubscriptionRemoved{}
+	mi := &file_webhook_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WebhookSubscriptionRemoved) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WebhookSubscriptionRemoved) ProtoMessage() {}
+
+func (x *WebhookSubscriptionRemoved) ProtoReflect() protoreflect.Message {
+	mi := &file_webhook_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WebhookSubscriptionRemoved.ProtoReflect.Descriptor instead.
+func (*WebhookSubscriptionRemoved) Descriptor() ([]byte, []int) {
+	return file_webhook_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *WebhookSubscriptionRemoved) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *WebhookSubscriptionRemoved) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *WebhookSubscriptionRemoved) GetSchemaVersion() int32 {
+	if x != nil {
+		return x.SchemaVersion
+	}
+	return 0
+}
+
+func (x *WebhookSubscriptionRemoved) GetSubscriptionId() string {
+	if x != nil {
+		return x.SubscriptionId
+	}
+	return ""
+}
+
+func (x *WebhookSubscriptionRemoved) GetWebhookId() string {
+	if x != nil {
+		return x.WebhookId
+	}
+	return ""
+}
+
+func (x *WebhookSubscriptionRemoved) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *WebhookSubscriptionRemoved) GetRemovedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RemovedAt
+	}
+	return nil
+}
+
 var File_webhook_proto protoreflect.FileDescriptor
 
 const file_webhook_proto_rawDesc = "" +
@@ -185,7 +768,83 @@ const file_webhook_proto_rawDesc = "" +
 	"\vendpoint_id\x18\v \x01(\tR\n" +
 	"endpointId\x12\x17\n" +
 	"\auser_id\x18\f \x01(\x05R\x06userId\x12F\n" +
-	"\x06status\x18\r \x01(\x0e2..power_finance.events.v1.WebhookDeliveryStatusR\x06status*\xdf\x01\n" +
+	"\x06status\x18\r \x01(\x0e2..power_finance.events.v1.WebhookDeliveryStatusR\x06status\"\xca\x02\n" +
+	"\x16WebhookEndpointCreated\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
+	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x12%\n" +
+	"\x0eschema_version\x18\x03 \x01(\x05R\rschemaVersion\x12\x1d\n" +
+	"\n" +
+	"webhook_id\x18\n" +
+	" \x01(\tR\twebhookId\x12\x17\n" +
+	"\auser_id\x18\v \x01(\x05R\x06userId\x12\x14\n" +
+	"\x05title\x18\f \x01(\tR\x05title\x12\x10\n" +
+	"\x03url\x18\r \x01(\tR\x03url\x12\x16\n" +
+	"\x06secret\x18\x0e \x01(\tR\x06secret\x129\n" +
+	"\n" +
+	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xb2\x02\n" +
+	"\x16WebhookEndpointUpdated\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
+	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x12%\n" +
+	"\x0eschema_version\x18\x03 \x01(\x05R\rschemaVersion\x12\x1d\n" +
+	"\n" +
+	"webhook_id\x18\n" +
+	" \x01(\tR\twebhookId\x12\x17\n" +
+	"\auser_id\x18\v \x01(\x05R\x06userId\x12\x14\n" +
+	"\x05title\x18\f \x01(\tR\x05title\x12\x10\n" +
+	"\x03url\x18\r \x01(\tR\x03url\x129\n" +
+	"\n" +
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x8a\x02\n" +
+	"\x16WebhookEndpointDeleted\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
+	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x12%\n" +
+	"\x0eschema_version\x18\x03 \x01(\x05R\rschemaVersion\x12\x1d\n" +
+	"\n" +
+	"webhook_id\x18\n" +
+	" \x01(\tR\twebhookId\x12\x17\n" +
+	"\auser_id\x18\v \x01(\x05R\x06userId\x129\n" +
+	"\n" +
+	"deleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAt\"\xa0\x02\n" +
+	"\x14WebhookSecretRotated\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
+	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x12%\n" +
+	"\x0eschema_version\x18\x03 \x01(\x05R\rschemaVersion\x12\x1d\n" +
+	"\n" +
+	"webhook_id\x18\n" +
+	" \x01(\tR\twebhookId\x12\x17\n" +
+	"\auser_id\x18\v \x01(\x05R\x06userId\x12\x16\n" +
+	"\x06secret\x18\f \x01(\tR\x06secret\x129\n" +
+	"\n" +
+	"rotated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\trotatedAt\"\xd4\x02\n" +
+	"\x18WebhookSubscriptionAdded\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
+	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x12%\n" +
+	"\x0eschema_version\x18\x03 \x01(\x05R\rschemaVersion\x12'\n" +
+	"\x0fsubscription_id\x18\n" +
+	" \x01(\tR\x0esubscriptionId\x12\x1d\n" +
+	"\n" +
+	"webhook_id\x18\v \x01(\tR\twebhookId\x12\x17\n" +
+	"\auser_id\x18\f \x01(\x05R\x06userId\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\r \x01(\tR\teventType\x129\n" +
+	"\n" +
+	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xb7\x02\n" +
+	"\x1aWebhookSubscriptionRemoved\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
+	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x12%\n" +
+	"\x0eschema_version\x18\x03 \x01(\x05R\rschemaVersion\x12'\n" +
+	"\x0fsubscription_id\x18\n" +
+	" \x01(\tR\x0esubscriptionId\x12\x1d\n" +
+	"\n" +
+	"webhook_id\x18\v \x01(\tR\twebhookId\x12\x17\n" +
+	"\auser_id\x18\f \x01(\x05R\x06userId\x129\n" +
+	"\n" +
+	"removed_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tremovedAt*\xdf\x01\n" +
 	"\x15WebhookDeliveryStatus\x12'\n" +
 	"#WEBHOOK_DELIVERY_STATUS_UNSPECIFIED\x10\x00\x12'\n" +
 	"#WEBHOOK_DELIVERY_STATUS_IN_PROGRESS\x10\x01\x12#\n" +
@@ -206,20 +865,38 @@ func file_webhook_proto_rawDescGZIP() []byte {
 }
 
 var file_webhook_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_webhook_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_webhook_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_webhook_proto_goTypes = []any{
 	(WebhookDeliveryStatus)(0),           // 0: power_finance.events.v1.WebhookDeliveryStatus
 	(*WebhookDeliveryStatusChanged)(nil), // 1: power_finance.events.v1.WebhookDeliveryStatusChanged
-	(*timestamppb.Timestamp)(nil),        // 2: google.protobuf.Timestamp
+	(*WebhookEndpointCreated)(nil),       // 2: power_finance.events.v1.WebhookEndpointCreated
+	(*WebhookEndpointUpdated)(nil),       // 3: power_finance.events.v1.WebhookEndpointUpdated
+	(*WebhookEndpointDeleted)(nil),       // 4: power_finance.events.v1.WebhookEndpointDeleted
+	(*WebhookSecretRotated)(nil),         // 5: power_finance.events.v1.WebhookSecretRotated
+	(*WebhookSubscriptionAdded)(nil),     // 6: power_finance.events.v1.WebhookSubscriptionAdded
+	(*WebhookSubscriptionRemoved)(nil),   // 7: power_finance.events.v1.WebhookSubscriptionRemoved
+	(*timestamppb.Timestamp)(nil),        // 8: google.protobuf.Timestamp
 }
 var file_webhook_proto_depIdxs = []int32{
-	2, // 0: power_finance.events.v1.WebhookDeliveryStatusChanged.occurred_at:type_name -> google.protobuf.Timestamp
-	0, // 1: power_finance.events.v1.WebhookDeliveryStatusChanged.status:type_name -> power_finance.events.v1.WebhookDeliveryStatus
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	8,  // 0: power_finance.events.v1.WebhookDeliveryStatusChanged.occurred_at:type_name -> google.protobuf.Timestamp
+	0,  // 1: power_finance.events.v1.WebhookDeliveryStatusChanged.status:type_name -> power_finance.events.v1.WebhookDeliveryStatus
+	8,  // 2: power_finance.events.v1.WebhookEndpointCreated.occurred_at:type_name -> google.protobuf.Timestamp
+	8,  // 3: power_finance.events.v1.WebhookEndpointCreated.created_at:type_name -> google.protobuf.Timestamp
+	8,  // 4: power_finance.events.v1.WebhookEndpointUpdated.occurred_at:type_name -> google.protobuf.Timestamp
+	8,  // 5: power_finance.events.v1.WebhookEndpointUpdated.updated_at:type_name -> google.protobuf.Timestamp
+	8,  // 6: power_finance.events.v1.WebhookEndpointDeleted.occurred_at:type_name -> google.protobuf.Timestamp
+	8,  // 7: power_finance.events.v1.WebhookEndpointDeleted.deleted_at:type_name -> google.protobuf.Timestamp
+	8,  // 8: power_finance.events.v1.WebhookSecretRotated.occurred_at:type_name -> google.protobuf.Timestamp
+	8,  // 9: power_finance.events.v1.WebhookSecretRotated.rotated_at:type_name -> google.protobuf.Timestamp
+	8,  // 10: power_finance.events.v1.WebhookSubscriptionAdded.occurred_at:type_name -> google.protobuf.Timestamp
+	8,  // 11: power_finance.events.v1.WebhookSubscriptionAdded.created_at:type_name -> google.protobuf.Timestamp
+	8,  // 12: power_finance.events.v1.WebhookSubscriptionRemoved.occurred_at:type_name -> google.protobuf.Timestamp
+	8,  // 13: power_finance.events.v1.WebhookSubscriptionRemoved.removed_at:type_name -> google.protobuf.Timestamp
+	14, // [14:14] is the sub-list for method output_type
+	14, // [14:14] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_webhook_proto_init() }
@@ -233,7 +910,7 @@ func file_webhook_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_webhook_proto_rawDesc), len(file_webhook_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   1,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

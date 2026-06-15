@@ -1,15 +1,72 @@
 from django.urls import path
 
 from .views.fallback_read import (
+    FallbackNotificationListView,
+    FallbackNotificationResourceView,
     FallbackTransactionListView,
     FallbackTransactionResourceView,
     FallbackWalletListView,
     FallbackWalletResourceView,
+    FallbackWebhookEventListView,
+    FallbackWebhookListView,
+    FallbackWebhookResourceView,
+)
+from .views.notifications import (
+    NotificationAckView,
+    NotificationBatchAckView,
+    NotificationResourceView,
 )
 from .views.transactions import TransactionListView, TransactionResourceView
 from .views.wallets import WalletListView, WalletResourceView
+from .views.webhooks import (
+    WebhookEventListView,
+    WebhookEventResourceView,
+    WebhookListView,
+    WebhookResourceView,
+    WebhookSecretView,
+)
 
 urlpatterns = [
+    path(
+        "webhooks/",
+        WebhookListView.as_view(),
+        name="webhooks-list",
+    ),
+    path(
+        "webhooks/<uuid:pk>/",
+        WebhookResourceView.as_view(),
+        name="webhooks-resource",
+    ),
+    path(
+        "webhooks/<uuid:pk>/secret/",
+        WebhookSecretView.as_view(),
+        name="webhooks-secret",
+    ),
+    path(
+        "webhooks/<uuid:pk>/events/",
+        WebhookEventListView.as_view(),
+        name="webhooks-event-list",
+    ),
+    path(
+        "webhooks/<uuid:pk>/events/<uuid:subscription_id>/",
+        WebhookEventResourceView.as_view(),
+        name="webhooks-event-resource",
+    ),
+    path(
+        "notifications/ack/",
+        NotificationBatchAckView.as_view(),
+        name="notifications-batch-ack",
+    ),
+    path(
+        "notifications/<uuid:notification_id>/ack/",
+        NotificationAckView.as_view(),
+        name="notifications-ack",
+    ),
+    path(
+        "notifications/<uuid:pk>/",
+        NotificationResourceView.as_view(),
+        name="notifications-resource",
+    ),
     path(
         "transactions/",
         TransactionListView.as_view(),
@@ -30,8 +87,6 @@ urlpatterns = [
         WalletResourceView.as_view(),
         name="wallets-resource",
     ),
-    # Always-consistent fallback reads. The gateway redirects here when the
-    # Read Service returns 507 (projection behind the client's Read-At-Least).
     path(
         "fallback-reads/wallets/",
         FallbackWalletListView.as_view(),
@@ -51,5 +106,30 @@ urlpatterns = [
         "fallback-reads/transactions/<uuid:pk>/",
         FallbackTransactionResourceView.as_view(),
         name="fallback-transactions-resource",
+    ),
+    path(
+        "fallback-reads/webhooks/",
+        FallbackWebhookListView.as_view(),
+        name="fallback-webhooks-list",
+    ),
+    path(
+        "fallback-reads/webhooks/<uuid:pk>/",
+        FallbackWebhookResourceView.as_view(),
+        name="fallback-webhooks-resource",
+    ),
+    path(
+        "fallback-reads/webhooks/<uuid:pk>/events/",
+        FallbackWebhookEventListView.as_view(),
+        name="fallback-webhooks-event-list",
+    ),
+    path(
+        "fallback-reads/notifications/",
+        FallbackNotificationListView.as_view(),
+        name="fallback-notifications-list",
+    ),
+    path(
+        "fallback-reads/notifications/<uuid:pk>/",
+        FallbackNotificationResourceView.as_view(),
+        name="fallback-notifications-resource",
     ),
 ]

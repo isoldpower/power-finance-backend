@@ -63,8 +63,6 @@ class DjangoWalletRepository(WalletRepository):
         return WalletMapper.to_domain(requested_wallet)
 
     async def save_wallet(self, wallet: WalletEntity) -> WalletEntity:
-        # with_deleted() so a SAGA-compensation `restore` can find
-        # rows that the soft-delete manager would otherwise hide.
         requested_wallet = await (
             WalletModel.objects.with_deleted().select_related("currency").aget(id=wallet.unique_id)
         )
@@ -73,7 +71,4 @@ class DjangoWalletRepository(WalletRepository):
         return WalletMapper.to_domain(requested_wallet)
 
     async def hard_delete_wallet(self, wallet_id: UUID) -> None:
-        # Bulk delete bypasses the model's soft-delete override and
-        # the manager's deleted_at filter, so this works whether the
-        # row is soft-deleted or live. Idempotent.
         await WalletModel.objects.with_deleted().filter(id=wallet_id).adelete()

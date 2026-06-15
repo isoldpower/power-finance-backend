@@ -1,12 +1,5 @@
-"""Service-wide async APIView. DRF's stock `APIView` ships only a sync
-`dispatch`; this subclass overrides it to await async handlers so views
-can be written as `async def get(...)` without bouncing through
-`async_to_sync` at every entry point.
-
-Ported from the old monolith's `environment/presentation/http/base_api_view.py`
-but stripped of the throttle / idempotency / Clerk-auth hooks — Kong owns
-those concerns in the CQRS architecture, so this base stays minimal.
-"""
+"""Service-wide async APIView overriding DRF's sync `dispatch` to await async
+handlers, so views can be written as `async def get(...)`."""
 
 from asgiref.sync import iscoroutinefunction, sync_to_async
 from rest_framework import exceptions

@@ -63,5 +63,4 @@ def test_adjustment_delta_folds_into_original():
 def test_effect_rows_are_never_emitted_on_their_own():
     inverse = _tx(TX_EFFECT, "-20", cancels_other=UUID(TX_ORIGINAL))
 
-    # The cancelled original isn't even present; only the effect row is.
     assert collapse_ledger([inverse]) == []

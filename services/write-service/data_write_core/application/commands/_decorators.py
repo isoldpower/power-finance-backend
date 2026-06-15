@@ -13,9 +13,8 @@ R = TypeVar("R")
 def atomic_command(
     using: str | None = None,
 ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
-    """Run the wrapped command handler inside a Django `aatomic` block.
-    Events are emitted to the outbox by the handler itself via
-    `self._publish_events(...)` so they commit alongside business writes."""
+    """Run the wrapped command handler inside a Django `aatomic` block so
+    handler-emitted outbox events commit alongside business writes."""
 
     def decorator(function: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         label = function.__qualname__

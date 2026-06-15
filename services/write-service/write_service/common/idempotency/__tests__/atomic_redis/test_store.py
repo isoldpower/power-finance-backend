@@ -1,9 +1,5 @@
-"""RedisIdempotencyStore: NX-set lock semantics with TTL, fetch-and-classify, completed-response overwrite.
-
-Uses a Redis stub that mirrors the surface the store touches. Avoids
-fakeredis as a dep; the store calls a tiny set of methods we can fake
-directly with high fidelity.
-"""
+"""RedisIdempotencyStore: NX-set lock with TTL, fetch-and-classify and completed-
+response overwrite, exercised against a small Redis stub."""
 
 from __future__ import annotations
 
@@ -71,7 +67,7 @@ class TryAcquireTests(IsolatedAsyncioTestCase):
         self.assertIsInstance(result, Acquired)
         call = redis.set_calls[0]
         self.assertTrue(call["nx"])
-        self.assertEqual(call["ex"], 30)  # default lock_ttl_seconds
+        self.assertEqual(call["ex"], 30)
         self.assertIn('"state":"in_flight"', call["value"])
         self.assertIn('"request_hash":"h"', call["value"])
 
@@ -120,7 +116,6 @@ class TryAcquireTests(IsolatedAsyncioTestCase):
     async def test_returns_already_completed_when_slot_holds_completed_entry(self) -> None:
         redis = _FakeRedis()
         store = RedisIdempotencyStore(redis)  # type: ignore[arg-type]
-        # Seed a completed entry directly.
         await store.store_response(
             user_id=1,
             idempotency_key="k",
@@ -145,7 +140,6 @@ class TryAcquireTests(IsolatedAsyncioTestCase):
             await store.try_acquire(1, "k", "h")
 
     async def test_redis_error_on_subsequent_get_raises_store_unavailable(self) -> None:
-        # First call seeds the lock; second call must GET → fails.
         redis = _FakeRedis()
         store = RedisIdempotencyStore(redis)  # type: ignore[arg-type]
         await store.try_acquire(1, "k", "h")
@@ -169,7 +163,6 @@ class StoreResponseTests(IsolatedAsyncioTestCase):
             headers={"X-Foo": "bar"},
         )
 
-        # First set was overwrite-without-nx (this one, since try_acquire wasn't called)
         last_call = redis.set_calls[-1]
         self.assertEqual(last_call["ex"], 999)
         self.assertFalse(last_call["nx"])
@@ -210,10 +203,8 @@ class ReleaseLockTests(IsolatedAsyncioTestCase):
         self.assertIn("idem:1:k", redis.delete_calls)
 
     async def test_redis_error_on_release_is_swallowed(self) -> None:
-        # Best-effort: release failures must not bubble — the caller is
-        # in cleanup and has nothing meaningful to do with the error.
         redis = _FakeRedis()
         redis.raise_on_delete = True
         store = RedisIdempotencyStore(redis)  # type: ignore[arg-type]
 
-        await store.release_lock(1, "k")  # must not raise
+        await store.release_lock(1, "k")

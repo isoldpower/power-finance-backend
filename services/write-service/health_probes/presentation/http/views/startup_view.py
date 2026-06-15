@@ -14,9 +14,8 @@ logger = get_http_logger("health")
 
 
 class StartupView(BaseAsyncAPIView):
-    """Startup probe: 200 once the process has finished initializing
-    (DB reachable, migrations applied), 503 while still bootstrapping.
-    Kubernetes polls this until success, then switches to polling readiness."""
+    """Startup probe: 200 once initialization finishes (DB reachable, migrations
+    applied), 503 while still bootstrapping."""
 
     authentication_classes: list = []
     permission_classes: list = []

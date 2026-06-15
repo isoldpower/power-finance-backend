@@ -1,10 +1,5 @@
-"""AppConfig wiring for the `write_service.common` package.
-
-Currently bootstraps the idempotency Redis client. Kept in `write_service`
-rather than `data_write_core` because the idempotency layer is service-
-infrastructure, not business logic — read-service / push-service would
-configure their own instances independently.
-"""
+"""AppConfig wiring for `write_service.common`; bootstraps the idempotency
+Redis client (service infrastructure, not business logic)."""
 
 from django.apps import AppConfig
 from django.conf import settings

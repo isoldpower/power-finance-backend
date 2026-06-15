@@ -14,9 +14,8 @@ logger = get_http_logger("health")
 
 
 class LivenessView(BaseAsyncAPIView):
-    """Liveness probe: always 200 while the ASGI worker can answer at all.
-    Kubernetes treats failures here as fatal and restarts the pod, so this
-    endpoint deliberately performs no dependency checks."""
+    """Liveness probe: always 200 while the worker can answer; performs no
+    dependency checks (failures here restart the pod)."""
 
     authentication_classes: list = []
     permission_classes: list = []

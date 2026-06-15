@@ -1,10 +1,5 @@
-"""EventCollector: collect / pull / close semantics.
-
-EventCollector is the single chokepoint between entities and the
-application layer. Pin its three guarantees: pull is destructive,
-close_after locks subsequent writes, and pull on a closed collector
-still returns (a closed collector still drains, just can't be re-filled).
-"""
+"""EventCollector collect / pull / close semantics: pull is destructive,
+close_after locks writes, and pull still drains a closed collector."""
 
 from __future__ import annotations
 
@@ -43,7 +38,6 @@ class EventCollectorTests(SimpleTestCase):
         self.assertEqual(second_pull, [])
 
     def test_pull_returns_independent_list_snapshot(self) -> None:
-        # Mutating the returned list must not affect future collects.
         collector = EventCollector()
         collector.collect(_Marker(label="x"))
 
@@ -72,7 +66,6 @@ class EventCollectorTests(SimpleTestCase):
             collector.collect(_Marker(label="nope"))
 
     def test_pull_on_closed_collector_still_returns_empty(self) -> None:
-        # Reading from a closed collector is a no-op, not an error.
         collector = EventCollector()
         collector.pull_events(close_after=True)
 

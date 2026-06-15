@@ -23,11 +23,9 @@ def collapse_ledger(
 
     collapsed_transactions: list[CollapsedTransaction] = []
     for transaction_row in transactions:
-        # Effect rows (inverses / adjustments) are never standalone transactions.
         if transaction_row.cancels_other is not None or transaction_row.adjusts_other is not None:
             continue
 
-        # An original that has since been cancelled collapses to nothing.
         original_id = UUID(transaction_row.unique_id)
         if original_id in cancelled_ids:
             continue

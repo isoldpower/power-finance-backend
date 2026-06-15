@@ -9,9 +9,8 @@ from data_write_core.domain.value_objects import OutboxEntry
 
 
 class OutboxSagaStep(SagaStep[int]):
-    """SAGA step whose forward() appends outbox entries and records their
-    sequence numbers. `last_appended_sequence` exposes the latest (surfaced
-    as X-Write-Version)."""
+    """SAGA step whose forward() appends outbox entries; `last_appended_sequence`
+    exposes the latest (surfaced as X-Write-Version)."""
 
     def __init__(self) -> None:
         self._appended_sequences: list[int] = []

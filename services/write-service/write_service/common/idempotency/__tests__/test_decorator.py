@@ -29,15 +29,11 @@ from write_service.common.idempotency.exceptions import (
     StoreUnavailable,
 )
 
-# ---------------------------------------------------------------------------
-# Fakes
-# ---------------------------------------------------------------------------
-
 
 @dataclass
 class _FakeEntry:
     request_hash: str
-    state: str  # "in_flight" or "completed"
+    state: str
     response: StoredResponse | None = None
 
 
@@ -104,11 +100,6 @@ def _make_request(
     )
 
 
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
-
-
 class IdempotentDecoratorTests(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.store = FakeStore()
@@ -140,7 +131,7 @@ class IdempotentDecoratorTests(IsolatedAsyncioTestCase):
         replay = await view(self, req)
         self.assertEqual(replay.status_code, 201)
         self.assertEqual(replay["Idempotent-Replayed"], "true")
-        self.assertEqual(self.handler_calls, 1)  # handler not re-invoked
+        self.assertEqual(self.handler_calls, 1)
 
     async def test_same_key_different_body_returns_422(self) -> None:
         view = self._view(required=True)
@@ -153,7 +144,6 @@ class IdempotentDecoratorTests(IsolatedAsyncioTestCase):
 
     async def test_in_flight_returns_409(self) -> None:
         view = self._view(required=True)
-        # Pre-seed the store with an in-flight marker (simulate concurrent request).
         from write_service.common.idempotency.request_hash import fingerprint
 
         body = {"amount": "10"}
@@ -202,7 +192,6 @@ class IdempotentDecoratorTests(IsolatedAsyncioTestCase):
         req = _make_request(headers={IDEMPOTENCY_HEADER: "k-6"})
         await view(self, req)
 
-        # Lock released — retry with same key + same body proceeds, doesn't 409.
         view2 = self._view(required=True)
         retry = await view2(self, req)
         self.assertEqual(retry.status_code, 201)
@@ -220,7 +209,6 @@ class IdempotentDecoratorTests(IsolatedAsyncioTestCase):
         with self.assertRaises(RuntimeError):
             await post(self, req)
 
-        # Lock released — second attempt re-runs the handler (not cached).
         @idempotent(required=True)
         async def post_ok(self_view, request):
             view.handler_calls += 1

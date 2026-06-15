@@ -240,3 +240,108 @@ def log_user_projected(user_id: int, external_id: str) -> None:
         user_id,
         external_id,
     )
+
+
+def log_notification_postgres_created(notification_id: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Received NotificationCreated payload for notification %s.",
+        notification_id,
+    )
+
+
+def log_notification_postgres_acknowledged(notification_ids: list[str], count: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Acknowledged notifications %s in read store (rows=%s).",
+        notification_ids,
+        count,
+    )
+
+
+def log_notification_postgres_removed(notification_id: str, count: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Removed notification %s from read store (rows=%s).",
+        notification_id,
+        count,
+    )
+
+
+def log_notification_list_version_bumped(user_id: int, version: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Bumped notification list version for user %s to %s.",
+        user_id,
+        version,
+    )
+
+
+def log_notification_cache_evicted(key: str, removed: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Evicted cache key %s (removed=%s).",
+        key,
+        removed,
+    )
+
+
+def log_webhook_postgres_created(webhook_id: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Received WebhookEndpointCreated payload for webhook %s.",
+        webhook_id,
+    )
+
+
+def log_webhook_postgres_updated(webhook_id: str, count: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Updated webhook %s in read store (rows=%s).",
+        webhook_id,
+        count,
+    )
+
+
+def log_webhook_postgres_removed(webhook_id: str, count: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Removed webhook %s from read store (rows=%s).",
+        webhook_id,
+        count,
+    )
+
+
+def log_webhook_subscription_postgres_created(subscription_id: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Received WebhookSubscriptionAdded payload for subscription %s.",
+        subscription_id,
+    )
+
+
+def log_webhook_subscription_postgres_removed(subscription_id: str, count: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Removed webhook subscription %s from read store (rows=%s).",
+        subscription_id,
+        count,
+    )
+
+
+def log_webhook_list_version_bumped(user_id: int, version: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Bumped webhook list version for user %s to %s.",
+        user_id,
+        version,
+    )
+
+
+def log_webhook_cache_evicted(key: str, removed: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Evicted cache key %s (removed=%s).",
+        key,
+        removed,
+    )

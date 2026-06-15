@@ -1,8 +1,5 @@
-"""HTTP-mapped exceptions for the idempotency layer.
-
-These extend DRF's `APIException` so the framework's exception handler turns
-them into proper responses without any view-level translation.
-"""
+"""HTTP-mapped exceptions for the idempotency layer, extending DRF's
+`APIException` so the framework handler renders them directly."""
 
 from rest_framework import status
 from rest_framework.exceptions import APIException
