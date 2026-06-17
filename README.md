@@ -1,18 +1,81 @@
-# Power Finance — CQRS workspace
+# Power Finance
 
-A CQRS architecture monorepo: a write side and read side split across services,
-fronted by a Kong API gateway, communicating over Kafka via a transactional
-outbox.
+> A learning-grade fintech backend built on **CQRS** — a consistency-oriented
+> write side and an availability-oriented read side, bridged by a Kafka
+> transactional outbox, with explicit read-your-writes, real-time SSE, signed
+> webhooks, and a two-tier fraud path.
 
-## Layout
+<p align="center">
+  <img src="docs/images/system-design.svg" alt="Power Finance system design" width="920">
+</p>
 
-- `services/` — `write-service` and `read-service` (Python/Django, uv workspace
-  members), `push-service` and `webhook-service` (Go, managed by `go mod`).
-- `libraries/` — shared Python libs (`correlation-py`, `kafka-client-py`,
-  `read-at-least-py`, `saga-pattern-py`, `kafka-messages-proto`) and the Go
-  `kafka-client-go`.
-- `infrastructure/` — Kafka, Kong gateway, Postgres, Debezium. See
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white">
+  <img alt="Go" src="https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white">
+  <img alt="Kafka" src="https://img.shields.io/badge/Kafka-KRaft-231F20?logo=apachekafka&logoColor=white">
+  <img alt="Postgres" src="https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white">
+  <img alt="Kong" src="https://img.shields.io/badge/Kong-Gateway-003459?logo=kong&logoColor=white">
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white">
+</p>
+
+---
+
+## Highlights
+
+- **CQRS split** — a synchronous, consistency-first write side (CAP: C) and an
+  eventually-consistent, availability-first read side (CAP: A), never sharing a
+  database.
+- **Transactional outbox → Kafka** — the write side commits domain changes and
+  outbox rows atomically; Debezium ships them to `events.async` keyed per user.
+- **Read-your-writes, opt-in** — clients pass a `Read-At-Least` header (a Postgres
+  outbox seq); a lagging read model returns `507` and the gateway transparently
+  falls back to the write side's consistent endpoints.
+- **Real-time** — the push service fans `events.async` out to clients over SSE,
+  authenticated per-user at the gateway.
+- **Webhooks** — durable, signed (HMAC) delivery with retries, a retry topic, and
+  a DLQ; schema owned by Goose migrations.
+- **Immutable audit** — writes mirror to ImmuDB with SAGA compensation against
+  Postgres.
+- **Gateway** — Kong with in-tree Lua plugins: Clerk JWT auth, the Read-At-Least
+  sign/verify pair, read-fallback, and two-tier (IP + per-user) rate limiting.
+- **Fraud (planned)** — a deep-path fraud service on Java/Apache Flink
+  ([ADR-0001](docs/adr-0001-fraud-service-java-flink.md)).
+
+## Services
+
+| Service | Stack | Role |
+| --- | --- | --- |
+| **write-service** | Python · Django | Commands → Postgres + outbox, ImmuDB mirror, idempotency, inbound-notifications consumer |
+| **read-service** | Python · Django | Projects `events.async` into Postgres + Elasticsearch read models; Redis caches; RAL |
+| **push-service** | Go | SSE fan-out of `events.async`, per-user gateway auth, Prometheus metrics |
+| **webhook-service** | Go | Signed webhook delivery with retry/DLQ; owns its Postgres; Goose migrations |
+
+Shared code lives in `libraries/` (Python: `correlation-py`, `kafka-client-py`,
+`read-at-least-py`, `saga-pattern-py`, `kafka-messages-proto`; Go:
+`kafka-client-go`). Infrastructure (Kafka, Kong, Postgres, Debezium) is in
+`infrastructure/`.
+
+## Quick start
+
+```bash
+make install            # sync the uv workspace + wire the git pre-commit hook
+docker compose up -d    # gateway + all services + Kafka/Postgres/Redis
+make test               # run every service + library suite
+```
+
+The gateway proxy is published on `localhost:${GATEWAY_PROXY_PORT:-8080}`. Each
+service stack is also standalone-runnable from its own directory
+(`docker compose up` under `services/<name>/`).
+
+## Repository layout
+
+- `services/` — `write-service`, `read-service` (Python/Django, uv workspace
+  members), `push-service`, `webhook-service` (Go, `go mod`). Each has its own
+  README.
+- `libraries/` — shared Python libs and the Go `kafka-client-go`.
+- `infrastructure/` — Kafka, Kong gateway, Postgres, Debezium —
   [infrastructure/README.md](infrastructure/README.md).
+- `docs/` — the [architecture spec](docs/architecture.md), ADRs, and diagrams.
 - `old-structure/` — the pre-CQRS monolith, kept for reference only and excluded
   from all tooling.
 
@@ -72,3 +135,9 @@ Gateway specifics (plugins, rate-limit tiers, the Read-At-Least mechanism) are i
 - **pre-commit** (`.pre-commit.yaml`) delegates mypy and tests to Makefile targets
   so commands have a single source of truth, and excludes `old-structure/` from
   every hook.
+
+## Documentation
+
+- [Architecture spec](docs/architecture.md) — components, data flows, patterns.
+- [ADR-0001: fraud service on Java/Flink](docs/adr-0001-fraud-service-java-flink.md)
+- [Infrastructure](infrastructure/README.md) — Kafka, Kong, Postgres, Debezium.
