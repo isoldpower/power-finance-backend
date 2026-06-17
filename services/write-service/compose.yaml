@@ -1,0 +1,178 @@
+# See ./README.md → "Stack" and "Debezium outbox"
+include:
+  - ../../infrastructure/kafka/compose.yaml
+
+services:
+  write-service:
+    build:
+      context: ../..
+      dockerfile: services/write-service/Dockerfile
+    image: power-finance/write-service:dev
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: write_service.settings.local
+      SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+      DEBUG: "true"
+      ALLOWED_HOSTS: "*"
+
+      DATABASE_HOST: postgres-write
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+
+      IMMUDB_HOST: immudb
+      IMMUDB_PORT: 3322
+      IMMUDB_USER: ${IMMUDB_USER:-immudb}
+      IMMUDB_PASSWORD: ${IMMUDB_PASSWORD:-immudb}
+
+      REDIS_HOST: write-redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres-write:
+        condition: service_healthy
+      immudb:
+        condition: service_started
+      write-redis:
+        condition: service_healthy
+
+  write-inbound-notifications-consumer:
+    build:
+      context: ../..
+      dockerfile: services/write-service/Dockerfile
+    image: power-finance/write-service:dev
+    restart: unless-stopped
+    command: ["python", "manage.py", "run_inbound_notifications_consumer"]
+    healthcheck:
+      disable: true
+    environment:
+      DJANGO_SETTINGS_MODULE: write_service.settings.local
+      SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+      DEBUG: "true"
+      ALLOWED_HOSTS: "*"
+
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_NOTIFICATIONS_INBOUND_TOPIC: ${KAFKA_NOTIFICATIONS_INBOUND_TOPIC:-notifications.inbound}
+      KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID: ${KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID:-write-service.notifications-inbound}
+
+      DATABASE_HOST: postgres-write
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+
+      IMMUDB_HOST: immudb
+      IMMUDB_PORT: 3322
+      IMMUDB_USER: ${IMMUDB_USER:-immudb}
+      IMMUDB_PASSWORD: ${IMMUDB_PASSWORD:-immudb}
+
+      REDIS_HOST: write-redis
+      REDIS_PORT: 6379
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres-write:
+        condition: service_healthy
+      immudb:
+        condition: service_started
+      write-redis:
+        condition: service_healthy
+
+  write-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  postgres-write:
+    image: postgres:18.3
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${DATABASE_PORT:-5433}:5432"
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-power_finance_write}
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_write_data:/var/lib/postgresql/data
+      - ../../infrastructure/postgres/write_config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    shm_size: 128mb
+    command:
+      - "postgres"
+      - "-c"
+      - "config_file=/etc/postgresql/postgresql.conf"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-power_finance_write}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  immudb:
+    image: codenotary/immudb:1.10
+    restart: unless-stopped
+    expose:
+      - "3322"
+      - "9497"
+    volumes:
+      - immudb_data:/var/lib/immudb
+
+  kafka-connect:
+    image: debezium/connect:2.7.3.Final
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres-write:
+        condition: service_healthy
+    environment:
+      BOOTSTRAP_SERVERS: "kafka:9092"
+      GROUP_ID: "outbox-connect-cluster"
+      CONFIG_STORAGE_TOPIC: "connect_configs"
+      OFFSET_STORAGE_TOPIC: "connect_offsets"
+      STATUS_STORAGE_TOPIC: "connect_statuses"
+      CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      STATUS_STORAGE_REPLICATION_FACTOR: "1"
+      KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+      VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    expose:
+      - "8083"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/ >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  debezium-bootstrap:
+    image: curlimages/curl:8.9.1
+    depends_on:
+      kafka-connect:
+        condition: service_healthy
+    restart: "no"
+    volumes:
+      - ../../infrastructure/debezium/connectors:/connectors:ro
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -eu
+        echo "Registering outbox-connector"
+        curl -fsS -X PUT \
+          -H "Content-Type: application/json" \
+          --data @/connectors/outbox-connector.json \
+          http://kafka-connect:8083/connectors/outbox-connector/config
+        echo
+        echo "OK"
+
+volumes:
+  postgres_write_data:
+  immudb_data:

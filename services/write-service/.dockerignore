@@ -1,0 +1,30 @@
+# This .dockerignore sits at the service root for visibility but Docker
+# applies the one at the build *context* root. With this compose's
+# context=../.. the effective ignore file is at the repo root. Keep this
+# one in sync if/when a root-level .dockerignore lands.
+
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.coverage
+**/.venv
+**/venv
+**/.env
+**/.env.*
+!**/.env.example
+**/.git
+**/.gitignore
+**/.idea
+**/.vscode
+**/*.md
+!**/README.md
+**/.DS_Store
+**/node_modules
+**/dist
+**/build
+old-structure/
+docs/
+.github/

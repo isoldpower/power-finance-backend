@@ -1,0 +1,20 @@
+[project]
+name = "kafka-messages-proto"
+version = "0.0.0"
+description = "Protobuf schemas + generated Python bindings for cross-service Kafka events."
+requires-python = ">=3.12"
+dependencies = [
+    "protobuf>=5.27,<6.0",
+]
+
+[dependency-groups]
+dev = [
+    "grpcio-tools>=1.66,<2.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["generated/python/kafka_messages"]

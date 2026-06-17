@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package power_finance.events.v1;
+
+option go_package = "github.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1";
+
+import "google/protobuf/timestamp.proto";
+
+message WalletCreated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string wallet_id = 10;
+  int32 user_id = 11;
+  string title = 12;
+  string currency_code = 13;
+  google.protobuf.Timestamp created_at = 14;
+}
+
+message WalletDeleted {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string wallet_id = 10;
+  int32 user_id = 11;
+  google.protobuf.Timestamp deleted_at = 12;
+}
+
+message WalletUpdated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string wallet_id = 10;
+  int32 user_id = 11;
+  string previous_title = 12;
+  string new_title = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}

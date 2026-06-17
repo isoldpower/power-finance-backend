@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package power_finance.events.v1;
+
+option go_package = "github.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1";
+
+import "google/protobuf/timestamp.proto";
+
+// Shared header every business event carries. Lives as separate fields
+// on each message rather than as a sub-message so the JSON wire format
+// stays flat (matches the legacy dict payload that consumers already
+// understand).
+message EventEnvelope {
+  // UUID. Idempotency key — consumers dedupe on this.
+  string event_id = 1;
+
+  // Wall-clock time the producer decided this event happened.
+  google.protobuf.Timestamp occurred_at = 2;
+
+  // Bump on any breaking change to a concrete event's payload. Consumers
+  // that can't handle a higher version should route the message to the
+  // DLQ rather than partially process it.
+  int32 schema_version = 3;
+}

@@ -1,0 +1,33 @@
+# See README.md → "Tooling notes"
+default_language_version:
+  python: python3.12
+
+default_stages: [pre-commit]
+
+exclude: ^old-structure/
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        name: ruff (lint + auto-fix)
+        args: [--fix]
+      - id: ruff-format
+        name: ruff (format)
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (services + libraries)
+        language: system
+        entry: make typecheck
+        pass_filenames: false
+        files: \.py$
+
+      - id: project-tests
+        name: project tests (all services + libraries)
+        language: system
+        entry: make test
+        pass_filenames: false
+        files: \.py$

@@ -1,0 +1,11 @@
+# See ./README.md → "Configuration"
+log_level: info
+
+push_service:
+  host: localhost
+  port: 8001
+  heartbeat_interval_seconds: 15
+
+kafka:
+  bootstrap_servers: localhost:9092
+  outbox_topic: events.async

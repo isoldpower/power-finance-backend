@@ -1,33 +1,129 @@
-# Byte-compiled / optimized / DLL files
+# =============================================================================
+# Python
+# =============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
 
-# Environments
-.env
-.env.local
-.env.docker
-.venv
-env/
+# =============================================================================
+# Virtual environments
+# =============================================================================
+.venv/
 venv/
+env/
 ENV/
 
-# Django-specific files
+# =============================================================================
+# UV (workspace lockfile IS committed; cache + per-project venvs are not)
+# =============================================================================
+.uv-cache/
+# uv.lock is intentionally committed at the workspace root
+
+# =============================================================================
+# Django
+# =============================================================================
 *.log
 *.pot
 *.mo
 db.sqlite3
+db.sqlite3-journal
 media/
-static/
-cache/**/*
+staticfiles/
+local_settings.py
 
-# IDE-specific files (Example for VS Code and PyCharm)
-.vscode/
+# =============================================================================
+# Environment files (secrets — never commit)
+# =============================================================================
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Service config files (viper) — samples are committed, real configs are not
+services/*/config.yaml
+
+# =============================================================================
+# Go (services/push_service)
+# =============================================================================
+# Compiled binaries
+*.exe
+*.exe~
+*.dll
+*.dylib
+*.test
+*.out
+
+# Build artifacts
+services/push-service/bin/
+services/push-service/dist/
+
+# Go workspace files (we use go.mod per-service; no go.work yet)
+go.work
+go.work.sum
+
+# Vendored deps (we don't vendor by default)
+vendor/
+
+# =============================================================================
+# IDEs
+# =============================================================================
 .idea/
+.vscode/
+*.swp
+*.swo
+*~
 
-# Operating System files
+# =============================================================================
+# OS
+# =============================================================================
 .DS_Store
-schema.yml
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Kubernetes secrets
-deploy/kubernetes/secrets.yaml
+# =============================================================================
+# Docker / Compose local state
+# =============================================================================
+.docker/
+docker-compose.override.local.yml
+
+# =============================================================================
+# Schema codegen output (regenerated from libraries/events-py/schemas/)
+# =============================================================================
+libraries/events-py/events_py/_generated/
+
+# =============================================================================
+# Local data volumes (when bind-mounting Postgres/Kafka/Redis state)
+# =============================================================================
+.data/
+volumes/
+
+# =============================================================================
+# Generated OpenAPI / Schema artifacts
+# =============================================================================
+schema.yml
+schema.yaml
+openapi.json
+.claude
+
+# =============================================================================
+# Kafka Connect / Debezium local working directories
+# =============================================================================
+infrastructure/debezium/.connect-data/
+infrastructure/kafka/.kafka-data/

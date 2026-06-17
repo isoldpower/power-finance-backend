@@ -1,0 +1,135 @@
+from django.urls import path
+
+from .views.fallback_read import (
+    FallbackNotificationListView,
+    FallbackNotificationResourceView,
+    FallbackTransactionListView,
+    FallbackTransactionResourceView,
+    FallbackWalletListView,
+    FallbackWalletResourceView,
+    FallbackWebhookEventListView,
+    FallbackWebhookListView,
+    FallbackWebhookResourceView,
+)
+from .views.notifications import (
+    NotificationAckView,
+    NotificationBatchAckView,
+    NotificationResourceView,
+)
+from .views.transactions import TransactionListView, TransactionResourceView
+from .views.wallets import WalletListView, WalletResourceView
+from .views.webhooks import (
+    WebhookEventListView,
+    WebhookEventResourceView,
+    WebhookListView,
+    WebhookResourceView,
+    WebhookSecretView,
+)
+
+urlpatterns = [
+    path(
+        "webhooks/",
+        WebhookListView.as_view(),
+        name="webhooks-list",
+    ),
+    path(
+        "webhooks/<uuid:pk>/",
+        WebhookResourceView.as_view(),
+        name="webhooks-resource",
+    ),
+    path(
+        "webhooks/<uuid:pk>/secret/",
+        WebhookSecretView.as_view(),
+        name="webhooks-secret",
+    ),
+    path(
+        "webhooks/<uuid:pk>/events/",
+        WebhookEventListView.as_view(),
+        name="webhooks-event-list",
+    ),
+    path(
+        "webhooks/<uuid:pk>/events/<uuid:subscription_id>/",
+        WebhookEventResourceView.as_view(),
+        name="webhooks-event-resource",
+    ),
+    path(
+        "notifications/ack/",
+        NotificationBatchAckView.as_view(),
+        name="notifications-batch-ack",
+    ),
+    path(
+        "notifications/<uuid:notification_id>/ack/",
+        NotificationAckView.as_view(),
+        name="notifications-ack",
+    ),
+    path(
+        "notifications/<uuid:pk>/",
+        NotificationResourceView.as_view(),
+        name="notifications-resource",
+    ),
+    path(
+        "transactions/",
+        TransactionListView.as_view(),
+        name="transactions-list",
+    ),
+    path(
+        "transactions/<uuid:pk>/",
+        TransactionResourceView.as_view(),
+        name="transactions-resource",
+    ),
+    path(
+        "wallets/",
+        WalletListView.as_view(),
+        name="wallets-list",
+    ),
+    path(
+        "wallets/<uuid:pk>/",
+        WalletResourceView.as_view(),
+        name="wallets-resource",
+    ),
+    path(
+        "fallback-reads/wallets/",
+        FallbackWalletListView.as_view(),
+        name="fallback-wallets-list",
+    ),
+    path(
+        "fallback-reads/wallets/<uuid:pk>/",
+        FallbackWalletResourceView.as_view(),
+        name="fallback-wallets-resource",
+    ),
+    path(
+        "fallback-reads/transactions/",
+        FallbackTransactionListView.as_view(),
+        name="fallback-transactions-list",
+    ),
+    path(
+        "fallback-reads/transactions/<uuid:pk>/",
+        FallbackTransactionResourceView.as_view(),
+        name="fallback-transactions-resource",
+    ),
+    path(
+        "fallback-reads/webhooks/",
+        FallbackWebhookListView.as_view(),
+        name="fallback-webhooks-list",
+    ),
+    path(
+        "fallback-reads/webhooks/<uuid:pk>/",
+        FallbackWebhookResourceView.as_view(),
+        name="fallback-webhooks-resource",
+    ),
+    path(
+        "fallback-reads/webhooks/<uuid:pk>/events/",
+        FallbackWebhookEventListView.as_view(),
+        name="fallback-webhooks-event-list",
+    ),
+    path(
+        "fallback-reads/notifications/",
+        FallbackNotificationListView.as_view(),
+        name="fallback-notifications-list",
+    ),
+    path(
+        "fallback-reads/notifications/<uuid:pk>/",
+        FallbackNotificationResourceView.as_view(),
+        name="fallback-notifications-resource",
+    ),
+]

@@ -1,0 +1,80 @@
+# See README.md → "Tooling notes"
+[project]
+name = "power-finance-cqrs"
+version = "0.0.0"
+description = "Power Finance — CQRS architecture monorepo (Write, Read, Push services + shared Python libraries + infrastructure)."
+requires-python = ">=3.12"
+
+[tool.uv.workspace]
+members = [
+    "services/write-service",
+    "services/read-service",
+    "libraries/auth-py",
+    "libraries/correlation-py",
+    "libraries/events-py",
+    "libraries/kafka-client-py",
+    "libraries/kafka-messages-proto",
+    "libraries/observability-py",
+    "libraries/read-at-least-py",
+    "libraries/saga-pattern-py",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8,<0.9",
+    "mypy>=1.13,<2.0",
+    "pre-commit>=4.0,<5.0",
+    "grpcio-tools>=1.66,<2.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+force-exclude = true
+extend-exclude = [
+    "**/migrations/**",
+    "**/generated/**",
+    ".venv",
+    "old-structure",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "W",   # pycodestyle warnings
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long — handled by formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__tests__/**" = ["B"]
+"**/__init__.py" = ["F401"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+check_untyped_defs = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+explicit_package_bases = true
+namespace_packages = true
+exclude = [
+    "/migrations/",
+    "/__tests__/",
+    "/generated/",
+    ".venv",
+    "manage\\.py$",
+    "fakes\\.py$",
+    "services/read-service/",
+    "old-structure/",
+]

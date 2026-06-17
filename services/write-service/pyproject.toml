@@ -1,0 +1,50 @@
+[project]
+name = "write-service"
+version = "0.0.0"
+description = "Power Finance — Write Service (CQRS write side, Postgres + outbox + ImmuDB)."
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.2,<6.0",
+    "djangorestframework>=3.16,<4.0",
+    "psycopg[binary,pool]>=3.3,<4.0",
+    "redis>=7.0,<8.0",
+    "celery>=5.6,<6.0",
+    "drf-spectacular>=0.29,<0.30",
+    "django-environ>=0.13,<0.14",
+    "django-cors-headers>=4.9,<5.0",
+    "pydantic>=2.12,<3.0",
+    "uvicorn[standard]>=0.43,<0.44",
+    "uvicorn-worker>=0.4,<0.5",
+    "gunicorn>=25.3,<26.0",
+    "correlation-py",
+    "saga-pattern-py",
+    "kafka-messages-proto",
+    "immudb-py>=1.5,<2.0",
+    "aiokafka>=0.11,<0.13",
+    "kafka-client-py",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9.0",
+    "pytest-django>=4.9,<5.0",
+    "pytest-asyncio>=0.24,<1.0",
+]
+
+[tool.uv.sources]
+correlation-py = { workspace = true }
+saga-pattern-py = { workspace = true }
+kafka-messages-proto = { workspace = true }
+kafka-client-py = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["write_service"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "write_service.settings.test"
+asyncio_mode = "auto"
+python_files = ["test_*.py"]

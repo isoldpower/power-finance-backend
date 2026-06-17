@@ -1,0 +1,72 @@
+# See ./README.md → "Build & Docker", "Configuration" and "Database migrations"
+include:
+  - ../../infrastructure/kafka/compose.yaml
+
+volumes:
+  webhook_postgres_data:
+
+services:
+  webhook-service:
+    build:
+      context: ../..
+      dockerfile: services/webhook-service/Dockerfile
+    image: power-finance/webhook-service:dev
+    restart: unless-stopped
+    environment:
+      WEBHOOK_SERVICE_HOST: 0.0.0.0
+      WEBHOOK_SERVICE_PORT: "8002"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_OUTBOX_TOPIC: ${KAFKA_OUTBOX_TOPIC:-events.async}
+      KAFKA_GROUP_ID: ${WEBHOOK_KAFKA_GROUP_ID:-webhook-service.deliveries}
+      KAFKA_RETRY_TOPIC: ${WEBHOOK_KAFKA_RETRY_TOPIC:-webhooks.retry}
+      KAFKA_DLQ_TOPIC: ${WEBHOOK_KAFKA_DLQ_TOPIC:-webhooks.dlq}
+      KAFKA_NOTIFICATIONS_INBOUND_TOPIC: ${KAFKA_NOTIFICATIONS_INBOUND_TOPIC:-notifications.inbound}
+      POSTGRES_DSN: postgres://postgres:postgres@webhook-postgres:5432/power_finance_webhooks
+      DELIVERY_TIMEOUT_SECONDS: ${WEBHOOK_DELIVERY_TIMEOUT_SECONDS:-10}
+      DELIVERY_MAX_ATTEMPTS: ${WEBHOOK_DELIVERY_MAX_ATTEMPTS:-5}
+      DELIVERY_RETRY_BACKOFF_SECONDS: ${WEBHOOK_DELIVERY_RETRY_BACKOFF_SECONDS:-30}
+      DELIVERY_SCHEDULER_INTERVAL_SECONDS: ${WEBHOOK_DELIVERY_SCHEDULER_INTERVAL_SECONDS:-15}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      webhook-postgres:
+        condition: service_healthy
+      webhook-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8002/readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    stop_grace_period: 30s
+
+  webhook-migrate:
+    build:
+      context: ../..
+      dockerfile: services/webhook-service/Dockerfile
+    image: power-finance/webhook-service:dev
+    command: ["migrate", "up"]
+    restart: "no"
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@webhook-postgres:5432/power_finance_webhooks
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      webhook-postgres:
+        condition: service_healthy
+
+  webhook-postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: power_finance_webhooks
+    volumes:
+      - webhook_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d power_finance_webhooks"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

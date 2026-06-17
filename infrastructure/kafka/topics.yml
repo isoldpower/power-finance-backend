@@ -1,0 +1,8 @@
+# See ../README.md → "Kafka topics"
+topics:
+  - name: events.async
+  - name: notifications.inbound
+  - name: events.retry
+  - name: events.dlq
+  - name: webhooks.retry
+  - name: webhooks.dlq

@@ -1,0 +1,43 @@
+from drf_spectacular.utils import OpenApiResponse, extend_schema
+from rest_framework import status
+from rest_framework.response import Response
+from write_service.common.base_async_api_view import BaseAsyncAPIView
+from write_service.common.logging import get_http_logger, log_request_failed
+
+from health_probes.application.dtos import LivenessReportDTO
+from health_probes.domain.entities import ProbeStatus
+
+from ..presenters import HealthCheckPresenter
+from ..serializers import LivenessDegradedResponseSerializer, LivenessResponseSerializer
+
+logger = get_http_logger("health")
+
+
+class LivenessView(BaseAsyncAPIView):
+    """Liveness probe: always 200 while the worker can answer; performs no
+    dependency checks (failures here restart the pod)."""
+
+    authentication_classes: list = []
+    permission_classes: list = []
+
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(response=LivenessResponseSerializer),
+            503: OpenApiResponse(response=LivenessDegradedResponseSerializer),
+        },
+    )
+    async def get(self, request) -> Response:
+        try:
+            report = LivenessReportDTO(status=ProbeStatus.OK.value)
+
+            return Response(
+                HealthCheckPresenter.present_liveness(report),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as exc:
+            log_request_failed(logger, "liveness_probe", exc)
+
+            return Response(
+                HealthCheckPresenter.present_degraded(exc),
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )

@@ -1,0 +1,131 @@
+# See ./README.md → "Stack"
+include:
+  - ../../infrastructure/kafka/compose.yaml
+  - ./compose.elastic.yaml
+
+x-elasticsearch-env: &elasticsearch-env
+  ELASTICSEARCH_HOSTS: https://es01:9200
+  ELASTICSEARCH_USERNAME: elastic
+  ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD:-changeme}
+  ELASTICSEARCH_CA_CERTS: /certs/ca/ca.crt
+  ELASTICSEARCH_VERIFY_CERTS: "true"
+
+services:
+  setup:
+    healthcheck:
+      interval: 250ms
+      start_period: 0s
+
+  read-service:
+    build:
+      context: ../..
+      dockerfile: services/read-service/Dockerfile
+    image: power-finance/read-service:dev
+    restart: unless-stopped
+    user: "0"
+    expose:
+      - "8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: read_service.settings.local
+      SECRET_KEY: ${READ_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+      DEBUG: "true"
+      ALLOWED_HOSTS: "*"
+      DATABASE_HOST: postgres-read
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
+      DATABASE_USER: ${READ_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
+      REDIS_URL: ${READ_REDIS_URL:-redis://read-redis:6379/0}
+      <<: *elasticsearch-env
+    volumes:
+      - certs:/certs:ro
+    depends_on:
+      postgres-read:
+        condition: service_healthy
+      read-redis:
+        condition: service_healthy
+      read-es-init:
+        condition: service_completed_successfully
+
+  read-es-init:
+    build:
+      context: ../..
+      dockerfile: services/read-service/Dockerfile
+    image: power-finance/read-service:dev
+    restart: "no"
+    user: "0"
+    command: ["python", "manage.py", "init_elasticsearch_indices"]
+    environment:
+      DJANGO_SETTINGS_MODULE: read_service.settings.local
+      <<: *elasticsearch-env
+    volumes:
+      - certs:/certs:ro
+    depends_on:
+      es01:
+        condition: service_healthy
+
+  read-write-consumer:
+    build:
+      context: ../..
+      dockerfile: services/read-service/Dockerfile
+    image: power-finance/read-service:dev
+    restart: unless-stopped
+    user: "0"
+    command: ["python", "manage.py", "run_write_message_consumer"]
+    environment:
+      DJANGO_SETTINGS_MODULE: read_service.settings.local
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_OUTBOX_TOPIC: ${KAFKA_OUTBOX_TOPIC:-events.async}
+      KAFKA_READ_GROUP_ID: ${KAFKA_READ_GROUP_ID:-read-service.write-consumer}
+      DATABASE_HOST: postgres-read
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
+      DATABASE_USER: ${READ_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
+      REDIS_URL: ${READ_REDIS_URL:-redis://read-redis:6379/0}
+      <<: *elasticsearch-env
+    volumes:
+      - certs:/certs:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres-read:
+        condition: service_healthy
+      read-redis:
+        condition: service_healthy
+      read-es-init:
+        condition: service_completed_successfully
+    stop_grace_period: 30s
+
+  postgres-read:
+    image: postgres:18.3
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${READ_DATABASE_PORT:-5434}:5432"
+    environment:
+      POSTGRES_DB: ${READ_DATABASE_NAME:-power_finance_read}
+      POSTGRES_USER: ${READ_DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_read_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${READ_DATABASE_USER:-postgres} -d ${READ_DATABASE_NAME:-power_finance_read}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  read-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_read_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_read_data:
+  redis_read_data:

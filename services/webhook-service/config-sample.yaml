@@ -1,0 +1,21 @@
+# See ./README.md → "Configuration"
+webhook_service:
+  host: localhost
+  port: 8002
+
+kafka:
+  bootstrap_servers: localhost:9092
+  outbox_topic: events.async
+  group_id: webhook-service.deliveries
+  retry_topic: webhooks.retry
+  dlq_topic: webhooks.dlq
+  notifications_inbound_topic: notifications.inbound
+
+postgres:
+  dsn: postgres://postgres:postgres@localhost:5432/power_finance_webhooks
+
+delivery:
+  timeout_seconds: 10
+  max_attempts: 5
+  retry_backoff_seconds: 30
+  scheduler_interval_seconds: 15
