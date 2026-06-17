@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"services/webhook-service/internal/metrics"
 	"services/webhook-service/webhook_service/types"
 )
 
@@ -70,7 +71,10 @@ func (a *DeliveryAttempter) Attempt(ctx context.Context, delivery types.Delivery
 		secret = resolved
 	}
 
+	metrics.DeliveryAttempted()
+	sendStart := time.Now()
 	sendErr := a.sender.Send(ctx, delivery, secret)
+	metrics.ObserveAttemptDuration(time.Since(sendStart).Seconds())
 	if sendErr == nil {
 		return a.recordSuccess(ctx, delivery, attemptNumber, now)
 	}
@@ -79,6 +83,7 @@ func (a *DeliveryAttempter) Attempt(ctx context.Context, delivery types.Delivery
 		return a.recordFailure(ctx, delivery, attemptNumber, sendErr.Error(), now)
 	}
 
+	metrics.DeliveryOutcome(metrics.OutcomeRetry)
 	nextAttemptAt := now.Add(a.retryBackoff * time.Duration(attemptNumber))
 	slog.Warn(
 		"webhook delivery failed, rescheduling",
@@ -96,6 +101,7 @@ func (a *DeliveryAttempter) recordSuccess(ctx context.Context, delivery types.De
 		return markErr
 	}
 
+	metrics.DeliveryOutcome(metrics.OutcomeSuccess)
 	slog.Info("webhook delivered", "delivery_id", delivery.ID, "attempts", attempts)
 	a.requestNotification(
 		ctx,
@@ -112,6 +118,7 @@ func (a *DeliveryAttempter) recordFailure(ctx context.Context, delivery types.De
 		return markErr
 	}
 
+	metrics.DeliveryOutcome(metrics.OutcomeExhausted)
 	slog.Error("webhook delivery exhausted retries", "delivery_id", delivery.ID, "attempts", attempts)
 	a.requestNotification(
 		ctx,

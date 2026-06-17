@@ -1,4 +1,4 @@
-# Webhook-service configuration sample.
+# See ./README.md → "Configuration"
 webhook_service:
   host: localhost
   port: 8002

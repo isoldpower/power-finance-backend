@@ -17,6 +17,7 @@ func clearConfigEnvironment(t *testing.T) {
 		"PUSH_SERVICE_HEARTBEAT_INTERVAL_SECONDS",
 		"KAFKA_BOOTSTRAP_SERVERS",
 		"KAFKA_OUTBOX_TOPIC",
+		"LOG_LEVEL",
 	}
 	for _, variable := range variables {
 		t.Setenv(variable, "")

@@ -1,12 +1,3 @@
-# Write Service — local targets.
-#
-# Invoke either directly:
-#   make -C services/write-service <target>
-# or via the root Makefile's subcommand router:
-#   make write <target>
-# (the root router rewrites `make write <target>` to `make -C
-# services/write-service <target>`).
-
 .DEFAULT_GOAL := help
 
 COMPOSE      := docker compose -f compose.yaml

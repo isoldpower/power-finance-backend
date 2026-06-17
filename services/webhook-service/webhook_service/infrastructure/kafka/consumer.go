@@ -23,9 +23,10 @@ type EventHandler interface {
 }
 
 type Consumer struct {
-	client         *kgo.Client
-	messageHandler *consumer.MessageHandler
-	readinessProbe *health.Probe
+	client            *kgo.Client
+	messageHandler    *consumer.MessageHandler
+	retryDLQPublisher *publisher.KafkaPublisher
+	readinessProbe    *health.Probe
 }
 
 // NewConsumer wires a consumer-group client, dedupe store and retry/DLQ
@@ -79,16 +80,17 @@ func NewConsumer(
 	)
 
 	return &Consumer{
-		client:         groupClient,
-		messageHandler: messageHandler,
-		readinessProbe: readinessProbe,
+		client:            groupClient,
+		messageHandler:    messageHandler,
+		retryDLQPublisher: retryDLQPublisher,
+		readinessProbe:    readinessProbe,
 	}, nil
 }
 
 // Run drains the consumer group, committing each record only after it has been
-// handled (or terminally routed).
+// handled (or terminally routed). Resources are released by Close once Run has
+// returned.
 func (c *Consumer) Run(ctx context.Context) {
-	defer c.client.Close()
 	c.readinessProbe.MarkReady()
 	defer c.readinessProbe.MarkUnready()
 	slog.Info("kafka consumer started")
@@ -108,6 +110,13 @@ func (c *Consumer) Run(ctx context.Context) {
 			c.processRecord(ctx, record)
 		})
 	}
+}
+
+// Close releases the consumer-group client and the retry/DLQ publisher, flushing
+// any buffered retry/DLQ records. Call it after Run has returned.
+func (c *Consumer) Close() {
+	c.retryDLQPublisher.Stop()
+	c.client.Close()
 }
 
 func (c *Consumer) processRecord(ctx context.Context, record *kgo.Record) {

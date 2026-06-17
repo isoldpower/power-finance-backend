@@ -1,3 +1,4 @@
+# See ./README.md → "Build & Docker" and "Configuration"
 include:
   - ../../infrastructure/kafka/compose.yaml
 

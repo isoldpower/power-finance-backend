@@ -90,10 +90,29 @@ func GetTime(headers KafkaHeaders, name string) (time.Time, bool) {
 	return parsedTime, true
 }
 
+// Merge combines base with additions keeping one entry per key (last value wins,
+// first-seen order) so repeated merges never accumulate duplicates; base is untouched.
 func Merge(base KafkaHeaders, additions ...Header) KafkaHeaders {
-	mergedHeaders := make(KafkaHeaders, 0, len(base)+len(additions))
-	mergedHeaders = append(mergedHeaders, base...)
-	mergedHeaders = append(mergedHeaders, additions...)
+	keyOrder := make([]string, 0, len(base)+len(additions))
+	valueByKey := make(map[string][]byte, len(base)+len(additions))
+
+	collect := func(header Header) {
+		if _, alreadySeen := valueByKey[header.Key]; !alreadySeen {
+			keyOrder = append(keyOrder, header.Key)
+		}
+		valueByKey[header.Key] = header.Value
+	}
+	for _, header := range base {
+		collect(header)
+	}
+	for _, header := range additions {
+		collect(header)
+	}
+
+	mergedHeaders := make(KafkaHeaders, 0, len(keyOrder))
+	for _, key := range keyOrder {
+		mergedHeaders = append(mergedHeaders, Header{Key: key, Value: valueByKey[key]})
+	}
 
 	return mergedHeaders
 }

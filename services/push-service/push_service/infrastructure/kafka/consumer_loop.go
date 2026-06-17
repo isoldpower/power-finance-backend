@@ -10,6 +10,7 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 
 	"services/push-service/internal/health"
+	"services/push-service/internal/metrics"
 )
 
 type broadcastConsumer interface {
@@ -65,6 +66,7 @@ func (cl *ConsumerLoop) Run(ctx context.Context) {
 }
 
 func (cl *ConsumerLoop) processRecord(ctx context.Context, record *kgo.Record) {
+	metrics.KafkaEventReceived()
 	message := consumer.MessageFromRecord(record)
 
 	if handleErr := cl.handle(ctx, message); handleErr != nil && !errors.Is(handleErr, context.Canceled) {

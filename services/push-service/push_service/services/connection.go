@@ -1,8 +1,10 @@
 package services
 
 import (
+	"context"
 	"log/slog"
 
+	"services/push-service/internal/metrics"
 	"services/push-service/push_service/types"
 )
 
@@ -41,12 +43,16 @@ func NewClientsPoolService() *ClientsPoolService {
 }
 
 // FanoutEvents provides a way to specify a sink channel that will be used
-// to fanout all the events processed by pool.
-func (cps *ClientsPoolService) FanoutEvents(eventsChannel <-chan types.OutboxEvent) {
+// to fanout all the events processed by pool. It runs until the sink channel
+// closes or ctx is cancelled, detaching every client on exit.
+func (cps *ClientsPoolService) FanoutEvents(ctx context.Context, eventsChannel <-chan types.OutboxEvent) {
 	defer close(cps.doneChannel)
 
 	for {
 		select {
+		case <-ctx.Done():
+			cps.removeAllClients()
+			return
 		case client := <-cps.registerChan:
 			cps.addClient(client)
 		case client := <-cps.unregisterChan:
@@ -103,6 +109,7 @@ func (cps *ClientsPoolService) deliver(client *PoolClient, event types.OutboxEve
 	select {
 	case client.eventsChannel <- event:
 	default:
+		metrics.EventDroppedSlowClient()
 		slog.Warn(
 			"dropping event for slow client",
 			"user_id", client.externalUserID,
@@ -120,6 +127,7 @@ func (cps *ClientsPoolService) addClient(client *PoolClient) {
 	}
 
 	userClients[client] = struct{}{}
+	metrics.SubscriberAdded()
 }
 
 func (cps *ClientsPoolService) removeClient(client *PoolClient) {
@@ -136,6 +144,7 @@ func (cps *ClientsPoolService) removeClient(client *PoolClient) {
 		delete(cps.clientsByUser, client.externalUserID)
 	}
 	close(client.eventsChannel)
+	metrics.SubscriberRemoved()
 }
 
 func (cps *ClientsPoolService) removeAllClients() {
@@ -145,4 +154,5 @@ func (cps *ClientsPoolService) removeAllClients() {
 		}
 		delete(cps.clientsByUser, userID)
 	}
+	metrics.SubscribersReset()
 }

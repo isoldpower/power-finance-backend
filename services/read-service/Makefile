@@ -1,12 +1,3 @@
-# Read Service — local targets.
-#
-# Invoke either directly:
-#   make -C services/read-service <target>
-# or via the root Makefile's subcommand router:
-#   make read <target>
-# (the root router rewrites `make read <target>` to `make -C
-# services/read-service <target>`).
-
 .DEFAULT_GOAL := help
 
 COMPOSE := docker compose -f compose.yaml

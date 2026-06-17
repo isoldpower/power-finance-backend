@@ -21,6 +21,8 @@ const (
 
 	bootstrapServersKey = "kafka.bootstrap_servers"
 	outboxTopicKey      = "kafka.outbox_topic"
+
+	logLevelKey = "log_level"
 )
 
 // Load resolves and composes all the Viper-based project configurations.
@@ -44,6 +46,9 @@ func Load() types.PushServiceConfig {
 			BootstrapServers: viperInstance.GetString(bootstrapServersKey),
 			OutboxTopics:     splitTopics(viperInstance.GetString(outboxTopicKey)),
 		},
+		Logging: types.LoggingConfig{
+			Level: viperInstance.GetString(logLevelKey),
+		},
 	}
 }
 
@@ -54,6 +59,8 @@ func registerDefaults(viperInstance *viper.Viper) {
 
 	viperInstance.SetDefault(bootstrapServersKey, "localhost:9092")
 	viperInstance.SetDefault(outboxTopicKey, "events.async")
+
+	viperInstance.SetDefault(logLevelKey, "info")
 }
 
 func resolveConfigPath() string {

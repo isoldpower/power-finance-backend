@@ -3,8 +3,13 @@ package types
 import "time"
 
 type PushServiceConfig struct {
-	Server ServerConfig
-	Kafka  KafkaConfig
+	Server  ServerConfig
+	Kafka   KafkaConfig
+	Logging LoggingConfig
+}
+
+type LoggingConfig struct {
+	Level string
 }
 
 type ServerConfig struct {

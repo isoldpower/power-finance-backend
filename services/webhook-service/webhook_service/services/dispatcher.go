@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"services/webhook-service/webhook_service/types"
@@ -14,30 +13,33 @@ type endpointResolver interface {
 	ActiveEndpointsForEvent(ctx context.Context, userID int, eventType string) ([]types.WebhookEndpoint, error)
 }
 
-type deliveryAttempter interface {
-	Attempt(ctx context.Context, delivery types.Delivery, secret string) error
+// deliveryWaker is signalled after new deliveries are enqueued so the scheduler
+// can attempt them promptly instead of waiting for its next tick.
+type deliveryWaker interface {
+	Wake()
 }
 
 type DeliveryDispatcher struct {
 	endpoints  endpointResolver
 	deliveries deliveryStore
-	attempter  deliveryAttempter
+	waker      deliveryWaker
 }
 
 func NewDeliveryDispatcher(
 	endpoints endpointResolver,
 	deliveries deliveryStore,
-	attempter deliveryAttempter,
+	waker deliveryWaker,
 ) *DeliveryDispatcher {
 	return &DeliveryDispatcher{
 		endpoints:  endpoints,
 		deliveries: deliveries,
-		attempter:  attempter,
+		waker:      waker,
 	}
 }
 
-// Dispatch fans the event out to every subscribed endpoint, durably
-// enqueueing each delivery and running the first attempt inline.
+// Dispatch fans the event out to every subscribed endpoint by durably enqueueing
+// a delivery and waking the scheduler. The HTTP attempts themselves run off the
+// consumer path in the scheduler, so a slow endpoint cannot stall consumption.
 func (d *DeliveryDispatcher) Dispatch(ctx context.Context, event types.OutboxEvent) error {
 	webhookEventType := types.WebhookEventTypeFor(event.EventType)
 	if webhookEventType == "" {
@@ -71,15 +73,7 @@ func (d *DeliveryDispatcher) Dispatch(ctx context.Context, event types.OutboxEve
 		if enqueueErr := d.deliveries.Enqueue(ctx, delivery, now); enqueueErr != nil {
 			return enqueueErr
 		}
-
-		if attemptErr := d.attempter.Attempt(ctx, delivery, endpoint.Secret); attemptErr != nil {
-			slog.Error(
-				"webhook first-attempt bookkeeping failed",
-				"delivery_id", delivery.ID,
-				"error", attemptErr,
-			)
-			return attemptErr
-		}
+		d.waker.Wake()
 	}
 
 	return nil

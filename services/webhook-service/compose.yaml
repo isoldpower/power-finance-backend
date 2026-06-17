@@ -1,3 +1,4 @@
+# See ./README.md → "Build & Docker", "Configuration" and "Database migrations"
 include:
   - ../../infrastructure/kafka/compose.yaml
 
@@ -31,6 +32,8 @@ services:
         condition: service_healthy
       webhook-postgres:
         condition: service_healthy
+      webhook-migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8002/readyz"]
       interval: 10s
@@ -39,9 +42,20 @@ services:
       start_period: 10s
     stop_grace_period: 30s
 
-  # Webhook-service owns its database. Keeping it separate from the write/read
-  # Postgres instances preserves the service's data autonomy: it projects
-  # webhook configs from Kafka and owns delivery state on its own.
+  webhook-migrate:
+    build:
+      context: ../..
+      dockerfile: services/webhook-service/Dockerfile
+    image: power-finance/webhook-service:dev
+    command: ["migrate", "up"]
+    restart: "no"
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@webhook-postgres:5432/power_finance_webhooks
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      webhook-postgres:
+        condition: service_healthy
+
   webhook-postgres:
     image: postgres:17-alpine
     restart: unless-stopped

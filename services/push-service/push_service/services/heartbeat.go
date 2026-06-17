@@ -23,14 +23,19 @@ func (hs *HeartbeatService) SpawnHeartbeatMessages(receiver chan<- []byte) {
 	for {
 		select {
 		case <-ticker.C:
-			receiver <- []byte(": heartbeat\n\n")
+			select {
+			case receiver <- []byte(": heartbeat\n\n"):
+			case <-hs.doneChannel:
+				return
+			}
 		case <-hs.doneChannel:
 			return
 		}
 	}
 }
 
-// StopTicker stops spawning heartbeat messages.
+// StopTicker stops spawning heartbeat messages. It is safe to call once per
+// HeartbeatService instance (one is created per SSE connection).
 func (hs *HeartbeatService) StopTicker() {
-	hs.doneChannel <- struct{}{}
+	close(hs.doneChannel)
 }

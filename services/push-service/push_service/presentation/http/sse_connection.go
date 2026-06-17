@@ -2,9 +2,14 @@ package http
 
 import (
 	"net/http"
+	"time"
 
 	"services/push-service/push_service/presentation"
 )
+
+// writeTimeout bounds a single SSE frame write so a half-open client connection
+// cannot block the writer goroutine indefinitely.
+const writeTimeout = 10 * time.Second
 
 type SseHttpConnection struct {
 	responseWriter http.ResponseWriter
@@ -38,6 +43,10 @@ func (hc *SseHttpConnection) ClientGoneChannel() <-chan struct{} {
 
 // SendMessageOverConnection is a helper method to send the payload over an established connection.
 func (hc *SseHttpConnection) SendMessageOverConnection(message []byte) error {
+	if deadlineErr := hc.controller.SetWriteDeadline(time.Now().Add(writeTimeout)); deadlineErr != nil {
+		return deadlineErr
+	}
+
 	if _, writeError := hc.responseWriter.Write(message); writeError != nil {
 		return writeError
 	}

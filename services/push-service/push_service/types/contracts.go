@@ -1,20 +1,23 @@
 package types
 
+import "context"
+
 // ClientSubscription is a single client's event feed; Cancel detaches it from the pool.
 type ClientSubscription interface {
 	Events() <-chan OutboxEvent
 	Cancel()
 }
 
-// ClientsPool fans events out to per-user subscriptions.
+// ClientsPool fans events out to per-user subscriptions until ctx is cancelled.
 type ClientsPool interface {
-	FanoutEvents(eventsChannel <-chan OutboxEvent)
+	FanoutEvents(ctx context.Context, eventsChannel <-chan OutboxEvent)
 	Subscribe(externalUserID string) (ClientSubscription, bool)
 }
 
-// EventsProjector translates raw Kafka events into client-facing events.
+// EventsProjector translates raw Kafka events into client-facing events until
+// ctx is cancelled.
 type EventsProjector interface {
-	RunKafkaReceiver(kafkaChannel <-chan OutboxEvent)
+	RunKafkaReceiver(ctx context.Context, kafkaChannel <-chan OutboxEvent)
 	Events() <-chan OutboxEvent
 }
 

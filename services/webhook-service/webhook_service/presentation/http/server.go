@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"services/webhook-service/internal/health"
+	"services/webhook-service/internal/metrics"
 )
 
 type Server struct {
@@ -20,14 +21,16 @@ func NewServer(serverConfig Config, readinessProbe *health.Probe) *Server {
 	router := http.NewServeMux()
 	httpServer := &Server{
 		server: &http.Server{
-			Addr:    fmt.Sprintf("%s:%d", serverConfig.Host, serverConfig.Port),
-			Handler: router,
+			Addr:              fmt.Sprintf("%s:%d", serverConfig.Host, serverConfig.Port),
+			Handler:           router,
+			ReadHeaderTimeout: 5 * time.Second,
 		},
 		readinessProbe: readinessProbe,
 	}
 
 	router.HandleFunc("GET /healthz", httpServer.handleHealthCheck)
 	router.HandleFunc("GET /readyz", httpServer.handleReadinessCheck)
+	router.Handle("GET /metrics", metrics.Handler())
 
 	return httpServer
 }

@@ -1,8 +1,6 @@
-# Push-service configuration sample.
-#
-# Copy to `config.yaml` (gitignored) for local runs, or point
-# PUSH_SERVICE_CONFIG_FILE at another path.
-# Env vars override file keys (dots→underscores, uppercased); LOG_LEVEL is env-only.
+# See ./README.md → "Configuration"
+log_level: info
+
 push_service:
   host: localhost
   port: 8001

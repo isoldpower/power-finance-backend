@@ -12,8 +12,9 @@ type Stores struct {
 	DedupeStore   *dedupe.PostgresStore
 }
 
-// Bootstrap opens the pool, applies the schema and builds the stores; the
-// returned cleanup closes the pool and must be called on shutdown.
+// Bootstrap opens the pool and builds the stores; the returned cleanup closes
+// the pool and must be called on shutdown. The schema is owned by the Goose
+// migrations (run via `webhook-service migrate`), not applied at boot.
 func Bootstrap(
 	rootContext context.Context,
 	config Config,
@@ -22,11 +23,6 @@ func Bootstrap(
 	postgresPool, poolErr := Connect(rootContext, config.DSN)
 	if poolErr != nil {
 		return nil, nil, poolErr
-	}
-
-	if schemaErr := EnsureSchema(rootContext, postgresPool); schemaErr != nil {
-		postgresPool.Close()
-		return nil, nil, schemaErr
 	}
 
 	return &Stores{

@@ -27,7 +27,7 @@ func StartPushService(serviceConfig types.PushServiceConfig) error {
 		services.NewEventsProjectionService(),
 		newHeartbeat,
 	)
-	notificationsHandler.Start()
+	notificationsHandler.Start(backgroundContext)
 
 	readinessProbe := health.NewProbe()
 	kafkaErr := kafka.StartKafkaConsumer(

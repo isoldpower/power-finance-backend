@@ -2,6 +2,7 @@ package http
 
 import (
 	"services/push-service/internal/health"
+	"services/push-service/internal/metrics"
 	httpServer "services/push-service/internal/server/http"
 	"services/push-service/push_service/types"
 )
@@ -28,6 +29,7 @@ func (hpd *HttpPresenterDefinition) InitialiseRoutes(
 	publicRoutes := []*httpServer.HttpServerRoute{
 		{Pattern: "GET /healthz", Handler: hpd.presentation.HandleHealthCheck},
 		{Pattern: "GET /readyz", Handler: hpd.presentation.HandleReadinessCheck},
+		{Pattern: "GET /metrics", Handler: metrics.Handler().ServeHTTP},
 	}
 
 	for _, route := range routes {

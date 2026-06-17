@@ -1,7 +1,6 @@
 package http
 
 import (
-	"log"
 	"log/slog"
 	"net/http"
 
@@ -47,7 +46,7 @@ func (hp *HttpPresentation) HandleReadinessCheck(
 		writer.WriteHeader(http.StatusServiceUnavailable)
 		_, writeErr := writer.Write([]byte("kafka consumer not running"))
 		if writeErr != nil {
-			log.Printf("Response write failed: %v", writeErr)
+			slog.Warn("readiness response write failed", "error", writeErr)
 		}
 
 		return
@@ -56,7 +55,7 @@ func (hp *HttpPresentation) HandleReadinessCheck(
 	writer.WriteHeader(http.StatusOK)
 	_, writeErr := writer.Write([]byte("ready"))
 	if writeErr != nil {
-		log.Printf("Response write failed: %v", writeErr)
+		slog.Warn("readiness response write failed", "error", writeErr)
 	}
 }
 

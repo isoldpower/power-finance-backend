@@ -190,6 +190,71 @@ func TestDedupeSkipsSeenEvent(t *testing.T) {
 	}
 }
 
+func wireDedupingHandler(
+	policy RetryPolicy,
+	userHandler UserHandler,
+	store dedupe.Store,
+) (*MessageHandler, *fakePublisher) {
+	fake := &fakePublisher{}
+	handler := NewMessageHandler(userHandler, MessageHandlerConfig{
+		Policy:         policy,
+		RetryPublisher: publisher.NewRetryPublisher(fake, "events.retry"),
+		DLQPublisher:   publisher.NewDLQPublisher(fake, "events.dlq"),
+		DedupeStore:    store,
+		EventID: func(message kafkaclient.ConsumedMessage) (string, bool) {
+			return "evt-1", true
+		},
+	})
+	handler.sleep = func(ctx context.Context, duration time.Duration) error { return nil }
+	return handler, fake
+}
+
+func TestSuccessMarksEventThenSkipsRedelivery(t *testing.T) {
+	calls := 0
+	userHandler := func(ctx context.Context, message kafkaclient.ConsumedMessage) error {
+		calls++
+		return nil
+	}
+	store := dedupe.NewInMemoryStore()
+	handler, _ := wireDedupingHandler(DefaultRetryPolicy(), userHandler, store)
+
+	if err := handler.Handle(context.Background(), fakeMessage()); err != nil {
+		t.Fatal(err)
+	}
+	if seen, _ := store.Seen(context.Background(), "evt-1"); !seen {
+		t.Fatal("expected successful handle to mark the event as consumed")
+	}
+
+	if err := handler.Handle(context.Background(), fakeMessage()); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("expected redelivery to be skipped after marking, got %d calls", calls)
+	}
+}
+
+func TestRetryScheduledDoesNotMarkEvent(t *testing.T) {
+	alwaysFail := func(ctx context.Context, message kafkaclient.ConsumedMessage) error {
+		return fmt.Errorf("%w: blip", kafkaclient.ErrTransient)
+	}
+	policy := DefaultRetryPolicy()
+	policy.MaxInProcessAttempts = 1
+	policy.MaxRetryTopicAttempts = 5
+	store := dedupe.NewInMemoryStore()
+	handler, fake := wireDedupingHandler(policy, alwaysFail, store)
+
+	if err := handler.Handle(context.Background(), fakeMessage()); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(fake.published) != 1 || fake.published[0].topic != "events.retry" {
+		t.Fatalf("expected a retry publish, got %+v", fake.published)
+	}
+	if seen, _ := store.Seen(context.Background(), "evt-1"); seen {
+		t.Fatal("a retry-scheduled event must not be marked, or its retry would be skipped")
+	}
+}
+
 func TestCancelledContextPropagatesWithoutRouting(t *testing.T) {
 	cancelledContext, cancel := context.WithCancel(context.Background())
 

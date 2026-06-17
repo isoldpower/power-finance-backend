@@ -13,10 +13,15 @@ const (
 	claimLease         = 5 * time.Minute
 )
 
+type deliveryAttempter interface {
+	Attempt(ctx context.Context, delivery types.Delivery, secret string) error
+}
+
 type RetryScheduler struct {
 	deliveries deliveryStore
 	attempter  deliveryAttempter
 	interval   time.Duration
+	wake       chan struct{}
 }
 
 func NewRetryScheduler(
@@ -28,10 +33,21 @@ func NewRetryScheduler(
 		deliveries: deliveries,
 		attempter:  attempter,
 		interval:   interval,
+		wake:       make(chan struct{}, 1),
 	}
 }
 
-// Run blocks until the context is cancelled, ticking on the configured interval.
+// Wake asks the scheduler to run a delivery pass promptly. It coalesces with any
+// already-pending wake and never blocks, so dispatch stays off the hot path.
+func (s *RetryScheduler) Wake() {
+	select {
+	case s.wake <- struct{}{}:
+	default:
+	}
+}
+
+// Run blocks until the context is cancelled, draining due deliveries on each
+// tick and whenever woken by a freshly dispatched delivery.
 func (s *RetryScheduler) Run(ctx context.Context) {
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
@@ -44,23 +60,37 @@ func (s *RetryScheduler) Run(ctx context.Context) {
 			return
 		case <-ticker.C:
 			s.runOnce(ctx)
+		case <-s.wake:
+			s.runOnce(ctx)
 		}
 	}
 }
 
+// runOnce drains every currently-due delivery in batches, so a single wake or
+// tick fully catches up rather than leaving a backlog for the next one.
 func (s *RetryScheduler) runOnce(ctx context.Context) {
-	now := time.Now().UTC()
-	due, claimErr := s.deliveries.ClaimDue(ctx, now, claimLease, scheduledBatchSize)
-	if claimErr != nil {
-		slog.Error("retry scheduler: claim due deliveries failed", "error", claimErr)
-		return
-	}
-
-	for _, delivery := range due {
+	for {
 		if ctx.Err() != nil {
 			return
 		}
-		s.attempt(ctx, delivery)
+
+		now := time.Now().UTC()
+		due, claimErr := s.deliveries.ClaimDue(ctx, now, claimLease, scheduledBatchSize)
+		if claimErr != nil {
+			slog.Error("retry scheduler: claim due deliveries failed", "error", claimErr)
+			return
+		}
+
+		for _, delivery := range due {
+			if ctx.Err() != nil {
+				return
+			}
+			s.attempt(ctx, delivery)
+		}
+
+		if len(due) < scheduledBatchSize {
+			return
+		}
 	}
 }
 

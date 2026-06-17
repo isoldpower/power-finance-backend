@@ -1,14 +1,6 @@
-package postgres
-
-import (
-	"context"
-	"fmt"
-
-	"github.com/jackc/pgx/v5/pgxpool"
-)
-
-const schemaSQL = `
-CREATE TABLE IF NOT EXISTS webhook_endpoints (
+-- +goose Up
+-- +goose StatementBegin
+CREATE TABLE webhook_endpoints (
     id               UUID PRIMARY KEY,
     user_id          BIGINT NOT NULL,
     user_external_id TEXT NOT NULL DEFAULT '',
@@ -20,7 +12,7 @@ CREATE TABLE IF NOT EXISTS webhook_endpoints (
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS webhook_subscriptions (
+CREATE TABLE webhook_subscriptions (
     id         UUID PRIMARY KEY,
     webhook_id UUID NOT NULL REFERENCES webhook_endpoints(id) ON DELETE CASCADE,
     user_id    BIGINT NOT NULL,
@@ -29,10 +21,10 @@ CREATE TABLE IF NOT EXISTS webhook_subscriptions (
     UNIQUE (webhook_id, event_type)
 );
 
-CREATE INDEX IF NOT EXISTS webhook_subscriptions_event_type_idx
+CREATE INDEX webhook_subscriptions_event_type_idx
     ON webhook_subscriptions (event_type);
 
-CREATE TABLE IF NOT EXISTS webhook_deliveries (
+CREATE TABLE webhook_deliveries (
     id               UUID PRIMARY KEY,
     webhook_id       UUID NOT NULL,
     user_id          BIGINT NOT NULL,
@@ -50,22 +42,21 @@ CREATE TABLE IF NOT EXISTS webhook_deliveries (
     UNIQUE (webhook_id, event_id)
 );
 
-CREATE INDEX IF NOT EXISTS webhook_deliveries_due_idx
+CREATE INDEX webhook_deliveries_due_idx
     ON webhook_deliveries (status, next_attempt_at);
 
-CREATE TABLE IF NOT EXISTS kafka_consumed_events (
+CREATE TABLE kafka_consumed_events (
     consumer_group TEXT NOT NULL,
     event_id       TEXT NOT NULL,
     consumed_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (consumer_group, event_id)
 );
-`
+-- +goose StatementEnd
 
-// EnsureSchema applies the table definitions idempotently.
-func EnsureSchema(ctx context.Context, pool *pgxpool.Pool) error {
-	if _, execErr := pool.Exec(ctx, schemaSQL); execErr != nil {
-		return fmt.Errorf("postgres: ensure schema: %w", execErr)
-	}
-
-	return nil
-}
+-- +goose Down
+-- +goose StatementBegin
+DROP TABLE kafka_consumed_events;
+DROP TABLE webhook_deliveries;
+DROP TABLE webhook_subscriptions;
+DROP TABLE webhook_endpoints;
+-- +goose StatementEnd

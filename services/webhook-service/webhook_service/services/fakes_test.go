@@ -119,6 +119,23 @@ func (f *fakeAttempter) Attempt(_ context.Context, delivery types.Delivery, secr
 	return f.err
 }
 
+type fakeWaker struct {
+	wakes int
+}
+
+func (f *fakeWaker) Wake() { f.wakes++ }
+
+// signalingAttempter reports each attempt over a channel so Run-driven tests can
+// observe deliveries without racing on a shared slice.
+type signalingAttempter struct {
+	attempted chan types.Delivery
+}
+
+func (s *signalingAttempter) Attempt(_ context.Context, delivery types.Delivery, _ string) error {
+	s.attempted <- delivery
+	return nil
+}
+
 type fakeConfigStore struct {
 	upserted    []types.WebhookEndpoint
 	updated     []string

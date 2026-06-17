@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -20,7 +21,7 @@ func validOutboxEvent() types.OutboxEvent {
 func TestProjectionForwardsValidEvents(t *testing.T) {
 	projection := NewEventsProjectionService()
 	kafkaChannel := make(chan types.OutboxEvent)
-	go projection.RunKafkaReceiver(kafkaChannel)
+	go projection.RunKafkaReceiver(context.Background(), kafkaChannel)
 
 	kafkaChannel <- validOutboxEvent()
 
@@ -39,7 +40,7 @@ func TestProjectionForwardsValidEvents(t *testing.T) {
 func TestProjectionDropsEventsWithoutEventType(t *testing.T) {
 	projection := NewEventsProjectionService()
 	kafkaChannel := make(chan types.OutboxEvent)
-	go projection.RunKafkaReceiver(kafkaChannel)
+	go projection.RunKafkaReceiver(context.Background(), kafkaChannel)
 
 	missingType := validOutboxEvent()
 	missingType.EventType = ""
@@ -54,7 +55,7 @@ func TestProjectionDropsEventsWithoutEventType(t *testing.T) {
 func TestProjectionDropsEventsWithEmptyPayload(t *testing.T) {
 	projection := NewEventsProjectionService()
 	kafkaChannel := make(chan types.OutboxEvent)
-	go projection.RunKafkaReceiver(kafkaChannel)
+	go projection.RunKafkaReceiver(context.Background(), kafkaChannel)
 
 	emptyPayload := validOutboxEvent()
 	emptyPayload.Payload = nil
@@ -69,7 +70,7 @@ func TestProjectionDropsEventsWithEmptyPayload(t *testing.T) {
 func TestPoolDeliversOnlyToTheEventOwner(t *testing.T) {
 	pool := NewClientsPoolService()
 	eventsChannel := make(chan types.OutboxEvent)
-	go pool.FanoutEvents(eventsChannel)
+	go pool.FanoutEvents(context.Background(), eventsChannel)
 
 	ownerClient, registered := pool.Subscribe("user_2abc")
 	if !registered {
@@ -103,7 +104,7 @@ func TestPoolDeliversOnlyToTheEventOwner(t *testing.T) {
 func TestPoolBroadcastsGlobalEventsToEverySubscriber(t *testing.T) {
 	pool := NewClientsPoolService()
 	eventsChannel := make(chan types.OutboxEvent)
-	go pool.FanoutEvents(eventsChannel)
+	go pool.FanoutEvents(context.Background(), eventsChannel)
 
 	firstClient, registered := pool.Subscribe("user_2abc")
 	if !registered {
@@ -132,10 +133,66 @@ func TestPoolBroadcastsGlobalEventsToEverySubscriber(t *testing.T) {
 	close(eventsChannel)
 }
 
+func TestProjectionStopsOnContextCancel(t *testing.T) {
+	projection := NewEventsProjectionService()
+	ctx, cancel := context.WithCancel(context.Background())
+	kafkaChannel := make(chan types.OutboxEvent)
+
+	done := make(chan struct{})
+	go func() {
+		projection.RunKafkaReceiver(ctx, kafkaChannel)
+		close(done)
+	}()
+
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("expected projection receiver to stop on context cancel")
+	}
+
+	if _, isOpen := <-projection.Events(); isOpen {
+		t.Fatal("expected events channel to be closed after shutdown")
+	}
+}
+
+func TestFanoutStopsAndDetachesClientsOnContextCancel(t *testing.T) {
+	pool := NewClientsPoolService()
+	ctx, cancel := context.WithCancel(context.Background())
+	eventsChannel := make(chan types.OutboxEvent)
+
+	done := make(chan struct{})
+	go func() {
+		pool.FanoutEvents(ctx, eventsChannel)
+		close(done)
+	}()
+
+	subscription, registered := pool.Subscribe("user_2abc")
+	if !registered {
+		t.Fatal("expected client to subscribe before shutdown")
+	}
+
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("expected fanout to stop on context cancel")
+	}
+
+	if _, isOpen := <-subscription.Events(); isOpen {
+		t.Fatal("expected subscriber channel to close on shutdown")
+	}
+	if _, registered := pool.Subscribe("user_late"); registered {
+		t.Fatal("expected subscribe to fail after shutdown")
+	}
+}
+
 func TestCancelledSubscriptionStopsReceivingEvents(t *testing.T) {
 	pool := NewClientsPoolService()
 	eventsChannel := make(chan types.OutboxEvent)
-	go pool.FanoutEvents(eventsChannel)
+	go pool.FanoutEvents(context.Background(), eventsChannel)
 
 	subscription, registered := pool.Subscribe("user_2abc")
 	if !registered {

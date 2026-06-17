@@ -37,9 +37,16 @@ func NewWebhookHandler(
 	}
 }
 
-// Start launches the background delivery-retry scheduler.
-func (h *WebhookHandler) Start(ctx context.Context) {
-	go h.scheduler.Run(ctx)
+// Start launches the background delivery-retry scheduler and returns a channel
+// that is closed once it has stopped, so the caller can join it on shutdown.
+func (h *WebhookHandler) Start(ctx context.Context) <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		h.scheduler.Run(ctx)
+	}()
+
+	return done
 }
 
 // Handle routes a decoded outbox event to config projection or delivery

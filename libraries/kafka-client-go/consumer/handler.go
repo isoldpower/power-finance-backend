@@ -30,15 +30,29 @@ type MessageHandlerConfig struct {
 	Logger         *slog.Logger
 }
 
+type attemptOutcome int
+
+const (
+	outcomeProcessed attemptOutcome = iota
+	outcomeRoutedToDLQ
+	outcomeRetryableExhausted
+)
+
 type MessageHandler struct {
 	userHandler    UserHandler
 	retryPolicy    RetryPolicy
 	dedupeGate     *dedupe.Gate
 	terminalRouter *TerminalRouter
+	logger         *slog.Logger
 	sleep          func(ctx context.Context, duration time.Duration) error
 }
 
 func NewMessageHandler(userHandler UserHandler, config MessageHandlerConfig) *MessageHandler {
+	logger := config.Logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+
 	return &MessageHandler{
 		userHandler: userHandler,
 		retryPolicy: config.Policy,
@@ -53,7 +67,8 @@ func NewMessageHandler(userHandler UserHandler, config MessageHandlerConfig) *Me
 			config.DLQPublisher,
 			config.Logger,
 		),
-		sleep: sleepUnlessCancelled,
+		logger: logger,
+		sleep:  sleepUnlessCancelled,
 	}
 }
 
@@ -66,35 +81,52 @@ func (h *MessageHandler) Handle(ctx context.Context, message kafkaclient.Consume
 	}
 
 	retryContext := RetryContextFromMessage(message)
-	lastRetryableError, runErr := h.runInProcessAttempts(ctx, message, retryContext)
+	outcome, lastRetryableError, runErr := h.runInProcessAttempts(ctx, message, retryContext)
 	if runErr != nil {
 		return runErr
-	} else if lastRetryableError == nil {
-		return nil
 	}
 
-	return h.terminalRouter.RouteTerminalFailure(
-		ctx,
-		message,
-		lastRetryableError,
-		retryContext,
-		h.retryPolicy.MaxInProcessAttempts,
-	)
+	switch outcome {
+	case outcomeProcessed:
+		return h.markProcessedBestEffort(ctx, message)
+	case outcomeRoutedToDLQ:
+		return nil
+	case outcomeRetryableExhausted:
+		return h.terminalRouter.RouteTerminalFailure(
+			ctx,
+			message,
+			lastRetryableError,
+			retryContext,
+			h.retryPolicy.MaxInProcessAttempts,
+		)
+	}
+
+	return nil
+}
+
+// markProcessedBestEffort records a handled event for dedupe; a mark failure is
+// logged not returned, since the handler succeeded and redelivery would reprocess it.
+func (h *MessageHandler) markProcessedBestEffort(ctx context.Context, message kafkaclient.ConsumedMessage) error {
+	if markErr := h.dedupeGate.MarkProcessed(ctx, message); markErr != nil {
+		h.logger.WarnContext(ctx, "kafka.dedupe.mark_failed", slog.String("error", markErr.Error()))
+	}
+
+	return nil
 }
 
 func (h *MessageHandler) runInProcessAttempts(
 	ctx context.Context,
 	message kafkaclient.ConsumedMessage,
 	retryContext RetryContext,
-) (lastRetryableError error, terminalError error) {
+) (outcome attemptOutcome, lastRetryableError error, terminalError error) {
 	var lastRetryable error
 
 	for attemptNumber := 1; attemptNumber <= h.retryPolicy.MaxInProcessAttempts; attemptNumber++ {
 		handlerError := h.userHandler(ctx, message)
 		if handlerError == nil {
-			return nil, nil
+			return outcomeProcessed, nil, nil
 		} else if isShutdownInProgress(ctx, handlerError) {
-			return nil, handlerError
+			return outcomeRoutedToDLQ, nil, handlerError
 		}
 
 		switch {
@@ -102,7 +134,7 @@ func (h *MessageHandler) runInProcessAttempts(
 			routeError := h.terminalRouter.RouteImmediateFailure(
 				ctx, message, handlerError, retryContext, attemptNumber, "poison",
 			)
-			return nil, routeError
+			return outcomeRoutedToDLQ, nil, routeError
 
 		case h.retryPolicy.IsRetryable(handlerError):
 			lastRetryable = handlerError
@@ -110,7 +142,7 @@ func (h *MessageHandler) runInProcessAttempts(
 			if !isLastAttempt {
 				backoff := inProcessBackoffForAttempt(attemptNumber)
 				if sleepError := h.sleep(ctx, backoff); sleepError != nil {
-					return nil, sleepError
+					return outcomeRoutedToDLQ, nil, sleepError
 				}
 			}
 
@@ -118,11 +150,11 @@ func (h *MessageHandler) runInProcessAttempts(
 			routeError := h.terminalRouter.RouteImmediateFailure(
 				ctx, message, handlerError, retryContext, attemptNumber, "non_retryable",
 			)
-			return nil, routeError
+			return outcomeRoutedToDLQ, nil, routeError
 		}
 	}
 
-	return lastRetryable, nil
+	return outcomeRetryableExhausted, lastRetryable, nil
 }
 
 func isShutdownInProgress(ctx context.Context, handlerError error) bool {

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+
 	"services/push-service/push_service/types"
 )
 
@@ -24,10 +26,10 @@ func NewSSENotificationsHandler(
 	}
 }
 
-// Start launches the projection and fanout pipelines.
-func (snh *SSENotificationsHandler) Start() {
-	go snh.projectionService.RunKafkaReceiver(snh.kafkaChannel)
-	go snh.poolService.FanoutEvents(snh.projectionService.Events())
+// Start launches the projection and fanout pipelines; both stop when ctx is cancelled.
+func (snh *SSENotificationsHandler) Start(ctx context.Context) {
+	go snh.projectionService.RunKafkaReceiver(ctx, snh.kafkaChannel)
+	go snh.poolService.FanoutEvents(ctx, snh.projectionService.Events())
 }
 
 // KafkaSink returns the Kafka event channel associated with handler.
@@ -67,7 +69,11 @@ func (snh *SSENotificationsHandler) SpinUntilDone(
 				return
 			}
 
-			responseChannel <- formatServerSentEvent(receivedEvent)
+			select {
+			case responseChannel <- formatServerSentEvent(receivedEvent):
+			case <-goneChannel:
+				return
+			}
 		}
 	}
 }

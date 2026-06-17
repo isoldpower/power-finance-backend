@@ -33,7 +33,7 @@ func StartWebhookService(serviceConfig Config) error {
 	defer producer.Stop()
 
 	handler := buildHandler(producer, stores, serviceConfig.Delivery)
-	handler.Start(rootContext)
+	schedulerDone := handler.Start(rootContext)
 
 	readinessProbe := health.NewProbe()
 	consumer, consumerErr := kafka.NewConsumer(
@@ -46,12 +46,28 @@ func StartWebhookService(serviceConfig Config) error {
 	if consumerErr != nil {
 		return consumerErr
 	}
+	defer consumer.Close()
 
-	go consumer.Run(rootContext)
+	consumerDone := make(chan struct{})
+	go func() {
+		defer close(consumerDone)
+		consumer.Run(rootContext)
+	}()
+
 	httpserver.NewServer(serviceConfig.Server, readinessProbe).
 		Run(rootContext)
 
+	awaitBackgroundDrainBeforeCleanup(consumerDone, schedulerDone)
+
 	return nil
+}
+
+// awaitBackgroundDrainBeforeCleanup blocks until the consumer and scheduler
+// goroutines have stopped, so the deferred pool and producer cleanups in
+// StartWebhookService never run underneath an in-flight delivery.
+func awaitBackgroundDrainBeforeCleanup(consumerDone, schedulerDone <-chan struct{}) {
+	<-consumerDone
+	<-schedulerDone
 }
 
 func buildHandler(
@@ -67,17 +83,17 @@ func buildHandler(
 		deliveryConfig.MaxAttempts,
 		deliveryConfig.RetryBackoff,
 	)
-	dispatcher := services.NewDeliveryDispatcher(
-		stores.ConfigStore,
-		stores.DeliveryStore,
-		attempter,
-	)
-	configProjection := services.NewConfigProjection(stores.ConfigStore)
 	scheduler := services.NewRetryScheduler(
 		stores.DeliveryStore,
 		attempter,
 		deliveryConfig.SchedulerInterval,
 	)
+	dispatcher := services.NewDeliveryDispatcher(
+		stores.ConfigStore,
+		stores.DeliveryStore,
+		scheduler,
+	)
+	configProjection := services.NewConfigProjection(stores.ConfigStore)
 
 	return handlers.NewWebhookHandler(configProjection, dispatcher, scheduler)
 }

@@ -20,6 +20,16 @@ func NewGate(store Store, extractor EventIDExtractor, logger *slog.Logger) *Gate
 		logger = slog.Default()
 	}
 
+	storeConfigured := store != nil
+	extractorConfigured := extractor != nil
+	if storeConfigured != extractorConfigured {
+		logger.Warn(
+			"kafka.dedupe.disabled_partial_config",
+			slog.Bool("store_configured", storeConfigured),
+			slog.Bool("extractor_configured", extractorConfigured),
+		)
+	}
+
 	return &Gate{
 		store:     store,
 		extractor: extractor,
@@ -51,4 +61,22 @@ func (g *Gate) AlreadyProcessed(
 	} else {
 		return false, nil
 	}
+}
+
+// MarkProcessed records the message's event id as consumed so a redelivery is
+// skipped by AlreadyProcessed; a no-op without a store/extractor or event id.
+func (g *Gate) MarkProcessed(
+	ctx context.Context,
+	message kafkaclient.ConsumedMessage,
+) error {
+	if g.store == nil || g.extractor == nil {
+		return nil
+	}
+
+	eventID, isFound := g.extractor(message)
+	if !isFound || eventID == "" {
+		return nil
+	}
+
+	return g.store.Mark(ctx, eventID)
 }

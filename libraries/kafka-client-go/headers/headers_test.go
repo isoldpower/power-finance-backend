@@ -115,6 +115,30 @@ func TestMergeAppendsWithoutMutatingBase(t *testing.T) {
 	}
 }
 
+func TestMergeReplacesDuplicateKeys(t *testing.T) {
+	base := KafkaHeaders{String(RetryCount, "1"), String(OriginalTopic, "events.async")}
+
+	merged := Merge(base, String(RetryCount, "2"), String(RetryCount, "3"))
+
+	if len(merged) != 2 {
+		t.Fatalf("expected duplicate keys collapsed to 2 headers, got %d", len(merged))
+	}
+	if value, _ := Get(merged, RetryCount); value != "3" {
+		t.Fatalf("expected last value to win, got %q", value)
+	}
+}
+
+func TestMergeIsIdempotentAcrossRepeatedMerges(t *testing.T) {
+	merged := Merge(nil, String(RetryCount, "1"))
+	for range 5 {
+		merged = Merge(merged, String(RetryCount, "1"))
+	}
+
+	if len(merged) != 1 {
+		t.Fatalf("expected repeated merges to stay at 1 header, got %d", len(merged))
+	}
+}
+
 func TestMergeNilBase(t *testing.T) {
 	merged := Merge(nil, String("a", "1"))
 

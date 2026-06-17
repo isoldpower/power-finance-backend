@@ -17,6 +17,8 @@ unexport VIRTUAL_ENV
 
 WRITE_SERVICE_DIR   := services/write-service
 READ_SERVICE_DIR    := services/read-service
+PUSH_SERVICE_DIR    := services/push-service
+WEBHOOK_SERVICE_DIR := services/webhook-service
 CORRELATION_LIB_DIR := libraries/correlation-py
 KAFKA_CLIENT_LIB_DIR := libraries/kafka-client-py
 SAGA_LIB_DIR         := libraries/saga-pattern-py
@@ -28,7 +30,7 @@ UVICORN_PORT := 8000
 PRECOMMIT_CONFIG := .pre-commit.yaml
 HOOK_SENTINEL    := .git/hooks/pre-commit
 
-ROUTER_TARGETS := write read
+ROUTER_TARGETS := write read push webhook
 ROUTING        := $(filter $(firstword $(MAKECMDGOALS)),$(ROUTER_TARGETS))
 
 # -----------------------------------------------------------------------------
@@ -68,6 +70,14 @@ write: | $(HOOK_SENTINEL) ## Route to write-service Makefile: `make write <subco
 .PHONY: read
 read: | $(HOOK_SENTINEL) ## Route to read-service Makefile: `make read <subcommand>`
 	@$(MAKE) -C $(READ_SERVICE_DIR) $(ROUTED_ARGS)
+
+.PHONY: push
+push: | $(HOOK_SENTINEL) ## Route to push-service Makefile: `make push <subcommand>`
+	@$(MAKE) -C $(PUSH_SERVICE_DIR) $(ROUTED_ARGS)
+
+.PHONY: webhook
+webhook: | $(HOOK_SENTINEL) ## Route to webhook-service Makefile: `make webhook <subcommand>`
+	@$(MAKE) -C $(WEBHOOK_SERVICE_DIR) $(ROUTED_ARGS)
 
 # When routing, expose the trailing args to the recipe AND no-op them as
 # Make goals so Make doesn't try to build them after the recipe returns.
