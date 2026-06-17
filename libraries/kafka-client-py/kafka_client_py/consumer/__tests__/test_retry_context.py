@@ -27,8 +27,6 @@ class _Msg:
 
 
 def test_from_message_with_no_headers_defaults_to_zero_attempts_and_no_timestamp():
-    # A freshly-published message has no retry headers — context must
-    # still be constructable without crashing.
     ctx = RetryContext.from_message(_Msg(headers=None))
 
     assert ctx.retry_topic_attempts_consumed == 0
@@ -75,7 +73,6 @@ def test_from_message_reads_both_headers_independently():
 
 
 def test_from_message_malformed_retry_count_defaults_to_zero():
-    # Pin lenient parsing — a poisoned header must not stop processing.
     msg = _Msg(headers=[(H.HEADER_RETRY_COUNT, b"not-a-number")])
 
     ctx = RetryContext.from_message(msg)

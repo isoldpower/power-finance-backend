@@ -1,3 +1,4 @@
+# See README.md → "Tooling notes"
 [project]
 name = "power-finance-cqrs"
 version = "0.0.0"
@@ -18,27 +19,17 @@ members = [
     "libraries/saga-pattern-py",
 ]
 
-# Note: services/push-service is a Go module and is intentionally excluded
-# from the uv workspace. It is managed by `go mod` independently.
-
 [dependency-groups]
 dev = [
     "ruff>=0.8,<0.9",
     "mypy>=1.13,<2.0",
     "pre-commit>=4.0,<5.0",
-    # protoc + Python plugin, used by libraries/kafka-messages-proto's
-    # codegen script. Workspace-level dev dep so a single `uv sync` makes
-    # `python -m grpc_tools.protoc` available in .venv.
     "grpcio-tools>=1.66,<2.0",
 ]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-# force-exclude so generated protobuf bindings are skipped even when a runner
-# (pre-commit, editor-on-save) passes the file path explicitly. Without it,
-# ruff strips the side-effectful `timestamp_pb2` import from *_pb2.py as
-# "unused", which breaks descriptor-pool loading at runtime.
 force-exclude = true
 extend-exclude = [
     "**/migrations/**",
@@ -83,9 +74,6 @@ exclude = [
     "/generated/",
     ".venv",
     "manage\\.py$",
-    # Test-double modules kept at each project root (importable as `from fakes
-    # import ...`). Excluded like __tests__: several share the top-level module
-    # name "fakes", which mypy can't map in a single run.
     "fakes\\.py$",
     "services/read-service/",
     "old-structure/",

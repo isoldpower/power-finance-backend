@@ -97,8 +97,6 @@ class MessageHandler:
             await self._user_handler(message)
             return HandlerSucceeded()
         except asyncio.CancelledError:
-            # Cooperative shutdown/cancellation — never reclassify as a handler
-            # failure, or the offset gets committed and the message is lost.
             raise
         except PoisonError as poison_exception:
             return HandlerRaisedPoison(exception=poison_exception)

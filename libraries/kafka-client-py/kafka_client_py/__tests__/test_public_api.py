@@ -34,8 +34,6 @@ def test_all_lists_the_documented_names():
 
 
 def test_re_exports_are_the_same_objects_as_their_modules():
-    # If a future refactor accidentally shadows a name with a re-import
-    # cycle or wrapping decorator, identity diverges. Pin it.
     from kafka_client_py.consumer.dedupe.store import (
         CREATE_TABLE_SQL,
         DedupeStore,
@@ -73,8 +71,6 @@ def test_re_exports_are_the_same_objects_as_their_modules():
 
 
 def test_headers_module_is_re_exported_for_dotted_access():
-    # Consumers do `from kafka_client_py import headers as H` and then
-    # H.HEADER_RETRY_COUNT. Pin that the module reference is the real one.
     from kafka_client_py import headers as headers_module
 
     assert headers_module is kafka_client_py.headers

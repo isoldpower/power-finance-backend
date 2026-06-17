@@ -34,6 +34,7 @@ USER app
 EXPOSE 8001
 
 ENTRYPOINT ["/usr/local/bin/push-service"]
+CMD ["run-api"]
 
 LABEL org.opencontainers.image.source=https://github.com/isoldpower/power-finance-backend \
       org.opencontainers.image.title="power-finance-push-service" \

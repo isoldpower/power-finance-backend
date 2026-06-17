@@ -28,18 +28,10 @@ def _ctx() -> RetryContext:
 
 
 def _terminal_router_stub() -> AsyncMock:
-    # The Router has two public coroutines used by AttemptOutcomes. Stub
-    # both as AsyncMock so we can assert call args without instantiating
-    # publishers / policies.
     router = AsyncMock()
     router.route_immediate_failure = AsyncMock()
     router.route_terminal_failure = AsyncMock()
     return router
-
-
-# ---------------------------------------------------------------------------
-# HandlerSucceeded
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -75,15 +67,8 @@ async def test_handler_succeeded_does_not_route_anywhere():
     router.route_terminal_failure.assert_not_awaited()
 
 
-# ---------------------------------------------------------------------------
-# HandlerRaisedPoison
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_poison_routes_to_immediate_failure_with_reason_poison():
-    # Poison must bypass the retry budget entirely and land in the DLQ
-    # with reason="poison" so on-call can grep.
     state = InProcessLoopState()
     router = _terminal_router_stub()
     boom = ValueError("bad payload")
@@ -123,11 +108,6 @@ async def test_poison_marks_loop_complete_so_caller_does_not_re_attempt():
     assert state.is_complete is True
 
 
-# ---------------------------------------------------------------------------
-# HandlerRaisedNonRetryable
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_non_retryable_routes_to_immediate_failure_with_reason_non_retryable():
     state = InProcessLoopState()
@@ -165,15 +145,8 @@ async def test_non_retryable_marks_loop_complete():
     assert state.is_complete is True
 
 
-# ---------------------------------------------------------------------------
-# HandlerRaisedRetryable
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_retryable_records_exception_without_marking_complete():
-    # Critical: in-process retry loop must NOT terminate; record the
-    # exception so the caller can sleep + try again.
     state = InProcessLoopState()
     boom = ConnectionError("blip")
 
@@ -191,8 +164,6 @@ async def test_retryable_records_exception_without_marking_complete():
 
 @pytest.mark.asyncio
 async def test_retryable_does_not_call_terminal_router():
-    # In-process retries are the handler's problem alone; the terminal
-    # router only sees a message AFTER the in-process loop gives up.
     router = _terminal_router_stub()
 
     await HandlerRaisedRetryable(exception=ConnectionError()).apply(

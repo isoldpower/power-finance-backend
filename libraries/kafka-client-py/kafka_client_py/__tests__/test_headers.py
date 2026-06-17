@@ -12,10 +12,6 @@ from datetime import UTC, datetime, timedelta, timezone
 
 from kafka_client_py import headers as H
 
-# ---------------------------------------------------------------------------
-# encode / decode
-# ---------------------------------------------------------------------------
-
 
 def test_encode_decode_roundtrip_string():
     assert H.decode(H.encode("hello")) == "hello"
@@ -27,9 +23,6 @@ def test_encode_decode_roundtrip_int():
 
 
 def test_encode_datetime_naive_is_treated_as_utc():
-    # Naive datetime carries no tz info; the encoder MUST default to
-    # UTC rather than silently use local time (would corrupt cross-tz
-    # consumers).
     naive = datetime(2026, 5, 18, 12, 0, 0)
     raw = H.encode(naive)
     parsed = datetime.fromisoformat(raw.decode())
@@ -48,20 +41,11 @@ def test_encode_datetime_non_utc_is_normalised_to_utc():
 
 
 def test_decode_returns_none_for_none_input():
-    # Callers like `get` chain into decode with possibly-absent values;
-    # pinning None passthrough avoids defensive isinstance checks at every call.
     assert H.decode(None) is None
 
 
 def test_encode_bool_becomes_string_repr():
-    # Encoder uses str() for everything non-datetime; booleans become "True"/"False".
-    # Not desirable to flip silently — pin so a future "smarter" coercion is intentional.
     assert H.decode(H.encode(True)) == "True"  # type: ignore[arg-type]
-
-
-# ---------------------------------------------------------------------------
-# get
-# ---------------------------------------------------------------------------
 
 
 def test_get_returns_none_when_headers_iterable_is_none():
@@ -77,17 +61,9 @@ def test_get_returns_none_when_header_name_absent():
 
 
 def test_get_returns_last_occurrence_when_header_repeats():
-    # Kafka allows repeated header names. The contract here is "last
-    # wins" so producers can append a fresher value without rewriting
-    # earlier ones.
     hs = [("x", b"first"), ("x", b"second")]
 
     assert H.get(hs, "x") == "second"
-
-
-# ---------------------------------------------------------------------------
-# get_int
-# ---------------------------------------------------------------------------
 
 
 def test_get_int_default_on_missing_headers():
@@ -95,8 +71,6 @@ def test_get_int_default_on_missing_headers():
 
 
 def test_get_int_default_on_unparseable_value():
-    # A garbage retry-count should not crash the consumer; treat as
-    # "no information" and fall back to default.
     assert H.get_int([("nope", b"not-a-number")], "nope", default=9) == 9
 
 
@@ -109,13 +83,7 @@ def test_get_int_handles_negative_integer():
 
 
 def test_get_int_default_zero_when_no_default_provided():
-    # Pin the literal default — used by RetryContext.from_message.
     assert H.get_int(None, "nope") == 0
-
-
-# ---------------------------------------------------------------------------
-# get_datetime
-# ---------------------------------------------------------------------------
 
 
 def test_get_datetime_roundtrips_via_encode():
@@ -130,7 +98,6 @@ def test_get_datetime_returns_none_when_header_absent():
 
 
 def test_get_datetime_returns_none_on_malformed_value():
-    # Pin lenient parsing — consumer must not crash on bad upstream input.
     assert H.get_datetime([("ts", b"not a date")], "ts") is None
 
 
@@ -138,14 +105,7 @@ def test_get_datetime_returns_none_when_headers_is_none():
     assert H.get_datetime(None, "ts") is None
 
 
-# ---------------------------------------------------------------------------
-# merge
-# ---------------------------------------------------------------------------
-
-
 def test_merge_does_not_mutate_input():
-    # Caller-supplied headers list is sometimes the original message's
-    # — mutation would silently corrupt other consumers.
     base = [("a", b"1")]
 
     merged = H.merge(base, ("b", "2"))
@@ -167,8 +127,6 @@ def test_merge_preserves_addition_order():
 
 
 def test_merge_appends_duplicates_rather_than_replacing():
-    # "Last wins" is enforced by `get()`, not by `merge()`. Pin that
-    # merge is a pure append — preserves the full history of a header.
     base = [("retry-count", b"1")]
 
     merged = H.merge(base, ("retry-count", 2))
@@ -182,4 +140,4 @@ def test_merge_with_no_additions_copies_base():
     merged = H.merge(base)
 
     assert merged == base
-    assert merged is not base  # must be a copy
+    assert merged is not base

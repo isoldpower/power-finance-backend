@@ -1,7 +1,4 @@
-# Shared Kafka broker lives in infrastructure/kafka/compose.yaml so this
-# stack stays standalone-runnable (`docker compose -f compose.yaml ...`
-# from this directory) while the root compose pulls the same broker in
-# transitively through this include.
+# See ./README.md → "Stack" and "Debezium outbox"
 include:
   - ../../infrastructure/kafka/compose.yaml
 
@@ -12,10 +9,6 @@ services:
       dockerfile: services/write-service/Dockerfile
     image: power-finance/write-service:dev
     restart: unless-stopped
-    # No published host port: write-service is reachable only over the compose
-    # network, exclusively through the Kong API gateway (kong.yml routes to
-    # host: write-service, port: 8000). `expose` documents the internal port
-    # without binding it on the host.
     expose:
       - "8000"
     environment:
@@ -45,12 +38,6 @@ services:
       write-redis:
         condition: service_healthy
 
-  # Standalone, long-lived Kafka consumer. Not a web process — it tails the
-  # notifications.inbound topic, where other services (webhook-service after a
-  # delivery) request notification creation, and persists each through the
-  # CreateNotification command so the resulting NotificationCreated event fans
-  # out through the outbox like any other write. `restart: unless-stopped` is
-  # the supervisor; on SIGTERM the consumer drains and commits cleanly.
   write-inbound-notifications-consumer:
     build:
       context: ../..
@@ -58,8 +45,6 @@ services:
     image: power-finance/write-service:dev
     restart: unless-stopped
     command: ["python", "manage.py", "run_inbound_notifications_consumer"]
-    # The image's HTTP healthcheck targets uvicorn on :8000; this worker serves
-    # no HTTP, so disable it and let restart: unless-stopped supervise instead.
     healthcheck:
       disable: true
     environment:
@@ -70,8 +55,6 @@ services:
 
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_NOTIFICATIONS_INBOUND_TOPIC: ${KAFKA_NOTIFICATIONS_INBOUND_TOPIC:-notifications.inbound}
-      # Stable consumer group so offsets survive restarts and the partition set
-      # can be shared if this worker is scaled to multiple replicas.
       KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID: ${KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID:-write-service.notifications-inbound}
 
       DATABASE_HOST: postgres-write
@@ -96,18 +79,7 @@ services:
         condition: service_started
       write-redis:
         condition: service_healthy
-    # No port / healthcheck: this is a background worker, not an HTTP service.
-    # Liveness is delegated to `restart: unless-stopped` plus crash exit codes.
 
-  # Write-service Redis. Single logical store, currently used only for
-  # idempotency-key dedup (in-flight lock + 24h cached response). Persistence
-  # is off — idempotency state is bounded by TTL and a Redis restart at worst
-  # means duplicate POSTs *during the outage window* land twice, which on a
-  # money endpoint is caught by the @idempotent decorator failing closed
-  # (503) when the client cannot reach Redis at request time.
-  #
-  # Kept separate from the gateway-redis instance so rate-limit churn and
-  # idempotency state can't compete for memory or eviction policy.
   write-redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -121,10 +93,6 @@ services:
   postgres-write:
     image: postgres:18.3
     restart: unless-stopped
-    # Loopback-only publish: reached as postgres-write:5432 over the compose
-    # network, and on 127.0.0.1:5433 from the host for local tests/tooling
-    # (write_service.settings.test points here). Bound to loopback, so it is
-    # not exposed to the network — the gateway stays the only 0.0.0.0 surface.
     ports:
       - "127.0.0.1:${DATABASE_PORT:-5433}:5432"
     environment:
@@ -136,9 +104,6 @@ services:
       - postgres_write_data:/var/lib/postgresql/data
       - ../../infrastructure/postgres/write_config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
     shm_size: 128mb
-    # All server-side config (logical replication for Debezium, WAL slot
-    # bounds, etc.) lives in the mounted postgresql.conf. It includes the
-    # image-generated defaults first and layers project overrides on top.
     command:
       - "postgres"
       - "-c"
@@ -152,24 +117,11 @@ services:
   immudb:
     image: codenotary/immudb:1.10
     restart: unless-stopped
-    # Internal-only: reached as immudb:3322 by write-service over the compose
-    # network. Not published to the host (3322 = API, 9497 = metrics).
     expose:
       - "3322"
       - "9497"
     volumes:
       - immudb_data:/var/lib/immudb
-
-  # ---------------------------------------------------------------------
-  # Debezium outbox publisher.
-  #
-  # The Connect worker tails postgres-write's WAL via logical replication
-  # and forwards rows from the `outbox_events` table through the Outbox
-  # Event Router SMT, then onto Kafka (shared cluster declared in the
-  # root compose). The connector is write-side-only because it knows the
-  # write Postgres schema — other services owning their own outbox would
-  # spin up their own Connect worker.
-  # ---------------------------------------------------------------------
 
   kafka-connect:
     image: debezium/connect:2.7.3.Final
@@ -192,8 +144,6 @@ services:
       VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
       CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
-    # Internal-only: the REST API is reached as kafka-connect:8083 by the
-    # debezium-bootstrap one-shot over the compose network. Not host-published.
     expose:
       - "8083"
     healthcheck:
@@ -203,9 +153,6 @@ services:
       retries: 12
       start_period: 40s
 
-  # One-shot: posts the outbox connector config to Kafka Connect's REST
-  # API once Connect is healthy. PUT to /connectors/<name>/config is
-  # idempotent — reruns update in place, no manual cleanup needed.
   debezium-bootstrap:
     image: curlimages/curl:8.9.1
     depends_on:

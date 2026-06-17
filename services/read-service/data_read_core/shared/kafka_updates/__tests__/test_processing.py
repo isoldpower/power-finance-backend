@@ -40,9 +40,6 @@ class RecordingEffect(Effect):
         self._log.append(f"compensate:{self._name}")
 
 
-# --------------------------------------------------------------------------- #
-# Effect coercion
-# --------------------------------------------------------------------------- #
 def test_as_effect_passes_through_effect_instances():
     effect = RecordingEffect("a", [])
     assert as_effect(effect) is effect
@@ -65,9 +62,6 @@ def test_effect_default_name_is_class_name():
     assert RecordingEffect.__name__ == "RecordingEffect"
 
 
-# --------------------------------------------------------------------------- #
-# SyncProcessGroup
-# --------------------------------------------------------------------------- #
 def test_group_requires_at_least_one_effect():
     with pytest.raises(ValueError):
         SyncProcessGroup([])
@@ -92,13 +86,9 @@ async def test_atomic_group_compensates_applied_effects_on_failure():
     with pytest.raises(RuntimeError, match="apply failed: b"):
         await group.run(_event())
 
-    # a applied then rolled back; b failed forward so it is not compensated.
     assert log == ["apply:a", "apply:b", "compensate:a"]
 
 
-# --------------------------------------------------------------------------- #
-# ExecutionPlan
-# --------------------------------------------------------------------------- #
 def test_plan_requires_at_least_one_group():
     with pytest.raises(ValueError):
         ExecutionPlan([])

@@ -24,7 +24,6 @@ async def test_transaction_evict_is_a_noop_when_absent(monkeypatch):
     fake_redis = FakeRedis()
     monkeypatch.setattr(tx_evict, "get_redis", lambda: fake_redis)
 
-    # Must not raise when the key was never cached.
     await EvictTransactionCache().apply(make_event(TransactionDeleted(transaction_id=TX_ID)))
 
     assert fake_redis.store == {}

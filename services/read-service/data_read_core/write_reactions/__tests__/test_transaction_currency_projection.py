@@ -48,8 +48,6 @@ async def test_currency_is_projected_from_owning_wallet():
 
 @pytest.mark.django_db(transaction=True)
 async def test_currency_degrades_to_empty_when_wallet_absent():
-    # Wallet projection missing (out-of-order / dropped) — projection must still
-    # land rather than fail, with currency left blank.
     await CreateTransactionReadModel().apply(make_event(_transaction_created()))
 
     transaction = await TransactionReadModel.objects.aget(id=TX_ID)

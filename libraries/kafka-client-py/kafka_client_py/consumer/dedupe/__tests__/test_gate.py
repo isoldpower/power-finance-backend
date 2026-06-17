@@ -35,7 +35,6 @@ class _SpyStore:
 
 @pytest.mark.asyncio
 async def test_returns_false_when_store_is_none():
-    # Dedupe disabled at construction → never claim "already processed".
     gate = DedupeGate(dedupe_store=None, event_id_extractor=lambda m: "evt-1")
 
     assert await gate.already_processed(FakeMessage()) is False
@@ -43,7 +42,6 @@ async def test_returns_false_when_store_is_none():
 
 @pytest.mark.asyncio
 async def test_returns_false_when_extractor_is_none():
-    # No way to derive an event id → can't dedupe; let the handler run.
     gate = DedupeGate(dedupe_store=InMemoryDedupeStore(), event_id_extractor=None)
 
     assert await gate.already_processed(FakeMessage()) is False
@@ -51,8 +49,6 @@ async def test_returns_false_when_extractor_is_none():
 
 @pytest.mark.asyncio
 async def test_does_not_call_store_when_disabled():
-    # When dedupe is off, the gate must not touch the store at all —
-    # this matters because the store may be expensive (DB round trip).
     store = _SpyStore(seen_result=True)
     gate = DedupeGate(dedupe_store=store, event_id_extractor=None)
 
@@ -63,8 +59,6 @@ async def test_does_not_call_store_when_disabled():
 
 @pytest.mark.asyncio
 async def test_returns_false_when_extractor_yields_none():
-    # Message has no event id (e.g. legacy producer); process anyway
-    # rather than swallow silently.
     store = _SpyStore(seen_result=True)
     gate = DedupeGate(dedupe_store=store, event_id_extractor=lambda m: None)
 

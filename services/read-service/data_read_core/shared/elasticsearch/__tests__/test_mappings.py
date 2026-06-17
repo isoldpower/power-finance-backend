@@ -37,5 +37,4 @@ def test_wallet_balance_is_scaled_float_and_title_is_full_text():
     properties = WALLETS_MAPPING["mappings"]["properties"]
     assert properties["balance"]["type"] == "scaled_float"
     assert properties["title"]["type"] == "text"
-    # title also has a keyword sub-field for exact-match / sorting.
     assert properties["title"]["fields"]["keyword"]["type"] == "keyword"

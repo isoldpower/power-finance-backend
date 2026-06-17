@@ -67,15 +67,8 @@ async def test_value_defaults_to_empty_bytes_when_message_value_is_none():
     assert pub.published[0].value == b""
 
 
-# ---------------------------------------------------------------------------
-# Original-topic provenance
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_original_topic_taken_from_existing_header_when_present():
-    # Coming from the retry topic: x-original-topic still names the
-    # source. Don't overwrite it with "events.retry".
     pub = FakePublisher()
     dlq = DLQPublisher(pub)  # type: ignore[arg-type]
 
@@ -120,11 +113,6 @@ async def test_original_partition_and_offset_stamped_from_inbound():
     assert H.get_int(pub.published[0].headers, H.HEADER_ORIGINAL_OFFSET) == 999
 
 
-# ---------------------------------------------------------------------------
-# Attempt count
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_retry_count_records_total_attempts_argument():
     pub = FakePublisher()
@@ -133,11 +121,6 @@ async def test_retry_count_records_total_attempts_argument():
     await dlq.publish(FakeMessage(), error=ValueError(), total_attempts=17)
 
     assert H.get_int(pub.published[0].headers, H.HEADER_RETRY_COUNT) == 17
-
-
-# ---------------------------------------------------------------------------
-# first_failed_at chain
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -187,11 +170,6 @@ async def test_first_failed_at_defaults_to_now_when_neither_source_present():
     assert before <= stamped <= after
 
 
-# ---------------------------------------------------------------------------
-# Error envelope
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_error_class_message_and_stack_are_stamped():
     pub = FakePublisher()
@@ -235,11 +213,6 @@ async def test_failed_at_header_is_set_to_now():
     after = datetime.now(UTC)
     assert failed_at is not None
     assert before <= failed_at <= after
-
-
-# ---------------------------------------------------------------------------
-# correlation_id passthrough
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio

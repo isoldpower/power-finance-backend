@@ -57,7 +57,7 @@ async def test_poison_routes_to_dlq_immediately():
     handler, pub = _wire(RetryPolicy(max_in_process_attempts=3), boom)
     await handler.handle(FakeMessage())
 
-    assert calls == 1  # no in-process retry on poison
+    assert calls == 1
     assert len(pub.published) == 1
     assert pub.published[0].topic == "events.dlq"
 
@@ -81,7 +81,7 @@ async def test_transient_then_success_in_process():
     await handler.handle(FakeMessage())
 
     assert calls == 3
-    assert pub.published == []  # recovered before any publish
+    assert pub.published == []
 
 
 @pytest.mark.asyncio
@@ -119,7 +119,6 @@ async def test_retry_budget_exhausted_routes_to_dlq():
     )
     handler, pub = _wire(policy, always_fail)
 
-    # Simulate the 3rd retry-topic delivery — header already says count=3.
     msg = FakeMessage(headers=[(H.HEADER_RETRY_COUNT, H.encode(3))])
     await handler.handle(msg)
 

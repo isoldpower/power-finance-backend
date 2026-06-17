@@ -20,7 +20,6 @@ class _FakeRequest:
 
 
 async def test_no_header_is_a_noop():
-    # No DB access expected — the gate short-circuits before reading.
     await ensure_read_at_least(_FakeRequest(7))
 
 
@@ -55,6 +54,5 @@ async def test_nothing_applied_yet_raises_507():
 async def test_scope_is_per_user():
     await record_applied_seq(user_id=7, outbox_seq=100)
 
-    # User 9 has no applied seq, so their own RAL is unmet even though user 7 is ahead.
     with pytest.raises(ReadModelNotCaughtUp):
         await ensure_read_at_least(_FakeRequest(9, {"Read-At-Least": "100"}))

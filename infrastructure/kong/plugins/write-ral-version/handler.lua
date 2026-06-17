@@ -66,8 +66,6 @@ function WriteRalVersionHandler:header_filter(config)
     local signed = raw_version .. ":" .. utilities.to_hex(digest)
     kong.response.set_header(config.write_version_header, signed)
 
-    -- Hand off to the log phase: cosockets are forbidden in header_filter,
-    -- so the Redis write happens after the response is already on the wire.
     kong.ctx.plugin.pending_offset_record = {
         user_id     = user_id,
         raw_version = raw_version,

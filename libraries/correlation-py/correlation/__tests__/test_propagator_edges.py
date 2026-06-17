@@ -37,9 +37,6 @@ class SyncPropagatorEdgeTests(unittest.TestCase):
         self.factory = RequestFactory()
 
     def test_empty_string_header_falls_through_to_generated_uuid(self) -> None:
-        # `request.headers.get(...) or uuid.uuid4()` — empty string is
-        # falsy, so the library substitutes a fresh UUID. Pin this since
-        # a switch to `is not None` would change observable behavior.
         captured: dict[str, str | None] = {}
 
         def get_response(request):
@@ -52,12 +49,10 @@ class SyncPropagatorEdgeTests(unittest.TestCase):
         response = propagator(request)
 
         self.assertIsNotNone(captured["seen"])
-        uuid.UUID(captured["seen"])  # must be a parseable UUID
+        uuid.UUID(captured["seen"])
         self.assertEqual(response[HEADER], captured["seen"])
 
     def test_non_uuid_inbound_id_is_preserved_verbatim(self) -> None:
-        # The library is a passthrough, NOT a validator. Whatever the
-        # caller sends as the correlation header is what downstream sees.
         propagator = SyncContextPropagator(lambda req: HttpResponse(status=200), HEADER)
         request = self.factory.get("/", HTTP_X_CORRELATION_ID="not-a-uuid-12345")
 
@@ -67,8 +62,6 @@ class SyncPropagatorEdgeTests(unittest.TestCase):
         self.assertEqual(response[HEADER], "not-a-uuid-12345")
 
     def test_request_correlation_id_is_assigned_before_view_runs(self) -> None:
-        # View bodies sometimes read request.correlation_id directly (not
-        # via ContextVar). Pin that the attribute is set first.
         captured: dict[str, str] = {}
 
         def get_response(request):
@@ -97,7 +90,6 @@ class SyncPropagatorEdgeTests(unittest.TestCase):
         self.assertEqual(captured["ctx"], "ctx-visible")
 
     def test_on_view_exception_response_header_is_not_set(self) -> None:
-        # There is no response to stamp — but context must still be reset.
         def raising(_request):
             raise RuntimeError("boom")
 
@@ -110,7 +102,6 @@ class SyncPropagatorEdgeTests(unittest.TestCase):
         self.assertIsNone(get_correlation_id())
 
     def test_two_sequential_requests_get_independent_generated_ids(self) -> None:
-        # No header on either request → each must get its own UUID.
         seen_ids: list[str] = []
 
         def get_response(request):
@@ -124,8 +115,6 @@ class SyncPropagatorEdgeTests(unittest.TestCase):
         self.assertEqual(len(set(seen_ids)), 2)
 
     def test_contextvar_is_reset_to_none_between_requests(self) -> None:
-        # Even if the outer test framework already verifies this once,
-        # a regression here is silent and very expensive — pin it twice.
         propagator = SyncContextPropagator(lambda req: HttpResponse(status=200), HEADER)
 
         propagator(self.factory.get("/", HTTP_X_CORRELATION_ID="first"))

@@ -33,8 +33,6 @@ async def test_mark_then_seen_returns_true():
 
 @pytest.mark.asyncio
 async def test_mark_is_idempotent():
-    # Marking the same event twice must not raise — the at-least-once
-    # delivery model means we'll legitimately see this in production.
     store = InMemoryDedupeStore()
 
     await store.mark("evt-1")
@@ -55,9 +53,6 @@ async def test_different_events_are_isolated():
 
 @pytest.mark.asyncio
 async def test_mark_accepts_connection_kwarg_for_interface_parity():
-    # The Postgres impl takes a `connection` kwarg so callers can attach
-    # the dedupe write to an existing transaction. The in-memory impl
-    # must accept-and-ignore it to keep test wiring identical.
     store = InMemoryDedupeStore()
 
     await store.mark("evt-1", connection=None)

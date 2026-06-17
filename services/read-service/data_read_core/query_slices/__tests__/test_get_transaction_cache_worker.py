@@ -53,12 +53,9 @@ async def test_save_writes_single_key_with_ttl(fake_redis: FakeRedis):
 async def test_foreign_owner_hit_is_evicted_and_misses(fake_redis: FakeRedis):
     worker = CacheWorker(fake_redis)
 
-    # cached entry owned by user 7
     await worker.save_to_cache(_transaction("t1", user_id=7))
 
-    # a different user requesting the same transaction id must not see it
     served = await worker.try_serve_from_cache("t1", user_id=9)
 
     assert served is None
-    # the stale foreign entry is dropped from the store
     assert get_single_cache_key("t1") not in fake_redis.store

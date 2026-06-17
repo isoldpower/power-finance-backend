@@ -38,8 +38,6 @@ async def test_records_seq_and_runs_inner():
 
 @pytest.mark.django_db(transaction=True)
 async def test_records_seq_even_when_inner_is_a_noop():
-    # RemoveWalletReadModel on an absent row writes nothing, but the event is
-    # fully consumed, so a client pinned to its seq must not be stranded.
     inner = _RecordingEffect()
     effect = TrackAppliedSeq(inner, WalletDeleted)
 

@@ -31,7 +31,7 @@ def test_backoff_grows_exponentially_within_cap():
     assert p.compute_backoff(1) == timedelta(seconds=1)
     assert p.compute_backoff(2) == timedelta(seconds=2)
     assert p.compute_backoff(3) == timedelta(seconds=4)
-    assert p.compute_backoff(10) == timedelta(seconds=60)  # capped
+    assert p.compute_backoff(10) == timedelta(seconds=60)
 
 
 def test_compute_retry_at_uses_provided_now():

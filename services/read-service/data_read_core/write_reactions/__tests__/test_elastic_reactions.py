@@ -62,9 +62,6 @@ def _use_fake_es(monkeypatch, module) -> FakeElasticsearch:
     return fake
 
 
-# --------------------------------------------------------------------------- #
-# Transaction document projection
-# --------------------------------------------------------------------------- #
 async def test_index_transaction_writes_full_document(monkeypatch):
     fake = _use_fake_es(monkeypatch, tx_create)
 
@@ -83,7 +80,7 @@ async def test_index_transaction_writes_full_document(monkeypatch):
     assert len(fake.indexed) == 1
     index, doc_id, document = fake.indexed[0]
     assert (index, doc_id) == (TRANSACTIONS_INDEX, TX_ID)
-    assert document["amount"] == 25.5  # Decimal string coerced to float
+    assert document["amount"] == 25.5
     assert document["currency_code"] == "EUR"
     assert document["user_id"] == 7
     assert document["occurred_at"] == document["created_at"]
@@ -115,9 +112,6 @@ async def test_remove_transaction_deletes_ignoring_404(monkeypatch):
     assert fake.options_kwargs == [{"ignore_status": 404}]
 
 
-# --------------------------------------------------------------------------- #
-# Wallet document projection
-# --------------------------------------------------------------------------- #
 async def test_index_wallet_writes_full_document(monkeypatch):
     fake = _use_fake_es(monkeypatch, wl_create)
 

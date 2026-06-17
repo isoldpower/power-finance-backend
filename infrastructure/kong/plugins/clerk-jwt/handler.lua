@@ -83,9 +83,6 @@ function ClerkJwtHandler:access(config)
         return messages.missing_sub_claim()
     end
 
-    -- Stash the verified claims for downstream plugins (e.g. read-at-least
-    -- reads a default offset claim out of the JWT). Sharing via kong.ctx
-    -- avoids a second parse / verify pass.
     kong.ctx.shared.clerk_claims = verified_jwt.payload
     kong.service.request.set_header("X-User-Id", sub_claim)
 end

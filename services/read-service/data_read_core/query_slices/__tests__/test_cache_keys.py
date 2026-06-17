@@ -27,7 +27,6 @@ def test_filter_hash_distinguishes_different_filters():
 
 
 def test_filter_hash_empty_dict_is_stable():
-    # guards the digest the default (unfiltered) list relies on
     assert wallet_filter_hash({}) == "bf21a9e8fbc5a384"
 
 

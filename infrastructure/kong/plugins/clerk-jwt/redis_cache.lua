@@ -31,13 +31,11 @@ local connect_to_redis = function(config)
     local client = redis:new()
     client:set_timeouts(config.redis_timeout_ms, config.redis_timeout_ms, config.redis_timeout_ms)
 
-    -- Establish initial connection.
     local connected, connect_error = client:connect(config.redis_host, config.redis_port)
     if not connected then
         return nil, "redis connect: " .. (connect_error or "Unknown Error")
     end
 
-    -- Try authenticate using provided password.
     if config.redis_password and config.redis_password ~= "" then
         local auth_ok, auth_error = client:auth(config.redis_password)
         if not auth_ok then
@@ -46,7 +44,6 @@ local connect_to_redis = function(config)
         end
     end
 
-    -- Check if database is alive by making test request.
     if config.redis_database and config.redis_database > 0 then
         local select_ok, select_error = client:select(config.redis_database)
         if not select_ok then

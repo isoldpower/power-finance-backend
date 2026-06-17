@@ -27,7 +27,6 @@ from kafka_client_py.publisher.retry_publisher import RetryPublisher
 
 
 def _make_traceback_error(message: str) -> Exception:
-    # Raise + catch so the exception has a real __traceback__ attached.
     try:
         raise ValueError(message)
     except ValueError as exc:
@@ -69,7 +68,6 @@ async def test_default_topic_is_events_retry():
 
 @pytest.mark.asyncio
 async def test_value_defaults_to_empty_bytes_when_message_value_is_none():
-    # aiokafka requires bytes, not None — pin defensive coercion.
     pub = FakePublisher()
     rp = RetryPublisher(pub)  # type: ignore[arg-type]
 
@@ -81,11 +79,6 @@ async def test_value_defaults_to_empty_bytes_when_message_value_is_none():
     )
 
     assert pub.published[0].value == b""
-
-
-# ---------------------------------------------------------------------------
-# Original-topic provenance
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -105,8 +98,6 @@ async def test_original_topic_falls_back_to_message_topic_on_first_retry():
 
 @pytest.mark.asyncio
 async def test_original_topic_preserved_across_hops_via_existing_header():
-    # On the 2nd retry, the inbound message arrives FROM events.retry,
-    # but x-original-topic is still events.async. Preserve it.
     pub = FakePublisher()
     rp = RetryPublisher(pub)  # type: ignore[arg-type]
     inbound = FakeMessage(
@@ -136,11 +127,6 @@ async def test_original_partition_and_offset_stamped_from_inbound_message():
     assert H.get_int(pub.published[0].headers, H.HEADER_ORIGINAL_OFFSET) == 4242
 
 
-# ---------------------------------------------------------------------------
-# Attempt and retry-at
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_attempt_number_is_recorded_verbatim_from_caller():
     pub = FakePublisher()
@@ -160,11 +146,6 @@ async def test_retry_at_is_stamped_with_provided_timestamp():
     await rp.publish(FakeMessage(), error=ValueError(), next_retry_at=when, attempt=1)
 
     assert H.get_datetime(pub.published[0].headers, H.HEADER_RETRY_AT) == when
-
-
-# ---------------------------------------------------------------------------
-# first_failed_at fallback chain
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -220,11 +201,6 @@ async def test_first_failed_at_defaults_to_now_when_neither_source_present():
     assert before <= stamped <= after
 
 
-# ---------------------------------------------------------------------------
-# Error class / message / stack
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_error_class_is_the_exception_typename():
     pub = FakePublisher()
@@ -257,7 +233,6 @@ async def test_error_message_carries_exception_string():
 
 @pytest.mark.asyncio
 async def test_error_message_is_truncated_at_1024_chars():
-    # Kafka caps per-header bytes; a multi-MB SQL error would blow the budget.
     pub = FakePublisher()
     rp = RetryPublisher(pub)  # type: ignore[arg-type]
     huge_message = "x" * 5000
@@ -286,11 +261,6 @@ async def test_error_stack_is_present_and_capped_at_8192_chars():
     assert decoded is not None
     assert "ValueError" in decoded
     assert len(decoded) <= 8192
-
-
-# ---------------------------------------------------------------------------
-# correlation_id passthrough
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -326,8 +296,6 @@ async def test_correlation_id_falls_back_to_inbound_header():
 
 @pytest.mark.asyncio
 async def test_correlation_id_header_omitted_when_neither_source_present():
-    # No correlation id anywhere → don't stamp a placeholder. Downstream
-    # consumers treat absence and "-" differently.
     pub = FakePublisher()
     rp = RetryPublisher(pub)  # type: ignore[arg-type]
 
@@ -354,5 +322,4 @@ async def test_argument_correlation_id_overrides_inbound_header():
         correlation_id="fresh",
     )
 
-    # last-wins via H.get on the merged header list
     assert H.get(pub.published[0].headers, H.HEADER_CORRELATION_ID) == "fresh"

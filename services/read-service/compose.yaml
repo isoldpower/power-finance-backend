@@ -1,14 +1,8 @@
-# Read-service stack. Shared Kafka broker lives in
-# infrastructure/kafka/compose.yaml so this stack stays standalone-runnable
-# (`docker compose -f compose.yaml up` from this directory) while the root
-# compose pulls the same broker in transitively through this include.
+# See ./README.md → "Stack"
 include:
   - ../../infrastructure/kafka/compose.yaml
   - ./compose.elastic.yaml
 
-# Shared Elasticsearch client config. The consumer indexes documents and the
-# HTTP app queries them; both reach the cluster as es01:9200 over TLS and verify
-# against the CA minted into the `certs` volume by the elastic setup service.
 x-elasticsearch-env: &elasticsearch-env
   ELASTICSEARCH_HOSTS: https://es01:9200
   ELASTICSEARCH_USERNAME: elastic
@@ -17,26 +11,17 @@ x-elasticsearch-env: &elasticsearch-env
   ELASTICSEARCH_VERIFY_CERTS: "true"
 
 services:
-  # Reduce healthcheck polling period so that it lands on a period when
-  # setup container is still active and haven't exited yet
   setup:
     healthcheck:
       interval: 250ms
       start_period: 0s
 
-  # Read-side HTTP app. Serves the query slices (e.g. GET wallet by id) behind
-  # Kong, which routes host: read-service, port: 8000 (see infrastructure/kong/
-  # kong.yml). No published host port: reachable only over the compose network
-  # through the gateway. The image's default CMD runs uvicorn on :8000.
   read-service:
     build:
       context: ../..
       dockerfile: services/read-service/Dockerfile
     image: power-finance/read-service:dev
     restart: unless-stopped
-    # Root needed only to read the elastic `setup`-minted CA in the shared
-    # `certs` volume (root:root, dir 0750). The cert mount is read-only, so this
-    # grants read access without letting the app write the volume.
     user: "0"
     expose:
       - "8000"
@@ -62,17 +47,12 @@ services:
       read-es-init:
         condition: service_completed_successfully
 
-  # One-shot schema bootstrap. Creates the read-side Elasticsearch indices with
-  # their mappings, then exits. Kept as a distinct command (not folded into the
-  # consumer startup) so index DDL stays an explicit, idempotent operation; the
-  # consumer and HTTP app gate on its successful completion.
   read-es-init:
     build:
       context: ../..
       dockerfile: services/read-service/Dockerfile
     image: power-finance/read-service:dev
     restart: "no"
-    # Root to read the root:root 0750 CA in the shared `certs` volume (ro mount).
     user: "0"
     command: ["python", "manage.py", "init_elasticsearch_indices"]
     environment:
@@ -84,36 +64,24 @@ services:
       es01:
         condition: service_healthy
 
-  # Standalone, long-lived Kafka consumer. Not a web process — it tails the
-  # write-service outbox topic, projects events into the read store, and
-  # invalidates caches. `restart: unless-stopped` is the supervisor; on
-  # SIGTERM the consumer drains its loop and commits cleanly before exiting.
   read-write-consumer:
     build:
       context: ../..
       dockerfile: services/read-service/Dockerfile
     image: power-finance/read-service:dev
     restart: unless-stopped
-    # Root to read the root:root 0750 CA in the shared `certs` volume (ro mount).
     user: "0"
     command: ["python", "manage.py", "run_write_message_consumer"]
     environment:
       DJANGO_SETTINGS_MODULE: read_service.settings.local
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_OUTBOX_TOPIC: ${KAFKA_OUTBOX_TOPIC:-events.async}
-      # Stable consumer group so offsets survive restarts and the partition
-      # set can be shared if this service is scaled to multiple replicas.
       KAFKA_READ_GROUP_ID: ${KAFKA_READ_GROUP_ID:-read-service.write-consumer}
-      # Read store — a SEPARATE Postgres instance from the write service's.
-      # The container env uses the standard DATABASE_* names the settings read;
-      # compose-level interpolation uses READ_DATABASE_* so it can't collide
-      # with the write stack's DATABASE_* in a shared root .env.
       DATABASE_HOST: postgres-read
       DATABASE_PORT: 5432
       DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
       DATABASE_USER: ${READ_DATABASE_USER:-postgres}
       DATABASE_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
-      # Read-side cache. Reached as read-redis:6379 over the compose network.
       REDIS_URL: ${READ_REDIS_URL:-redis://read-redis:6379/0}
       <<: *elasticsearch-env
     volumes:
@@ -127,15 +95,8 @@ services:
         condition: service_healthy
       read-es-init:
         condition: service_completed_successfully
-    # No port / healthcheck: this is a background worker, not an HTTP service.
-    # Liveness is delegated to `restart: unless-stopped` plus crash exit codes.
     stop_grace_period: 30s
 
-  # Read-side Postgres. A distinct instance from postgres-write: its own
-  # volume and database, holding only denormalised projections built from the
-  # event stream. Reached as postgres-read:5432 over the compose network, and
-  # on 127.0.0.1:5434 from the host for local tests/tooling. Loopback-only, so
-  # it is not network-exposed.
   postgres-read:
     image: postgres:18.3
     restart: unless-stopped
@@ -154,10 +115,6 @@ services:
       timeout: 3s
       retries: 10
 
-  # Read-side Redis cache. Holds denormalised single-wallet entries
-  # (key `read:wallet:<id>`) that the consumer's cache-eviction effects drop
-  # when a wallet is deleted. Reached as read-redis:6379 over the compose
-  # network, and on 127.0.0.1:6381 from the host for tooling. Loopback-only.
   read-redis:
     image: redis:7-alpine
     restart: unless-stopped

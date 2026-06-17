@@ -34,7 +34,6 @@ async def test_compensates_completed_steps_in_reverse_on_forward_failure():
     with pytest.raises(RuntimeError, match="forward failed: c"):
         await SagaCoordinator(steps).run()
 
-    # c failed forward so it is NOT compensated; a and b roll back in reverse.
     assert log == [
         ("forward", "a"),
         ("forward", "b"),
@@ -61,8 +60,6 @@ async def test_compensation_failure_is_swallowed_and_original_error_raised():
         RecordingStep("b", log, fail_forward=True),
     ]
 
-    # The forward failure (b) propagates; a's failing compensation is logged,
-    # not raised, and does not mask the original error.
     with pytest.raises(RuntimeError, match="forward failed: b"):
         await SagaCoordinator(steps).run()
 

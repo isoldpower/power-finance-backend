@@ -19,9 +19,6 @@ from kafka_client_py.publisher._error_details import (
     truncate_utf8,
 )
 
-# Go encodes timestamps with time.RFC3339Nano: UTC is rendered as a "Z"
-# suffix and fractional seconds carry up to nine digits with trailing
-# zeros trimmed.
 GO_ENCODED_TIMESTAMPS = [
     ("2026-01-02T03:04:05Z", datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)),
     ("2026-01-02T03:04:05.1Z", datetime(2026, 1, 2, 3, 4, 5, 100000, tzinfo=UTC)),
@@ -38,9 +35,6 @@ def test_get_datetime_parses_go_rfc3339_formats(go_encoded: str, expected: datet
 
 
 def test_python_isoformat_stays_parseable_as_rfc3339():
-    # Go parses with time.RFC3339Nano, which requires the date-time shape
-    # with either "Z" or a numeric offset. Python's encode() must keep
-    # producing the "+00:00" offset form Go understands.
     encoded = H.encode(datetime(2026, 1, 2, 3, 4, 5, 123456, tzinfo=UTC)).decode("utf-8")
 
     assert encoded == "2026-01-02T03:04:05.123456+00:00"
@@ -52,8 +46,6 @@ def test_truncate_utf8_caps_by_bytes_like_go():
 
     encoded = truncated.encode("utf-8")
     assert len(encoded) <= ERROR_MESSAGE_MAX_BYTES
-    # Both libraries cut at the same character boundary: the largest
-    # whole-character prefix that fits the byte budget.
     assert len(encoded) == ERROR_MESSAGE_MAX_BYTES - ERROR_MESSAGE_MAX_BYTES % 3
 
 
@@ -68,17 +60,12 @@ def test_truncate_utf8_is_noop_within_budget():
 
 
 def _go_truncate(raw: bytes, max_bytes: int) -> bytes:
-    # Mirror of truncate() in kafka-client-go/publisher/error_details.go:
-    # back up while the byte at the cut position is a UTF-8 continuation.
     while max_bytes > 0 and (raw[max_bytes] & 0xC0) == 0x80:
         max_bytes -= 1
     return raw[:max_bytes]
 
 
 def test_go_truncated_header_bytes_decode_cleanly():
-    # An odd byte budget would land mid-character for 2-byte "é"; the Go
-    # algorithm backs up one byte, so the published bytes always survive
-    # headers.decode's strict utf-8.
     two_byte_character = "é"
     raw = (two_byte_character * 600).encode("utf-8")
 

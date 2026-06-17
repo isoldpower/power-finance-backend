@@ -74,7 +74,6 @@ async def test_save_writes_versioned_key_with_ttl(fake_redis: FakeRedis):
 
     await worker.save_to_cache(context=operation, wallets=[_wallet()], total=1)
 
-    # version defaults to 0 when the counter key is absent
     expected_key = _expected_key(operation, version=0)
     assert len(fake_redis.set_calls) == 1
     key, raw_value, ttl = fake_redis.set_calls[0]
@@ -89,14 +88,11 @@ async def test_version_bump_orphans_old_entry(fake_redis: FakeRedis):
     worker = CacheWorker(fake_redis)
     operation = _operation(user_id=7)
 
-    # cached under version 0
     await worker.save_to_cache(context=operation, wallets=[_wallet()], total=1)
     assert await worker.try_serve_from_cache(operation) is not None
 
-    # a write-side mutation bumps the per-user version
     fake_redis.store[get_list_version_key(7)] = "1"
 
-    # the v0 entry is now unreachable — reads recompute against v1
     assert await worker.try_serve_from_cache(operation) is None
 
 

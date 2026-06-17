@@ -34,8 +34,6 @@ class FilterEdgeTests(unittest.TestCase):
         self.filter = CorrelationIDFilter()
 
     def test_overwrites_existing_correlation_id_attr_on_record(self) -> None:
-        # Defensive: if a downstream filter set correlation_id earlier,
-        # ours stomps it. Pin this so a "preserve if set" change is intentional.
         record = _record()
         record.correlation_id = "stale-from-elsewhere"
 
@@ -56,8 +54,6 @@ class FilterEdgeTests(unittest.TestCase):
             reset_correlation_id(token)
 
     def test_works_end_to_end_through_a_handler_and_formatter(self) -> None:
-        # Wire the filter into the logging stack the way consumers do
-        # and verify %(correlation_id)s renders the active id.
         stream = io.StringIO()
         handler = logging.StreamHandler(stream)
         handler.addFilter(CorrelationIDFilter())
@@ -78,8 +74,6 @@ class FilterEdgeTests(unittest.TestCase):
         self.assertIn("[trace-xyz] hello world", stream.getvalue())
 
     def test_placeholder_dash_when_no_id_in_context(self) -> None:
-        # Same as the happy-path test but proves through a formatter so
-        # the placeholder isn't accidentally None / empty / falsy garbage.
         stream = io.StringIO()
         handler = logging.StreamHandler(stream)
         handler.addFilter(CorrelationIDFilter())

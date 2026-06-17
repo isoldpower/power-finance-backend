@@ -1,9 +1,4 @@
-# Root compose — wires the API Gateway (Kong) in front of the workspace
-# services. Per-service stacks live under services/<name>/compose.yaml and
-# are pulled in via `include:` so service-local commands still work. The
-# shared Kafka broker is defined in infrastructure/kafka/compose.yaml and
-# reaches this project transitively through the service includes.
-
+# See README.md → "Docker"
 include:
   - services/write-service/compose.yaml
   - services/read-service/compose.yaml
@@ -26,28 +21,12 @@ services:
       KONG_ADMIN_ERROR_LOG: /dev/stderr
       KONG_ADMIN_LISTEN: "0.0.0.0:8001"
       KONG_PROXY_LISTEN: "0.0.0.0:8000 http2, 0.0.0.0:8443 http2 ssl"
-      # SSE-friendly defaults: long idle timeouts at the proxy layer.
       KONG_NGINX_PROXY_PROXY_BUFFERING: "off"
       KONG_NGINX_PROXY_PROXY_READ_TIMEOUT: "3600s"
       KONG_NGINX_PROXY_PROXY_SEND_TIMEOUT: "3600s"
-      # Custom plugins:
-      #   clerk-jwt       — validates Clerk session tokens
-      #   read-at-least   — request-side: verify inbound Read-At-Least, inject
-      #                     default header from per-user Redis on read routes
-      #   write-ral-version — response-side: sign upstream X-Write-Version header
-      #                       and record (user, offset) to Redis on write routes
-      #   read-fallback   — redirect Read Service 507s to the Write Service's
-      #                     always-consistent fallback-read endpoints
       KONG_PLUGINS: "bundled,clerk-jwt,read-at-least,write-ral-version,user-tier-rate-limit,read-fallback"
-      # Locks dict for the clerk-jwt single-flight JWKS fetch (resty.lock
-      # requires an nginx shared dict; the JWKS document itself lives in
-      # Redis now). 1m is plenty — we only store one lock key per issuer.
       KONG_NGINX_HTTP_LUA_SHARED_DICT: "clerk_jwks_locks 1m"
-      # Surfaced into Kong's env vault as {vault://env/clerk-issuer-url}.
       CLERK_ISSUER_URL: ${CLERK_ISSUER_URL:-}
-      # Gateway-internal HMAC secret. Must be identical for read-at-least and
-      # write-ral-version so signatures produced on write responses verify on
-      # read requests. Not shared with upstream services.
       READ_AT_LEAST_HMAC_SECRET: ${READ_AT_LEAST_HMAC_SECRET:-}
     volumes:
       - ./infrastructure/kong/kong.yml:/etc/kong/kong.yml:ro
@@ -70,10 +49,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Backing store for Kong rate-limiting counters. Keeping it in Redis is
-  # what keeps the gateway stateless — every Kong replica reads/writes the
-  # same counters, restarts don't lose state. Persistence is intentionally
-  # off: rate-limit counters are ephemeral and survive nothing meaningful.
   gateway-redis:
     image: redis:7-alpine
     restart: unless-stopped

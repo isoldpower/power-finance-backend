@@ -104,11 +104,11 @@ async def test_guarded_handler_retries_until_dependency_recovers():
     probe = _RecoverProbe()
     handler = HealthGuardedHandler(flaky_handler, probe, guarded_errors=(ConnectionError,))
 
-    await handler(_event())  # must not raise; retries after the outage
+    await handler(_event())
 
     assert attempts["n"] == 2
     assert probe.waited == 1
-    assert len(seen) == 1  # second attempt succeeded
+    assert len(seen) == 1
 
 
 async def test_guarded_handler_passes_through_on_success():
@@ -130,9 +130,6 @@ async def test_guarded_handler_passes_through_on_success():
     assert calls == ["e"]
 
 
-# --------------------------------------------------------------------------- #
-# Concrete probe ping behaviour
-# --------------------------------------------------------------------------- #
 class _FakePingClient:
     def __init__(self, *, result=True, raises=None):
         self._result = result

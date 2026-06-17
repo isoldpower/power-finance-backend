@@ -1,15 +1,8 @@
 # syntax=docker/dockerfile:1.7
-
-# Build context MUST be the repository root — the write-service is a uv
-# workspace member that depends on `correlation-py` from libraries/.
-# Run from repo root:
-#   docker build -f services/write-service/Dockerfile -t write-service .
-# Or via the bundled compose.yaml (which sets context: ../..).
-
+# See ./README.md → "Build & Docker"
 ARG PYTHON_VERSION=3.12
 ARG UV_VERSION=0.5
 
-# ---------- builder stage ----------
 FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
 
 FROM python:${PYTHON_VERSION}-slim AS builder
@@ -23,9 +16,6 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
-# Layer 1: install workspace dependencies only (no project source).
-# Mounting the manifests as bind volumes keeps them out of the resulting
-# layer — they're re-copied with the rest of the source in Layer 2.
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     --mount=type=bind,source=uv.lock,target=uv.lock \
@@ -36,8 +26,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=libraries/saga-pattern-py/pyproject.toml,target=libraries/saga-pattern-py/pyproject.toml \
     uv sync --frozen --no-install-project --no-dev --package write-service
 
-# Layer 2: copy source for the service + every workspace lib it imports,
-# then install the project itself (editable install registers entrypoints).
 COPY libraries/correlation-py /app/libraries/correlation-py
 COPY libraries/kafka-client-py /app/libraries/kafka-client-py
 COPY libraries/saga-pattern-py /app/libraries/saga-pattern-py
@@ -48,18 +36,12 @@ COPY pyproject.toml uv.lock /app/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --package write-service
 
-
-# ---------- runtime stage ----------
 FROM python:${PYTHON_VERSION}-slim AS runtime
 
-# psycopg[binary] bundles libpq; no system libpq needed. Curl is for the
-# container healthcheck.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl \
  && rm -rf /var/lib/apt/lists/*
 
-# Non-root user — Django writes nothing under /app at runtime (static
-# files are served by the gateway) so a read-only-ish layout is fine.
 RUN groupadd --system --gid 1000 app \
  && useradd --system --uid 1000 --gid app --no-create-home --shell /usr/sbin/nologin app
 

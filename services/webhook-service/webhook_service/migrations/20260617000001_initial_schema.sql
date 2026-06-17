@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE webhook_endpoints (
+CREATE TABLE IF NOT EXISTS webhook_endpoints (
     id               UUID PRIMARY KEY,
     user_id          BIGINT NOT NULL,
     user_external_id TEXT NOT NULL DEFAULT '',
@@ -12,7 +12,7 @@ CREATE TABLE webhook_endpoints (
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE webhook_subscriptions (
+CREATE TABLE IF NOT EXISTS webhook_subscriptions (
     id         UUID PRIMARY KEY,
     webhook_id UUID NOT NULL REFERENCES webhook_endpoints(id) ON DELETE CASCADE,
     user_id    BIGINT NOT NULL,
@@ -21,10 +21,10 @@ CREATE TABLE webhook_subscriptions (
     UNIQUE (webhook_id, event_type)
 );
 
-CREATE INDEX webhook_subscriptions_event_type_idx
+CREATE INDEX IF NOT EXISTS webhook_subscriptions_event_type_idx
     ON webhook_subscriptions (event_type);
 
-CREATE TABLE webhook_deliveries (
+CREATE TABLE IF NOT EXISTS webhook_deliveries (
     id               UUID PRIMARY KEY,
     webhook_id       UUID NOT NULL,
     user_id          BIGINT NOT NULL,
@@ -42,10 +42,10 @@ CREATE TABLE webhook_deliveries (
     UNIQUE (webhook_id, event_id)
 );
 
-CREATE INDEX webhook_deliveries_due_idx
+CREATE INDEX IF NOT EXISTS webhook_deliveries_due_idx
     ON webhook_deliveries (status, next_attempt_at);
 
-CREATE TABLE kafka_consumed_events (
+CREATE TABLE IF NOT EXISTS kafka_consumed_events (
     consumer_group TEXT NOT NULL,
     event_id       TEXT NOT NULL,
     consumed_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -55,8 +55,8 @@ CREATE TABLE kafka_consumed_events (
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE kafka_consumed_events;
-DROP TABLE webhook_deliveries;
-DROP TABLE webhook_subscriptions;
-DROP TABLE webhook_endpoints;
+DROP TABLE IF EXISTS kafka_consumed_events;
+DROP TABLE IF EXISTS webhook_deliveries;
+DROP TABLE IF EXISTS webhook_subscriptions;
+DROP TABLE IF EXISTS webhook_endpoints;
 -- +goose StatementEnd

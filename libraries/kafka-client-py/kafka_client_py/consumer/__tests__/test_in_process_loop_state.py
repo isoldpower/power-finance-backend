@@ -38,8 +38,6 @@ def test_mark_complete_does_not_touch_exception():
 
 
 def test_record_retryable_exception_remembers_last():
-    # Last-wins so the terminal router publishes the most recent failure
-    # reason, which is the one a human will actually investigate.
     state = InProcessLoopState()
     first = ConnectionError("first")
     second = TimeoutError("second")
@@ -51,8 +49,6 @@ def test_record_retryable_exception_remembers_last():
 
 
 def test_record_retryable_exception_does_not_complete_the_loop():
-    # Recording does NOT terminate the loop — that's the whole point of
-    # in-process retries.
     state = InProcessLoopState()
 
     state.record_retryable_exception(RuntimeError("blip"))

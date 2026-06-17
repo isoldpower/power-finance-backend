@@ -36,14 +36,8 @@ def _wire(policy: RetryPolicy) -> tuple[TerminalRouter, FakePublisher]:
     )
 
 
-# ---------------------------------------------------------------------------
-# route_immediate_failure
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_immediate_failure_always_goes_to_dlq():
-    # Poison / non-retryable: no retry-topic shuffle, straight to DLQ.
     router, pub = _wire(RetryPolicy(max_retry_topic_attempts=10))
     ctx = RetryContext(retry_topic_attempts_consumed=2, first_failed_at=None)
 
@@ -61,7 +55,6 @@ async def test_immediate_failure_always_goes_to_dlq():
 
 @pytest.mark.asyncio
 async def test_immediate_failure_reports_total_attempts_as_sum():
-    # total_attempts = retry-topic attempts so far + in-process attempts.
     router, pub = _wire(RetryPolicy())
     ctx = RetryContext(retry_topic_attempts_consumed=4, first_failed_at=None)
 
@@ -77,11 +70,6 @@ async def test_immediate_failure_reports_total_attempts_as_sum():
 
     pub_out = pub.published[0]
     assert H.get_int(pub_out.headers, H.HEADER_RETRY_COUNT) == 7
-
-
-# ---------------------------------------------------------------------------
-# route_terminal_failure: budget remaining → retry topic
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -108,8 +96,6 @@ async def test_terminal_failure_with_budget_remaining_goes_to_retry_topic():
 
 @pytest.mark.asyncio
 async def test_retry_topic_attempt_number_is_incremented_by_one():
-    # Republishing onto the retry topic stamps the NEXT attempt number,
-    # not the one just consumed.
     router, pub = _wire(
         RetryPolicy(
             max_retry_topic_attempts=5,
@@ -133,7 +119,6 @@ async def test_retry_topic_attempt_number_is_incremented_by_one():
 
 @pytest.mark.asyncio
 async def test_retry_topic_message_includes_retry_at_header():
-    # Without this, the scheduler can't delay redelivery.
     now = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
     router, pub = _wire(
         RetryPolicy(
@@ -155,17 +140,11 @@ async def test_retry_topic_message_includes_retry_at_header():
 
     retry_at = H.get_datetime(pub.published[0].headers, H.HEADER_RETRY_AT)
     assert retry_at is not None
-    assert retry_at.tzinfo is not None  # always UTC-aware
-
-
-# ---------------------------------------------------------------------------
-# route_terminal_failure: budget exhausted → DLQ
-# ---------------------------------------------------------------------------
+    assert retry_at.tzinfo is not None
 
 
 @pytest.mark.asyncio
 async def test_terminal_failure_with_budget_exhausted_goes_to_dlq():
-    # consumed == max means no slot left; promote straight to DLQ.
     router, pub = _wire(RetryPolicy(max_retry_topic_attempts=3))
     ctx = RetryContext(retry_topic_attempts_consumed=3, first_failed_at=None)
 
@@ -182,7 +161,6 @@ async def test_terminal_failure_with_budget_exhausted_goes_to_dlq():
 
 @pytest.mark.asyncio
 async def test_terminal_failure_budget_exceeded_also_goes_to_dlq():
-    # Defensive: consumed > max (somehow) must NOT silently re-queue.
     router, pub = _wire(RetryPolicy(max_retry_topic_attempts=3))
     ctx = RetryContext(retry_topic_attempts_consumed=99, first_failed_at=None)
 

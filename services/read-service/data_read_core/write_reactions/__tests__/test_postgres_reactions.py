@@ -67,9 +67,6 @@ async def _make_transaction(amount: Decimal) -> None:
     )
 
 
-# --------------------------------------------------------------------------- #
-# Wallet read model
-# --------------------------------------------------------------------------- #
 async def test_create_wallet_projects_row():
     event = make_event(
         WalletCreated(
@@ -98,7 +95,6 @@ async def test_update_wallet_changes_title():
 
 
 async def test_update_missing_wallet_is_a_noop():
-    # No wallet projected yet — must not create one or raise.
     await UpdateWalletReadModel().apply(
         make_event(WalletUpdated(wallet_id=WALLET_ID, user_id=7, new_title="X", updated_at=_ts()))
     )
@@ -114,9 +110,6 @@ async def test_remove_wallet_deletes_row():
     assert not await WalletReadModel.objects.filter(id=WALLET_ID).aexists()
 
 
-# --------------------------------------------------------------------------- #
-# Transaction read model — balance bookkeeping
-# --------------------------------------------------------------------------- #
 async def test_update_transaction_adjusts_wallet_balance_by_delta():
     await _make_wallet(balance=Decimal("100"))
     await _make_transaction(Decimal("40"))
@@ -132,7 +125,7 @@ async def test_update_transaction_adjusts_wallet_balance_by_delta():
     transaction = await TransactionReadModel.objects.aget(id=TX_ID)
     wallet = await WalletReadModel.objects.aget(id=WALLET_ID)
     assert transaction.amount == Decimal("70")
-    assert wallet.balance == Decimal("130")  # 100 + (70 - 40)
+    assert wallet.balance == Decimal("130")
 
 
 async def test_update_transaction_to_same_amount_leaves_balance():
@@ -161,7 +154,7 @@ async def test_remove_transaction_reverses_wallet_balance():
 
     wallet = await WalletReadModel.objects.aget(id=WALLET_ID)
     assert not await TransactionReadModel.objects.filter(id=TX_ID).aexists()
-    assert wallet.balance == Decimal("60")  # 100 - 40
+    assert wallet.balance == Decimal("60")
 
 
 async def test_remove_missing_transaction_is_a_noop():
@@ -172,12 +165,9 @@ async def test_remove_missing_transaction_is_a_noop():
     )
 
     wallet = await WalletReadModel.objects.aget(id=WALLET_ID)
-    assert wallet.balance == Decimal("100")  # untouched
+    assert wallet.balance == Decimal("100")
 
 
-# --------------------------------------------------------------------------- #
-# User projection
-# --------------------------------------------------------------------------- #
 async def test_project_user_creates_mapping():
     await ProjectUserReadModel().apply(make_event(UserSynced(user_id=7, external_id="ext-7")))
 

@@ -47,8 +47,6 @@ async def test_missing_outbox_seq_projects_without_recording():
 
 @pytest.mark.django_db(transaction=True)
 async def test_es_failure_leaves_seq_unrecorded():
-    # The ES write runs first; if it fails the seq must not advance, keeping
-    # the gate conservative.
     effect = TrackEsAppliedSeq(_FailingEffect(), WalletCreated)
 
     with pytest.raises(RuntimeError):

@@ -61,13 +61,9 @@ class MiddlewareHeaderResolutionTests(unittest.TestCase):
         self.factory = RequestFactory()
 
     def test_header_name_is_captured_at_construction_not_at_call(self) -> None:
-        # Middleware is instantiated once and reused across requests.
-        # If a setting flip after construction changed behavior at
-        # request time, the resulting drift would be very confusing.
         with override_settings(CORRELATION_ID_HEADER="X-Build-Time"):
             middleware = CorrelationIDMiddleware(lambda req: HttpResponse(status=200))
 
-        # Setting changes AFTER construction must not be observed.
         with override_settings(CORRELATION_ID_HEADER="X-Runtime"):
             request = self.factory.get("/", HTTP_X_BUILD_TIME="bt-id")
             response = middleware(request)
@@ -76,7 +72,6 @@ class MiddlewareHeaderResolutionTests(unittest.TestCase):
         self.assertNotIn("X-Runtime", response)
 
     def test_default_header_is_used_when_setting_unset(self) -> None:
-        # No CORRELATION_ID_HEADER → falls back to "X-Correlation-ID".
         from django.conf import settings
 
         had_attr = hasattr(settings, "CORRELATION_ID_HEADER")

@@ -30,14 +30,7 @@ def _config(**overrides) -> ProducerConfig:
     return ProducerConfig(**defaults)
 
 
-# ---------------------------------------------------------------------------
-# ProducerConfig
-# ---------------------------------------------------------------------------
-
-
 def test_producer_config_defaults_match_documented_safety_settings():
-    # acks=all + idempotence=True is the durability story; if either
-    # default flips, services lose at-least-once guarantees silently.
     cfg = ProducerConfig(bootstrap_servers="localhost:9092")
 
     assert cfg.acknowledgement_mode == "all"
@@ -45,11 +38,6 @@ def test_producer_config_defaults_match_documented_safety_settings():
     assert cfg.linger_milliseconds == 5
     assert cfg.compression_type == "gzip"
     assert cfg.client_id is None
-
-
-# ---------------------------------------------------------------------------
-# start / stop lifecycle
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -76,8 +64,6 @@ async def test_start_constructs_and_starts_inner_producer():
 
 @pytest.mark.asyncio
 async def test_start_is_idempotent():
-    # Already-started → second call is a no-op (no second producer, no
-    # second start). Important for service bootstrap that may race.
     producer = _producer_mock()
     with patch(
         "kafka_client_py.publisher.publisher.AIOKafkaProducer",
@@ -94,11 +80,9 @@ async def test_start_is_idempotent():
 
 @pytest.mark.asyncio
 async def test_stop_without_start_is_a_silent_noop():
-    # Service shutdown might call stop() before start() in error paths;
-    # this must not crash.
     publisher = AsyncPublisher(_config())
 
-    await publisher.stop()  # must not raise
+    await publisher.stop()
 
 
 @pytest.mark.asyncio
@@ -114,19 +98,12 @@ async def test_stop_stops_the_inner_producer_and_clears_handle():
         await publisher.stop()
 
     producer.stop.assert_awaited_once()
-    # Subsequent stop must still no-op (handle was cleared).
     await publisher.stop()
-    producer.stop.assert_awaited_once()  # not awaited a second time
-
-
-# ---------------------------------------------------------------------------
-# publish
-# ---------------------------------------------------------------------------
+    producer.stop.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_publish_before_start_raises_runtime_error():
-    # Defensive: tells the caller they forgot the lifecycle hook.
     publisher = AsyncPublisher(_config())
 
     with pytest.raises(RuntimeError, match="before start"):
@@ -160,7 +137,6 @@ async def test_publish_forwards_args_to_inner_producer():
 
 @pytest.mark.asyncio
 async def test_publish_with_no_headers_passes_empty_list_not_none():
-    # aiokafka rejects None headers — pin the empty-list defaulting.
     producer = _producer_mock()
     with patch(
         "kafka_client_py.publisher.publisher.AIOKafkaProducer",
@@ -174,11 +150,6 @@ async def test_publish_with_no_headers_passes_empty_list_not_none():
     kwargs = producer.send_and_wait.await_args.kwargs
     assert kwargs["headers"] == []
     assert kwargs["key"] is None
-
-
-# ---------------------------------------------------------------------------
-# async context manager
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio

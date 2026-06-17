@@ -77,7 +77,7 @@ async def test_unknown_event_type_is_dropped_not_dispatched():
     await processor(make_consumed_message())
 
     assert router.dispatched == []
-    assert dlq.published == []  # silently ignored, not poisoned
+    assert dlq.published == []
 
 
 async def test_malformed_envelope_routes_to_dlq_without_dispatch():

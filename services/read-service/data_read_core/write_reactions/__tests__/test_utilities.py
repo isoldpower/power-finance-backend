@@ -54,7 +54,7 @@ async def test_handle_database_errors_swallows_integrity_error():
 
     result = await handle_database_errors(_effect, None, resource_id="r1")
 
-    assert result is None  # swallowed, not raised
+    assert result is None
 
 
 @pytest.mark.django_db(transaction=True)

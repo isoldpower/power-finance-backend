@@ -21,8 +21,6 @@ class ProbesDictionary:
         redis_probe: HealthProbe | None = None,
         elasticsearch_probe: HealthProbe | None = None,
     ) -> "ProbesDictionary":
-        # Defaults built here, not as argument defaults, so the probes aren't
-        # instantiated at import time and overrides (tests) stay cheap.
         return cls(
             postgres_probe=postgres_probe or PostgresHealthProbe(),
             redis_probe=redis_probe or RedisHealthProbe(),

@@ -1,12 +1,6 @@
+# See ./README.md → "Kong gateway"
 _format_version: "3.0"
 _transform: true
-
-# -----------------------------------------------------------------------------
-# Upstream services
-#
-# Kong proxies requests to these by their docker-compose service names on the
-# internal network.
-# -----------------------------------------------------------------------------
 
 services:
   - name: write-service
@@ -33,21 +27,11 @@ services:
       - name: clerk-jwt
         config:
           issuer_url: "{vault://env/clerk-issuer-url}"
-          # JWKS cache lives in gateway-redis, keyed by issuer URL.
-          # Single-flight fetch lock still uses an nginx shared dict
-          # (see KONG_NGINX_HTTP_LUA_SHARED_DICT in compose.yaml).
           redis_host: gateway-redis
           redis_port: 6379
           redis_database: 0
           redis_timeout_ms: 100
           redis_key_prefix: "clerk:jwks:"
-      # write-ral-version handles the response side of the consistency-token
-      # mechanism: it signs the raw X-Write-Version emitted by Write
-      # Service into the canonical {seq}:{hmac} form and best-effort
-      # records (user_id, seq) in gateway-redis so subsequent reads from
-      # the same user can get a default Read-At-Least header injected by
-      # the read-at-least plugin. Write Service stays ignorant of HMAC
-      # and Redis.
       - name: write-ral-version
         config:
           hmac_secret: "{vault://env/read-at-least-hmac-secret}"
@@ -58,10 +42,6 @@ services:
           redis_timeout_ms: 100
           redis_key_prefix: "ral:user:"
           redis_ttl_seconds: 604800
-      # Tier 1 — IP floor. Applies to every request (anonymous and
-      # authenticated). Generous enough to survive shared IPs (NAT,
-      # corporate, mobile carriers) where many users share an egress.
-      # Runs before clerk-jwt thanks to clerk-jwt's lowered priority.
       - name: rate-limiting
         config:
           minute: 200
@@ -71,12 +51,7 @@ services:
           redis_port: 6379
           limit_by: ip
           fault_tolerant: true
-          # IP floor is enforced but invisible. Headers come from the
-          # user-tier plugin so the client sees one set of numbers that
-          # actually match the limit binding their traffic.
           hide_client_headers: true
-      # Tier 2 — per-user ceiling for authenticated callers. Stricter than
-      # the IP floor; for normal traffic this is what actually bites.
       - name: user-tier-rate-limit
         config:
           per_minute: 60
@@ -100,26 +75,16 @@ services:
           - /api/v1/reads
         strip_path: false
         preserve_host: false
-        # POST is allowed for the search endpoints (wallets/transactions/
-        # webhooks /search/), which carry a filter tree in the request body.
-        # All other read endpoints are GET; a POST to them 405s at the service.
         methods: [GET, POST, OPTIONS]
     plugins:
       - name: clerk-jwt
         config:
           issuer_url: "{vault://env/clerk-issuer-url}"
-          # JWKS cache lives in gateway-redis, keyed by issuer URL.
-          # Single-flight fetch lock still uses an nginx shared dict
-          # (see KONG_NGINX_HTTP_LUA_SHARED_DICT in compose.yaml).
           redis_host: gateway-redis
           redis_port: 6379
           redis_database: 0
           redis_timeout_ms: 100
           redis_key_prefix: "clerk:jwks:"
-      # read-at-least handles the request side: verifies the HMAC of
-      # inbound Read-At-Least headers (which were signed earlier by
-      # write-ral-version on the write path) and injects a default from
-      # gateway-redis when the header is absent.
       - name: read-at-least
         config:
           hmac_secret: "{vault://env/read-at-least-hmac-secret}"
@@ -128,13 +93,6 @@ services:
           redis_database: 0
           redis_timeout_ms: 100
           redis_key_prefix: "ral:user:"
-      # read-fallback transparently redirects a 507 from the Read Service
-      # (its projection is behind the client's Read-At-Least) to the Write
-      # Service's always-consistent fallback-read endpoints. It self-proxies
-      # the read in the access phase — the only phase that both sees the
-      # upstream status and still permits the HTTP call needed to fall back.
-      # Priority 650 keeps it below read-at-least (700) so the resolved
-      # Read-At-Least header is already on the request when it forwards.
       - name: read-fallback
         config:
           read_service_url: "http://read-service:8000"
@@ -144,8 +102,6 @@ services:
           fallback_status: 507
           read_timeout_ms: 10000
           fallback_timeout_ms: 30000
-      # Tier 1 — IP floor on the read path. Reads are cheap; this cap is
-      # mostly here as anti-flood for unauthenticated probes.
       - name: rate-limiting
         config:
           minute: 1200
@@ -155,12 +111,7 @@ services:
           redis_port: 6379
           limit_by: ip
           fault_tolerant: true
-          # IP floor is enforced but invisible. Headers come from the
-          # user-tier plugin so the client sees one set of numbers that
-          # actually match the limit binding their traffic.
           hide_client_headers: true
-      # Tier 2 — per-user ceiling on reads. Tuned wide because read UIs
-      # are pagination-heavy and re-render on every focus change.
       - name: user-tier-rate-limit
         config:
           per_minute: 600
@@ -176,8 +127,6 @@ services:
     port: 8001
     protocol: http
     connect_timeout: 5000
-    # Long timeouts — SSE connections are long-lived. Buffering disabled at
-    # the nginx layer via KONG_NGINX_PROXY_PROXY_BUFFERING=off in compose.
     write_timeout: 3600000
     read_timeout: 3600000
     routes:
@@ -191,21 +140,11 @@ services:
       - name: clerk-jwt
         config:
           issuer_url: "{vault://env/clerk-issuer-url}"
-          # JWKS cache lives in gateway-redis, keyed by issuer URL.
-          # Single-flight fetch lock still uses an nginx shared dict
-          # (see KONG_NGINX_HTTP_LUA_SHARED_DICT in compose.yaml).
           redis_host: gateway-redis
           redis_port: 6379
           redis_database: 0
           redis_timeout_ms: 100
           redis_key_prefix: "clerk:jwks:"
-      # No rate-limiting on /events: SSE is connection-bound, not request-
-      # bound, and a per-request counter would fire after the first event.
-      # Concurrent-connection limits belong on the Push Service itself.
-
-# -----------------------------------------------------------------------------
-# Global plugins — cross-cutting concerns applied to every route.
-# -----------------------------------------------------------------------------
 
 plugins:
   - name: correlation-id

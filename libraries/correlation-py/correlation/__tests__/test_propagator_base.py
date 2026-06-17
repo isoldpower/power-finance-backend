@@ -9,8 +9,6 @@ from correlation.context_propagator.base import ContextPropagator
 
 class ContextPropagatorBaseTests(unittest.TestCase):
     def test_cannot_be_instantiated_directly(self) -> None:
-        # Abstract class with abstract __call__ — guards against accidental
-        # use as a concrete base.
         with self.assertRaises(TypeError):
             ContextPropagator(lambda req: None, "X-Correlation-ID")  # type: ignore[abstract]
 

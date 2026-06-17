@@ -16,7 +16,7 @@ from read_at_least_py import parse_read_at_least
         ("-5", None),
         ("abc", None),
         ("12.5", None),
-        ("100:deadbeef", 100),  # defensively tolerate a signed {seq}:{sig} shape
+        ("100:deadbeef", 100),
         (":deadbeef", None),
     ],
 )

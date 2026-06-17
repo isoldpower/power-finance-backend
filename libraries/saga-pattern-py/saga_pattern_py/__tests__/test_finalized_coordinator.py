@@ -35,7 +35,6 @@ async def test_transaction_failure_rolls_back_completed_and_skips_final():
     with pytest.raises(RuntimeError, match="forward failed: t2"):
         await coordinator.run_transaction()
 
-    # final never runs; only the completed t1 is compensated.
     assert log == [
         ("forward", "t1"),
         ("forward", "t2"),
@@ -53,7 +52,6 @@ async def test_final_failure_rolls_back_all_transaction_steps():
     with pytest.raises(RuntimeError, match="forward failed: final"):
         await coordinator.run_transaction()
 
-    # final failed forward so it is not compensated; t2 then t1 roll back.
     assert log == [
         ("forward", "t1"),
         ("forward", "t2"),

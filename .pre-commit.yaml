@@ -1,10 +1,4 @@
-# Pre-commit hooks for the CQRS workspace.
-#
-# The old monolith lives under `old-structure/` for reference only and is
-# excluded from every hook via the `exclude:` regex. Hooks delegate to
-# Makefile targets at the repo root so commands have a single source of
-# truth.
-
+# See README.md → "Tooling notes"
 default_language_version:
   python: python3.12
 

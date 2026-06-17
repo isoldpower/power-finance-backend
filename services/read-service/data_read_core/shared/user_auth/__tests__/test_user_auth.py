@@ -17,9 +17,6 @@ def _request(*, method="GET", headers=None):
     return SimpleNamespace(method=method, headers=headers or {})
 
 
-# --------------------------------------------------------------------------- #
-# Permission
-# --------------------------------------------------------------------------- #
 def test_header_constant():
     assert GATEWAY_USER_HEADER == "X-User-Id"
 
@@ -39,9 +36,6 @@ def test_permission_denies_when_user_missing():
     assert IsGatewayAuthenticated().has_permission(request, view=None) is False
 
 
-# --------------------------------------------------------------------------- #
-# Authentication (DB-backed user lookup)
-# --------------------------------------------------------------------------- #
 @pytest.mark.django_db(transaction=True)
 async def test_authenticate_options_request_is_skipped():
     result = await GatewayUserHeaderAuthentication().authenticate(_request(method="OPTIONS"))

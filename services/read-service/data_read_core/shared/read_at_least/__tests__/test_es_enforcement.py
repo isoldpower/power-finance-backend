@@ -43,8 +43,6 @@ async def test_behind_raises_507():
 
 @pytest.mark.django_db(transaction=True)
 async def test_postgres_seq_does_not_satisfy_es_gate():
-    # Postgres projection is ahead, but ES has applied nothing — the ES gate
-    # must read its own table and still reject.
     await record_applied_seq(user_id=7, outbox_seq=100)
 
     with pytest.raises(ReadModelNotCaughtUp):
