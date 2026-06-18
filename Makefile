@@ -3,10 +3,11 @@
 
 unexport VIRTUAL_ENV
 
-WRITE_SERVICE_DIR   := services/write-service
-READ_SERVICE_DIR    := services/read-service
-PUSH_SERVICE_DIR    := services/push-service
-WEBHOOK_SERVICE_DIR := services/webhook-service
+WRITE_SERVICE_DIR     := services/write-service
+READ_SERVICE_DIR      := services/read-service
+PUSH_SERVICE_DIR      := services/push-service
+WEBHOOK_SERVICE_DIR   := services/webhook-service
+ANTIFRAUD_SERVICE_DIR := services/antifraud-service
 CORRELATION_LIB_DIR := libraries/correlation-py
 KAFKA_CLIENT_LIB_DIR := libraries/kafka-client-py
 SAGA_LIB_DIR         := libraries/saga-pattern-py
@@ -19,7 +20,7 @@ REGISTRY      := ghcr.io
 IMAGE_OWNER   := isoldpower
 IMAGE_PREFIX  := $(REGISTRY)/$(IMAGE_OWNER)/power-finance
 IMAGE_TAG     ?= $(shell git rev-parse --short HEAD)
-DOCKER_SERVICES := write read push webhook
+DOCKER_SERVICES := write read push webhook antifraud
 GATEWAY_IMAGE   := $(IMAGE_PREFIX)/api-gateway
 GATEWAY_CONTEXT := infrastructure/kong
 DOCKER_CONFIG_FILE := $(HOME)/.docker/config.json
@@ -27,7 +28,7 @@ DOCKER_CONFIG_FILE := $(HOME)/.docker/config.json
 PRECOMMIT_CONFIG := .pre-commit.yaml
 HOOK_SENTINEL    := .git/hooks/pre-commit
 
-ROUTER_TARGETS := write read push webhook
+ROUTER_TARGETS := write read push webhook antifraud
 ROUTING        := $(filter $(firstword $(MAKECMDGOALS)),$(ROUTER_TARGETS))
 
 $(HOOK_SENTINEL): $(PRECOMMIT_CONFIG)
@@ -49,6 +50,10 @@ push: | $(HOOK_SENTINEL) ## Route to push-service Makefile: `make push <subcomma
 .PHONY: webhook
 webhook: | $(HOOK_SENTINEL) ## Route to webhook-service Makefile: `make webhook <subcommand>`
 	@$(MAKE) -C $(WEBHOOK_SERVICE_DIR) $(ROUTED_ARGS)
+
+.PHONY: antifraud
+antifraud: | $(HOOK_SENTINEL) ## Route to antifraud-service Makefile: `make antifraud <subcommand>`
+	@$(MAKE) -C $(ANTIFRAUD_SERVICE_DIR) $(ROUTED_ARGS)
 
 ifneq ($(ROUTING),)
   ROUTED_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))

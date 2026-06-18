@@ -18,7 +18,7 @@ class LowHistoryHighValueRuleTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertTrue(alerts.get(0).contains("LowHistoryHighValueRule"), alerts.get(0));
+        assertTrue(alerts.get(0).message.contains("LowHistoryHighValueRule"), alerts.get(0).message);
         harness.close();
     }
 
@@ -54,7 +54,7 @@ class LowHistoryHighValueRuleTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertTrue(alerts.get(0).contains("clerk=u2"), alerts.get(0));
+        assertEquals("u2", alerts.get(0).clerkId);
         harness.close();
     }
 

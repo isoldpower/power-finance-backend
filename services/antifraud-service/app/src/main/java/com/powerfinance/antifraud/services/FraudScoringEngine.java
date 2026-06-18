@@ -2,12 +2,13 @@ package com.powerfinance.antifraud.services;
 
 import java.util.List;
 
+import com.powerfinance.antifraud.types.Alert;
 import com.powerfinance.antifraud.types.OutboxEvent;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 
-public class FraudScoringEngine extends KeyedProcessFunction<String, OutboxEvent, String> {
+public class FraudScoringEngine extends KeyedProcessFunction<String, OutboxEvent, Alert> {
 
     private final List<FraudRule> fraudRules;
     private final double fraudScoreThreshold;
@@ -28,7 +29,7 @@ public class FraudScoringEngine extends KeyedProcessFunction<String, OutboxEvent
     public void processElement(
             OutboxEvent outboxEvent,
             Context context,
-            Collector<String> alertOutput
+            Collector<Alert> alertOutput
     ) throws Exception {
         double totalFraudScore = 0;
         StringBuilder scoreBreakdown = new StringBuilder();
@@ -45,12 +46,13 @@ public class FraudScoringEngine extends KeyedProcessFunction<String, OutboxEvent
         }
 
         if (totalFraudScore > fraudScoreThreshold) {
-            alertOutput.collect(this.buildAlertMessage(
-                    context.getCurrentKey(),
+            String currentKey = context.getCurrentKey();
+            alertOutput.collect(new Alert(currentKey, this.buildAlertMessage(
+                    currentKey,
                     outboxEvent.eventId,
                     totalFraudScore,
                     scoreBreakdown.toString().trim()
-            ));
+            )));
         }
     }
 

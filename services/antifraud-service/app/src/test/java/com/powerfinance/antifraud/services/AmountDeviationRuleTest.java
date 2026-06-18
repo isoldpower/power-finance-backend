@@ -6,6 +6,7 @@ import static com.powerfinance.antifraud.services.RuleTestSupport.transactionEve
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.powerfinance.antifraud.types.Alert;
 import com.powerfinance.antifraud.types.OutboxEvent;
 import org.apache.flink.streaming.util.KeyedOneInputStreamOperatorTestHarness;
 import org.junit.jupiter.api.Test;
@@ -13,7 +14,7 @@ import org.junit.jupiter.api.Test;
 class AmountDeviationRuleTest {
 
     private void feedNormalHistory(
-            KeyedOneInputStreamOperatorTestHarness<String, OutboxEvent, String> harness,
+            KeyedOneInputStreamOperatorTestHarness<String, OutboxEvent, Alert> harness,
             String clerkId,
             int count) throws Exception {
         for (int i = 0; i < count; i++) {
@@ -32,7 +33,8 @@ class AmountDeviationRuleTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertTrue(alerts.get(0).contains("AmountDeviationRule"), alerts.get(0));
+        assertTrue(alerts.get(0).message.contains("AmountDeviationRule"), alerts.get(0).message);
+        assertEquals("u1", alerts.get(0).clerkId);
         harness.close();
     }
 

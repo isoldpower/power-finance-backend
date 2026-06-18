@@ -21,7 +21,7 @@ test: ## Run the test suite
 
 .PHONY: build-image
 build-image: ## Build the Antifraud Service Docker image (context = repo root)
-	$(COMPOSE) build antifraud-service
+	$(COMPOSE) build antifraud-jobmanager
 
 .PHONY: up
 up: ## Start the Antifraud Service stack (antifraud-service + kafka)
@@ -33,4 +33,4 @@ down: ## Stop the Antifraud Service stack (antifraud-service + kafka)
 
 .PHONY: logs
 logs: ## Tail the antifraud-service logs
-	$(COMPOSE) logs -f antifraud-service
+	$(COMPOSE) logs -f antifraud-jobmanager antifraud-taskmanager

@@ -23,7 +23,7 @@ class FraudScoringEngineTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertTrue(alerts.get(0).contains("score=6.0"), alerts.get(0));
+        assertTrue(alerts.get(0).message.contains("score=6.0"), alerts.get(0).message);
         harness.close();
     }
 
@@ -55,8 +55,8 @@ class FraudScoringEngineTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertTrue(alerts.get(0).contains("score=5.0"), alerts.get(0));
-        assertTrue(alerts.get(0).contains("FixedScoreRule=5.0"), alerts.get(0));
+        assertTrue(alerts.get(0).message.contains("score=5.0"), alerts.get(0).message);
+        assertTrue(alerts.get(0).message.contains("FixedScoreRule=5.0"), alerts.get(0).message);
         harness.close();
     }
 
@@ -70,7 +70,7 @@ class FraudScoringEngineTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertTrue(alerts.get(0).contains("clerk=u1"), alerts.get(0));
+        assertEquals("u1", alerts.get(0).clerkId);
         harness.close();
     }
 

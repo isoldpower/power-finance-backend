@@ -30,6 +30,7 @@ public class App {
                 config.kafkaBootstrapServers(),
                 config.kafkaOutboxTopic(),
                 config.kafkaGroupId(),
+                config.kafkaAlertsTopic(),
                 fraudScoringEngine
         ));
 

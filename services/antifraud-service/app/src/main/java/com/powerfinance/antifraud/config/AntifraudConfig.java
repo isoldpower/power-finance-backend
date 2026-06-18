@@ -4,6 +4,7 @@ public record AntifraudConfig(
         String kafkaBootstrapServers,
         String kafkaOutboxTopic,
         String kafkaGroupId,
+        String kafkaAlertsTopic,
         double fraudScoreThreshold
 ) {
 
@@ -12,6 +13,7 @@ public record AntifraudConfig(
                 environmentValue("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
                 environmentValue("KAFKA_OUTBOX_TOPIC", "events.async"),
                 environmentValue("KAFKA_GROUP_ID", "antifraud-service"),
+                environmentValue("KAFKA_ALERTS_TOPIC", "fraud.alerts"),
                 Double.parseDouble(environmentValue("FRAUD_SCORE_THRESHOLD", "4.0"))
         );
     }

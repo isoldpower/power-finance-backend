@@ -6,3 +6,4 @@ topics:
   - name: events.dlq
   - name: webhooks.retry
   - name: webhooks.dlq
+  - name: fraud.alerts

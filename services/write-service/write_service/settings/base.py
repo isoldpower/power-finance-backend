@@ -25,13 +25,15 @@ env = environ.Env(
     IDEMPOTENCY_REDIS_DB=(int, 0),
     IDEMPOTENCY_LOCK_TTL_SECONDS=(int, 30),
     IDEMPOTENCY_RESPONSE_TTL_SECONDS=(int, 86400),
+    FRAUD_REDIS_DB=(int, 0),
     IMMUDB_HOST=(str, "localhost"),
     IMMUDB_PORT=(int, 3322),
     IMMUDB_USER=(str, "immudb"),
     IMMUDB_PASSWORD=(str, "immudb"),
     KAFKA_BOOTSTRAP_SERVERS=(str, "localhost:9092"),
     KAFKA_OUTBOX_TOPIC=(str, "events.async"),
-    KAFKA_FRAUD_SIGNALS_TOPIC=(str, "fraud.signals"),
+    KAFKA_FRAUD_ALERTS_TOPIC=(str, "fraud.alerts"),
+    KAFKA_FRAUD_ALERTS_GROUP_ID=(str, "write-service.fraud-alerts"),
     KAFKA_NOTIFICATIONS_INBOUND_TOPIC=(str, "notifications.inbound"),
     KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID=(str, "write-service.notifications-inbound"),
     CORRELATION_ID_HEADER=(str, "X-Correlation-ID"),
@@ -117,6 +119,10 @@ IDEMPOTENCY = {
     "RESPONSE_TTL_SECONDS": env("IDEMPOTENCY_RESPONSE_TTL_SECONDS"),
 }
 
+FRAUD = {
+    "REDIS_DB": env("FRAUD_REDIS_DB"),
+}
+
 IMMUDB = {
     "HOST": env("IMMUDB_HOST"),
     "PORT": env("IMMUDB_PORT"),
@@ -127,7 +133,8 @@ IMMUDB = {
 KAFKA = {
     "BOOTSTRAP_SERVERS": env("KAFKA_BOOTSTRAP_SERVERS"),
     "OUTBOX_TOPIC": env("KAFKA_OUTBOX_TOPIC"),
-    "FRAUD_SIGNALS_TOPIC": env("KAFKA_FRAUD_SIGNALS_TOPIC"),
+    "FRAUD_ALERTS_TOPIC": env("KAFKA_FRAUD_ALERTS_TOPIC"),
+    "FRAUD_ALERTS_GROUP_ID": env("KAFKA_FRAUD_ALERTS_GROUP_ID"),
     "NOTIFICATIONS_INBOUND_TOPIC": env("KAFKA_NOTIFICATIONS_INBOUND_TOPIC"),
     "NOTIFICATIONS_INBOUND_GROUP_ID": env("KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID"),
 }

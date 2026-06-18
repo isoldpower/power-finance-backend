@@ -19,6 +19,7 @@ repositories {
 dependencies {
     compileOnly(libs.flink.streaming)
     compileOnly(libs.flink.clients)
+    compileOnly(libs.flink.connector.base)
 
     // Use JUnit Jupiter for testing.
     testImplementation(libs.junit.jupiter)

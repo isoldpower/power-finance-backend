@@ -3,6 +3,7 @@ package com.powerfinance.antifraud.services;
 import java.util.List;
 
 import com.google.protobuf.Timestamp;
+import com.powerfinance.antifraud.types.Alert;
 import com.powerfinance.antifraud.types.OutboxEvent;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.streaming.api.operators.KeyedProcessOperator;
@@ -15,12 +16,12 @@ final class RuleTestSupport {
     private RuleTestSupport() {
     }
 
-    static KeyedOneInputStreamOperatorTestHarness<String, OutboxEvent, String> harnessFor(
+    static KeyedOneInputStreamOperatorTestHarness<String, OutboxEvent, Alert> harnessFor(
             FraudRule fraudRule, double threshold) throws Exception {
         return harnessFor(List.of(fraudRule), threshold);
     }
 
-    static KeyedOneInputStreamOperatorTestHarness<String, OutboxEvent, String> harnessFor(
+    static KeyedOneInputStreamOperatorTestHarness<String, OutboxEvent, Alert> harnessFor(
             List<FraudRule> fraudRules, double threshold) throws Exception {
         var engine = new FraudScoringEngine(fraudRules, threshold);
         var harness = new KeyedOneInputStreamOperatorTestHarness<>(

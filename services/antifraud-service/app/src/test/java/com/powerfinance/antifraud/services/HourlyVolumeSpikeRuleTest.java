@@ -5,6 +5,7 @@ import static com.powerfinance.antifraud.services.RuleTestSupport.transactionEve
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.powerfinance.antifraud.types.Alert;
 import com.powerfinance.antifraud.types.OutboxEvent;
 import org.apache.flink.streaming.util.KeyedOneInputStreamOperatorTestHarness;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,7 @@ class HourlyVolumeSpikeRuleTest {
     private static final long BASE_SECONDS = 30 * DAY_SECONDS;
 
     private void feedDailyBaseline(
-            KeyedOneInputStreamOperatorTestHarness<String, OutboxEvent, String> harness,
+            KeyedOneInputStreamOperatorTestHarness<String, OutboxEvent, Alert> harness,
             String clerkId,
             int days,
             String dailyAmount) throws Exception {
@@ -37,7 +38,7 @@ class HourlyVolumeSpikeRuleTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertTrue(alerts.get(0).contains("HourlyVolumeSpikeRule"), alerts.get(0));
+        assertTrue(alerts.get(0).message.contains("HourlyVolumeSpikeRule"), alerts.get(0).message);
         harness.close();
     }
 

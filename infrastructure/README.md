@@ -15,6 +15,17 @@ Connect internal topics (a 1-broker cluster, else Connect refuses to start), and
 restarts). Production would use an odd-numbered controller quorum on separate
 nodes.
 
+> **TODO — broker is only shared within a single compose project.** Because each
+> service `include:`s this file, running service stacks *separately* (e.g.
+> `make antifraud up` and `make write up` in different terminals) spins up a
+> *separate* `kafka` container per project on its own network — so cross-service
+> flows like antifraud → `fraud.alerts` → write-service only work under the
+> **root** compose (where the includes dedupe to one broker). To make the broker
+> truly shared across independently-run stacks, move it onto a shared external
+> Docker network (e.g. `power-finance`) that this compose owns and the services
+> reference as `external`, dropping the per-service `include:` + `depends_on:
+> kafka`. Deferred for now; root-compose runs are unaffected.
+
 ## Kafka topics
 
 `kafka/topics.yml` is a catalogue, not a provisioning manifest. The dev broker

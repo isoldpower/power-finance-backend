@@ -2,6 +2,7 @@
 # See ./README.md → "Build & Docker"
 
 ARG JAVA_VERSION=21
+ARG FLINK_VERSION=2.0.0
 
 FROM eclipse-temurin:${JAVA_VERSION}-jdk AS builder
 
@@ -17,17 +18,12 @@ RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew --no-daemon clean shadowJar -x test
 
 
-FROM eclipse-temurin:${JAVA_VERSION}-jre AS runtime
-
-RUN groupadd -r -g 1000 app \
- && useradd -r -u 1000 -g app -s /usr/sbin/nologin app
+# Flink provides the runtime; the slim job jar (Flink core excluded) goes in
+# usrlib so the standalone-job entrypoint deploys it in Application Mode.
+FROM flink:${FLINK_VERSION}-java${JAVA_VERSION} AS runtime
 
 COPY --from=builder /src/services/antifraud-service/app/build/libs/app-all.jar \
-     /usr/local/lib/antifraud-service.jar
-
-USER app
-
-ENTRYPOINT ["java", "-jar", "/usr/local/lib/antifraud-service.jar"]
+     /opt/flink/usrlib/antifraud-service.jar
 
 LABEL org.opencontainers.image.source=https://github.com/isoldpower/power-finance-backend \
       org.opencontainers.image.title="power-finance-antifraud-service" \

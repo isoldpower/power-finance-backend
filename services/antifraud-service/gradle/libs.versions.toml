@@ -10,6 +10,7 @@ protobuf = "4.34.0"
 [libraries]
 flink-streaming = { module = "org.apache.flink:flink-streaming-java", version.ref = "flink" }
 flink-clients = { module = "org.apache.flink:flink-clients", version.ref = "flink" }
+flink-connector-base = { module = "org.apache.flink:flink-connector-base", version.ref = "flink" }
 flink-connector-kafka = { module = "org.apache.flink:flink-connector-kafka", version = "4.0.0-2.0" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
