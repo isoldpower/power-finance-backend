@@ -1,0 +1,21 @@
+# See ./README.md → "Build & Docker" and "Configuration"
+include:
+  - ../../infrastructure/kafka/compose.yaml
+
+services:
+  antifraud-service:
+    build:
+      context: ../..
+      dockerfile: services/antifraud-service/Dockerfile
+    image: power-finance/antifraud-service:dev
+    restart: unless-stopped
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_OUTBOX_TOPIC: ${KAFKA_OUTBOX_TOPIC:-events.async}
+      KAFKA_GROUP_ID: ${ANTIFRAUD_KAFKA_GROUP_ID:-antifraud-service}
+      FRAUD_SCORE_THRESHOLD: ${FRAUD_SCORE_THRESHOLD:-4.0}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      kafka:
+        condition: service_healthy
+    stop_grace_period: 30s

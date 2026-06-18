@@ -372,7 +372,8 @@ const file_transaction_proto_rawDesc = "" +
 	"\n" +
 	"new_amount\x18\x0e \x01(\tR\tnewAmount\x129\n" +
 	"\n" +
-	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtBOZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
+	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x7f\n" +
+	"\x1acom.powerfinance.events.v1B\x10TransactionProtoP\x01ZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
 
 var (
 	file_transaction_proto_rawDescOnce sync.Once

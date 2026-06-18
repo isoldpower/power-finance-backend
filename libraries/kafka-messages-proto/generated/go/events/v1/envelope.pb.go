@@ -100,7 +100,8 @@ const file_envelope_proto_rawDesc = "" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12%\n" +
-	"\x0eschema_version\x18\x03 \x01(\x05R\rschemaVersionBOZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
+	"\x0eschema_version\x18\x03 \x01(\x05R\rschemaVersionB|\n" +
+	"\x1acom.powerfinance.events.v1B\rEnvelopeProtoP\x01ZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
 
 var (
 	file_envelope_proto_rawDescOnce sync.Once

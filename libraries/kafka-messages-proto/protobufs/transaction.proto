@@ -3,6 +3,9 @@ syntax = "proto3";
 package power_finance.events.v1;
 
 option go_package = "github.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1";
+option java_package = "com.powerfinance.events.v1";
+option java_multiple_files = true;
+option java_outer_classname = "TransactionProto";
 
 import "google/protobuf/timestamp.proto";
 

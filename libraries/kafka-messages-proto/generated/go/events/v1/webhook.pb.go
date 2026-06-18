@@ -850,7 +850,8 @@ const file_webhook_proto_rawDesc = "" +
 	"#WEBHOOK_DELIVERY_STATUS_IN_PROGRESS\x10\x01\x12#\n" +
 	"\x1fWEBHOOK_DELIVERY_STATUS_SUCCESS\x10\x02\x12\"\n" +
 	"\x1eWEBHOOK_DELIVERY_STATUS_FAILED\x10\x03\x12+\n" +
-	"'WEBHOOK_DELIVERY_STATUS_RETRY_SCHEDULED\x10\x04BOZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
+	"'WEBHOOK_DELIVERY_STATUS_RETRY_SCHEDULED\x10\x04B{\n" +
+	"\x1acom.powerfinance.events.v1B\fWebhookProtoP\x01ZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
 
 var (
 	file_webhook_proto_rawDescOnce sync.Once

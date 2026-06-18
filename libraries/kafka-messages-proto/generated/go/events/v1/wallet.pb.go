@@ -344,7 +344,8 @@ const file_wallet_proto_rawDesc = "" +
 	"\x0eprevious_title\x18\f \x01(\tR\rpreviousTitle\x12\x1b\n" +
 	"\tnew_title\x18\r \x01(\tR\bnewTitle\x129\n" +
 	"\n" +
-	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtBOZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtBz\n" +
+	"\x1acom.powerfinance.events.v1B\vWalletProtoP\x01ZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
 
 var (
 	file_wallet_proto_rawDescOnce sync.Once

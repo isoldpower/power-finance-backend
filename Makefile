@@ -15,6 +15,15 @@ READ_AT_LEAST_LIB_DIR := libraries/read-at-least-py
 UVICORN_HOST := 0.0.0.0
 UVICORN_PORT := 8000
 
+REGISTRY      := ghcr.io
+IMAGE_OWNER   := isoldpower
+IMAGE_PREFIX  := $(REGISTRY)/$(IMAGE_OWNER)/power-finance
+IMAGE_TAG     ?= $(shell git rev-parse --short HEAD)
+DOCKER_SERVICES := write read push webhook
+GATEWAY_IMAGE   := $(IMAGE_PREFIX)/api-gateway
+GATEWAY_CONTEXT := infrastructure/kong
+DOCKER_CONFIG_FILE := $(HOME)/.docker/config.json
+
 PRECOMMIT_CONFIG := .pre-commit.yaml
 HOOK_SENTINEL    := .git/hooks/pre-commit
 
@@ -113,5 +122,35 @@ precommit-install: ## Force-reinstall the git pre-commit hook
 .PHONY: precommit
 precommit: | $(HOOK_SENTINEL) ## Run all pre-commit hooks against the entire tree
 	uv run pre-commit run --config $(PRECOMMIT_CONFIG) --all-files
+
+.PHONY: docker-auth-check
+docker-auth-check:
+	@grep -q '"$(REGISTRY)"' $(DOCKER_CONFIG_FILE) 2>/dev/null || { \
+		echo "Not authorized for $(REGISTRY) — no credentials found in $(DOCKER_CONFIG_FILE)."; \
+		echo "Authorization is out of scope for this target. Run 'docker login $(REGISTRY)' first."; \
+		exit 1; }
+
+.PHONY: docker-build
+docker-build: ## Build all 4 services + the api-gateway image (override tag with IMAGE_TAG=...; default = git short SHA)
+	@for svc in $(DOCKER_SERVICES); do \
+		img=$(IMAGE_PREFIX)/$$svc-service; \
+		echo "==> building $$img:latest, $$img:$(IMAGE_TAG)"; \
+		docker build -f services/$$svc-service/Dockerfile \
+			-t "$$img:latest" -t "$$img:$(IMAGE_TAG)" . || exit 1; \
+	done
+	@echo "==> building $(GATEWAY_IMAGE):latest, $(GATEWAY_IMAGE):$(IMAGE_TAG)"
+	@docker build -t "$(GATEWAY_IMAGE):latest" -t "$(GATEWAY_IMAGE):$(IMAGE_TAG)" $(GATEWAY_CONTEXT)
+
+.PHONY: docker-push
+docker-push: docker-auth-check docker-build ## Build + push all 4 services + the api-gateway to the GHCR registry
+	@for svc in $(DOCKER_SERVICES); do \
+		img=$(IMAGE_PREFIX)/$$svc-service; \
+		echo "==> pushing $$img"; \
+		docker push "$$img:latest" || exit 1; \
+		docker push "$$img:$(IMAGE_TAG)" || exit 1; \
+	done
+	@echo "==> pushing $(GATEWAY_IMAGE)"
+	@docker push "$(GATEWAY_IMAGE):latest"
+	@docker push "$(GATEWAY_IMAGE):$(IMAGE_TAG)"
 
 endif
