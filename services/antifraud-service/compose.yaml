@@ -1,0 +1,46 @@
+include:
+  - ../../infrastructure/kafka/compose.yaml
+
+services:
+  antifraud-jobmanager:
+    build:
+      context: ../..
+      dockerfile: services/antifraud-service/Dockerfile
+    image: power-finance/antifraud-service:dev
+    command: standalone-job --job-classname com.powerfinance.antifraud.App
+    restart: unless-stopped
+    ports:
+      - "${ANTIFRAUD_UI_PORT:-8085}:8081"
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: antifraud-jobmanager
+        parallelism.default: 1
+        restart-strategy.type: exponential-delay
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_OUTBOX_TOPIC=${KAFKA_OUTBOX_TOPIC:-events.async}
+      - KAFKA_GROUP_ID=${ANTIFRAUD_KAFKA_GROUP_ID:-antifraud-service}
+      - KAFKA_ALERTS_TOPIC=${KAFKA_ALERTS_TOPIC:-fraud.alerts}
+      - FRAUD_SCORE_THRESHOLD=${FRAUD_SCORE_THRESHOLD:-4.0}
+    depends_on:
+      kafka:
+        condition: service_healthy
+    stop_grace_period: 30s
+
+  antifraud-taskmanager:
+    image: power-finance/antifraud-service:dev
+    command: taskmanager
+    restart: unless-stopped
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: antifraud-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_OUTBOX_TOPIC=${KAFKA_OUTBOX_TOPIC:-events.async}
+      - KAFKA_GROUP_ID=${ANTIFRAUD_KAFKA_GROUP_ID:-antifraud-service}
+      - KAFKA_ALERTS_TOPIC=${KAFKA_ALERTS_TOPIC:-fraud.alerts}
+      - FRAUD_SCORE_THRESHOLD=${FRAUD_SCORE_THRESHOLD:-4.0}
+    depends_on:
+      - antifraud-jobmanager
+    stop_grace_period: 30s

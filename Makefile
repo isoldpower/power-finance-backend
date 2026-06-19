@@ -3,10 +3,11 @@
 
 unexport VIRTUAL_ENV
 
-WRITE_SERVICE_DIR   := services/write-service
-READ_SERVICE_DIR    := services/read-service
-PUSH_SERVICE_DIR    := services/push-service
-WEBHOOK_SERVICE_DIR := services/webhook-service
+WRITE_SERVICE_DIR     := services/write-service
+READ_SERVICE_DIR      := services/read-service
+PUSH_SERVICE_DIR      := services/push-service
+WEBHOOK_SERVICE_DIR   := services/webhook-service
+ANTIFRAUD_SERVICE_DIR := services/antifraud-service
 CORRELATION_LIB_DIR := libraries/correlation-py
 KAFKA_CLIENT_LIB_DIR := libraries/kafka-client-py
 SAGA_LIB_DIR         := libraries/saga-pattern-py
@@ -15,10 +16,19 @@ READ_AT_LEAST_LIB_DIR := libraries/read-at-least-py
 UVICORN_HOST := 0.0.0.0
 UVICORN_PORT := 8000
 
+REGISTRY      := ghcr.io
+IMAGE_OWNER   := isoldpower
+IMAGE_PREFIX  := $(REGISTRY)/$(IMAGE_OWNER)/power-finance
+IMAGE_TAG     ?= $(shell git rev-parse --short HEAD)
+DOCKER_SERVICES := write read push webhook antifraud
+GATEWAY_IMAGE   := $(IMAGE_PREFIX)/api-gateway
+GATEWAY_CONTEXT := infrastructure/kong
+DOCKER_CONFIG_FILE := $(HOME)/.docker/config.json
+
 PRECOMMIT_CONFIG := .pre-commit.yaml
 HOOK_SENTINEL    := .git/hooks/pre-commit
 
-ROUTER_TARGETS := write read push webhook
+ROUTER_TARGETS := write read push webhook antifraud
 ROUTING        := $(filter $(firstword $(MAKECMDGOALS)),$(ROUTER_TARGETS))
 
 $(HOOK_SENTINEL): $(PRECOMMIT_CONFIG)
@@ -40,6 +50,10 @@ push: | $(HOOK_SENTINEL) ## Route to push-service Makefile: `make push <subcomma
 .PHONY: webhook
 webhook: | $(HOOK_SENTINEL) ## Route to webhook-service Makefile: `make webhook <subcommand>`
 	@$(MAKE) -C $(WEBHOOK_SERVICE_DIR) $(ROUTED_ARGS)
+
+.PHONY: antifraud
+antifraud: | $(HOOK_SENTINEL) ## Route to antifraud-service Makefile: `make antifraud <subcommand>`
+	@$(MAKE) -C $(ANTIFRAUD_SERVICE_DIR) $(ROUTED_ARGS)
 
 ifneq ($(ROUTING),)
   ROUTED_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
@@ -113,5 +127,35 @@ precommit-install: ## Force-reinstall the git pre-commit hook
 .PHONY: precommit
 precommit: | $(HOOK_SENTINEL) ## Run all pre-commit hooks against the entire tree
 	uv run pre-commit run --config $(PRECOMMIT_CONFIG) --all-files
+
+.PHONY: docker-auth-check
+docker-auth-check:
+	@grep -q '"$(REGISTRY)"' $(DOCKER_CONFIG_FILE) 2>/dev/null || { \
+		echo "Not authorized for $(REGISTRY) — no credentials found in $(DOCKER_CONFIG_FILE)."; \
+		echo "Authorization is out of scope for this target. Run 'docker login $(REGISTRY)' first."; \
+		exit 1; }
+
+.PHONY: docker-build
+docker-build: ## Build all 4 services + the api-gateway image (override tag with IMAGE_TAG=...; default = git short SHA)
+	@for svc in $(DOCKER_SERVICES); do \
+		img=$(IMAGE_PREFIX)/$$svc-service; \
+		echo "==> building $$img:latest, $$img:$(IMAGE_TAG)"; \
+		docker build -f services/$$svc-service/Dockerfile \
+			-t "$$img:latest" -t "$$img:$(IMAGE_TAG)" . || exit 1; \
+	done
+	@echo "==> building $(GATEWAY_IMAGE):latest, $(GATEWAY_IMAGE):$(IMAGE_TAG)"
+	@docker build -t "$(GATEWAY_IMAGE):latest" -t "$(GATEWAY_IMAGE):$(IMAGE_TAG)" $(GATEWAY_CONTEXT)
+
+.PHONY: docker-push
+docker-push: docker-auth-check docker-build ## Build + push all 4 services + the api-gateway to the GHCR registry
+	@for svc in $(DOCKER_SERVICES); do \
+		img=$(IMAGE_PREFIX)/$$svc-service; \
+		echo "==> pushing $$img"; \
+		docker push "$$img:latest" || exit 1; \
+		docker push "$$img:$(IMAGE_TAG)" || exit 1; \
+	done
+	@echo "==> pushing $(GATEWAY_IMAGE)"
+	@docker push "$(GATEWAY_IMAGE):latest"
+	@docker push "$(GATEWAY_IMAGE):$(IMAGE_TAG)"
 
 endif

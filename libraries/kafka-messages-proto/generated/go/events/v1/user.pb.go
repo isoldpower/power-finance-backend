@@ -118,7 +118,8 @@ const file_user_proto_rawDesc = "" +
 	"\auser_id\x18\n" +
 	" \x01(\x05R\x06userId\x12\x1f\n" +
 	"\vexternal_id\x18\v \x01(\tR\n" +
-	"externalIdBOZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
+	"externalIdBx\n" +
+	"\x1acom.powerfinance.events.v1B\tUserProtoP\x01ZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
 
 var (
 	file_user_proto_rawDescOnce sync.Once

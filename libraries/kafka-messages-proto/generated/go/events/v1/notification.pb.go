@@ -459,7 +459,8 @@ const file_notification_proto_rawDesc = "" +
 	" \x01(\tR\x0enotificationId\x12\x17\n" +
 	"\auser_id\x18\v \x01(\x05R\x06userId\x129\n" +
 	"\n" +
-	"deleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAtBOZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
+	"deleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAtB\x80\x01\n" +
+	"\x1acom.powerfinance.events.v1B\x11NotificationProtoP\x01ZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
 
 var (
 	file_notification_proto_rawDescOnce sync.Once

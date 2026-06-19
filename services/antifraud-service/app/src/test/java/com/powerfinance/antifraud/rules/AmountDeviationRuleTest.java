@@ -1,0 +1,85 @@
+package com.powerfinance.antifraud.rules;
+
+import static com.powerfinance.antifraud.rules.RuleTestSupport.harnessFor;
+import static com.powerfinance.antifraud.rules.RuleTestSupport.nonTransactionEvent;
+import static com.powerfinance.antifraud.rules.RuleTestSupport.transactionEvent;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.powerfinance.antifraud.model.Alert;
+import com.powerfinance.antifraud.model.OutboxEvent;
+import org.apache.flink.streaming.util.KeyedOneInputStreamOperatorTestHarness;
+import org.junit.jupiter.api.Test;
+
+class AmountDeviationRuleTest {
+
+    private void feedNormalHistory(
+            KeyedOneInputStreamOperatorTestHarness<String, OutboxEvent, Alert> harness,
+            String clerkId,
+            int count) throws Exception {
+        for (int i = 0; i < count; i++) {
+            harness.processElement(transactionEvent(clerkId, i % 2 == 0 ? "95" : "105"), 0);
+        }
+    }
+
+    @Test
+    void flagsOutlierAfterWarmup() throws Exception {
+        var harness = harnessFor(new AmountDeviationRule(), 0.0);
+
+        feedNormalHistory(harness, "u1", 40);
+        assertTrue(harness.extractOutputValues().isEmpty(), "normal activity must not alert");
+
+        harness.processElement(transactionEvent("u1", "1000"), 0);
+
+        var alerts = harness.extractOutputValues();
+        assertEquals(1, alerts.size());
+        assertTrue(alerts.get(0).getMessage().contains("AmountDeviationRule"), alerts.get(0).getMessage());
+        assertEquals("u1", alerts.get(0).getClerkId());
+        harness.close();
+    }
+
+    @Test
+    void doesNotFlagAmountWithinDeviation() throws Exception {
+        var harness = harnessFor(new AmountDeviationRule(), 0.0);
+
+        feedNormalHistory(harness, "u1", 40);
+        harness.processElement(transactionEvent("u1", "104"), 0);
+
+        assertTrue(harness.extractOutputValues().isEmpty());
+        harness.close();
+    }
+
+    @Test
+    void doesNotFlagBeforeWarmup() throws Exception {
+        var harness = harnessFor(new AmountDeviationRule(), 0.0);
+
+        feedNormalHistory(harness, "u1", 10);
+        harness.processElement(transactionEvent("u1", "100000"), 0);
+
+        assertTrue(harness.extractOutputValues().isEmpty(), "must stay quiet until warmed up");
+        harness.close();
+    }
+
+    @Test
+    void keepsPerUserDistributionsSeparate() throws Exception {
+        var harness = harnessFor(new AmountDeviationRule(), 0.0);
+
+        feedNormalHistory(harness, "u1", 40);
+        harness.processElement(transactionEvent("u2", "1000"), 0);
+
+        assertTrue(harness.extractOutputValues().isEmpty());
+        harness.close();
+    }
+
+    @Test
+    void ignoresNonTransactionEvents() throws Exception {
+        var harness = harnessFor(new AmountDeviationRule(), 0.0);
+
+        for (int i = 0; i < 50; i++) {
+            harness.processElement(nonTransactionEvent("u1"), 0);
+        }
+
+        assertTrue(harness.extractOutputValues().isEmpty());
+        harness.close();
+    }
+}

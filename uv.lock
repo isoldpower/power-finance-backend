@@ -19,6 +19,11 @@ members = [
     "write-service",
 ]
 
+[[manifest.dependency-metadata]]
+name = "immudb-py"
+version = "1.5.0"
+requires-dist = ["cachetools", "certifi", "charset-normalizer", "ecdsa", "google-api-core", "google-api-python-client", "google-auth", "google-auth-httplib2", "googleapis-common-protos", "grpcio", "httplib2", "idna", "proto-plus", "protobuf", "pyasn1", "pyasn1-modules", "pyparsing", "requests", "rsa", "six", "uritemplate", "urllib3"]
+
 [[package]]
 name = "aiohappyeyeballs"
 version = "2.6.2"
@@ -198,15 +203,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/19/14/2c5dd9f512b66549ae92767a9c7b330ae88e1932ca57876909410251fe13/anyio-4.13.0.tar.gz", hash = "sha256:334b70e641fd2221c1505b3890c69882fe4a2df910cba14d97019b90b24439dc", size = 231622, upload-time = "2026-03-24T12:59:09.671Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/da/42/e921fccf5015463e32a3cf6ee7f980a6ed0f395ceeaa45060b61d86486c2/anyio-4.13.0-py3-none-any.whl", hash = "sha256:08b310f9e24a9594186fd75b4f73f4a4152069e3853f1ed8bfbf58369f4ad708", size = 114353, upload-time = "2026-03-24T12:59:08.246Z" },
-]
-
-[[package]]
-name = "appier"
-version = "1.45.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0a/ac/4a09c07b691e573c970a848c0ceee2c8997116544efca03f32610c1672d7/appier-1.45.4.tar.gz", hash = "sha256:aecd78ea8810e5d027b8f99fce72b8422a12757779672bb3fbe0709646b588a8", size = 251881, upload-time = "2026-04-29T18:52:37.523Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3e/51/e32f7258593d4ef0670f4d5a1bafba58c55536b4e403d5e033c5e97b7eb2/appier-1.45.4-py2.py3-none-any.whl", hash = "sha256:c1a5e97786e2ff60f54c3cfd22ee5d5899a80dbe88b234dcb379037ad04a38ff", size = 318721, upload-time = "2026-04-29T18:52:35.288Z" },
 ]
 
 [[package]]
@@ -765,18 +761,6 @@ wheels = [
 ]
 
 [[package]]
-name = "google-api"
-version = "0.1.12"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "appier" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/85/2d/a6064ce3da7b8aede497559f445707a9cc53c8f7858d6237b6033db0782c/google_api-0.1.12.tar.gz", hash = "sha256:5611c87cdfc6b72927a5e2ea9299ddd6f3a206e29a342b86d3ff3ecc351c30a3", size = 3730, upload-time = "2017-09-05T11:22:17.834Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4d/99/d3237a3286f463158cad1deea9bda706cc401e67302e12c17507edba940e/google_api-0.1.12-py2.py3-none-any.whl", hash = "sha256:618f9f2076482a128c408867b5398b291938fe8e653ed7f8ed58fce5042f0c75", size = 7978, upload-time = "2017-09-05T11:22:17.02Z" },
-]
-
-[[package]]
 name = "google-api-core"
 version = "2.30.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1005,12 +989,10 @@ name = "immudb-py"
 version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "appier" },
     { name = "cachetools" },
     { name = "certifi" },
     { name = "charset-normalizer" },
     { name = "ecdsa" },
-    { name = "google-api" },
     { name = "google-api-core" },
     { name = "google-api-python-client" },
     { name = "google-auth" },

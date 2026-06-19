@@ -19,6 +19,38 @@ members = [
     "libraries/saga-pattern-py",
 ]
 
+# immudb-py 1.5.0 ships broken metadata: it declares a dependency on the Hive
+# "google-api" package (and "appier"), which installs a non-namespace
+# google/__init__.py that shadows google.protobuf and crashes on import. immudb
+# never imports either, so we override its metadata to drop them.
+[[tool.uv.dependency-metadata]]
+name = "immudb-py"
+version = "1.5.0"
+requires-dist = [
+    "cachetools",
+    "certifi",
+    "charset-normalizer",
+    "ecdsa",
+    "google-api-core",
+    "google-api-python-client",
+    "google-auth",
+    "google-auth-httplib2",
+    "googleapis-common-protos",
+    "grpcio",
+    "httplib2",
+    "idna",
+    "proto-plus",
+    "protobuf",
+    "pyasn1",
+    "pyasn1-modules",
+    "pyparsing",
+    "requests",
+    "rsa",
+    "six",
+    "uritemplate",
+    "urllib3",
+]
+
 [dependency-groups]
 dev = [
     "ruff>=0.8,<0.9",
