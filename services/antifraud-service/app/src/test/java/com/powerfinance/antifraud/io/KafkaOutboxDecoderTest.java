@@ -1,4 +1,4 @@
-package com.powerfinance.antifraud.presentation;
+package com.powerfinance.antifraud.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.powerfinance.antifraud.types.OutboxEvent;
+import com.powerfinance.antifraud.model.OutboxEvent;
 import org.apache.flink.util.Collector;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Test;
@@ -34,10 +34,10 @@ class KafkaOutboxDecoderTest {
 
         assertEquals(1, decodedEvents.size());
         OutboxEvent decodedEvent = decodedEvents.get(0);
-        assertEquals("clerk_abc", decodedEvent.clerkId);
-        assertEquals("TransactionCreated", decodedEvent.eventType);
-        assertEquals("evt-1", decodedEvent.eventId);
-        assertEquals(transaction, TransactionCreated.parseFrom(decodedEvent.payload));
+        assertEquals("clerk_abc", decodedEvent.getClerkId());
+        assertEquals("TransactionCreated", decodedEvent.getEventType());
+        assertEquals("evt-1", decodedEvent.getEventId());
+        assertEquals(transaction, TransactionCreated.parseFrom(decodedEvent.getPayload()));
     }
 
     @Test
@@ -55,7 +55,7 @@ class KafkaOutboxDecoderTest {
 
         var decodedEvents = collect(consumerRecord);
         assertEquals(1, decodedEvents.size());
-        assertEquals("", decodedEvents.get(0).clerkId);
+        assertEquals("", decodedEvents.get(0).getClerkId());
         assertNull(consumerRecord.key());
     }
 

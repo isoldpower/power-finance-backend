@@ -1,5 +1,6 @@
 package com.powerfinance.antifraud.config;
 
+/** Immutable runtime configuration for the antifraud Flink job. */
 public record AntifraudConfig(
         String kafkaBootstrapServers,
         String kafkaOutboxTopic,
@@ -8,6 +9,7 @@ public record AntifraudConfig(
         double fraudScoreThreshold
 ) {
 
+    /** Builds the configuration from environment variables, falling back to defaults. */
     public static AntifraudConfig fromEnvironment() {
         return new AntifraudConfig(
                 environmentValue("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),

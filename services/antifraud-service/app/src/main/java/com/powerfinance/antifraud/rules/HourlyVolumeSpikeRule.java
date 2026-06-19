@@ -1,15 +1,16 @@
-package com.powerfinance.antifraud.services;
+package com.powerfinance.antifraud.rules;
 
 import java.util.Iterator;
 import java.util.Map;
 
-import com.powerfinance.antifraud.types.OutboxEvent;
+import com.powerfinance.antifraud.model.OutboxEvent;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 
 import com.powerfinance.events.v1.TransactionCreated;
 
+/** Scores a user whose last-24h transaction volume spikes above the 30-day daily baseline. */
 public class HourlyVolumeSpikeRule implements FraudRule {
 
     private static final String EVENT_TYPE = "TransactionCreated";
@@ -25,6 +26,7 @@ public class HourlyVolumeSpikeRule implements FraudRule {
 
     private transient MapState<Long, Double> volumeByHourBucketState;
 
+    /** Registers the keyed per-hour volume state. */
     @Override
     public void open(RuntimeContext runtimeContext) {
         this.volumeByHourBucketState = runtimeContext.getMapState(new MapStateDescriptor<>(
@@ -34,13 +36,14 @@ public class HourlyVolumeSpikeRule implements FraudRule {
         ));
     }
 
+    /** Records the transaction volume and scores it when the recent window spikes over baseline. */
     @Override
     public double score(OutboxEvent outboxEvent) throws Exception {
-        if (!EVENT_TYPE.equals(outboxEvent.eventType)) {
+        if (!EVENT_TYPE.equals(outboxEvent.getEventType())) {
             return 0;
         }
 
-        TransactionCreated transaction = TransactionCreated.parseFrom(outboxEvent.payload);
+        TransactionCreated transaction = TransactionCreated.parseFrom(outboxEvent.getPayload());
         double transactionAmount = Double.parseDouble(transaction.getAmount());
         long currentHourBucket = eventTimeMillis(transaction) / HOUR_MS;
 

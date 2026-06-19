@@ -1,13 +1,14 @@
-package com.powerfinance.antifraud.services;
+package com.powerfinance.antifraud.engine;
 
-import static com.powerfinance.antifraud.services.RuleTestSupport.harnessFor;
-import static com.powerfinance.antifraud.services.RuleTestSupport.transactionEvent;
+import static com.powerfinance.antifraud.rules.RuleTestSupport.harnessFor;
+import static com.powerfinance.antifraud.rules.RuleTestSupport.transactionEvent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
-import com.powerfinance.antifraud.types.OutboxEvent;
+import com.powerfinance.antifraud.model.OutboxEvent;
+import com.powerfinance.antifraud.rules.FraudRule;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
@@ -23,7 +24,7 @@ class FraudScoringEngineTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertTrue(alerts.get(0).message.contains("score=6.0"), alerts.get(0).message);
+        assertTrue(alerts.get(0).getMessage().contains("score=6.0"), alerts.get(0).getMessage());
         harness.close();
     }
 
@@ -55,8 +56,8 @@ class FraudScoringEngineTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertTrue(alerts.get(0).message.contains("score=5.0"), alerts.get(0).message);
-        assertTrue(alerts.get(0).message.contains("FixedScoreRule=5.0"), alerts.get(0).message);
+        assertTrue(alerts.get(0).getMessage().contains("score=5.0"), alerts.get(0).getMessage());
+        assertTrue(alerts.get(0).getMessage().contains("FixedScoreRule=5.0"), alerts.get(0).getMessage());
         harness.close();
     }
 
@@ -70,7 +71,7 @@ class FraudScoringEngineTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertEquals("u1", alerts.get(0).clerkId);
+        assertEquals("u1", alerts.get(0).getClerkId());
         harness.close();
     }
 

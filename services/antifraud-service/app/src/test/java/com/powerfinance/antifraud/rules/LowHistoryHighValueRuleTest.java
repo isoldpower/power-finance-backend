@@ -1,8 +1,8 @@
-package com.powerfinance.antifraud.services;
+package com.powerfinance.antifraud.rules;
 
-import static com.powerfinance.antifraud.services.RuleTestSupport.harnessFor;
-import static com.powerfinance.antifraud.services.RuleTestSupport.nonTransactionEvent;
-import static com.powerfinance.antifraud.services.RuleTestSupport.transactionEvent;
+import static com.powerfinance.antifraud.rules.RuleTestSupport.harnessFor;
+import static com.powerfinance.antifraud.rules.RuleTestSupport.nonTransactionEvent;
+import static com.powerfinance.antifraud.rules.RuleTestSupport.transactionEvent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -18,7 +18,7 @@ class LowHistoryHighValueRuleTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertTrue(alerts.get(0).message.contains("LowHistoryHighValueRule"), alerts.get(0).message);
+        assertTrue(alerts.get(0).getMessage().contains("LowHistoryHighValueRule"), alerts.get(0).getMessage());
         harness.close();
     }
 
@@ -54,7 +54,7 @@ class LowHistoryHighValueRuleTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertEquals("u2", alerts.get(0).clerkId);
+        assertEquals("u2", alerts.get(0).getClerkId());
         harness.close();
     }
 

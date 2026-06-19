@@ -1,12 +1,13 @@
-package com.powerfinance.antifraud.services;
+package com.powerfinance.antifraud.rules;
 
-import com.powerfinance.antifraud.types.OutboxEvent;
+import com.powerfinance.antifraud.model.OutboxEvent;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 
 import com.powerfinance.events.v1.TransactionCreated;
 
+/** Scores a large transaction made by a user with little prior transaction history. */
 public class LowHistoryHighValueRule implements FraudRule {
 
     private static final String EVENT_TYPE = "TransactionCreated";
@@ -16,6 +17,7 @@ public class LowHistoryHighValueRule implements FraudRule {
 
     private transient ValueState<Double> transactionTotalState;
 
+    /** Registers the keyed cumulative-total state. */
     @Override
     public void open(RuntimeContext runtimeContext) {
         this.transactionTotalState = runtimeContext.getState(new ValueStateDescriptor<>(
@@ -24,13 +26,14 @@ public class LowHistoryHighValueRule implements FraudRule {
         ));
     }
 
+    /** Scores a large transaction against a thin history, then accumulates the total. */
     @Override
     public double score(OutboxEvent outboxEvent) throws Exception {
-        if (!EVENT_TYPE.equals(outboxEvent.eventType)) {
+        if (!EVENT_TYPE.equals(outboxEvent.getEventType())) {
             return 0;
         }
 
-        TransactionCreated transaction = TransactionCreated.parseFrom(outboxEvent.payload);
+        TransactionCreated transaction = TransactionCreated.parseFrom(outboxEvent.getPayload());
         double transactionAmount = Double.parseDouble(transaction.getAmount());
 
         Double priorTransactionTotal = transactionTotalState.value();

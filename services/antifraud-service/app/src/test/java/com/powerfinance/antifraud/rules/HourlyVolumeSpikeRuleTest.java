@@ -1,12 +1,12 @@
-package com.powerfinance.antifraud.services;
+package com.powerfinance.antifraud.rules;
 
-import static com.powerfinance.antifraud.services.RuleTestSupport.harnessFor;
-import static com.powerfinance.antifraud.services.RuleTestSupport.transactionEvent;
+import static com.powerfinance.antifraud.rules.RuleTestSupport.harnessFor;
+import static com.powerfinance.antifraud.rules.RuleTestSupport.transactionEvent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.powerfinance.antifraud.types.Alert;
-import com.powerfinance.antifraud.types.OutboxEvent;
+import com.powerfinance.antifraud.model.Alert;
+import com.powerfinance.antifraud.model.OutboxEvent;
 import org.apache.flink.streaming.util.KeyedOneInputStreamOperatorTestHarness;
 import org.junit.jupiter.api.Test;
 
@@ -38,7 +38,7 @@ class HourlyVolumeSpikeRuleTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertTrue(alerts.get(0).message.contains("HourlyVolumeSpikeRule"), alerts.get(0).message);
+        assertTrue(alerts.get(0).getMessage().contains("HourlyVolumeSpikeRule"), alerts.get(0).getMessage());
         harness.close();
     }
 

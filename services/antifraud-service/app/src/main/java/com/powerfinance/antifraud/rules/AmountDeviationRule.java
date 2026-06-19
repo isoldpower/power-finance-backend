@@ -1,12 +1,13 @@
-package com.powerfinance.antifraud.services;
+package com.powerfinance.antifraud.rules;
 
-import com.powerfinance.antifraud.types.OutboxEvent;
+import com.powerfinance.antifraud.model.OutboxEvent;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 
 import com.powerfinance.events.v1.TransactionCreated;
 
+/** Scores transactions whose amount deviates beyond a sigma threshold from the user's history. */
 public class AmountDeviationRule implements FraudRule {
 
     private static final String EVENT_TYPE = "TransactionCreated";
@@ -16,6 +17,7 @@ public class AmountDeviationRule implements FraudRule {
 
     private transient ValueState<RunningStats> amountStatsState;
 
+    /** Registers the keyed running-statistics state. */
     @Override
     public void open(RuntimeContext runtimeContext) {
         this.amountStatsState = runtimeContext.getState(new ValueStateDescriptor<>(
@@ -24,13 +26,14 @@ public class AmountDeviationRule implements FraudRule {
         ));
     }
 
+    /** Scores the transaction as an outlier once enough samples exist, then updates the stats. */
     @Override
     public double score(OutboxEvent outboxEvent) throws Exception {
-        if (!EVENT_TYPE.equals(outboxEvent.eventType)) {
+        if (!EVENT_TYPE.equals(outboxEvent.getEventType())) {
             return 0;
         }
 
-        TransactionCreated transaction = TransactionCreated.parseFrom(outboxEvent.payload);
+        TransactionCreated transaction = TransactionCreated.parseFrom(outboxEvent.getPayload());
         double transactionAmount = Double.parseDouble(transaction.getAmount());
 
         RunningStats runningAmountStats = amountStatsState.value();
@@ -52,11 +55,13 @@ public class AmountDeviationRule implements FraudRule {
         return rulePoints;
     }
 
+    /** Welford running mean and variance accumulator over transaction amounts. */
     static class RunningStats {
         public long count;
         public double mean;
         public double m2;
 
+        /** Incorporates a new value into the running mean and sum of squared deltas. */
         public void add(double value) {
             count += 1;
             double delta = value - mean;

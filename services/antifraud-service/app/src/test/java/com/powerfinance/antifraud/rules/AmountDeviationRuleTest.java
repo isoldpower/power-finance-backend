@@ -1,13 +1,13 @@
-package com.powerfinance.antifraud.services;
+package com.powerfinance.antifraud.rules;
 
-import static com.powerfinance.antifraud.services.RuleTestSupport.harnessFor;
-import static com.powerfinance.antifraud.services.RuleTestSupport.nonTransactionEvent;
-import static com.powerfinance.antifraud.services.RuleTestSupport.transactionEvent;
+import static com.powerfinance.antifraud.rules.RuleTestSupport.harnessFor;
+import static com.powerfinance.antifraud.rules.RuleTestSupport.nonTransactionEvent;
+import static com.powerfinance.antifraud.rules.RuleTestSupport.transactionEvent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.powerfinance.antifraud.types.Alert;
-import com.powerfinance.antifraud.types.OutboxEvent;
+import com.powerfinance.antifraud.model.Alert;
+import com.powerfinance.antifraud.model.OutboxEvent;
 import org.apache.flink.streaming.util.KeyedOneInputStreamOperatorTestHarness;
 import org.junit.jupiter.api.Test;
 
@@ -33,8 +33,8 @@ class AmountDeviationRuleTest {
 
         var alerts = harness.extractOutputValues();
         assertEquals(1, alerts.size());
-        assertTrue(alerts.get(0).message.contains("AmountDeviationRule"), alerts.get(0).message);
-        assertEquals("u1", alerts.get(0).clerkId);
+        assertTrue(alerts.get(0).getMessage().contains("AmountDeviationRule"), alerts.get(0).getMessage());
+        assertEquals("u1", alerts.get(0).getClerkId());
         harness.close();
     }
 
