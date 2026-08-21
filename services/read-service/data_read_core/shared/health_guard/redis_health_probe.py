@@ -1,3 +1,5 @@
+from inspect import isawaitable
+
 from redis.exceptions import RedisError
 
 from data_read_core.shared.redis_cache import get_redis
@@ -16,6 +18,8 @@ class RedisHealthProbe(HealthProbe):
 
     async def is_healthy(self) -> bool:
         try:
-            return bool(await get_redis().ping())
+            reply = get_redis().ping()
+
+            return bool(await reply if isawaitable(reply) else reply)
         except REDIS_CONNECTIVITY_ERRORS:
             return False

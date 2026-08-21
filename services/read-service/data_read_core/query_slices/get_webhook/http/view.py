@@ -13,7 +13,7 @@ from data_read_core.shared.rest_framework import ErrorResponseSerializer, async_
 from ..dtos import GetWebhookQuery
 from ..query_handler import GetWebhookQueryHandler
 from ._presenters import present_one
-from ._serializers import EnvelopedWebhookResponseSerializer
+from ._serializers import EnvelopedWebhookDetailSerializer
 
 
 @extend_schema(
@@ -29,7 +29,7 @@ from ._serializers import EnvelopedWebhookResponseSerializer
         )
     ],
     responses={
-        200: EnvelopedWebhookResponseSerializer,
+        200: EnvelopedWebhookDetailSerializer,
         404: ErrorResponseSerializer,
     },
 )

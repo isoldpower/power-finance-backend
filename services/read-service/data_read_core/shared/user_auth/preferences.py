@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from rest_framework.request import Request
 
-from data_read_core.shared.money import CURRENCY_SCALES
+from data_read_core.shared.money import CURRENCY_CATALOG
 
 from .defaults import DEFAULT_CURRENCY, DEFAULT_LANGUAGE, DEFAULT_TIMEZONE
 from .headers import CURRENCY_HEADER, LANGUAGE_HEADER, TIMEZONE_HEADER
@@ -37,9 +37,8 @@ async def _resolve_currency(raw_currency: str | None) -> str:
         return DEFAULT_CURRENCY
 
     parsed_currency = raw_currency.strip().upper()
-    currency_scales = await CURRENCY_SCALES.table()
 
-    return parsed_currency if parsed_currency in currency_scales else DEFAULT_CURRENCY
+    return parsed_currency if await CURRENCY_CATALOG.supports(parsed_currency) else DEFAULT_CURRENCY
 
 
 def _resolve_timezone(raw: str | None) -> str:

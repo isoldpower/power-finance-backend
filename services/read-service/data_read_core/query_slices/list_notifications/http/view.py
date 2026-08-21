@@ -19,7 +19,7 @@ from data_read_core.shared.rest_framework import (
 from ..dtos import ListNotificationsQuery
 from ..query_handler import ListNotificationsQueryHandler
 from ._presenters import present_many
-from ._serializers import PaginatedNotificationResponseSerializer
+from ._serializers import PaginatedNotificationPreviewSerializer
 
 ONLY_UNREAD_PARAMETER = OpenApiParameter(
     "only_unread",
@@ -35,7 +35,7 @@ ONLY_UNREAD_PARAMETER = OpenApiParameter(
     description="Retrieve a page of your notifications, newest first.",
     parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER, ONLY_UNREAD_PARAMETER],
     responses={
-        200: PaginatedNotificationResponseSerializer,
+        200: PaginatedNotificationPreviewSerializer,
         422: ErrorResponseSerializer,
     },
 )

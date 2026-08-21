@@ -1,10 +1,13 @@
 from decimal import Decimal
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .parsing import CURRENCY_AGNOSTIC_RULES, MAX_INTEGER_DIGITS, AmountCandidate, AmountRule
 
 
+@extend_schema_field(OpenApiTypes.STR)
 class MoneyAmountField(serializers.Field):
     rules: tuple[AmountRule, ...] = CURRENCY_AGNOSTIC_RULES
 

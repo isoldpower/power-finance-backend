@@ -36,6 +36,10 @@ services:
       DATABASE_USER: ${READ_DATABASE_USER:-postgres}
       DATABASE_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
       REDIS_URL: ${READ_REDIS_URL:-redis://read-redis:6379/0}
+      EXCHANGE_RATES_PROVIDER: ${EXCHANGE_RATES_PROVIDER:-open-er-api}
+      EXCHANGE_RATES_BASE_URL: ${EXCHANGE_RATES_BASE_URL:-https://open.er-api.com/v6/latest}
+      EXCHANGE_RATES_TTL_SECONDS: ${EXCHANGE_RATES_TTL_SECONDS:-900}
+      EXCHANGE_RATES_MAX_AGE_SECONDS: ${EXCHANGE_RATES_MAX_AGE_SECONDS:-172800}
       <<: *elasticsearch-env
     volumes:
       - certs:/certs:ro
@@ -110,7 +114,10 @@ services:
     volumes:
       - postgres_read_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${READ_DATABASE_USER:-postgres} -d ${READ_DATABASE_NAME:-power_finance_read}"]
+      test: [
+        "CMD-SHELL",
+        "pg_isready -U ${READ_DATABASE_USER:-postgres} -d ${READ_DATABASE_NAME:-power_finance_read}",
+      ]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -121,7 +128,10 @@ services:
     volumes:
       - redis_read_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      test: [
+        "CMD-SHELL",
+        "redis-cli ping | grep -q PONG",
+      ]
       interval: 5s
       timeout: 3s
       retries: 10

@@ -1,14 +1,9 @@
 from rest_framework import serializers
 
-from data_read_core.shared.rest_framework import collection_response
+from data_read_core.shared.rest_framework import MoneySerializer, collection_response
 
 
-class MoneySerializer(serializers.Serializer):
-    amount = serializers.CharField(help_text="Decimal string at the currency's scale.")
-    currency = serializers.CharField()
-
-
-class WalletResponseSerializer(serializers.Serializer):
+class WalletPreviewSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
     balance = MoneySerializer()
@@ -17,4 +12,4 @@ class WalletResponseSerializer(serializers.Serializer):
     deleted_at = serializers.DateTimeField(allow_null=True)
 
 
-PaginatedWalletResponseSerializer = collection_response(WalletResponseSerializer)
+PaginatedWalletPreviewSerializer = collection_response(WalletPreviewSerializer)

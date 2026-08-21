@@ -7,7 +7,7 @@ class FilterWebhooksRequestSerializer(serializers.Serializer):
     filter_body = serializers.JSONField(allow_null=False, required=True)
 
 
-class WebhookResponseSerializer(serializers.Serializer):
+class WebhookSearchResultSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     title = serializers.CharField()
     url = serializers.URLField()
@@ -17,4 +17,4 @@ class WebhookResponseSerializer(serializers.Serializer):
     deleted_at = serializers.DateTimeField(allow_null=True)
 
 
-PaginatedWebhookResponseSerializer = collection_response(WebhookResponseSerializer)
+PaginatedWebhookSearchResultSerializer = collection_response(WebhookSearchResultSerializer)

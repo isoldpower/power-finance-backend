@@ -63,10 +63,10 @@ class PageRequest:
         limit_policy: LimitPolicy = DEFAULT_LIMIT_POLICY,
     ) -> "PageRequest":
         fingerprint = query_fingerprint(order, query_material)
-        raw_cursor = request.query_params.get(PARAMETER_NAMES.get("CURSOR"))
+        raw_cursor = request.query_params.get(PARAMETER_NAMES["CURSOR"])
 
         return cls(
-            limit=limit_policy.resolve(request.query_params.get(PARAMETER_NAMES.get("LIMIT"))),
+            limit=limit_policy.resolve(request.query_params.get(PARAMETER_NAMES["LIMIT"])),
             order=order,
             fingerprint=fingerprint,
             cursor=CURSOR_CODEC.decode(raw_cursor, fingerprint) if raw_cursor else None,

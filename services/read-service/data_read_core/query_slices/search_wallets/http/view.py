@@ -20,7 +20,7 @@ from ..query_handler import SearchWalletsQueryHandler
 from ._presenters import present_many
 from ._serializers import (
     FilterWalletsRequestSerializer,
-    PaginatedWalletResponseSerializer,
+    PaginatedWalletSearchResultSerializer,
 )
 
 
@@ -36,7 +36,7 @@ from ._serializers import (
     parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER],
     request=FilterWalletsRequestSerializer,
     responses={
-        200: PaginatedWalletResponseSerializer,
+        200: PaginatedWalletSearchResultSerializer,
         422: ErrorResponseSerializer,
     },
 )

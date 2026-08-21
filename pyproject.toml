@@ -107,6 +107,5 @@ exclude = [
     ".venv",
     "manage\\.py$",
     "fakes\\.py$",
-    "services/read-service/",
     "old-structure/",
 ]

@@ -13,7 +13,7 @@ from data_read_core.shared.rest_framework import ErrorResponseSerializer, async_
 from ..dtos import GetWalletQuery
 from ..query_handler import GetWalletQueryHandler
 from ._presenters import present_one
-from ._serializers import EnvelopedWalletResponseSerializer
+from ._serializers import EnvelopedWalletDetailSerializer
 
 
 @extend_schema(
@@ -29,7 +29,7 @@ from ._serializers import EnvelopedWalletResponseSerializer
         )
     ],
     responses={
-        200: EnvelopedWalletResponseSerializer,
+        200: EnvelopedWalletDetailSerializer,
         404: ErrorResponseSerializer,
     },
 )

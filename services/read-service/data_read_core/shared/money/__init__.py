@@ -1,4 +1,10 @@
-from .currency_scales import CURRENCY_SCALES, DEFAULT_CURRENCY, DEFAULT_DECIMALS, CurrencyScales
+from .currency_catalog import (
+    CURRENCY_CATALOG,
+    DEFAULT_CURRENCY,
+    DEFAULT_DECIMALS,
+    CurrencyCatalog,
+    CurrencyRecord,
+)
 from .parsing import (
     AMOUNT_PARSER,
     AMOUNT_RULES,
@@ -19,7 +25,7 @@ __all__ = [
     "AMOUNT_PARSER",
     "AMOUNT_RULES",
     "CANONICAL_AMOUNT",
-    "CURRENCY_SCALES",
+    "CURRENCY_CATALOG",
     "DEFAULT_CURRENCY",
     "DEFAULT_DECIMALS",
     "MAX_INTEGER_DIGITS",
@@ -27,8 +33,9 @@ __all__ = [
     "AmountParser",
     "AmountRule",
     "CanonicalFormRule",
+    "CurrencyCatalog",
+    "CurrencyRecord",
     "CurrencyScaleRule",
-    "CurrencyScales",
     "IntegerDigitsRule",
     "TextOnlyRule",
     "amount_at_scale",

@@ -18,7 +18,7 @@ from data_read_core.shared.rest_framework import (
 from ..dtos import ListWalletsQuery
 from ..query_handler import ListWalletsQueryHandler
 from ._presenters import present_many
-from ._serializers import PaginatedWalletResponseSerializer
+from ._serializers import PaginatedWalletPreviewSerializer
 
 
 @extend_schema(
@@ -27,7 +27,7 @@ from ._serializers import PaginatedWalletResponseSerializer
     description="Retrieve a page of your wallets, newest first.",
     parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER],
     responses={
-        200: PaginatedWalletResponseSerializer,
+        200: PaginatedWalletPreviewSerializer,
         422: ErrorResponseSerializer,
     },
 )

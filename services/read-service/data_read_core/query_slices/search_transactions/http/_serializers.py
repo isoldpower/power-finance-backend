@@ -7,7 +7,7 @@ class FilterTransactionsRequestSerializer(serializers.Serializer):
     filter_body = serializers.JSONField(allow_null=False, required=True)
 
 
-class TransactionResponseSerializer(serializers.Serializer):
+class TransactionSearchResultSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     wallet_id = serializers.UUIDField()
     amount = serializers.CharField(help_text="Decimal string at the currency's scale.")
@@ -18,4 +18,4 @@ class TransactionResponseSerializer(serializers.Serializer):
     deleted_at = serializers.DateTimeField(allow_null=True)
 
 
-PaginatedTransactionResponseSerializer = collection_response(TransactionResponseSerializer)
+PaginatedTransactionSearchResultSerializer = collection_response(TransactionSearchResultSerializer)

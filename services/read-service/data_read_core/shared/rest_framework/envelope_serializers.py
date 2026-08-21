@@ -52,11 +52,14 @@ class ErrorResponseSerializer(serializers.Serializer):
     meta = ErrorMetaSerializer()
 
 
-def collection_response(item_serializer: type[serializers.Serializer]) -> type:
-    """Build the `data` + `meta` serializer for a paginated collection."""
+def collection_response(
+    item_serializer: type[serializers.Serializer],
+    component_name: str | None = None,
+) -> type:
+    """Build the `data` + `meta` serializer for a collection."""
 
     return type(
-        f"Paginated{item_serializer.__name__}",
+        component_name or f"Paginated{item_serializer.__name__}",
         (serializers.Serializer,),
         {
             "data": item_serializer(many=True),

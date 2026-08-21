@@ -13,7 +13,7 @@ from data_read_core.shared.rest_framework import ErrorResponseSerializer, async_
 from ..dtos import GetNotificationQuery
 from ..query_handler import GetNotificationQueryHandler
 from ._presenters import present_one
-from ._serializers import EnvelopedNotificationResponseSerializer
+from ._serializers import EnvelopedNotificationDetailSerializer
 
 
 @extend_schema(
@@ -29,7 +29,7 @@ from ._serializers import EnvelopedNotificationResponseSerializer
         )
     ],
     responses={
-        200: EnvelopedNotificationResponseSerializer,
+        200: EnvelopedNotificationDetailSerializer,
         404: ErrorResponseSerializer,
     },
 )
@@ -37,11 +37,23 @@ from ._serializers import EnvelopedNotificationResponseSerializer
 @read_at_least_gate
 async def get_notification(request, pk=None):
     logger = get_query_logger("get_notification")
-    log_request_received(logger, "get_notification", id=pk, user_id=request.user.id)
+    log_request_received(
+        logger,
+        "get_notification",
+        id=pk,
+        user_id=request.user.id,
+    )
 
     fetched = await GetNotificationQueryHandler().handle(
         GetNotificationQuery(user_id=request.user.id, notification_id=pk)
     )
-    log_request_served(logger, "get_notification", id=pk)
+    log_request_served(
+        logger,
+        "get_notification",
+        id=pk,
+    )
 
-    return ok(present_one(fetched.resource), {"cached": fetched.cached})
+    return ok(
+        present_one(fetched.resource),
+        {"cached": fetched.cached},
+    )

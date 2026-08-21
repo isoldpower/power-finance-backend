@@ -18,7 +18,7 @@ from data_read_core.shared.rest_framework import (
 from ..dtos import ListWebhooksQuery
 from ..query_handler import ListWebhooksQueryHandler
 from ._presenters import present_many
-from ._serializers import PaginatedWebhookResponseSerializer
+from ._serializers import PaginatedWebhookPreviewSerializer
 
 
 @extend_schema(
@@ -27,7 +27,7 @@ from ._serializers import PaginatedWebhookResponseSerializer
     description="Retrieve a page of your webhook endpoints, newest first.",
     parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER],
     responses={
-        200: PaginatedWebhookResponseSerializer,
+        200: PaginatedWebhookPreviewSerializer,
         422: ErrorResponseSerializer,
     },
 )

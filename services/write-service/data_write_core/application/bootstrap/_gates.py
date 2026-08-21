@@ -15,6 +15,7 @@ _INFRA_FREE_COMMANDS: tuple[str, ...] = (
     "makemigrations",
     "migrate",
     "collectstatic",
+    "spectacular",
 )
 
 

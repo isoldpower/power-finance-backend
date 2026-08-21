@@ -1,6 +1,13 @@
-"""One spelling for every timestamp that leaves the service."""
-
 from datetime import UTC, datetime
+from typing import overload
+
+
+@overload
+def to_iso(value: datetime | str) -> str: ...
+
+
+@overload
+def to_iso(value: None) -> None: ...
 
 
 def to_iso(value: datetime | str | None) -> str | None:

@@ -20,7 +20,7 @@ from ..query_handler import SearchTransactionsQueryHandler
 from ._presenters import present_many
 from ._serializers import (
     FilterTransactionsRequestSerializer,
-    PaginatedTransactionResponseSerializer,
+    PaginatedTransactionSearchResultSerializer,
 )
 
 
@@ -36,7 +36,7 @@ from ._serializers import (
     parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER],
     request=FilterTransactionsRequestSerializer,
     responses={
-        200: PaginatedTransactionResponseSerializer,
+        200: PaginatedTransactionSearchResultSerializer,
         422: ErrorResponseSerializer,
     },
 )

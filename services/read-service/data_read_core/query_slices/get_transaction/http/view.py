@@ -13,7 +13,7 @@ from data_read_core.shared.rest_framework import ErrorResponseSerializer, async_
 from ..dtos import GetTransactionQuery
 from ..query_handler import GetTransactionQueryHandler
 from ._presenters import present_one
-from ._serializers import EnvelopedTransactionResponseSerializer
+from ._serializers import EnvelopedTransactionDetailSerializer
 
 
 @extend_schema(
@@ -29,7 +29,7 @@ from ._serializers import EnvelopedTransactionResponseSerializer
         )
     ],
     responses={
-        200: EnvelopedTransactionResponseSerializer,
+        200: EnvelopedTransactionDetailSerializer,
         404: ErrorResponseSerializer,
     },
 )

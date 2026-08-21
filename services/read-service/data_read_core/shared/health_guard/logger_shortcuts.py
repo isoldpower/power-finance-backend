@@ -10,7 +10,7 @@ def warn_probe_unavailable(title: str, poll_seconds: float):
     )
 
 
-def warn_projection_unavailable(title: str, event_id: str, error: str):
+def warn_projection_unavailable(title: str, event_id: str, error: BaseException):
     logger = get_workers_logger("health")
     logger.warning(
         "%s unavailable while projecting event %s; " "blocking consumption until recovery (%s).",

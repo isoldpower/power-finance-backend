@@ -6,6 +6,7 @@ from .envelope_serializers import (
     collection_response,
     resource_response,
 )
+from .money_serializers import MoneySerializer
 from .schema_parameters import CURSOR_PARAMETER, LIMIT_PARAMETER
 
 __all__ = [
@@ -14,6 +15,7 @@ __all__ = [
     "AsyncAPIView",
     "CollectionMetaSerializer",
     "ErrorResponseSerializer",
+    "MoneySerializer",
     "ResourceMetaSerializer",
     "async_api_view",
     "collection_response",

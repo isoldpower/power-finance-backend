@@ -9,9 +9,9 @@ from .config import LIMITS, NON_INTEGER_LIMIT_MESSAGE, PARAMETER_NAMES
 class LimitPolicy:
     """The page sizes a collection answers."""
 
-    default: int = LIMITS.get("DEFAULT")
-    minimum: int = LIMITS.get("MINIMUM")
-    maximum: int = LIMITS.get("MAXIMUM")
+    default: int = LIMITS["DEFAULT"]
+    minimum: int = LIMITS["MINIMUM"]
+    maximum: int = LIMITS["MAXIMUM"]
 
     def resolve(self, raw: str | None) -> int:
         if not raw:
@@ -26,7 +26,7 @@ class LimitPolicy:
             raise ValidationFailed(
                 details=[
                     ErrorDetail(
-                        field=PARAMETER_NAMES.get("LIMIT"),
+                        field=PARAMETER_NAMES["LIMIT"],
                         code=DetailCode.INVALID,
                         message=NON_INTEGER_LIMIT_MESSAGE,
                     )

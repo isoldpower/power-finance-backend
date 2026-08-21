@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from datetime import datetime
 
 from data_read_core.shared.postgres_orm import TransactionReadModel
+from data_read_core.shared.timestamps import to_iso
 
 
 @dataclass(frozen=True)
@@ -28,8 +28,8 @@ class TransactionDTO:
             wallet_id=str(model.wallet_id),
             amount=str(model.amount),
             currency=model.currency_code,
-            occurred_at=_to_iso(model.occurred_at),
-            created_at=_to_iso(model.created_at),
+            occurred_at=to_iso(model.occurred_at),
+            created_at=to_iso(model.created_at),
         )
 
     @classmethod
@@ -54,7 +54,3 @@ class TransactionDTO:
             "occurred_at": self.occurred_at,
             "created_at": self.created_at,
         }
-
-
-def _to_iso(value: datetime | None) -> str | None:
-    return value.isoformat() if value is not None else None

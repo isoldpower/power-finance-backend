@@ -26,6 +26,11 @@ DATABASES = {
     }
 }
 
+EXCHANGE_RATES = {
+    **EXCHANGE_RATES,  # noqa: F405
+    "PROVIDER": "static",
+}
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": True,

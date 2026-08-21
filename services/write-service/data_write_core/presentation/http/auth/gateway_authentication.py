@@ -13,11 +13,6 @@ from .preferences import resolve_preferences
 class GatewayUserHeaderAuthentication(BaseAuthentication):
     """Resolve the caller from the headers the gateway set."""
 
-    def __init__(self):
-        super().__init__()
-
-        self._user_repository = get_repository_registry().user_repository
-
     async def authenticate(self, request: Request):
         if request.method == "OPTIONS":
             return None
@@ -28,16 +23,18 @@ class GatewayUserHeaderAuthentication(BaseAuthentication):
                 f"Missing {GATEWAY_USER_HEADER} header — request must traverse the API gateway."
             )
 
-        internal_user = await self._user_repository.get_synced_internal(
+        user_repository = get_repository_registry().user_repository
+        internal_user = await user_repository.get_synced_internal(
             external_id=external_user_id,
         )
 
-        caller = GatewayUser(
-            internal=internal_user,
-            preferences=await resolve_preferences(request),
+        return (
+            GatewayUser(
+                internal=internal_user,
+                preferences=await resolve_preferences(request),
+            ),
+            None,
         )
-
-        return caller, None
 
     def authenticate_header(self, request: Request) -> str:
         return "Bearer"

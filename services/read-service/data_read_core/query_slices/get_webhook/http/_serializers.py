@@ -3,7 +3,7 @@ from rest_framework import serializers
 from data_read_core.shared.rest_framework import resource_response
 
 
-class WebhookResponseSerializer(serializers.Serializer):
+class WebhookDetailSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     title = serializers.CharField()
     url = serializers.URLField()
@@ -13,4 +13,4 @@ class WebhookResponseSerializer(serializers.Serializer):
     deleted_at = serializers.DateTimeField(allow_null=True)
 
 
-EnvelopedWebhookResponseSerializer = resource_response(WebhookResponseSerializer)
+EnvelopedWebhookDetailSerializer = resource_response(WebhookDetailSerializer)

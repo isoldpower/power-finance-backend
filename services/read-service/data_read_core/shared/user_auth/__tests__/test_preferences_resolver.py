@@ -2,7 +2,7 @@ import pytest
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
-from data_read_core.shared.money import CURRENCY_SCALES
+from data_read_core.shared.money import CURRENCY_CATALOG
 from data_read_core.shared.postgres_orm import CurrencyReadModel
 from data_read_core.shared.user_auth import UserPreferences, resolve_preferences
 
@@ -13,7 +13,7 @@ FACTORY = APIRequestFactory()
 
 @pytest.fixture(autouse=True)
 async def _reference_currencies():
-    CURRENCY_SCALES.reset()
+    CURRENCY_CATALOG.reset()
     await CurrencyReadModel.objects.abulk_create(
         [
             CurrencyReadModel(code="USD", name="US Dollar", numeric="840", digits=2),
@@ -22,7 +22,7 @@ async def _reference_currencies():
         ignore_conflicts=True,
     )
     yield
-    CURRENCY_SCALES.reset()
+    CURRENCY_CATALOG.reset()
 
 
 def request_with(**headers) -> Request:

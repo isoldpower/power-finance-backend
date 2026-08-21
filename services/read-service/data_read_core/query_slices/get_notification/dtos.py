@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from datetime import datetime
 
 from data_read_core.shared.postgres_orm import NotificationReadModel
+from data_read_core.shared.timestamps import to_iso
 
 
 @dataclass(frozen=True)
@@ -29,7 +29,7 @@ class NotificationDTO:
             message=model.message,
             payload=model.payload,
             is_read=model.is_read,
-            created_at=_to_iso(model.created_at),
+            created_at=to_iso(model.created_at),
         )
 
     @classmethod
@@ -54,7 +54,3 @@ class NotificationDTO:
             "is_read": self.is_read,
             "created_at": self.created_at,
         }
-
-
-def _to_iso(value: datetime | None) -> str | None:
-    return value.isoformat() if value is not None else None

@@ -26,6 +26,11 @@ env = environ.Env(
     ELASTICSEARCH_PASSWORD=(str, "changeme"),
     ELASTICSEARCH_CA_CERTS=(str, ""),
     ELASTICSEARCH_VERIFY_CERTS=(bool, True),
+    EXCHANGE_RATES_PROVIDER=(str, "open-er-api"),
+    EXCHANGE_RATES_BASE_URL=(str, "https://open.er-api.com/v6/latest"),
+    EXCHANGE_RATES_TIMEOUT_SECONDS=(float, 5.0),
+    EXCHANGE_RATES_TTL_SECONDS=(int, 900),
+    EXCHANGE_RATES_MAX_AGE_SECONDS=(int, 172800),
     LOG_LEVEL=(str, "INFO"),
 )
 if ENV_FILE.exists():
@@ -111,10 +116,17 @@ ELASTICSEARCH = {
     "VERIFY_CERTS": env("ELASTICSEARCH_VERIFY_CERTS"),
 }
 
+EXCHANGE_RATES = {
+    "PROVIDER": env("EXCHANGE_RATES_PROVIDER"),
+    "BASE_URL": env("EXCHANGE_RATES_BASE_URL"),
+    "TIMEOUT_SECONDS": env("EXCHANGE_RATES_TIMEOUT_SECONDS"),
+    "TTL_SECONDS": env("EXCHANGE_RATES_TTL_SECONDS"),
+    "MAX_AGE_SECONDS": env("EXCHANGE_RATES_MAX_AGE_SECONDS"),
+}
+
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "EXCEPTION_HANDLER": "data_read_core.shared.http_contract.api_exception_handler",
-    # ISO-8601 with an explicit offset, everywhere, for every timestamp.
     "DATETIME_FORMAT": "iso-8601",
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "data_read_core.shared.user_auth.GatewayUserHeaderAuthentication",

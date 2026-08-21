@@ -15,6 +15,7 @@ class DataWriteCoreConfig(AppConfig):
             ApplicationEnvironment,
             bootstrap_application,
         )
+        from data_write_core.presentation.http.auth import schema  # noqa: F401
 
         bootstrap_application(
             ApplicationEnvironment(

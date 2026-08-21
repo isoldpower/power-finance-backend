@@ -18,7 +18,7 @@ from data_read_core.shared.rest_framework import (
 from ..dtos import ListTransactionsQuery
 from ..query_handler import ListTransactionsQueryHandler
 from ._presenters import present_many
-from ._serializers import PaginatedTransactionResponseSerializer
+from ._serializers import PaginatedTransactionPreviewSerializer
 
 
 @extend_schema(
@@ -27,7 +27,7 @@ from ._serializers import PaginatedTransactionResponseSerializer
     description="Retrieve a page of your transactions, newest first.",
     parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER],
     responses={
-        200: PaginatedTransactionResponseSerializer,
+        200: PaginatedTransactionPreviewSerializer,
         422: ErrorResponseSerializer,
     },
 )

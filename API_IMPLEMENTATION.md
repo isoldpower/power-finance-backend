@@ -256,6 +256,40 @@ produces the documented default.
 ---
 
 ## Phase 1 — Currencies
+**STATUS: implemented.** All four steps landed on the read side. What was built,
+and where it deviates from the step as written:
+
+- the reference table gained a `symbol` column (migration `0008_currency_symbol`,
+  backfilled for the 34 seeded codes). It is READ-SIDE ONLY: nothing in the write
+  domain formats money for a screen, so the write-side `Currency` value object is
+  untouched and the two seed lists no longer match field-for-field;
+- `CurrencyScales` widened into `CurrencyCatalog` (`shared/money/currency_catalog.py`)
+  because the same one-read-per-process table now answers `name` and `symbol` as
+  well as `digits`. `decimals_for` / `decimals_or_default` behave exactly as
+  before; `table()` was replaced by `supports()` at its one call site;
+- the rate provider is `open.er-api.com` — free, no key, no attribution clause,
+  ~160 codes. It publishes ONCE A DAY, which is why the freshness rule is two
+  settings rather than one: `TTL_SECONDS` (900) says how often we ask, and
+  `MAX_AGE_SECONDS` (172800) says how old the FEED's own timestamp may be before
+  we refuse to serve it. A Redis TTL alone cannot express the second — a stalled
+  feed keeps answering, and only its own timestamp gives it away;
+- a second provider, `StaticRateProvider`, serves fixed made-up numbers and talks
+  to nothing. Test settings select it so the endpoints are exercisable without a
+  network round trip; selecting it logs a warning, because a deployment that
+  reaches for it by accident should be noisy;
+- `GET /currencies` is NOT cached in Redis. The catalog already holds the table in
+  process memory, so a Redis hop would be the slower path. It reports no
+  `meta.cached` at all rather than a permanent `false`;
+- the rates path parameter is `{code}`, not the target's `{currency-code}`: a
+  Django path converter cannot carry a hyphen. Client-visible URLs are identical;
+- `?target=` accepts both `target=RUB&target=EUR` and `target=RUB,EUR`, since the
+  target document writes the param as a list without fixing an encoding. An
+  unknown code in it is a 422 rather than a silent omission from the map — a
+  missing entry would otherwise be indistinguishable from `rate_unavailable`;
+- none of the three endpoints applies the Read-At-Least gate. Reference data and
+  a shared rate feed carry no user write version, so there is nothing to be
+  behind.
+
 Small, self-contained, and unblocks money scale enforcement plus every conversion downstream.
 
 ### Step 1.1 — `GET /currencies`

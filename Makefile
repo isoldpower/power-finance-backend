@@ -115,9 +115,13 @@ format: | $(HOOK_SENTINEL) ## Format code with ruff
 format-check: | $(HOOK_SENTINEL) ## Verify formatting without writing changes
 	uv run ruff format --check .
 
+# Each Django service is its own package root, and both own a top-level
+# `background_workers`. One mypy run over both would see two files claiming the
+# same module name and refuse to check either, so they are checked separately.
 .PHONY: typecheck
 typecheck: | $(HOOK_SENTINEL) ## Run mypy against services + libraries
-	uv run mypy services libraries
+	uv run mypy services/write-service libraries
+	uv run mypy services/read-service
 
 .PHONY: precommit-install
 precommit-install: ## Force-reinstall the git pre-commit hook

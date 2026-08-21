@@ -20,7 +20,7 @@ from ..query_handler import SearchWebhooksQueryHandler
 from ._presenters import present_many
 from ._serializers import (
     FilterWebhooksRequestSerializer,
-    PaginatedWebhookResponseSerializer,
+    PaginatedWebhookSearchResultSerializer,
 )
 
 
@@ -35,7 +35,7 @@ from ._serializers import (
     parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER],
     request=FilterWebhooksRequestSerializer,
     responses={
-        200: PaginatedWebhookResponseSerializer,
+        200: PaginatedWebhookSearchResultSerializer,
         422: ErrorResponseSerializer,
     },
 )

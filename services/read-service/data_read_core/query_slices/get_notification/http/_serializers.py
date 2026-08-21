@@ -3,7 +3,7 @@ from rest_framework import serializers
 from data_read_core.shared.rest_framework import resource_response
 
 
-class NotificationResponseSerializer(serializers.Serializer):
+class NotificationDetailSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     short = serializers.CharField()
     message = serializers.CharField()
@@ -14,4 +14,4 @@ class NotificationResponseSerializer(serializers.Serializer):
     deleted_at = serializers.DateTimeField(allow_null=True)
 
 
-EnvelopedNotificationResponseSerializer = resource_response(NotificationResponseSerializer)
+EnvelopedNotificationDetailSerializer = resource_response(NotificationDetailSerializer)
