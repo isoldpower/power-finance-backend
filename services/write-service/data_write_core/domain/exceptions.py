@@ -67,6 +67,14 @@ class InsufficientFundsError(DomainError):
         super().__init__(f"Insufficient funds: requested {amount}, available {available}.")
 
 
+class AmountPrecisionError(DomainError):
+    def __init__(self, amount: Decimal, currency_code: str, decimals: int) -> None:
+        self.amount = amount
+        self.currency_code = currency_code
+        self.decimals = decimals
+        super().__init__(f"{currency_code} allows {decimals} fraction digits, got {amount}.")
+
+
 class NegativeMoneyError(DomainError):
     def __init__(self, amount: Decimal) -> None:
         self.amount = amount

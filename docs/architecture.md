@@ -129,7 +129,7 @@ Stateless edge component handling cross-cutting request concerns.
 - `clerk-jwt` — validates Clerk session tokens, stashes claims for downstream plugins
 - `read-at-least` — request-side: verifies inbound `Read-At-Least` HMAC and injects a default from per-user Redis on read routes
 - `write-version` — response-side: signs the raw `X-Write-Version` emitted by Write Service and records `(user_id, seq)` to Redis on write routes
-- `user-tier-rate-limit` — per-user rate caps layered on top of Kong's bundled IP rate-limiting
+- `user-tier-rate-limit` — per-user rate caps layered on top of Kong's bundled IP rate-limiting. Sliding window: two Redis buckets per window, the previous one weighted by how much of it the window still covers, decided and incremented in one atomic script so concurrent requests cannot both pass the same check
 - `read-fallback` — on read routes, transparently redirects a Read Service 507 to the Write Service's fallback-read endpoint
 
 **Responsibilities:**
@@ -145,7 +145,7 @@ Stateless edge component handling cross-cutting request concerns.
 
 **Critical configuration for SSE:**
 - HTTP/2 enabled
-- Idle timeouts disabled or set very high for `/events` endpoints
+- Idle timeouts disabled or set very high for the SSE endpoint (`/api/v1/notifications/stream`)
 - Response buffering disabled
 - Heartbeat configuration aware
 
@@ -596,7 +596,7 @@ sequenceDiagram
     participant VC as Versions Cache
     participant AK as Async Kafka
 
-    C->>GW: GET /events<br/>Accept: text/event-stream<br/>Last-Event-ID: {id}
+    C->>GW: GET /api/v1/notifications/stream<br/>Accept: text/event-stream<br/>Last-Event-ID: {id}
     GW->>PS: Upgrade to SSE
     PS->>PS: Validate auth
     PS->>VC: Read user's last delivered ID

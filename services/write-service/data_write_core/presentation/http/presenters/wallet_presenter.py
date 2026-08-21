@@ -1,21 +1,24 @@
+from write_service.common.timestamps import to_iso
+
 from data_write_core.application.dtos import WalletDTO
+from data_write_core.application.money_scales import money_at_scale
 
 
 class WalletHttpPresenter:
     @staticmethod
-    def present_one(wallet: WalletDTO) -> dict:
+    async def present_one(wallet: WalletDTO) -> dict:
         return {
             "id": str(wallet.id),
             "name": wallet.name,
-            "user_id": wallet.user_id,
-            "balance": {
-                "amount": str(wallet.balance_amount),
-                "currency": wallet.currency,
-            },
-            "created_at": wallet.created_at,
-            "updated_at": wallet.updated_at,
+            "balance": await money_at_scale(
+                wallet.balance_amount,
+                wallet.currency,
+            ),
+            "created_at": to_iso(wallet.created_at),
+            "updated_at": to_iso(wallet.updated_at),
+            "deleted_at": None,
         }
 
     @staticmethod
-    def present_many(wallets: list[WalletDTO]) -> list[dict]:
-        return [WalletHttpPresenter.present_one(wallet) for wallet in wallets]
+    async def present_many(wallets: list[WalletDTO]) -> list[dict]:
+        return [await WalletHttpPresenter.present_one(wallet) for wallet in wallets]

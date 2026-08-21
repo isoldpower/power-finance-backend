@@ -24,7 +24,7 @@ func (hpd *HttpPresenterDefinition) InitialiseRoutes(
 	sourceServer *httpServer.HTTPServer,
 ) error {
 	routes := []*httpServer.HttpServerRoute{
-		{Pattern: "GET /events", Handler: hpd.presentation.HandleGetNotifications},
+		{Pattern: "GET /api/v1/notifications/stream", Handler: hpd.presentation.HandleGetNotifications},
 	}
 	publicRoutes := []*httpServer.HttpServerRoute{
 		{Pattern: "GET /healthz", Handler: hpd.presentation.HandleHealthCheck},

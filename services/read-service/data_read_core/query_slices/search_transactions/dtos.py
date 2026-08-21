@@ -1,13 +1,14 @@
 from dataclasses import dataclass
 from typing import Any
 
+from data_read_core.shared.pagination import PageRequest
+
 
 @dataclass(frozen=True)
 class SearchTransactionsQuery:
     user_id: int
     filter_body: dict[str, Any]
-    limit: int
-    offset: int
+    page: PageRequest
 
 
 @dataclass(frozen=True)

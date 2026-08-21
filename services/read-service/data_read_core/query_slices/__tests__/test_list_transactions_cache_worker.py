@@ -31,13 +31,13 @@ def _operation(
     user_id: int = 7,
     filters: dict | None = None,
     limit: int = 20,
-    offset: int = 0,
+    cursor: str = "first",
 ) -> CacheOperationData:
     return CacheOperationData(
         user_id=user_id,
         filters=filters if filters is not None else {},
         limit=limit,
-        offset=offset,
+        cursor=cursor,
     )
 
 
@@ -47,7 +47,7 @@ def _expected_key(operation: CacheOperationData, version: int) -> str:
         version=version,
         filter_hash=get_filter_hash(operation.filters),
         limit=operation.limit,
-        offset=operation.offset,
+        cursor=operation.cursor,
     )
 
 
@@ -70,7 +70,7 @@ async def test_save_then_serve_round_trips(fake_redis: FakeRedis):
 
 async def test_save_writes_versioned_key_with_ttl(fake_redis: FakeRedis):
     worker = CacheWorker(fake_redis)
-    operation = _operation(user_id=7, limit=10, offset=5)
+    operation = _operation(user_id=7, limit=10, cursor="Y3Vyc29y")
 
     await worker.save_to_cache(context=operation, transactions=[_transaction()], total=1)
 

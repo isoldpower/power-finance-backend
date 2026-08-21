@@ -54,7 +54,7 @@ class CacheWorker:
                 context.filters,
             ),
             limit=context.limit,
-            offset=context.offset,
+            cursor=context.cursor,
         )
 
     async def _current_version(self, user_id: int) -> int:

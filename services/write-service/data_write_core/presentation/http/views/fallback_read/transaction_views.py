@@ -1,8 +1,6 @@
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import status
-from rest_framework.response import Response
-from write_service.common.logging import get_http_logger, log_request_failed
+from drf_spectacular.utils import extend_schema
+from write_service.common.http_contract import ok
+from write_service.common.pagination import CREATED_AT_DESC, PageRequest, build_page
 
 from data_write_core.application.queries import (
     GetFallbackTransactionQuery,
@@ -12,10 +10,14 @@ from data_write_core.application.queries import (
 )
 
 from ...decorators import trace_handler_flow
+from ...serializers import (
+    EnvelopedTransactionResponseSerializer,
+    ErrorResponseSerializer,
+    PaginatedTransactionResponseSerializer,
+)
 from ._presenters import present_transaction, present_transactions
+from ._schema import CURSOR_PARAMETER, LIMIT_PARAMETER, resource_id_parameter
 from .base import FallbackReadView
-
-logger = get_http_logger("fallback_read")
 
 
 class FallbackTransactionListView(FallbackReadView):
@@ -27,88 +29,49 @@ class FallbackTransactionListView(FallbackReadView):
             "ledger. The gateway routes here when the Read Service is not "
             "caught up."
         ),
-        parameters=[
-            OpenApiParameter(
-                "limit",
-                OpenApiTypes.INT,
-                OpenApiParameter.QUERY,
-            ),
-            OpenApiParameter(
-                "offset",
-                OpenApiTypes.INT,
-                OpenApiParameter.QUERY,
-            ),
-        ],
+        parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER],
+        responses={
+            200: PaginatedTransactionResponseSerializer,
+            422: ErrorResponseSerializer,
+        },
     )
     @trace_handler_flow
     async def get(self, request):
-        try:
-            paginator = self.pagination_class()
-            paginator.limit = paginator.get_limit(request)
-            paginator.offset = paginator.get_offset(request)
+        page_request = PageRequest.from_request(request, CREATED_AT_DESC)
+        transactions, total = await ListFallbackTransactionsQueryHandler().handle(
+            ListFallbackTransactionsQuery(
+                user_id=int(request.user.unique_id),
+                page=page_request,
+            )
+        )
 
-            transactions, total = await ListFallbackTransactionsQueryHandler().handle(
-                ListFallbackTransactionsQuery(
-                    user_id=int(request.user.unique_id),
-                    limit=paginator.limit,
-                    offset=paginator.offset,
-                )
-            )
-
-            paginator.count = total
-            return paginator.get_paginated_response(present_transactions(transactions))
-        except Exception as error:
-            log_request_failed(
-                logger,
-                "list_fallback_transactions",
-                error,
-                user_id=request.user.unique_id,
-            )
-            return Response(
-                {
-                    "message": f"Failed to list transactions: {error}",
-                    "resource_id": None,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        page = build_page(transactions, total, page_request)
+        return ok(
+            await present_transactions(page.items),
+            page.meta(cached=False),
+        )
 
 
 class FallbackTransactionResourceView(FallbackReadView):
     @extend_schema(
         operation_id="fallback_transactions_retrieve",
         summary="Get transaction details (consistent fallback)",
-        parameters=[
-            OpenApiParameter(
-                "id",
-                OpenApiTypes.UUID,
-                OpenApiParameter.PATH,
-                description="Transaction ID",
-            ),
-        ],
+        parameters=[resource_id_parameter("id", "Transaction ID")],
+        responses={
+            200: EnvelopedTransactionResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
     )
     @trace_handler_flow
     async def get(self, request, pk=None):
-        try:
-            transaction = await GetFallbackTransactionQueryHandler().handle(
-                GetFallbackTransactionQuery(
-                    user_id=int(request.user.unique_id),
-                    transaction_id=pk,
-                )
-            )
-
-            return Response(present_transaction(transaction), status=status.HTTP_200_OK)
-        except Exception as error:
-            log_request_failed(
-                logger,
-                "get_fallback_transaction",
-                error,
+        transaction = await GetFallbackTransactionQueryHandler().handle(
+            GetFallbackTransactionQuery(
+                user_id=int(request.user.unique_id),
                 transaction_id=pk,
-                user_id=request.user.unique_id,
             )
-            return Response(
-                {
-                    "message": f"Failed to retrieve transaction with ID {pk}: {error}",
-                    "resource_id": f"{pk}",
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        )
+
+        return ok(
+            await present_transaction(transaction),
+            {"cached": False},
+        )

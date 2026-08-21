@@ -10,6 +10,9 @@ services:
     connect_timeout: 5000
     write_timeout: 30000
     read_timeout: 30000
+    # There is ONE public surface, /api/v1. The read/write split lives here, in
+    # the router, rather than in the paths a client types: reads and writes of
+    # the same resource share a URL and differ only by method.
     routes:
       - name: write-api-v1
         paths:
@@ -72,10 +75,22 @@ services:
     routes:
       - name: read-api-v1
         paths:
-          - /api/v1/reads
+          - /api/v1
         strip_path: false
         preserve_host: false
-        methods: [GET, POST, OPTIONS]
+        methods: [GET, OPTIONS]
+      # The /search endpoints are READS that arrive as POST, because a filter
+      # tree does not survive a query string. Their longer path outranks the
+      # write route's bare /api/v1 prefix, which is what keeps them on the read
+      # side without inventing a separate URL space for them.
+      - name: read-api-v1-search
+        paths:
+          - /api/v1/wallets/search
+          - /api/v1/transactions/search
+          - /api/v1/webhooks/search
+        strip_path: false
+        preserve_host: false
+        methods: [POST, OPTIONS]
     plugins:
       - name: clerk-jwt
         config:
@@ -97,7 +112,7 @@ services:
         config:
           read_service_url: "http://read-service:8000"
           write_service_url: "http://write-service:8000"
-          read_path_prefix: "/api/v1/reads"
+          read_path_prefix: "/api/v1"
           fallback_path_prefix: "/api/v1/fallback-reads"
           fallback_status: 507
           read_timeout_ms: 10000
@@ -130,9 +145,11 @@ services:
     write_timeout: 3600000
     read_timeout: 3600000
     routes:
-      - name: events-sse
+      # Longer than the read route's /api/v1 prefix, so the stream reaches
+      # push-service while every other GET under /api/v1 goes to read-service.
+      - name: notifications-stream
         paths:
-          - /events
+          - /api/v1/notifications/stream
         strip_path: false
         preserve_host: false
         methods: [GET, OPTIONS]
@@ -169,5 +186,10 @@ plugins:
         - X-Correlation-ID
         - X-Write-Version
         - Idempotent-Replayed
+        - Retry-After
+        - X-RateLimit-Limit-Minute
+        - X-RateLimit-Remaining-Minute
+        - X-RateLimit-Limit-Hour
+        - X-RateLimit-Remaining-Hour
       credentials: false
       max_age: 3600

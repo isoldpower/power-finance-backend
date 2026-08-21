@@ -1,3 +1,4 @@
+from data_read_core.shared.pagination import PageRequest, apply_keyset
 from data_read_core.shared.postgres_orm import NotificationReadModel
 
 
@@ -11,13 +12,15 @@ def _owned_queryset(user_id: int, only_unread: bool):
 
 async def fetch_owned_notifications(
     user_id: int,
-    limit: int,
-    offset: int,
+    page: PageRequest,
     only_unread: bool = False,
 ) -> list[NotificationReadModel]:
-    queryset = _owned_queryset(user_id, only_unread).order_by("-created_at")[
-        offset : offset + limit
-    ]
+    """One page plus the lookahead row `build_page` needs to mint cursors."""
+
+    queryset = apply_keyset(
+        _owned_queryset(user_id, only_unread),
+        page,
+    )
 
     return [notification async for notification in queryset]
 

@@ -34,14 +34,30 @@ def test_wallet_and_transaction_namespaces_are_disjoint():
     assert wallet_list_version_key(7) == "ver:wallets:7"
     assert transaction_list_version_key(7) == "ver:transactions:7"
 
-    wallet_key = wallet_list_cache_key(7, 0, "deadbeef", 20, 0)
-    transaction_key = transaction_list_cache_key(7, 0, "deadbeef", 20, 0)
+    wallet_key = wallet_list_cache_key(7, 0, "deadbeef", 20, "first")
+    transaction_key = transaction_list_cache_key(7, 0, "deadbeef", 20, "first")
     assert wallet_key.startswith("read:wallets:")
     assert transaction_key.startswith("read:transactions:")
     assert wallet_key != transaction_key
 
 
-def test_cache_key_embeds_version_filter_and_pagination():
-    key = wallet_list_cache_key(user_id=7, version=3, filter_hash="abc123", limit=10, offset=20)
+def test_cache_key_embeds_version_filter_and_page():
+    key = wallet_list_cache_key(
+        user_id=7,
+        version=3,
+        filter_hash="abc123",
+        limit=10,
+        cursor="Y3Vyc29y",
+    )
 
-    assert key == "read:wallets:7:v3:fabc123:l10:o20"
+    assert key == "read:wallets:7:v3:fabc123:l10:cY3Vyc29y"
+
+
+def test_first_page_and_cursor_page_get_different_keys():
+    """The cursor already encodes the anchor, the direction and the query
+    fingerprint, so it is the whole cache identity of a page bar its size."""
+
+    first = wallet_list_cache_key(7, 3, "abc123", 10, "first")
+    second = wallet_list_cache_key(7, 3, "abc123", 10, "Y3Vyc29y")
+
+    assert first != second

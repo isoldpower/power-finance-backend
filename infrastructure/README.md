@@ -92,17 +92,35 @@ fails to load.
   user-tier plugin so clients see one consistent set of numbers.
 - **Tier 2 — per-user ceiling** (`user-tier-rate-limit`): stricter, for
   authenticated callers; for normal traffic this is what actually bites. Read
-  limits are tuned wide because read UIs are pagination-heavy.
+  limits are tuned wide because read UIs are pagination-heavy. It counts on a
+  SLIDING window — two buckets per window in Redis, the previous one weighted by
+  the fraction of it the window still covers — so a caller cannot spend a full
+  allowance either side of a boundary and get twice the limit in two seconds.
+  The check and the increment run as one Redis script, so concurrent requests
+  cannot both read a count below the limit and both pass, and a rejected request
+  spends no budget. `Retry-After` is computed from when the estimate decays back
+  under the limit, which is usually well before the next boundary.
 
-`/events` (push-service SSE) has **no** rate limiting: SSE is connection-bound,
+`/api/v1/notifications/stream` (push-service SSE) has **no** rate limiting: SSE is connection-bound,
 not request-bound, so a per-request counter would fire after the first event.
 Concurrent-connection limits belong on Push Service itself. Its route also uses
 1-hour proxy timeouts (SSE is long-lived) with nginx proxy buffering disabled
 (`KONG_NGINX_PROXY_PROXY_BUFFERING=off`).
 
-Read routes allow `POST` on `/api/v1/reads` for the search endpoints
-(wallets/transactions/webhooks `/search/`), which carry a filter tree in the
-request body; all other read endpoints are GET.
+There is one public surface, `/api/v1`, and the read/write split lives in the
+router rather than in the paths a client types: reads and writes of the same
+resource share a URL and differ only by method. `GET` goes to the Read Service,
+`POST`/`PUT`/`PATCH`/`DELETE` to the Write Service.
+
+Two kinds of route beat that bare prefix by being longer:
+
+- the search endpoints (`/api/v1/{wallets,transactions,webhooks}/search`), which
+  are reads that arrive as `POST` because a filter tree does not survive a query
+  string, and are routed to the Read Service;
+- `/api/v1/notifications/stream`, which is routed to Push Service.
+
+`/api/v1/fallback-reads/…` is internal to the `read-fallback` plugin and is
+never a public path.
 
 Global plugins: `correlation-id` (X-Correlation-ID, echoed downstream) and
 `cors`.

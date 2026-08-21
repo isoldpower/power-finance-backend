@@ -1,20 +1,17 @@
 from rest_framework import serializers
 
-
-class TransactionMetaResponseSerializer(serializers.Serializer):
-    id = serializers.UUIDField()
-    occurred_at = serializers.DateTimeField()
-    created_at = serializers.DateTimeField()
+from data_read_core.shared.rest_framework import resource_response
 
 
 class TransactionResponseSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     wallet_id = serializers.UUIDField()
-    amount = serializers.DecimalField(max_digits=20, decimal_places=2)
+    amount = serializers.CharField(help_text="Decimal string at the currency's scale.")
     currency = serializers.CharField(allow_blank=True)
-    meta = TransactionMetaResponseSerializer()
+    occurred_at = serializers.DateTimeField()
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField(allow_null=True)
+    deleted_at = serializers.DateTimeField(allow_null=True)
 
 
-class MessageResponseSerializer(serializers.Serializer):
-    message = serializers.CharField()
-    resource_id = serializers.CharField()
+EnvelopedTransactionResponseSerializer = resource_response(TransactionResponseSerializer)

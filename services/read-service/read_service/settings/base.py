@@ -1,8 +1,5 @@
 """Base settings shared by all environments. Concrete environments (local,
 production) extend this module and override values that differ.
-
-Environment variables are loaded via django-environ from a `.env` file at
-the service root. See `.env.example` for the full list of recognised keys.
 """
 
 from pathlib import Path
@@ -42,6 +39,7 @@ DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
 ROOT_URLCONF = "read_service.urls"
+APPEND_SLASH = False
 WSGI_APPLICATION = "read_service.wsgi.application"
 ASGI_APPLICATION = "read_service.asgi.application"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -115,6 +113,9 @@ ELASTICSEARCH = {
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "EXCEPTION_HANDLER": "data_read_core.shared.http_contract.api_exception_handler",
+    # ISO-8601 with an explicit offset, everywhere, for every timestamp.
+    "DATETIME_FORMAT": "iso-8601",
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "data_read_core.shared.user_auth.GatewayUserHeaderAuthentication",
     ],

@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from write_service.common.pagination import PageRequest, apply_keyset
+
 from data_write_core.application.interfaces import NotificationRepository
 from data_write_core.domain.entities import NotificationEntity
 
@@ -43,18 +45,12 @@ class DjangoNotificationRepository(NotificationRepository):
     async def get_user_notifications(
         self,
         user_id: int,
-        limit: int | None = None,
-        offset: int | None = None,
+        page: PageRequest | None = None,
     ) -> list[NotificationEntity]:
-        queryset = NotificationModel.objects.filter(user_id=user_id).order_by("-created_at")
+        queryset = NotificationModel.objects.filter(user_id=user_id)
+        rows = apply_keyset(queryset, page) if page else queryset.order_by("-created_at", "-id")
 
-        start = offset or 0
-        if limit is not None:
-            queryset = queryset[start : start + limit]
-        elif offset is not None:
-            queryset = queryset[start:]
-
-        return [NotificationMapper.to_domain(notification) async for notification in queryset]
+        return [NotificationMapper.to_domain(notification) async for notification in rows]
 
     async def count_user_notifications(self, user_id: int) -> int:
         return await NotificationModel.objects.filter(user_id=user_id).acount()

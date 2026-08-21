@@ -33,4 +33,9 @@ class TransactionReadModel(models.Model):
                 fields=["user_id", "currency_code"],
                 name="rt_user_currency_idx",
             ),
+            models.Index(
+                fields=["user_id", "-created_at", "-id"],
+                include=["amount", "currency_code", "wallet_id"],
+                name="rt_user_keyset_idx",
+            ),
         ]

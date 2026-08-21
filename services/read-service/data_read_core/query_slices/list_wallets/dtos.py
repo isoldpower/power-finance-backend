@@ -1,14 +1,14 @@
 from dataclasses import dataclass, field
-from datetime import datetime
 
+from data_read_core.shared.pagination import PageRequest
 from data_read_core.shared.postgres_orm import WalletReadModel
+from data_read_core.shared.timestamps import to_iso
 
 
 @dataclass(frozen=True)
 class ListWalletsQuery:
     user_id: int
-    limit: int
-    offset: int
+    page: PageRequest
     filters: dict = field(default_factory=dict)
 
 
@@ -17,7 +17,7 @@ class CacheOperationData:
     user_id: int
     filters: dict
     limit: int
-    offset: int
+    cursor: str
 
 
 @dataclass(frozen=True)
@@ -38,8 +38,8 @@ class WalletDTO:
             name=model.title,
             balance_amount=str(model.balance),
             currency=model.currency_code,
-            created_at=_to_iso(model.created_at),
-            updated_at=_to_iso(model.updated_at),
+            created_at=to_iso(model.created_at),
+            updated_at=to_iso(model.updated_at),
         )
 
     @classmethod
@@ -64,7 +64,3 @@ class WalletDTO:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
-
-
-def _to_iso(value: datetime | None) -> str | None:
-    return value.isoformat() if value is not None else None

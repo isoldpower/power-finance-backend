@@ -1,5 +1,7 @@
 from redis.asyncio import Redis
 
+from data_read_core.shared.query_results import FetchedResource
+
 from .cache_worker import CacheWorker
 from .dtos import GetWebhookQuery, WebhookDTO
 from .exceptions import WebhookNotFoundError
@@ -14,23 +16,21 @@ class GetWebhookQueryHandler:
         self._redis_client = redis_client
         self._cache_worker = CacheWorker(redis_client)
 
-    async def handle(self, query: GetWebhookQuery) -> WebhookDTO:
+    async def handle(self, query: GetWebhookQuery) -> FetchedResource:
         cached_value = await self._cache_worker.try_serve_from_cache(
             query.webhook_id,
             query.user_id,
         )
         if cached_value is not None:
             log_served_from_cache(query.webhook_id)
-            return cached_value
+            return FetchedResource(resource=cached_value, cached=True)
 
         owned_webhook = await fetch_owned_webhook(query.user_id, query.webhook_id)
         if owned_webhook is None:
-            raise WebhookNotFoundError(
-                f"Webhook {query.webhook_id} not found for user {query.user_id}"
-            )
+            raise WebhookNotFoundError()
 
         webhook = WebhookDTO.from_read_model(owned_webhook)
         await self._cache_worker.save_to_cache(webhook)
 
         log_served_from_store(query.webhook_id)
-        return webhook
+        return FetchedResource(resource=webhook, cached=False)

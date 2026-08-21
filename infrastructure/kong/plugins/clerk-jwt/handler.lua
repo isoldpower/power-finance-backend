@@ -22,6 +22,34 @@ local jwks_fetcher = require "kong.plugins.clerk-jwt.fetch_jwks"
 
 local AUTH_HEADER = "Authorization"
 
+-- User preferences live on the Clerk user record in `unsafeMetadata`, which is
+-- CLIENT-WRITABLE. Forwarding them as headers off the verified token is what
+-- makes them attributable at all; the services still treat the values as
+-- untrusted and fall back per field.
+local PREFERENCE_HEADERS = {
+    { header = "X-User-Currency", claim = "currency" },
+    { header = "X-User-Timezone", claim = "timezone" },
+    { header = "X-User-Language", claim = "language" },
+}
+
+
+--- Copy the caller's preferences out of the token's `unsafeMetadata`.
+--
+-- Each header is set or CLEARED unconditionally. Skipping the clear would leave
+-- a client-supplied `X-User-Currency` intact whenever the preference is unset which is unlikely.
+local forward_preferences = function(payload)
+    local metadata = payload and payload.unsafeMetadata or {}
+
+    for _, preference in ipairs(PREFERENCE_HEADERS) do
+        local value = metadata[preference.claim]
+        if type(value) == "string" and value ~= "" then
+            kong.service.request.set_header(preference.header, value)
+        else
+            kong.service.request.clear_header(preference.header)
+        end
+    end
+end
+
 -- PRIORITY 801 is deliberately below Kong's bundled rate-limiting plugin
 -- (priority 901). The IP-floor rate limit must fire before clerk-jwt so
 -- that attackers can't burn JWT verification CPU by spraying invalid
@@ -85,6 +113,7 @@ function ClerkJwtHandler:access(config)
 
     kong.ctx.shared.clerk_claims = verified_jwt.payload
     kong.service.request.set_header("X-User-Id", sub_claim)
+    forward_preferences(verified_jwt.payload)
 end
 
 

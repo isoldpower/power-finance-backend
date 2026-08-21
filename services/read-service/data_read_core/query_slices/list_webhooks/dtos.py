@@ -1,21 +1,21 @@
 from dataclasses import dataclass
-from datetime import datetime
 
+from data_read_core.shared.pagination import PageRequest
 from data_read_core.shared.postgres_orm import WebhookReadModel
+from data_read_core.shared.timestamps import to_iso
 
 
 @dataclass(frozen=True)
 class ListWebhooksQuery:
     user_id: int
-    limit: int
-    offset: int
+    page: PageRequest
 
 
 @dataclass(frozen=True)
 class CacheOperationData:
     user_id: int
     limit: int
-    offset: int
+    cursor: str
 
 
 @dataclass(frozen=True)
@@ -36,8 +36,8 @@ class WebhookDTO:
             title=model.title,
             url=model.url,
             is_active=model.is_active,
-            created_at=_to_iso(model.created_at),
-            updated_at=_to_iso(model.updated_at),
+            created_at=to_iso(model.created_at),
+            updated_at=to_iso(model.updated_at),
         )
 
     @classmethod
@@ -62,7 +62,3 @@ class WebhookDTO:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
-
-
-def _to_iso(value: datetime | None) -> str | None:
-    return value.isoformat() if value is not None else None

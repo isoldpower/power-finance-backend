@@ -17,9 +17,13 @@ def get_filter_hash(filters: dict) -> str:
 
 
 def get_list_cache_key(
-    user_id: int, version: int, filter_hash: str, limit: int, offset: int
+    user_id: int,
+    version: int,
+    filter_hash: str,
+    limit: int,
+    cursor: str,
 ) -> str:
-    return f"read:wallets:{user_id}:v{version}:f{filter_hash}:l{limit}:o{offset}"
+    return f"read:wallets:{user_id}:v{version}:f{filter_hash}:l{limit}:c{cursor}"
 
 
 def get_list_version_key(user_id: int) -> str:

@@ -16,8 +16,8 @@ class NotificationReadModel(models.Model):
         db_table = "read_notifications"
         indexes = [
             models.Index(
-                fields=["user_id", "-created_at"],
-                name="rn_user_created_idx",
+                fields=["user_id", "-created_at", "-id"],
+                name="rn_user_keyset_idx",
             ),
             models.Index(
                 fields=["user_id", "is_read"],

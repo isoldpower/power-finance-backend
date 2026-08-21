@@ -8,9 +8,13 @@ from rest_framework.exceptions import AuthenticationFailed
 
 from data_read_core.shared.user_auth import (
     GATEWAY_USER_HEADER,
+    GatewayUser,
     GatewayUserHeaderAuthentication,
     IsGatewayAuthenticated,
+    UserPreferences,
 )
+
+DEFAULTS = UserPreferences(currency="USD", timezone="UTC", language="en")
 
 
 def _request(*, method="GET", headers=None):
@@ -21,13 +25,19 @@ def test_header_constant():
     assert GATEWAY_USER_HEADER == "X-User-Id"
 
 
-def test_permission_allows_authenticated_user():
-    request = SimpleNamespace(user=SimpleNamespace(is_authenticated=True))
+def test_permission_allows_a_caller_the_gateway_resolved():
+    caller = GatewayUser(internal=SimpleNamespace(id=1, username="ext-1"), preferences=DEFAULTS)
+    request = SimpleNamespace(user=caller)
+
     assert IsGatewayAuthenticated().has_permission(request, view=None) is True
 
 
-def test_permission_denies_anonymous():
-    request = SimpleNamespace(user=SimpleNamespace(is_authenticated=False))
+def test_permission_denies_anything_that_merely_claims_to_be_authenticated():
+    """The type is the check: something that only answers `is_authenticated`
+    never went through the gateway."""
+
+    request = SimpleNamespace(user=SimpleNamespace(is_authenticated=True))
+
     assert IsGatewayAuthenticated().has_permission(request, view=None) is False
 
 
@@ -58,11 +68,44 @@ async def test_authenticate_unprovisioned_user_raises():
 
 @pytest.mark.django_db(transaction=True)
 async def test_authenticate_returns_provisioned_user():
-    await get_user_model().objects.acreate(id=1, username="ext-1")
+    internal_user = await get_user_model().objects.acreate(id=1, username="ext-1")
 
-    user, auth = await GatewayUserHeaderAuthentication().authenticate(
+    caller, auth = await GatewayUserHeaderAuthentication().authenticate(
         _request(headers={GATEWAY_USER_HEADER: "ext-1"})
     )
 
-    assert user.username == "ext-1"
+    assert caller.id == internal_user.id
+    assert caller.external_id == "ext-1"
     assert auth is None
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_authenticate_binds_preferences_to_the_caller():
+    """Identity and preferences arrive on the same request and are needed
+    together, so a handler reads both off `request.user`."""
+
+    await get_user_model().objects.acreate(id=2, username="ext-2")
+
+    caller, _ = await GatewayUserHeaderAuthentication().authenticate(
+        _request(
+            headers={
+                GATEWAY_USER_HEADER: "ext-2",
+                "X-User-Timezone": "Europe/Berlin",
+                "X-User-Language": "de-DE",
+            }
+        )
+    )
+
+    assert caller.preferences.timezone == "Europe/Berlin"
+    assert caller.preferences.language == "de-DE"
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_a_caller_without_preferences_gets_the_documented_defaults():
+    await get_user_model().objects.acreate(id=3, username="ext-3")
+
+    caller, _ = await GatewayUserHeaderAuthentication().authenticate(
+        _request(headers={GATEWAY_USER_HEADER: "ext-3"})
+    )
+
+    assert caller.preferences == DEFAULTS

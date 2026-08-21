@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git ca-certific
     && luarocks make lua-resty-jwt-dev-0.rockspec \
     && rm -rf /tmp/lua-resty-jwt
 
-# --- Bake the declarative config + custom plugins into the image ---
+# --- Bake the declarative config + custom plugins + shared code into the image ---
 # (deploy-ready: no bind mounts needed; only secrets/ports come from runtime env)
 COPY kong.yml /etc/kong/kong.yml
 COPY plugins/clerk-jwt            /usr/local/share/lua/5.1/kong/plugins/clerk-jwt
@@ -19,6 +19,10 @@ COPY plugins/read-at-least        /usr/local/share/lua/5.1/kong/plugins/read-at-
 COPY plugins/write-ral-version    /usr/local/share/lua/5.1/kong/plugins/write-ral-version
 COPY plugins/user-tier-rate-limit /usr/local/share/lua/5.1/kong/plugins/user-tier-rate-limit
 COPY plugins/read-fallback        /usr/local/share/lua/5.1/kong/plugins/read-fallback
+# Shared library code used by several plugins (the API error envelope). It is
+# installed OUTSIDE kong/plugins/ so Kong never tries to load it as a plugin,
+# under the namespace the plugins require it by: `power_finance.envelope`.
+COPY shared/lua                   /usr/local/share/lua/5.1/power_finance
 
 # --- Static configuration (non-secret) baked so the image runs standalone ---
 ENV KONG_DATABASE=off \

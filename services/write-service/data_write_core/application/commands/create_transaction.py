@@ -12,6 +12,7 @@ from data_write_core.infrastructure.outbox_saga import (
     PostgresOutboxEmissionStep,
 )
 
+from .._amount_scale import ensure_amount_scale
 from ..bootstrap import get_repository_registry
 from ..dtos import TransactionDTO, transaction_to_dto, wallet_to_dto
 from ..interfaces import OutboxRepository, TransactionRepository, WalletRepository
@@ -54,6 +55,11 @@ class CreateTransactionCommandHandler(CommandHandlerBase[TransactionDTO], LoadWa
             wallet_id=command.source_wallet_id,
             user_id=command.user_id,
         )
+        await ensure_amount_scale(
+            command.amount,
+            wallet_aggregate.root.currency_code,
+        )
+
         new_transaction = wallet_aggregate.apply_transaction(
             amount=command.amount,
         )

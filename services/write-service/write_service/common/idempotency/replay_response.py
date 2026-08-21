@@ -1,6 +1,7 @@
 from rest_framework.response import Response
 
 from .atomic_redis import StoredResponse
+from .replay_marker import mark_replay
 
 REPLAY_HEADER = "Idempotent-Replayed"
 
@@ -14,5 +15,10 @@ class ReplayResponseBuilder:
         )
         for header_name, header_value in stored_response.headers.items():
             rebuilt_response[header_name] = header_value
+
         rebuilt_response[REPLAY_HEADER] = "true"
-        return rebuilt_response
+
+        return mark_replay(
+            rebuilt_response,
+            replayed=True,
+        )

@@ -5,7 +5,9 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from .exceptions import InvalidOperationError
+from data_read_core.shared.money import CANONICAL_AMOUNT
+
+from .exceptions import InvalidOperationError, InvalidValueError
 
 
 class ComparisonOperator(str, Enum):
@@ -28,6 +30,7 @@ class GroupOperator(str, Enum):
 class TypeVariant(str, Enum):
     INTEGER = "int"
     FLOAT = "float"
+    DECIMAL = "decimal"
     STRING = "str"
     BOOLEAN = "bool"
     DATETIME = "datetime"
@@ -37,9 +40,14 @@ class TypeVariant(str, Enum):
 _TYPE_VALIDATORS = {
     TypeVariant.INTEGER: lambda value: bool(re.fullmatch(r"^[+-]?\d+$", str(value))),
     TypeVariant.FLOAT: lambda value: bool(re.fullmatch(r"^[+-]?(\d+\.\d+|\d+|\.\d+)$", str(value))),
+    TypeVariant.DECIMAL: lambda value: (
+        isinstance(value, str) and bool(CANONICAL_AMOUNT.fullmatch(value))
+    ),
     TypeVariant.STRING: lambda value: True,
-    TypeVariant.BOOLEAN: lambda value: isinstance(value, bool)
-    or bool(re.fullmatch(r"^(true|false|1|0)$", str(value), re.IGNORECASE)),
+    TypeVariant.BOOLEAN: lambda value: (
+        isinstance(value, bool)
+        or bool(re.fullmatch(r"^(true|false|1|0)$", str(value), re.IGNORECASE))
+    ),
     TypeVariant.DATETIME: lambda value: _is_iso_datetime(value),
     TypeVariant.UUID: lambda value: _is_uuid(value),
 }
@@ -80,18 +88,20 @@ class FilterFieldPolicy:
     model_lookup: str = ""
     es_field: str = ""
 
-    def check_valid_value(self, raw_value: dict[str, Any]) -> bool:
+    def check_valid_value(self, raw_value: dict[str, Any], path: str = "filter_body") -> bool:
         operator = raw_value.get("operator")
         if not operator or operator not in self.allowed_operators:
             raise InvalidOperationError(
-                f"Unknown operator type: {operator}. "
-                f"Allowed operators: {self.allowed_operators}"
+                f"Operator {operator!r} is not permitted on {self.request_name!r}. "
+                f"Allowed operators: {sorted(self.allowed_operators)}",
+                path=f"{path}.operator",
             )
 
         value = raw_value.get("value")
         if value is None or not self._validate_value(value):
-            raise InvalidOperationError(
-                f"Unknown value type: {value}. Specified value type: {self.value_type}"
+            raise InvalidValueError(
+                f"Value does not match the {self.value_type} type of " f"{self.request_name!r}",
+                path=f"{path}.value",
             )
 
         return True

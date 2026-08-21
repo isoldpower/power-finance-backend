@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
+from write_service.common.pagination import PageRequest
+
 from data_write_core.domain.entities import NotificationEntity
 
 
@@ -29,9 +31,9 @@ class NotificationRepository(ABC):
     async def get_user_notifications(
         self,
         user_id: int,
-        limit: int | None = None,
-        offset: int | None = None,
+        page: PageRequest | None = None,
     ) -> list[NotificationEntity]:
+        """One page of rows, including the lookahead row. Newest first."""
         raise NotImplementedError()
 
     @abstractmethod

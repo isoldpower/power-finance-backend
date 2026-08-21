@@ -3,7 +3,9 @@ from decimal import Decimal
 from uuid import UUID
 
 import pytest
+from write_service.common.pagination import CURSOR_CODEC, build_page
 
+from data_write_core.application.exceptions import FallbackTransactionNotVisibleError
 from data_write_core.application.queries import (
     GetFallbackTransactionQuery,
     GetFallbackTransactionQueryHandler,
@@ -19,6 +21,7 @@ from .fakes import (
     FakeTransactionRepository,
     FakeWalletRepository,
     make_checkpoint,
+    make_page,
     make_transaction,
     make_wallet,
 )
@@ -75,14 +78,18 @@ async def test_list_wallets_returns_dtos_with_balances_and_total():
     )
     handler = ListFallbackWalletsQueryHandler(wallet_repo, transaction_repo)
 
-    dtos, total = await handler.handle(ListFallbackWalletsQuery(user_id=7, limit=20, offset=0))
+    dtos, total = await handler.handle(
+        ListFallbackWalletsQuery(user_id=7, page=make_page(limit=20))
+    )
 
     assert total == 2
     assert [str(dto.id) for dto in dtos] == [WALLET_A, WALLET_B]
     assert dtos[0].balance_amount == Decimal("10")
 
 
-async def test_list_wallets_honors_limit_and_offset():
+async def test_list_wallets_pages_forward_from_a_cursor():
+    """The second page starts after the first page's last row, not at an offset."""
+
     wallets = [
         make_wallet(WALLET_A, created_at=datetime(2026, 1, 2)),
         make_wallet(WALLET_B, created_at=datetime(2026, 1, 1)),
@@ -91,10 +98,21 @@ async def test_list_wallets_honors_limit_and_offset():
         FakeWalletRepository(wallets), FakeTransactionRepository()
     )
 
-    dtos, total = await handler.handle(ListFallbackWalletsQuery(user_id=7, limit=1, offset=1))
+    first_request = make_page(limit=1)
+    first_rows, total = await handler.handle(
+        ListFallbackWalletsQuery(user_id=7, page=first_request)
+    )
+    first_page = build_page(first_rows, total, first_request)
+
+    second_request = make_page(
+        limit=1,
+        cursor=CURSOR_CODEC.decode(first_page.next_cursor, first_request.fingerprint),
+    )
+    second_rows, _ = await handler.handle(ListFallbackWalletsQuery(user_id=7, page=second_request))
 
     assert total == 2
-    assert [str(dto.id) for dto in dtos] == [WALLET_B]
+    assert [str(dto.id) for dto in first_page.items] == [WALLET_A]
+    assert [str(dto.id) for dto in second_rows] == [WALLET_B]
 
 
 async def test_get_transaction_resolves_currency_from_wallet():
@@ -138,7 +156,9 @@ async def test_list_transactions_sorts_desc_paginates_and_maps_currency():
     transaction_repo = FakeTransactionRepository(user_transactions=[older, newer])
     handler = ListFallbackTransactionsQueryHandler(transaction_repo, wallet_repo)
 
-    dtos, total = await handler.handle(ListFallbackTransactionsQuery(user_id=7, limit=1, offset=0))
+    dtos, total = await handler.handle(
+        ListFallbackTransactionsQuery(user_id=7, page=make_page(limit=1))
+    )
 
     assert total == 2
     assert str(dtos[0].id) == TX_2
@@ -160,7 +180,9 @@ async def test_list_transactions_drops_cancelled_pair():
         wallet_repo,
     )
 
-    dtos, total = await handler.handle(ListFallbackTransactionsQuery(user_id=7, limit=20, offset=0))
+    dtos, total = await handler.handle(
+        ListFallbackTransactionsQuery(user_id=7, page=make_page(limit=20))
+    )
 
     assert total == 0
     assert dtos == []
@@ -181,7 +203,9 @@ async def test_list_transactions_folds_adjustment_into_original():
         wallet_repo,
     )
 
-    dtos, total = await handler.handle(ListFallbackTransactionsQuery(user_id=7, limit=20, offset=0))
+    dtos, total = await handler.handle(
+        ListFallbackTransactionsQuery(user_id=7, page=make_page(limit=20))
+    )
 
     assert total == 1
     assert str(dtos[0].id) == TX_1
@@ -203,6 +227,8 @@ async def test_get_transaction_folds_adjustment():
 
 
 async def test_get_transaction_cancelled_is_not_visible():
+    """A cancelled transaction is gone as far as reads are concerned."""
+
     original = make_transaction(TX_1, WALLET_A, "20")
     inverse = make_transaction(TX_EFFECT, WALLET_A, "-20", cancels_other=UUID(TX_1))
     handler = GetFallbackTransactionQueryHandler(
@@ -210,7 +236,7 @@ async def test_get_transaction_cancelled_is_not_visible():
         FakeWalletRepository([make_wallet(WALLET_A)]),
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(FallbackTransactionNotVisibleError):
         await handler.handle(GetFallbackTransactionQuery(user_id=7, transaction_id=UUID(TX_1)))
 
 
@@ -221,5 +247,5 @@ async def test_get_transaction_effect_row_is_not_visible():
         FakeWalletRepository([make_wallet(WALLET_A)]),
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(FallbackTransactionNotVisibleError):
         await handler.handle(GetFallbackTransactionQuery(user_id=7, transaction_id=UUID(TX_EFFECT)))

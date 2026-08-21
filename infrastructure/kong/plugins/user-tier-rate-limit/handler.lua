@@ -7,31 +7,24 @@
 -- Why custom: Kong's bundled rate-limiting plugin can only have one
 -- instance per scope. We need the IP floor (built-in) AND a per-user
 -- ceiling at the same time, so the user tier needs to be a separate
--- plugin class.
---
--- Counter strategy: fixed minute/hour windows in Redis via INCR + EXPIRE.
--- Cheaper and simpler than a sliding window; accuracy at window edges is
--- fine for fraud/abuse prevention.
---
--- Failure modes are fail-open: any Redis error logs a warning and the
--- request proceeds without counting. The IP floor still bounds the
--- blast radius if Redis is down.
+-- plugin class. Uses SLIDING WINDOW strategy. Failure modes are fail-open.
 
 local messages      = require "kong.plugins.user-tier-rate-limit.messages"
 local redis_counter = require "kong.plugins.user-tier-rate-limit.redis_counter"
+
 
 -- PRIORITY 600 keeps user-tier-rate-limit below clerk-jwt (801) so the
 -- verified claims have already been stashed in kong.ctx.shared by the
 -- time this runs.
 local UserTierRateLimitHandler = {
     PRIORITY = 600,
-    VERSION  = "0.2.0",
+    VERSION  = "0.3.0",
 }
 
 
 -- Window definitions. Adding a new window (e.g. per-second burst, per-day
--- quota) is a matter of pushing one more row here — the loop below picks
--- it up automatically.
+-- quota) is a matter of pushing one more row here — the counter and the script
+-- both loop over whatever this table holds.
 local WINDOWS = {
     { label = "minute", seconds = 60,   header_suffix = "Minute", config_key = "per_minute" },
     { label = "hour",   seconds = 3600, header_suffix = "Hour",   config_key = "per_hour" },
@@ -43,43 +36,53 @@ local WINDOWS = {
 -- clients see one consistent header family regardless of which tier
 -- bound their traffic.
 --
--- @param header_suffix string  the "Minute" / "Hour" tail of the header name
--- @param limit number  configured ceiling for the window
--- @param remaining number  budget left after the current request
-local set_window_headers = function(header_suffix, limit, remaining)
-    kong.response.set_header("X-RateLimit-Limit-" .. header_suffix, limit)
-    kong.response.set_header("X-RateLimit-Remaining-" .. header_suffix, math.max(0, remaining))
+-- @param evaluated_window table  one row of the counter's reply
+local set_window_headers = function(evaluated_window)
+    local remaining = evaluated_window.limit - evaluated_window.estimate
+
+    kong.response.set_header(
+        "X-RateLimit-Limit-" .. evaluated_window.header_suffix,
+        evaluated_window.limit
+    )
+    kong.response.set_header(
+        "X-RateLimit-Remaining-" .. evaluated_window.header_suffix,
+        math.max(0, remaining)
+    )
 end
 
 
---- Increment counters across all windows and return whether any were
--- exceeded. On the first Redis error we fail open: stop counting,
--- release the connection, and let the request through.
+--- How long until this window would admit one more request, assuming the
+-- caller stops sending in the meantime.
 --
--- @param client table  resty.redis client
--- @param config table  plugin config record
--- @param user_id string  Clerk `sub` claim
--- @return boolean  true if any window's post-increment count exceeds its limit
-local apply_all_windows = function(client, config, user_id)
-    local any_exceeded = false
+-- @param evaluated_window table  one row of the counter's reply
+-- @return number  whole seconds to wait, at least 1
+local seconds_until_admitted = function(evaluated_window)
+    local headroom = evaluated_window.limit - evaluated_window.current
+    local previous = evaluated_window.previous
 
-    for _, window in ipairs(WINDOWS) do
-        local limit = config[window.config_key]
-        local count, increment_error = redis_counter.increment_window(
-            client, config.redis_key_prefix, user_id, window.label, window.seconds
-        )
-        if not count then
-            kong.log.warn("user-tier-rate-limit: ", increment_error, " — failing open")
-            return false
-        end
+    if headroom > 0 and previous > 0 then
+        local decayed_at = evaluated_window.seconds
+            - (headroom * evaluated_window.seconds / previous)
 
-        set_window_headers(window.header_suffix, limit, limit - count)
-        if count > limit then
-            any_exceeded = true
+        return math.max(1, math.ceil(decayed_at - evaluated_window.elapsed))
+    end
+
+    return math.max(1, math.ceil(evaluated_window.seconds - evaluated_window.elapsed))
+end
+
+
+--- Longest wait across the windows that rejected the request.
+-- Backing off for the shorter one would only trip the longer one again.
+local retry_after_seconds = function(evaluated)
+    local retry_after = 1
+
+    for _, evaluated_window in ipairs(evaluated.windows) do
+        if evaluated_window.estimate > evaluated_window.limit then
+            retry_after = math.max(retry_after, seconds_until_admitted(evaluated_window))
         end
     end
 
-    return any_exceeded
+    return retry_after
 end
 
 
@@ -95,11 +98,22 @@ function UserTierRateLimitHandler:access(config)
         return
     end
 
-    local exceeded = apply_all_windows(client, config, claims.sub)
+    local evaluated, evaluate_error = redis_counter.evaluate_windows(
+        client, config, claims.sub, WINDOWS
+    )
     redis_counter.release(client)
 
-    if exceeded then
-        return messages.rate_limit_exceeded()
+    if not evaluated then
+        kong.log.warn("user-tier-rate-limit: ", evaluate_error, " — failing open")
+        return
+    end
+
+    for _, evaluated_window in ipairs(evaluated.windows) do
+        set_window_headers(evaluated_window)
+    end
+
+    if not evaluated.allowed then
+        return messages.rate_limit_exceeded(retry_after_seconds(evaluated))
     end
 end
 

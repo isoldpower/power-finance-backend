@@ -9,4 +9,6 @@ def present_one(notification: NotificationDTO) -> dict:
         "payload": notification.payload,
         "is_read": notification.is_read,
         "created_at": notification.created_at,
+        "updated_at": None,
+        "deleted_at": None,
     }

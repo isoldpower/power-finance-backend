@@ -1,35 +1,20 @@
 from rest_framework import serializers
 
+from data_read_core.shared.rest_framework import collection_response
 
-class WalletBalanceResponseSerializer(serializers.Serializer):
-    amount = serializers.DecimalField(max_digits=20, decimal_places=2)
+
+class MoneySerializer(serializers.Serializer):
+    amount = serializers.CharField(help_text="Decimal string at the currency's scale.")
     currency = serializers.CharField()
-
-
-class WalletMetaResponseSerializer(serializers.Serializer):
-    id = serializers.UUIDField()
-    created_at = serializers.DateTimeField()
-    updated_at = serializers.DateTimeField(allow_null=True)
 
 
 class WalletResponseSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
-    balance = WalletBalanceResponseSerializer()
-    meta = WalletMetaResponseSerializer()
+    balance = MoneySerializer()
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField(allow_null=True)
+    deleted_at = serializers.DateTimeField(allow_null=True)
 
 
-class PaginationMetaSerializer(serializers.Serializer):
-    limit = serializers.IntegerField()
-    offset = serializers.IntegerField()
-    total = serializers.IntegerField()
-
-
-class PaginatedWalletResponseSerializer(serializers.Serializer):
-    data = WalletResponseSerializer(many=True)
-    meta = PaginationMetaSerializer()
-
-
-class MessageResponseSerializer(serializers.Serializer):
-    message = serializers.CharField()
-    resource_id = serializers.CharField(allow_null=True)
+PaginatedWalletResponseSerializer = collection_response(WalletResponseSerializer)

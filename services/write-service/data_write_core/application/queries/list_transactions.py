@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+from write_service.common.pagination import PageRequest, keyset_slice
+
 from data_write_core.domain.services import collapse_ledger
 
 from ..bootstrap import get_repository_registry
@@ -11,8 +13,7 @@ from ..interfaces import TransactionRepository, WalletRepository
 @dataclass(frozen=True)
 class ListFallbackTransactionsQuery:
     user_id: int
-    limit: int
-    offset: int
+    page: PageRequest
 
 
 class ListFallbackTransactionsQueryHandler:
@@ -34,14 +35,10 @@ class ListFallbackTransactionsQueryHandler:
     ) -> tuple[list[TransactionPlainDTO], int]:
         ledger = await self._transaction_repository.get_user_transactions(query.user_id)
         collapsed = collapse_ledger(ledger)
-        collapsed.sort(key=lambda entry: entry.transaction.created_at, reverse=True)
-
         total = len(collapsed)
-        page = collapsed[query.offset : query.offset + query.limit]
 
         currency_by_wallet = await self._currency_by_wallet(query.user_id)
-
-        return [
+        transactions = [
             TransactionPlainDTO(
                 id=UUID(entry.transaction.unique_id),
                 amount=entry.effective_amount,
@@ -51,8 +48,10 @@ class ListFallbackTransactionsQueryHandler:
                 cancels_other=entry.transaction.cancels_other,
                 adjusts_other=entry.transaction.adjusts_other,
             )
-            for entry in page
-        ], total
+            for entry in collapsed
+        ]
+
+        return keyset_slice(transactions, query.page), total
 
     async def _currency_by_wallet(self, user_id: int) -> dict[str, str]:
         wallets = await self._wallet_repository.get_user_wallets(user_id)

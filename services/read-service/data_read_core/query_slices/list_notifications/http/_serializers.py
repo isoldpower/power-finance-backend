@@ -1,26 +1,17 @@
 from rest_framework import serializers
 
+from data_read_core.shared.rest_framework import collection_response
+
 
 class NotificationResponseSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     short = serializers.CharField()
     message = serializers.CharField()
-    payload = serializers.DictField(allow_null=True)
+    payload = serializers.JSONField(allow_null=True)
     is_read = serializers.BooleanField()
     created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField(allow_null=True)
+    deleted_at = serializers.DateTimeField(allow_null=True)
 
 
-class PaginationMetaSerializer(serializers.Serializer):
-    limit = serializers.IntegerField()
-    offset = serializers.IntegerField()
-    total = serializers.IntegerField()
-
-
-class PaginatedNotificationResponseSerializer(serializers.Serializer):
-    data = NotificationResponseSerializer(many=True)
-    meta = PaginationMetaSerializer()
-
-
-class MessageResponseSerializer(serializers.Serializer):
-    message = serializers.CharField()
-    resource_id = serializers.CharField(allow_null=True)
+PaginatedNotificationResponseSerializer = collection_response(NotificationResponseSerializer)

@@ -1,4 +1,4 @@
-from datetime import datetime
+from write_service.common.timestamps import to_iso
 
 from data_write_core.application.dtos import (
     NotificationDTO,
@@ -7,48 +7,39 @@ from data_write_core.application.dtos import (
     WebhookDTO,
     WebhookSubscriptionDTO,
 )
+from data_write_core.application.money_scales import amount_at_scale, money_at_scale
 
 
-def _iso(value: datetime | None) -> str | None:
-    return value.isoformat() if value is not None else None
-
-
-def present_wallet(wallet: WalletDTO) -> dict:
+async def present_wallet(wallet: WalletDTO) -> dict:
     return {
         "id": str(wallet.id),
         "name": wallet.name,
-        "balance": {
-            "amount": str(wallet.balance_amount),
-            "currency": wallet.currency,
-        },
-        "meta": {
-            "id": str(wallet.id),
-            "created_at": _iso(wallet.created_at),
-            "updated_at": _iso(wallet.updated_at),
-        },
+        "balance": await money_at_scale(wallet.balance_amount, wallet.currency),
+        "created_at": to_iso(wallet.created_at),
+        "updated_at": to_iso(wallet.updated_at),
+        "deleted_at": None,
     }
 
 
-def present_wallets(wallets: list[WalletDTO]) -> list[dict]:
-    return [present_wallet(wallet) for wallet in wallets]
+async def present_wallets(wallets: list[WalletDTO]) -> list[dict]:
+    return [await present_wallet(wallet) for wallet in wallets]
 
 
-def present_transaction(transaction: TransactionPlainDTO) -> dict:
+async def present_transaction(transaction: TransactionPlainDTO) -> dict:
     return {
         "id": str(transaction.id),
         "wallet_id": str(transaction.source_wallet_id),
-        "amount": str(transaction.amount),
+        "amount": await amount_at_scale(transaction.amount, transaction.currency_code),
         "currency": transaction.currency_code,
-        "meta": {
-            "id": str(transaction.id),
-            "occurred_at": _iso(transaction.created_at),
-            "created_at": _iso(transaction.created_at),
-        },
+        "occurred_at": to_iso(transaction.created_at),
+        "created_at": to_iso(transaction.created_at),
+        "updated_at": None,
+        "deleted_at": None,
     }
 
 
-def present_transactions(transactions: list[TransactionPlainDTO]) -> list[dict]:
-    return [present_transaction(transaction) for transaction in transactions]
+async def present_transactions(transactions: list[TransactionPlainDTO]) -> list[dict]:
+    return [await present_transaction(transaction) for transaction in transactions]
 
 
 def present_webhook(webhook: WebhookDTO) -> dict:
@@ -57,11 +48,9 @@ def present_webhook(webhook: WebhookDTO) -> dict:
         "title": webhook.title,
         "url": webhook.url,
         "is_active": webhook.is_active,
-        "meta": {
-            "id": str(webhook.id),
-            "created_at": _iso(webhook.created_at),
-            "updated_at": _iso(webhook.updated_at),
-        },
+        "created_at": to_iso(webhook.created_at),
+        "updated_at": to_iso(webhook.updated_at),
+        "deleted_at": None,
     }
 
 
@@ -75,7 +64,9 @@ def present_webhook_subscription(subscription: WebhookSubscriptionDTO) -> dict:
         "webhook_id": str(subscription.webhook_id),
         "event_type": subscription.event_type,
         "is_active": subscription.is_active,
-        "created_at": _iso(subscription.created_at),
+        "created_at": to_iso(subscription.created_at),
+        "updated_at": None,
+        "deleted_at": None,
     }
 
 
@@ -92,7 +83,9 @@ def present_notification(notification: NotificationDTO) -> dict:
         "message": notification.message,
         "payload": notification.payload,
         "is_read": notification.is_read,
-        "created_at": _iso(notification.created_at),
+        "created_at": to_iso(notification.created_at),
+        "updated_at": None,
+        "deleted_at": None,
     }
 
 

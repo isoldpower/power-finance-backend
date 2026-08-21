@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
+from write_service.common.pagination import PageRequest
+
 from data_write_core.domain.entities import WebhookEntity, WebhookSubscriptionEntity
 
 
@@ -17,9 +19,9 @@ class WebhookRepository(ABC):
     async def get_user_webhooks(
         self,
         user_id: int,
-        limit: int | None = None,
-        offset: int | None = None,
+        page: PageRequest | None = None,
     ) -> list[WebhookEntity]:
+        """One page of rows — including the lookahead row — newest first."""
         raise NotImplementedError()
 
     @abstractmethod

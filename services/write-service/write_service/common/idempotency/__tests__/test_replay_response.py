@@ -15,7 +15,7 @@ class ReplayResponseBuilderTests(SimpleTestCase):
     def test_preserves_status_code_and_body(self) -> None:
         stored = StoredResponse(
             status_code=201,
-            body={"id": 1},
+            body={"data": {"id": 1}, "meta": {"idempotent_replay": False}},
             headers={},
             request_hash="h",
         )
@@ -23,7 +23,21 @@ class ReplayResponseBuilderTests(SimpleTestCase):
         rebuilt = ReplayResponseBuilder.build(stored)
 
         self.assertEqual(rebuilt.status_code, 201)
-        self.assertEqual(rebuilt.data, {"id": 1})
+        self.assertEqual(rebuilt.data["data"], {"id": 1})
+
+    def test_marks_the_body_as_a_replay(self) -> None:
+        """`meta.idempotent_replay` is the contract; the header is a convenience."""
+
+        stored = StoredResponse(
+            status_code=201,
+            body={"data": {"id": 1}, "meta": {"idempotent_replay": False}},
+            headers={},
+            request_hash="h",
+        )
+
+        rebuilt = ReplayResponseBuilder.build(stored)
+
+        self.assertIs(rebuilt.data["meta"]["idempotent_replay"], True)
 
     def test_adds_idempotent_replayed_header(self) -> None:
         stored = StoredResponse(status_code=200, body={}, headers={}, request_hash="h")

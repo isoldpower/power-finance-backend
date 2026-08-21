@@ -1,0 +1,16 @@
+DEFAULT_LIMIT = 25
+MINIMUM_LIMIT = 1
+MAXIMUM_LIMIT = 100
+
+LIMIT_PARAMETER_NAME = "limit"
+CURSOR_PARAMETER_NAME = "cursor"
+
+LIMIT_KEY = "limit"
+TOTAL_KEY = "total"
+NEXT_CURSOR_KEY = "next_cursor"
+PREVIOUS_CURSOR_KEY = "prev_cursor"
+CACHED_KEY = "cached"
+
+NON_INTEGER_LIMIT_MESSAGE = "limit must be an integer"
+
+LOOKAHEAD_ROW_COUNT = 1

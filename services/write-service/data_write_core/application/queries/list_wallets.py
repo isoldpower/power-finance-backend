@@ -1,6 +1,8 @@
 import asyncio
 from dataclasses import dataclass
 
+from write_service.common.pagination import PageRequest
+
 from data_write_core.domain.entities import WalletEntity
 from data_write_core.domain.services import reconstruct_balance
 
@@ -13,8 +15,7 @@ from ._wallet_balance import load_balance_inputs
 @dataclass(frozen=True)
 class ListFallbackWalletsQuery:
     user_id: int
-    limit: int
-    offset: int
+    page: PageRequest
 
 
 class ListFallbackWalletsQueryHandler:
@@ -34,8 +35,7 @@ class ListFallbackWalletsQueryHandler:
     async def handle(self, query: ListFallbackWalletsQuery) -> tuple[list[WalletDTO], int]:
         wallets = await self._wallet_repository.get_user_wallets(
             user_id=query.user_id,
-            limit=query.limit,
-            offset=query.offset,
+            page=query.page,
         )
         total = await self._wallet_repository.count_user_wallets(query.user_id)
 

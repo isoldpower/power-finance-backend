@@ -33,7 +33,7 @@ return {
                     {
                         read_path_prefix = {
                             type = "string",
-                            default = "/api/v1/reads",
+                            default = "/api/v1",
                             description = "Inbound read path prefix; replaced "
                                 .. "with fallback_path_prefix when building the "
                                 .. "Write Service fallback URL.",

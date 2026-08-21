@@ -1,19 +1,23 @@
+from typing import Any
+
 from rest_framework.response import Response
+from write_service.common.http_contract import ok
 
 
 class CommandResponseMixin:
+    """Every mutation answers the same way: the affected resource in `data`, the
+    write version in a header."""
+
     def form_write_response(
         self,
         write_version: int,
-        response_body: dict,
+        response_body: Any,
         status_code: int,
-    ):
-        response = Response(
+        meta: dict[str, Any] | None = None,
+    ) -> Response:
+        return ok(
             response_body,
-            status=status_code,
-            headers={
-                "X-Write-Version": str(write_version),
-            },
+            meta or {},
+            status_code=status_code,
+            headers={"X-Write-Version": str(write_version)},
         )
-
-        return response

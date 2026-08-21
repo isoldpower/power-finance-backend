@@ -1,5 +1,7 @@
 from redis.asyncio import Redis
 
+from data_read_core.shared.query_results import FetchedResource
+
 from .cache_worker import CacheWorker
 from .dtos import GetWalletQuery, WalletDTO
 from .exceptions import WalletNotFoundError
@@ -14,20 +16,27 @@ class GetWalletQueryHandler:
         self._redis_client = redis_client
         self._cache_worker = CacheWorker(redis_client)
 
-    async def handle(self, query: GetWalletQuery) -> WalletDTO:
-        cached_value = await self._cache_worker.try_serve_from_cache(query.wallet_id, query.user_id)
+    async def handle(self, query: GetWalletQuery) -> FetchedResource:
+        cached_value = await self._cache_worker.try_serve_from_cache(
+            query.wallet_id,
+            query.user_id,
+        )
         if cached_value is not None:
             log_served_from_cache(query.wallet_id)
-            return cached_value
+            return FetchedResource(
+                resource=cached_value,
+                cached=True,
+            )
 
         owned_wallet = await fetch_owned_wallet(query.user_id, query.wallet_id)
         if owned_wallet is None:
-            raise WalletNotFoundError(
-                f"Wallet {query.wallet_id} not found for user {query.user_id}"
-            )
+            raise WalletNotFoundError()
 
         wallet = WalletDTO.from_read_model(owned_wallet)
         await self._cache_worker.save_to_cache(wallet)
 
         log_served_from_store(query.wallet_id)
-        return wallet
+        return FetchedResource(
+            resource=wallet,
+            cached=False,
+        )

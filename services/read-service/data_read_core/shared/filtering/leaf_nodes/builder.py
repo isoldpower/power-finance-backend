@@ -1,7 +1,7 @@
 from typing import Any
 
 from ..entities import FieldFilter, FilterPolicy
-from ..exceptions import InvalidOperationError, PolicyViolationError
+from ..exceptions import ROOT_PATH, PolicyViolationError, UnknownNodeError
 from .abstraction import LeafNodeBuilder, LeafTreeNode
 from .equality import EqualLeafTreeNode, NotEqualLeafTreeNode
 from .membership import InLeafTreeNode
@@ -30,26 +30,39 @@ class FilterLeafNodeBuilder(LeafNodeBuilder):
     def __init__(self, policy: FilterPolicy) -> None:
         self._policy = policy
 
-    def is_leaf(self, raw: dict[str, Any]) -> bool:
+    def is_leaf(
+        self,
+        raw: dict[str, Any],
+        path: str = ROOT_PATH,
+    ) -> bool:
         if not ("field_name" in raw and "value" in raw and "operator" in raw):
             return False
 
-        return self._policy_for(raw["field_name"]).check_valid_value(raw)
+        return self._policy_for(raw["field_name"], path).check_valid_value(raw, path)
 
-    def get_related_leaf(self, field_filter: FieldFilter) -> LeafTreeNode:
-        policy = self._policy_for(field_filter.field_name)
+    def get_related_leaf(
+        self,
+        field_filter: FieldFilter,
+        path: str = ROOT_PATH,
+    ) -> LeafTreeNode:
+        policy = self._policy_for(field_filter.field_name, path)
         for leaf_type in self._known_leaves:
             if leaf_type.is_related(field_filter):
                 return leaf_type(field_filter, policy)
 
-        raise InvalidOperationError(f"Unknown leaf type: {field_filter}")
+        raise UnknownNodeError(f"Unsupported leaf: {field_filter}", path=path)
 
-    def _policy_for(self, field_name: str):
+    def _policy_for(
+        self,
+        field_name: str,
+        path: str = ROOT_PATH,
+    ):
         policy = self._policy.get(field_name)
         if policy is None:
             raise PolicyViolationError(
-                f"No policy specified for field: {field_name}. "
-                f"Supported fields: {list(self._policy.keys())}"
+                f"Field {field_name!r} is not filterable on this resource. "
+                f"Filterable fields: {sorted(self._policy)}",
+                path=f"{path}.field_name",
             )
 
         return policy

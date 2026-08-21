@@ -1,6 +1,3 @@
-"""Base settings shared by all environments; concrete environments extend and
-override. Env vars load via django-environ from a `.env` file."""
-
 from pathlib import Path
 
 import environ
@@ -48,6 +45,7 @@ APP_NAME = env("APP_NAME")
 API_VERSION = env("API_VERSION")
 
 ROOT_URLCONF = "write_service.urls"
+APPEND_SLASH = False
 WSGI_APPLICATION = "write_service.wsgi.application"
 ASGI_APPLICATION = "write_service.asgi.application"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -143,11 +141,13 @@ CORRELATION_ID_HEADER = env("CORRELATION_ID_HEADER")
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "EXCEPTION_HANDLER": "data_write_core.presentation.http.exception_handler.write_exception_handler",
+    "DATETIME_FORMAT": "iso-8601",
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "data_write_core.presentation.http.gateway_authentication.GatewayUserHeaderAuthentication",
+        "data_write_core.presentation.http.auth.GatewayUserHeaderAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        "data_write_core.presentation.http.gateway_authentication.IsGatewayAuthenticated",
+        "data_write_core.presentation.http.auth.IsGatewayAuthenticated",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }

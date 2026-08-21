@@ -7,11 +7,9 @@ def present_one(webhook: WebhookDTO) -> dict:
         "title": webhook.title,
         "url": webhook.url,
         "is_active": webhook.is_active,
-        "meta": {
-            "id": webhook.id,
-            "created_at": webhook.created_at,
-            "updated_at": webhook.updated_at,
-        },
+        "created_at": webhook.created_at,
+        "updated_at": webhook.updated_at,
+        "deleted_at": None,
     }
 
 

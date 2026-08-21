@@ -36,6 +36,7 @@ services:
       - ./infrastructure/kong/plugins/write-ral-version:/usr/local/share/lua/5.1/kong/plugins/write-ral-version:ro
       - ./infrastructure/kong/plugins/user-tier-rate-limit:/usr/local/share/lua/5.1/kong/plugins/user-tier-rate-limit:ro
       - ./infrastructure/kong/plugins/read-fallback:/usr/local/share/lua/5.1/kong/plugins/read-fallback:ro
+      - ./infrastructure/kong/shared/lua:/usr/local/share/lua/5.1/power_finance:ro
     ports:
       - "${GATEWAY_PROXY_PORT:-8080}:8000"
       - "${GATEWAY_ADMIN_PORT:-8001}:8001"

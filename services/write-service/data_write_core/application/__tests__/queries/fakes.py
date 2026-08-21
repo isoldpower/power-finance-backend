@@ -1,6 +1,14 @@
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
+
+from write_service.common.pagination import (
+    CREATED_AT_DESC,
+    PageRequest,
+    keyset_slice,
+    query_fingerprint,
+)
 
 from data_write_core.domain.entities import (
     BalanceCheckpointEntity,
@@ -8,6 +16,24 @@ from data_write_core.domain.entities import (
     WalletEntity,
 )
 from data_write_core.domain.value_objects import TransactionData, WalletData
+
+
+@dataclass(frozen=True)
+class _KeyedRow:
+    id: str
+    created_at: datetime
+    wallet: WalletEntity
+
+
+def make_page(limit: int = 25, cursor=None) -> PageRequest:
+    """A PageRequest as the view layer would have built it."""
+
+    return PageRequest(
+        limit=limit,
+        order=CREATED_AT_DESC,
+        fingerprint=query_fingerprint(CREATED_AT_DESC),
+        cursor=cursor,
+    )
 
 
 def make_wallet(
@@ -71,19 +97,25 @@ class FakeWalletRepository:
         return wallet
 
     async def get_user_wallets(
-        self, user_id: int, limit: int | None = None, offset: int | None = None
+        self, user_id: int, page: PageRequest | None = None
     ) -> list[WalletEntity]:
         ordered = sorted(
             self._wallets.values(),
             key=lambda wallet: wallet.created_at,
             reverse=True,
         )
-        start = offset or 0
-        if limit is not None:
-            return ordered[start : start + limit]
-        if offset is not None:
-            return ordered[start:]
-        return ordered
+        if page is None:
+            return ordered
+
+        # The real repository pages in the database, where the sort keys are
+        # columns. Entities spell the id `unique_id`, so the keys are lifted
+        # onto a row-shaped view to page over.
+        rows = [
+            _KeyedRow(id=wallet.unique_id, created_at=wallet.created_at, wallet=wallet)
+            for wallet in ordered
+        ]
+
+        return [row.wallet for row in keyset_slice(rows, page)]
 
     async def count_user_wallets(self, user_id: int) -> int:
         return len(self._wallets)

@@ -16,9 +16,9 @@ class WalletReadModel(models.Model):
         db_table = "read_wallets"
         indexes = [
             models.Index(
-                fields=["user_id", "-created_at"],
+                fields=["user_id", "-created_at", "-id"],
                 include=["title", "currency_code", "balance"],
-                name="rw_user_created_idx",
+                name="rw_user_keyset_idx",
             ),
             models.Index(
                 fields=["user_id", "currency_code"],

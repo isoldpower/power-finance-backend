@@ -1,21 +1,18 @@
+from data_read_core.shared.money import money_at_scale
+
 from ..dtos import WalletDTO
 
 
-def present_one(wallet: WalletDTO) -> dict:
+async def present_one(wallet: WalletDTO) -> dict:
     return {
         "id": wallet.id,
         "name": wallet.name,
-        "balance": {
-            "amount": wallet.balance_amount,
-            "currency": wallet.currency,
-        },
-        "meta": {
-            "id": wallet.id,
-            "created_at": wallet.created_at,
-            "updated_at": wallet.updated_at,
-        },
+        "balance": await money_at_scale(wallet.balance_amount, wallet.currency),
+        "created_at": wallet.created_at,
+        "updated_at": wallet.updated_at,
+        "deleted_at": None,
     }
 
 
-def present_many(wallets: list[WalletDTO]) -> list[dict]:
-    return [present_one(wallet) for wallet in wallets]
+async def present_many(wallets: list[WalletDTO]) -> list[dict]:
+    return [await present_one(wallet) for wallet in wallets]

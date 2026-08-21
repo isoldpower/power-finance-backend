@@ -1,3 +1,5 @@
+from write_service.common.timestamps import to_iso
+
 from data_write_core.application.dtos import (
     WebhookDTO,
     WebhookSubscriptionDTO,
@@ -13,8 +15,10 @@ class WebhookHttpPresenter:
             "title": webhook.title,
             "url": webhook.url,
             "is_active": webhook.is_active,
-            "created_at": webhook.created_at,
-            "updated_at": webhook.updated_at,
+            "created_at": to_iso(webhook.created_at),
+            "updated_at": to_iso(webhook.updated_at),
+            # Always present, null when unset.
+            "deleted_at": None,
         }
 
     @staticmethod
@@ -35,7 +39,9 @@ class WebhookHttpPresenter:
             "webhook_id": str(subscription.webhook_id),
             "event_type": subscription.event_type,
             "is_active": subscription.is_active,
-            "created_at": subscription.created_at,
+            "created_at": to_iso(subscription.created_at),
+            "updated_at": None,
+            "deleted_at": None,
         }
 
     @staticmethod

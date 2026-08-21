@@ -13,6 +13,7 @@ from data_write_core.infrastructure.outbox_saga import (
     PostgresOutboxEmissionStep,
 )
 
+from .._amount_scale import ensure_amount_scale
 from ..bootstrap import get_repository_registry
 from ..dtos import TransactionDTO, transaction_to_dto
 from ..interfaces import OutboxRepository, TransactionRepository, WalletRepository
@@ -61,6 +62,14 @@ class UpdateTransactionCommandHandler(
             transaction_id=command.transaction_id,
             user_id=command.user_id,
         )
+        wallet_dto = await self.load_wallet_dto(
+            wallet_id=transaction_aggregate.root.source_wallet_id,
+            user_id=command.user_id,
+        )
+        await ensure_amount_scale(
+            command.new_amount,
+            wallet_dto.currency,
+        )
 
         adjustment_transaction = transaction_aggregate.adjust_self(new_amount=command.new_amount)
         if adjustment_transaction is not transaction_aggregate.root:
@@ -73,10 +82,6 @@ class UpdateTransactionCommandHandler(
         else:
             latest_sequence = await self._outbox_repository.get_latest_sequence()
 
-        wallet_dto = await self.load_wallet_dto(
-            wallet_id=transaction_aggregate.root.source_wallet_id,
-            user_id=command.user_id,
-        )
         transaction_dto = transaction_to_dto(adjustment_transaction, wallet_dto)
 
         await self._publish_domain_events(transaction_aggregate)

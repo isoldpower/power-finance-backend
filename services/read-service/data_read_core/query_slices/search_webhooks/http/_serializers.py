@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from data_read_core.shared.rest_framework import collection_response
+
 
 class FilterWebhooksRequestSerializer(serializers.Serializer):
     filter_body = serializers.JSONField(allow_null=False, required=True)
@@ -12,19 +14,7 @@ class WebhookResponseSerializer(serializers.Serializer):
     is_active = serializers.BooleanField()
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField(allow_null=True)
+    deleted_at = serializers.DateTimeField(allow_null=True)
 
 
-class PaginationMetaSerializer(serializers.Serializer):
-    limit = serializers.IntegerField()
-    offset = serializers.IntegerField()
-    total = serializers.IntegerField()
-
-
-class PaginatedWebhookResponseSerializer(serializers.Serializer):
-    data = WebhookResponseSerializer(many=True)
-    meta = PaginationMetaSerializer()
-
-
-class MessageResponseSerializer(serializers.Serializer):
-    message = serializers.CharField()
-    resource_id = serializers.CharField(allow_null=True)
+PaginatedWebhookResponseSerializer = collection_response(WebhookResponseSerializer)

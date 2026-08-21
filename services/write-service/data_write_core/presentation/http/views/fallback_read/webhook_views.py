@@ -1,8 +1,11 @@
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import status
-from rest_framework.response import Response
-from write_service.common.logging import get_http_logger, log_request_failed
+from drf_spectacular.utils import extend_schema
+from write_service.common.http_contract import ok
+from write_service.common.pagination import (
+    CREATED_AT_DESC,
+    CompletePage,
+    PageRequest,
+    build_page,
+)
 
 from data_write_core.application.queries import (
     GetFallbackWebhookQuery,
@@ -12,13 +15,19 @@ from data_write_core.application.queries import (
     ListFallbackWebhookSubscriptionsQuery,
     ListFallbackWebhookSubscriptionsQueryHandler,
 )
-from data_write_core.domain.exceptions import WebhookNotFoundError
 
 from ...decorators import trace_handler_flow
+from ...serializers import (
+    EnvelopedWebhookResponseSerializer,
+    ErrorResponseSerializer,
+    PaginatedWebhookResponseSerializer,
+    PaginatedWebhookSubscriptionResponseSerializer,
+)
 from ._presenters import present_webhook, present_webhook_subscriptions, present_webhooks
+from ._schema import CURSOR_PARAMETER, LIMIT_PARAMETER, resource_id_parameter
 from .base import FallbackReadView
 
-logger = get_http_logger("fallback_read")
+WEBHOOK_ID_PARAMETER = resource_id_parameter("id", "Webhook ID")
 
 
 class FallbackWebhookListView(FallbackReadView):
@@ -29,148 +38,79 @@ class FallbackWebhookListView(FallbackReadView):
             "Always-consistent webhook list served from the write side. The "
             "gateway routes here when the Read Service is not caught up."
         ),
-        parameters=[
-            OpenApiParameter(
-                "limit",
-                OpenApiTypes.INT,
-                OpenApiParameter.QUERY,
-            ),
-            OpenApiParameter(
-                "offset",
-                OpenApiTypes.INT,
-                OpenApiParameter.QUERY,
-            ),
-        ],
+        parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER],
+        responses={
+            200: PaginatedWebhookResponseSerializer,
+            422: ErrorResponseSerializer,
+        },
     )
     @trace_handler_flow
     async def get(self, request):
-        try:
-            paginator = self.pagination_class()
-            paginator.limit = paginator.get_limit(request)
-            paginator.offset = paginator.get_offset(request)
+        page_request = PageRequest.from_request(request, CREATED_AT_DESC)
+        webhooks, total = await ListFallbackWebhooksQueryHandler().handle(
+            ListFallbackWebhooksQuery(
+                user_id=int(request.user.unique_id),
+                page=page_request,
+            )
+        )
 
-            webhooks, total = await ListFallbackWebhooksQueryHandler().handle(
-                ListFallbackWebhooksQuery(
-                    user_id=int(request.user.unique_id),
-                    limit=paginator.limit,
-                    offset=paginator.offset,
-                )
-            )
-
-            paginator.count = total
-            return paginator.get_paginated_response(present_webhooks(webhooks))
-        except Exception as error:
-            log_request_failed(
-                logger,
-                "list_fallback_webhooks",
-                error,
-                user_id=request.user.unique_id,
-            )
-            return Response(
-                {
-                    "message": f"Failed to list owned webhooks: {error}",
-                    "resource_id": None,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        page = build_page(webhooks, total, page_request)
+        return ok(
+            present_webhooks(page.items),
+            page.meta(cached=False),
+        )
 
 
 class FallbackWebhookResourceView(FallbackReadView):
     @extend_schema(
         operation_id="fallback_webhooks_retrieve",
         summary="Get webhook details (consistent fallback)",
-        parameters=[
-            OpenApiParameter(
-                "id",
-                OpenApiTypes.UUID,
-                OpenApiParameter.PATH,
-                description="Webhook ID",
-            ),
-        ],
+        parameters=[WEBHOOK_ID_PARAMETER],
+        responses={
+            200: EnvelopedWebhookResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
     )
     @trace_handler_flow
     async def get(self, request, pk=None):
-        try:
-            webhook = await GetFallbackWebhookQueryHandler().handle(
-                GetFallbackWebhookQuery(
-                    user_id=int(request.user.unique_id),
-                    webhook_id=pk,
-                )
-            )
-
-            return Response(present_webhook(webhook), status=status.HTTP_200_OK)
-        except WebhookNotFoundError as error:
-            return Response(
-                {
-                    "message": str(error),
-                    "resource_id": f"{pk}",
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        except Exception as error:
-            log_request_failed(
-                logger,
-                "get_fallback_webhook",
-                error,
+        webhook = await GetFallbackWebhookQueryHandler().handle(
+            GetFallbackWebhookQuery(
+                user_id=int(request.user.unique_id),
                 webhook_id=pk,
-                user_id=request.user.unique_id,
             )
-            return Response(
-                {
-                    "message": f"Failed to retrieve webhook with ID {pk}: {error}",
-                    "resource_id": f"{pk}",
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        )
+
+        return ok(
+            present_webhook(webhook),
+            {"cached": False},
+        )
 
 
 class FallbackWebhookEventListView(FallbackReadView):
     @extend_schema(
         operation_id="fallback_webhooks_subscriptions_list",
         summary="List webhook event subscriptions (consistent fallback)",
-        parameters=[
-            OpenApiParameter(
-                "id",
-                OpenApiTypes.UUID,
-                OpenApiParameter.PATH,
-                description="Webhook ID",
-            ),
-        ],
+        description=(
+            "Every event type the webhook is subscribed to. Bounded by the "
+            "event catalogue, so this endpoint is not paginated."
+        ),
+        parameters=[WEBHOOK_ID_PARAMETER],
+        responses={
+            200: PaginatedWebhookSubscriptionResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
     )
     @trace_handler_flow
     async def get(self, request, pk=None):
-        try:
-            subscriptions = await ListFallbackWebhookSubscriptionsQueryHandler().handle(
-                ListFallbackWebhookSubscriptionsQuery(
-                    user_id=int(request.user.unique_id),
-                    webhook_id=pk,
-                )
-            )
-
-            return Response(
-                present_webhook_subscriptions(subscriptions),
-                status=status.HTTP_200_OK,
-            )
-        except WebhookNotFoundError as error:
-            return Response(
-                {
-                    "message": str(error),
-                    "resource_id": f"{pk}",
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        except Exception as error:
-            log_request_failed(
-                logger,
-                "list_fallback_webhook_subscriptions",
-                error,
+        subscriptions = await ListFallbackWebhookSubscriptionsQueryHandler().handle(
+            ListFallbackWebhookSubscriptionsQuery(
+                user_id=int(request.user.unique_id),
                 webhook_id=pk,
-                user_id=request.user.unique_id,
             )
-            return Response(
-                {
-                    "message": f"Failed to list subscriptions of webhook {pk}: {error}",
-                    "resource_id": f"{pk}",
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        )
+
+        page = CompletePage(subscriptions)
+        return ok(
+            present_webhook_subscriptions(page.items),
+            page.meta(cached=False),
+        )

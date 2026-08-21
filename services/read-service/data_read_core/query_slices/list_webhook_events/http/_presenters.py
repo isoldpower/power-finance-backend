@@ -8,6 +8,8 @@ def present_one(subscription: WebhookSubscriptionDTO) -> dict:
         "event_type": subscription.event_type,
         "is_active": subscription.is_active,
         "created_at": subscription.created_at,
+        "updated_at": None,
+        "deleted_at": None,
     }
 
 
