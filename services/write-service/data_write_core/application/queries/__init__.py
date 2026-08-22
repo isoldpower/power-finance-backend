@@ -3,7 +3,11 @@ from .get_notification import (
     GetFallbackNotificationQueryHandler,
 )
 from .get_transaction import GetFallbackTransactionQuery, GetFallbackTransactionQueryHandler
-from .get_wallet import GetFallbackWalletQuery, GetFallbackWalletQueryHandler
+from .get_wallet import (
+    FallbackWalletDetail,
+    GetFallbackWalletQuery,
+    GetFallbackWalletQueryHandler,
+)
 from .get_webhook import (
     GetFallbackWebhookQuery,
     GetFallbackWebhookQueryHandler,
@@ -28,6 +32,7 @@ __all__ = [
     "ListFallbackNotificationsQueryHandler",
     "GetFallbackTransactionQuery",
     "GetFallbackTransactionQueryHandler",
+    "FallbackWalletDetail",
     "GetFallbackWalletQuery",
     "GetFallbackWalletQueryHandler",
     "GetFallbackWebhookQuery",

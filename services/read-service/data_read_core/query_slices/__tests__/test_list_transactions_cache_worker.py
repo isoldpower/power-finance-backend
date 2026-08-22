@@ -20,10 +20,18 @@ def _transaction(transaction_id: str = "t1", user_id: int = 7) -> TransactionDTO
         id=transaction_id,
         user_id=user_id,
         wallet_id="w1",
-        amount="25.00",
+        wallet_name="Random Credit Card",
+        name="Groceries store",
+        amount="-25.00",
         currency="USD",
+        category="Food",
+        origin="manual",
+        chain_id=None,
+        chain_sort="ffffffff-ffff-ffff-ffff-ffffffffffff",
         occurred_at="2026-01-01T00:00:00+00:00",
         created_at="2026-01-01T00:00:00+00:00",
+        updated_at=None,
+        deleted_at=None,
     )
 
 

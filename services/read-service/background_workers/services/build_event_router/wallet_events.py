@@ -4,12 +4,14 @@ from data_read_core.shared.kafka_updates import (
     SyncProcessGroup,
 )
 from data_read_core.write_reactions import (
+    BumpTransactionListVersion,
     BumpWalletListVersion,
     CreateWalletReadModel,
     EvictWalletCache,
     IndexWalletDocument,
     RemoveWalletDocument,
     RemoveWalletReadModel,
+    RenameWalletInTransactions,
     TrackAppliedSeq,
     TrackEsAppliedSeq,
     UpdateWalletDocument,
@@ -57,8 +59,10 @@ def subscribe_wallet_updated(
             SyncProcessGroup(
                 [
                     TrackAppliedSeq(UpdateWalletReadModel(), WalletUpdated),
+                    RenameWalletInTransactions(),
                     EvictWalletCache(WalletUpdated),
                     BumpWalletListVersion(WalletUpdated),
+                    BumpTransactionListVersion(WalletUpdated),
                 ]
             ),
             SyncProcessGroup([TrackEsAppliedSeq(UpdateWalletDocument(), WalletUpdated)]),

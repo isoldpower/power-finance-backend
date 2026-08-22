@@ -8,6 +8,10 @@ from .envelope_serializers import (
 )
 from .money_serializers import MoneySerializer
 from .schema_parameters import CURSOR_PARAMETER, LIMIT_PARAMETER
+from .transaction_serializers import (
+    TransactionWalletSerializer,
+    transaction_preview_fields,
+)
 
 __all__ = [
     "CURSOR_PARAMETER",
@@ -16,6 +20,8 @@ __all__ = [
     "CollectionMetaSerializer",
     "ErrorResponseSerializer",
     "MoneySerializer",
+    "TransactionWalletSerializer",
+    "transaction_preview_fields",
     "ResourceMetaSerializer",
     "async_api_view",
     "collection_response",

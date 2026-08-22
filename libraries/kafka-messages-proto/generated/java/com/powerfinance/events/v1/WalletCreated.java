@@ -32,6 +32,9 @@ private static final long serialVersionUID = 0L;
     walletId_ = "";
     title_ = "";
     currencyCode_ = "";
+    category_ = "";
+    color_ = "";
+    zeroBalance_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -283,6 +286,144 @@ private static final long serialVersionUID = 0L;
     return createdAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : createdAt_;
   }
 
+  public static final int CATEGORY_FIELD_NUMBER = 15;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object category_ = "";
+  /**
+   * <code>string category = 15;</code>
+   * @return The category.
+   */
+  @java.lang.Override
+  public java.lang.String getCategory() {
+    java.lang.Object ref = category_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      category_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string category = 15;</code>
+   * @return The bytes for category.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getCategoryBytes() {
+    java.lang.Object ref = category_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      category_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int COLOR_FIELD_NUMBER = 16;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object color_ = "";
+  /**
+   * <code>string color = 16;</code>
+   * @return The color.
+   */
+  @java.lang.Override
+  public java.lang.String getColor() {
+    java.lang.Object ref = color_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      color_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string color = 16;</code>
+   * @return The bytes for color.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getColorBytes() {
+    java.lang.Object ref = color_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      color_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int FAVORITE_FIELD_NUMBER = 17;
+  private boolean favorite_ = false;
+  /**
+   * <code>bool favorite = 17;</code>
+   * @return The favorite.
+   */
+  @java.lang.Override
+  public boolean getFavorite() {
+    return favorite_;
+  }
+
+  public static final int ZERO_BALANCE_FIELD_NUMBER = 18;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object zeroBalance_ = "";
+  /**
+   * <pre>
+   * Canonical decimal string at the wallet currency's scale. The datum the
+   * balance is measured from, not a floor — see the wallet's `zero_balance`.
+   * </pre>
+   *
+   * <code>string zero_balance = 18;</code>
+   * @return The zeroBalance.
+   */
+  @java.lang.Override
+  public java.lang.String getZeroBalance() {
+    java.lang.Object ref = zeroBalance_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      zeroBalance_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Canonical decimal string at the wallet currency's scale. The datum the
+   * balance is measured from, not a floor — see the wallet's `zero_balance`.
+   * </pre>
+   *
+   * <code>string zero_balance = 18;</code>
+   * @return The bytes for zeroBalance.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getZeroBalanceBytes() {
+    java.lang.Object ref = zeroBalance_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      zeroBalance_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -321,6 +462,18 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(14, getCreatedAt());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(category_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 15, category_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(color_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 16, color_);
+    }
+    if (favorite_ != false) {
+      output.writeBool(17, favorite_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(zeroBalance_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 18, zeroBalance_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -357,6 +510,19 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(14, getCreatedAt());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(category_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(15, category_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(color_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(16, color_);
+    }
+    if (favorite_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(17, favorite_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(zeroBalance_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(18, zeroBalance_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -395,6 +561,14 @@ private static final long serialVersionUID = 0L;
       if (!getCreatedAt()
           .equals(other.getCreatedAt())) return false;
     }
+    if (!getCategory()
+        .equals(other.getCategory())) return false;
+    if (!getColor()
+        .equals(other.getColor())) return false;
+    if (getFavorite()
+        != other.getFavorite()) return false;
+    if (!getZeroBalance()
+        .equals(other.getZeroBalance())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -426,6 +600,15 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + CREATED_AT_FIELD_NUMBER;
       hash = (53 * hash) + getCreatedAt().hashCode();
     }
+    hash = (37 * hash) + CATEGORY_FIELD_NUMBER;
+    hash = (53 * hash) + getCategory().hashCode();
+    hash = (37 * hash) + COLOR_FIELD_NUMBER;
+    hash = (53 * hash) + getColor().hashCode();
+    hash = (37 * hash) + FAVORITE_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getFavorite());
+    hash = (37 * hash) + ZERO_BALANCE_FIELD_NUMBER;
+    hash = (53 * hash) + getZeroBalance().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -580,6 +763,10 @@ private static final long serialVersionUID = 0L;
         createdAtBuilder_.dispose();
         createdAtBuilder_ = null;
       }
+      category_ = "";
+      color_ = "";
+      favorite_ = false;
+      zeroBalance_ = "";
       return this;
     }
 
@@ -644,6 +831,18 @@ private static final long serialVersionUID = 0L;
             : createdAtBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.category_ = category_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.color_ = color_;
+      }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.favorite_ = favorite_;
+      }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.zeroBalance_ = zeroBalance_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -690,6 +889,24 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasCreatedAt()) {
         mergeCreatedAt(other.getCreatedAt());
+      }
+      if (!other.getCategory().isEmpty()) {
+        category_ = other.category_;
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      if (!other.getColor().isEmpty()) {
+        color_ = other.color_;
+        bitField0_ |= 0x00000200;
+        onChanged();
+      }
+      if (other.getFavorite() != false) {
+        setFavorite(other.getFavorite());
+      }
+      if (!other.getZeroBalance().isEmpty()) {
+        zeroBalance_ = other.zeroBalance_;
+        bitField0_ |= 0x00000800;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -761,6 +978,26 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 114
+            case 122: {
+              category_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 122
+            case 130: {
+              color_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 130
+            case 136: {
+              favorite_ = input.readBool();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 136
+            case 146: {
+              zeroBalance_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 146
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1370,6 +1607,279 @@ private static final long serialVersionUID = 0L;
         createdAt_ = null;
       }
       return createdAtBuilder_;
+    }
+
+    private java.lang.Object category_ = "";
+    /**
+     * <code>string category = 15;</code>
+     * @return The category.
+     */
+    public java.lang.String getCategory() {
+      java.lang.Object ref = category_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        category_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string category = 15;</code>
+     * @return The bytes for category.
+     */
+    public com.google.protobuf.ByteString
+        getCategoryBytes() {
+      java.lang.Object ref = category_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        category_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string category = 15;</code>
+     * @param value The category to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCategory(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      category_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string category = 15;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCategory() {
+      category_ = getDefaultInstance().getCategory();
+      bitField0_ = (bitField0_ & ~0x00000100);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string category = 15;</code>
+     * @param value The bytes for category to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCategoryBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      category_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object color_ = "";
+    /**
+     * <code>string color = 16;</code>
+     * @return The color.
+     */
+    public java.lang.String getColor() {
+      java.lang.Object ref = color_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        color_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string color = 16;</code>
+     * @return The bytes for color.
+     */
+    public com.google.protobuf.ByteString
+        getColorBytes() {
+      java.lang.Object ref = color_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        color_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string color = 16;</code>
+     * @param value The color to set.
+     * @return This builder for chaining.
+     */
+    public Builder setColor(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      color_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string color = 16;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearColor() {
+      color_ = getDefaultInstance().getColor();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string color = 16;</code>
+     * @param value The bytes for color to set.
+     * @return This builder for chaining.
+     */
+    public Builder setColorBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      color_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+
+    private boolean favorite_ ;
+    /**
+     * <code>bool favorite = 17;</code>
+     * @return The favorite.
+     */
+    @java.lang.Override
+    public boolean getFavorite() {
+      return favorite_;
+    }
+    /**
+     * <code>bool favorite = 17;</code>
+     * @param value The favorite to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFavorite(boolean value) {
+
+      favorite_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool favorite = 17;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFavorite() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      favorite_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object zeroBalance_ = "";
+    /**
+     * <pre>
+     * Canonical decimal string at the wallet currency's scale. The datum the
+     * balance is measured from, not a floor — see the wallet's `zero_balance`.
+     * </pre>
+     *
+     * <code>string zero_balance = 18;</code>
+     * @return The zeroBalance.
+     */
+    public java.lang.String getZeroBalance() {
+      java.lang.Object ref = zeroBalance_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        zeroBalance_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Canonical decimal string at the wallet currency's scale. The datum the
+     * balance is measured from, not a floor — see the wallet's `zero_balance`.
+     * </pre>
+     *
+     * <code>string zero_balance = 18;</code>
+     * @return The bytes for zeroBalance.
+     */
+    public com.google.protobuf.ByteString
+        getZeroBalanceBytes() {
+      java.lang.Object ref = zeroBalance_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        zeroBalance_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Canonical decimal string at the wallet currency's scale. The datum the
+     * balance is measured from, not a floor — see the wallet's `zero_balance`.
+     * </pre>
+     *
+     * <code>string zero_balance = 18;</code>
+     * @param value The zeroBalance to set.
+     * @return This builder for chaining.
+     */
+    public Builder setZeroBalance(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      zeroBalance_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Canonical decimal string at the wallet currency's scale. The datum the
+     * balance is measured from, not a floor — see the wallet's `zero_balance`.
+     * </pre>
+     *
+     * <code>string zero_balance = 18;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearZeroBalance() {
+      zeroBalance_ = getDefaultInstance().getZeroBalance();
+      bitField0_ = (bitField0_ & ~0x00000800);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Canonical decimal string at the wallet currency's scale. The datum the
+     * balance is measured from, not a floor — see the wallet's `zero_balance`.
+     * </pre>
+     *
+     * <code>string zero_balance = 18;</code>
+     * @param value The bytes for zeroBalance to set.
+     * @return This builder for chaining.
+     */
+    public Builder setZeroBalanceBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      zeroBalance_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:power_finance.events.v1.WalletCreated)

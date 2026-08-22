@@ -43,12 +43,12 @@ class WebhookSecretView(WebhookView, CommandResponseMixin):
     )
     @idempotent(required=False)
     @trace_handler_flow
-    async def post(self, request, pk=None):
+    async def post(self, request, webhook_id=None):
         rotated_webhook, write_version = await RotateWebhookSecretCommandHandler().handle(
             RotateWebhookSecretCommand(
                 user_id=int(request.user.unique_id),
                 user_external_id=request.user.external_id,
-                webhook_id=pk,
+                webhook_id=webhook_id,
             )
         )
 

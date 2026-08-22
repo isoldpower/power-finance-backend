@@ -9,6 +9,7 @@ option java_outer_classname = "TransactionProto";
 
 import "google/protobuf/timestamp.proto";
 
+
 message TransactionCreated {
   string event_id = 1;
   google.protobuf.Timestamp occurred_at = 2;
@@ -20,6 +21,12 @@ message TransactionCreated {
   string amount = 13;
 
   google.protobuf.Timestamp created_at = 14;
+
+  string name = 15;
+  string category = 16;
+  string evidence_url = 17;
+  string origin = 18;
+  string chain_id = 19;
 }
 
 message TransactionDeleted {
@@ -35,6 +42,7 @@ message TransactionDeleted {
   int32 user_id = 12;
   string amount = 13;
   google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp deleted_at = 16;
 }
 
 message TransactionUpdated {
@@ -47,6 +55,20 @@ message TransactionUpdated {
   int32 user_id = 12;
   string previous_amount = 13;
   string new_amount = 14;
+
+  google.protobuf.Timestamp updated_at = 15;
+}
+
+message TransactionMetadataUpdated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string transaction_id = 10;
+  int32 user_id = 11;
+  string name = 12;
+  string category = 13;
+  string evidence_url = 14;
 
   google.protobuf.Timestamp updated_at = 15;
 }

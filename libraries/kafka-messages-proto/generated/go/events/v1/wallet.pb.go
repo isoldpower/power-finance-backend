@@ -32,6 +32,12 @@ type WalletCreated struct {
 	Title         string                 `protobuf:"bytes,12,opt,name=title,proto3" json:"title,omitempty"`
 	CurrencyCode  string                 `protobuf:"bytes,13,opt,name=currency_code,json=currencyCode,proto3" json:"currency_code,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Category      string                 `protobuf:"bytes,15,opt,name=category,proto3" json:"category,omitempty"`
+	Color         string                 `protobuf:"bytes,16,opt,name=color,proto3" json:"color,omitempty"`
+	Favorite      bool                   `protobuf:"varint,17,opt,name=favorite,proto3" json:"favorite,omitempty"`
+	// Canonical decimal string at the wallet currency's scale. The datum the
+	// balance is measured from, not a floor — see the wallet's `zero_balance`.
+	ZeroBalance   string `protobuf:"bytes,18,opt,name=zero_balance,json=zeroBalance,proto3" json:"zero_balance,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -120,6 +126,34 @@ func (x *WalletCreated) GetCreatedAt() *timestamppb.Timestamp {
 		return x.CreatedAt
 	}
 	return nil
+}
+
+func (x *WalletCreated) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *WalletCreated) GetColor() string {
+	if x != nil {
+		return x.Color
+	}
+	return ""
+}
+
+func (x *WalletCreated) GetFavorite() bool {
+	if x != nil {
+		return x.Favorite
+	}
+	return false
+}
+
+func (x *WalletCreated) GetZeroBalance() string {
+	if x != nil {
+		return x.ZeroBalance
+	}
+	return ""
 }
 
 type WalletDeleted struct {
@@ -216,6 +250,13 @@ type WalletUpdated struct {
 	PreviousTitle string                 `protobuf:"bytes,12,opt,name=previous_title,json=previousTitle,proto3" json:"previous_title,omitempty"`
 	NewTitle      string                 `protobuf:"bytes,13,opt,name=new_title,json=newTitle,proto3" json:"new_title,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// Fields 15-18 carry the FULL post-update state, not a diff. PATCH is
+	// partial, so a diff would need a presence flag per field; projecting an
+	// overwrite of the whole mutable set is both smaller and idempotent.
+	Category      string `protobuf:"bytes,15,opt,name=category,proto3" json:"category,omitempty"`
+	Color         string `protobuf:"bytes,16,opt,name=color,proto3" json:"color,omitempty"`
+	Favorite      bool   `protobuf:"varint,17,opt,name=favorite,proto3" json:"favorite,omitempty"`
+	ZeroBalance   string `protobuf:"bytes,18,opt,name=zero_balance,json=zeroBalance,proto3" json:"zero_balance,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -306,11 +347,39 @@ func (x *WalletUpdated) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *WalletUpdated) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *WalletUpdated) GetColor() string {
+	if x != nil {
+		return x.Color
+	}
+	return ""
+}
+
+func (x *WalletUpdated) GetFavorite() bool {
+	if x != nil {
+		return x.Favorite
+	}
+	return false
+}
+
+func (x *WalletUpdated) GetZeroBalance() string {
+	if x != nil {
+		return x.ZeroBalance
+	}
+	return ""
+}
+
 var File_wallet_proto protoreflect.FileDescriptor
 
 const file_wallet_proto_rawDesc = "" +
 	"\n" +
-	"\fwallet.proto\x12\x17power_finance.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xba\x02\n" +
+	"\fwallet.proto\x12\x17power_finance.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xab\x03\n" +
 	"\rWalletCreated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -322,7 +391,11 @@ const file_wallet_proto_rawDesc = "" +
 	"\x05title\x18\f \x01(\tR\x05title\x12#\n" +
 	"\rcurrency_code\x18\r \x01(\tR\fcurrencyCode\x129\n" +
 	"\n" +
-	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xff\x01\n" +
+	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x1a\n" +
+	"\bcategory\x18\x0f \x01(\tR\bcategory\x12\x14\n" +
+	"\x05color\x18\x10 \x01(\tR\x05color\x12\x1a\n" +
+	"\bfavorite\x18\x11 \x01(\bR\bfavorite\x12!\n" +
+	"\fzero_balance\x18\x12 \x01(\tR\vzeroBalance\"\xff\x01\n" +
 	"\rWalletDeleted\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -332,7 +405,7 @@ const file_wallet_proto_rawDesc = "" +
 	" \x01(\tR\bwalletId\x12\x17\n" +
 	"\auser_id\x18\v \x01(\x05R\x06userId\x129\n" +
 	"\n" +
-	"deleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAt\"\xc3\x02\n" +
+	"deleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAt\"\xb4\x03\n" +
 	"\rWalletUpdated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -344,7 +417,11 @@ const file_wallet_proto_rawDesc = "" +
 	"\x0eprevious_title\x18\f \x01(\tR\rpreviousTitle\x12\x1b\n" +
 	"\tnew_title\x18\r \x01(\tR\bnewTitle\x129\n" +
 	"\n" +
-	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtBz\n" +
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1a\n" +
+	"\bcategory\x18\x0f \x01(\tR\bcategory\x12\x14\n" +
+	"\x05color\x18\x10 \x01(\tR\x05color\x12\x1a\n" +
+	"\bfavorite\x18\x11 \x01(\bR\bfavorite\x12!\n" +
+	"\fzero_balance\x18\x12 \x01(\tR\vzeroBalanceBz\n" +
 	"\x1acom.powerfinance.events.v1B\vWalletProtoP\x01ZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
 
 var (

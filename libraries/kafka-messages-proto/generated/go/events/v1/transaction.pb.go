@@ -22,6 +22,9 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// A transaction is one user-stated money operation. The money itself lives in
+// the ledger as one or more append-only flows; these events carry the FOLD of
+// those flows, which is what a reader needs.
 type TransactionCreated struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -30,8 +33,13 @@ type TransactionCreated struct {
 	TransactionId string                 `protobuf:"bytes,10,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
 	WalletId      string                 `protobuf:"bytes,11,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
 	UserId        int32                  `protobuf:"varint,12,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Amount        string                 `protobuf:"bytes,13,opt,name=amount,proto3" json:"amount,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+Amount    string                     `protobuf:"bytes,13,opt,name=amount,proto3" json:"amount,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Name      string                 `protobuf:"bytes,15,opt,name=name,proto3" json:"name,omitempty"`
+	Category      string `protobuf:"bytes,16,opt,name=category,proto3" json:"category,omitempty"`
+	EvidenceUrl   string `protobuf:"bytes,17,opt,name=evidence_url,json=evidenceUrl,proto3" json:"evidence_url,omitempty"`
+	Origin        string `protobuf:"bytes,18,opt,name=origin,proto3" json:"origin,omitempty"`
+	ChainId       string `protobuf:"bytes,19,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -122,6 +130,41 @@ func (x *TransactionCreated) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *TransactionCreated) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *TransactionCreated) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *TransactionCreated) GetEvidenceUrl() string {
+	if x != nil {
+		return x.EvidenceUrl
+	}
+	return ""
+}
+
+func (x *TransactionCreated) GetOrigin() string {
+	if x != nil {
+		return x.Origin
+	}
+	return ""
+}
+
+func (x *TransactionCreated) GetChainId() string {
+	if x != nil {
+		return x.ChainId
+	}
+	return ""
+}
+
 type TransactionDeleted struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -130,8 +173,11 @@ type TransactionDeleted struct {
 	TransactionId string                 `protobuf:"bytes,10,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
 	WalletId      string                 `protobuf:"bytes,11,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
 	UserId        int32                  `protobuf:"varint,12,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// The outstanding amount at cancellation, signed. Reversing it returns the
+	// wallet balance to where it stood before the transaction.
 	Amount        string                 `protobuf:"bytes,13,opt,name=amount,proto3" json:"amount,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	DeletedAt     *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -222,6 +268,15 @@ func (x *TransactionDeleted) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *TransactionDeleted) GetDeletedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DeletedAt
+	}
+	return nil
+}
+
+// An amount restatement, appended to the ledger as an adjusting flow. No HTTP
+// route raises this yet — see API_DIFF.md on adjustments.
 type TransactionUpdated struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	EventId        string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -330,11 +385,121 @@ func (x *TransactionUpdated) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// A PATCH. Carries the full post-update state rather than a diff, since PATCH
+// is partial and an overwrite of the whole mutable set is idempotent.
+type TransactionMetadataUpdated struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	SchemaVersion int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	TransactionId string                 `protobuf:"bytes,10,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	UserId        int32                  `protobuf:"varint,11,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Name          string                 `protobuf:"bytes,12,opt,name=name,proto3" json:"name,omitempty"`
+	Category      string                 `protobuf:"bytes,13,opt,name=category,proto3" json:"category,omitempty"`
+	EvidenceUrl   string                 `protobuf:"bytes,14,opt,name=evidence_url,json=evidenceUrl,proto3" json:"evidence_url,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransactionMetadataUpdated) Reset() {
+	*x = TransactionMetadataUpdated{}
+	mi := &file_transaction_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransactionMetadataUpdated) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransactionMetadataUpdated) ProtoMessage() {}
+
+func (x *TransactionMetadataUpdated) ProtoReflect() protoreflect.Message {
+	mi := &file_transaction_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransactionMetadataUpdated.ProtoReflect.Descriptor instead.
+func (*TransactionMetadataUpdated) Descriptor() ([]byte, []int) {
+	return file_transaction_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *TransactionMetadataUpdated) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *TransactionMetadataUpdated) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *TransactionMetadataUpdated) GetSchemaVersion() int32 {
+	if x != nil {
+		return x.SchemaVersion
+	}
+	return 0
+}
+
+func (x *TransactionMetadataUpdated) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
+}
+
+func (x *TransactionMetadataUpdated) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *TransactionMetadataUpdated) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *TransactionMetadataUpdated) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *TransactionMetadataUpdated) GetEvidenceUrl() string {
+	if x != nil {
+		return x.EvidenceUrl
+	}
+	return ""
+}
+
+func (x *TransactionMetadataUpdated) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 var File_transaction_proto protoreflect.FileDescriptor
 
 const file_transaction_proto_rawDesc = "" +
 	"\n" +
-	"\x11transaction.proto\x12\x17power_finance.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc3\x02\n" +
+	"\x11transaction.proto\x12\x17power_finance.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc9\x03\n" +
 	"\x12TransactionCreated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -346,7 +511,12 @@ const file_transaction_proto_rawDesc = "" +
 	"\auser_id\x18\f \x01(\x05R\x06userId\x12\x16\n" +
 	"\x06amount\x18\r \x01(\tR\x06amount\x129\n" +
 	"\n" +
-	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xc9\x02\n" +
+	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x12\n" +
+	"\x04name\x18\x0f \x01(\tR\x04name\x12\x1a\n" +
+	"\bcategory\x18\x10 \x01(\tR\bcategory\x12!\n" +
+	"\fevidence_url\x18\x11 \x01(\tR\vevidenceUrl\x12\x16\n" +
+	"\x06origin\x18\x12 \x01(\tR\x06origin\x12\x19\n" +
+	"\bchain_id\x18\x13 \x01(\tR\achainId\"\x84\x03\n" +
 	"\x12TransactionDeleted\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -358,7 +528,9 @@ const file_transaction_proto_rawDesc = "" +
 	"\auser_id\x18\f \x01(\x05R\x06userId\x12\x16\n" +
 	"\x06amount\x18\r \x01(\tR\x06amount\x129\n" +
 	"\n" +
-	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtJ\x04\b\x0e\x10\x0f\"\xf3\x02\n" +
+	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"deleted_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAtJ\x04\b\x0e\x10\x0f\"\xf3\x02\n" +
 	"\x12TransactionUpdated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -371,6 +543,19 @@ const file_transaction_proto_rawDesc = "" +
 	"\x0fprevious_amount\x18\r \x01(\tR\x0epreviousAmount\x12\x1d\n" +
 	"\n" +
 	"new_amount\x18\x0e \x01(\tR\tnewAmount\x129\n" +
+	"\n" +
+	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xe9\x02\n" +
+	"\x1aTransactionMetadataUpdated\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
+	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x12%\n" +
+	"\x0eschema_version\x18\x03 \x01(\x05R\rschemaVersion\x12%\n" +
+	"\x0etransaction_id\x18\n" +
+	" \x01(\tR\rtransactionId\x12\x17\n" +
+	"\auser_id\x18\v \x01(\x05R\x06userId\x12\x12\n" +
+	"\x04name\x18\f \x01(\tR\x04name\x12\x1a\n" +
+	"\bcategory\x18\r \x01(\tR\bcategory\x12!\n" +
+	"\fevidence_url\x18\x0e \x01(\tR\vevidenceUrl\x129\n" +
 	"\n" +
 	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x7f\n" +
 	"\x1acom.powerfinance.events.v1B\x10TransactionProtoP\x01ZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
@@ -387,25 +572,29 @@ func file_transaction_proto_rawDescGZIP() []byte {
 	return file_transaction_proto_rawDescData
 }
 
-var file_transaction_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_transaction_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_transaction_proto_goTypes = []any{
-	(*TransactionCreated)(nil),    // 0: power_finance.events.v1.TransactionCreated
-	(*TransactionDeleted)(nil),    // 1: power_finance.events.v1.TransactionDeleted
-	(*TransactionUpdated)(nil),    // 2: power_finance.events.v1.TransactionUpdated
-	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
+	(*TransactionCreated)(nil),         // 0: power_finance.events.v1.TransactionCreated
+	(*TransactionDeleted)(nil),         // 1: power_finance.events.v1.TransactionDeleted
+	(*TransactionUpdated)(nil),         // 2: power_finance.events.v1.TransactionUpdated
+	(*TransactionMetadataUpdated)(nil), // 3: power_finance.events.v1.TransactionMetadataUpdated
+	(*timestamppb.Timestamp)(nil),      // 4: google.protobuf.Timestamp
 }
 var file_transaction_proto_depIdxs = []int32{
-	3, // 0: power_finance.events.v1.TransactionCreated.occurred_at:type_name -> google.protobuf.Timestamp
-	3, // 1: power_finance.events.v1.TransactionCreated.created_at:type_name -> google.protobuf.Timestamp
-	3, // 2: power_finance.events.v1.TransactionDeleted.occurred_at:type_name -> google.protobuf.Timestamp
-	3, // 3: power_finance.events.v1.TransactionDeleted.created_at:type_name -> google.protobuf.Timestamp
-	3, // 4: power_finance.events.v1.TransactionUpdated.occurred_at:type_name -> google.protobuf.Timestamp
-	3, // 5: power_finance.events.v1.TransactionUpdated.updated_at:type_name -> google.protobuf.Timestamp
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	4, // 0: power_finance.events.v1.TransactionCreated.occurred_at:type_name -> google.protobuf.Timestamp
+	4, // 1: power_finance.events.v1.TransactionCreated.created_at:type_name -> google.protobuf.Timestamp
+	4, // 2: power_finance.events.v1.TransactionDeleted.occurred_at:type_name -> google.protobuf.Timestamp
+	4, // 3: power_finance.events.v1.TransactionDeleted.created_at:type_name -> google.protobuf.Timestamp
+	4, // 4: power_finance.events.v1.TransactionDeleted.deleted_at:type_name -> google.protobuf.Timestamp
+	4, // 5: power_finance.events.v1.TransactionUpdated.occurred_at:type_name -> google.protobuf.Timestamp
+	4, // 6: power_finance.events.v1.TransactionUpdated.updated_at:type_name -> google.protobuf.Timestamp
+	4, // 7: power_finance.events.v1.TransactionMetadataUpdated.occurred_at:type_name -> google.protobuf.Timestamp
+	4, // 8: power_finance.events.v1.TransactionMetadataUpdated.updated_at:type_name -> google.protobuf.Timestamp
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_transaction_proto_init() }
@@ -419,7 +608,7 @@ func file_transaction_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_transaction_proto_rawDesc), len(file_transaction_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

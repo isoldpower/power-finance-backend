@@ -8,7 +8,7 @@ from data_write_core.domain.services import reconstruct_balance
 
 from ..bootstrap import get_repository_registry
 from ..dtos import WalletDTO, wallet_to_dto
-from ..interfaces import TransactionRepository, WalletRepository
+from ..interfaces import MoneyFlowRepository, WalletRepository
 from ._wallet_balance import load_balance_inputs
 
 
@@ -22,15 +22,15 @@ class ListFallbackWalletsQueryHandler:
     def __init__(
         self,
         wallet_repository: WalletRepository | None = None,
-        transaction_repository: TransactionRepository | None = None,
+        money_flow_repository: MoneyFlowRepository | None = None,
     ) -> None:
-        if wallet_repository is None or transaction_repository is None:
+        if wallet_repository is None or money_flow_repository is None:
             registry = get_repository_registry()
             wallet_repository = wallet_repository or registry.wallet_repository
-            transaction_repository = transaction_repository or registry.transaction_repository
+            money_flow_repository = money_flow_repository or registry.money_flow_repository
 
         self._wallet_repository = wallet_repository
-        self._transaction_repository = transaction_repository
+        self._transaction_repository = money_flow_repository
 
     async def handle(self, query: ListFallbackWalletsQuery) -> tuple[list[WalletDTO], int]:
         wallets = await self._wallet_repository.get_user_wallets(

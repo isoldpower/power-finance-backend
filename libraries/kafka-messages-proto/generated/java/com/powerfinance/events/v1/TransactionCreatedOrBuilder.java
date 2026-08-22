@@ -74,11 +74,21 @@ public interface TransactionCreatedOrBuilder extends
   int getUserId();
 
   /**
+   * <pre>
+   * Signed: negative means money left the wallet. `type` is this field's sign,
+   * so the two can never disagree and neither is stored twice.
+   * </pre>
+   *
    * <code>string amount = 13;</code>
    * @return The amount.
    */
   java.lang.String getAmount();
   /**
+   * <pre>
+   * Signed: negative means money left the wallet. `type` is this field's sign,
+   * so the two can never disagree and neither is stored twice.
+   * </pre>
+   *
    * <code>string amount = 13;</code>
    * @return The bytes for amount.
    */
@@ -99,4 +109,74 @@ public interface TransactionCreatedOrBuilder extends
    * <code>.google.protobuf.Timestamp created_at = 14;</code>
    */
   com.google.protobuf.TimestampOrBuilder getCreatedAtOrBuilder();
+
+  /**
+   * <code>string name = 15;</code>
+   * @return The name.
+   */
+  java.lang.String getName();
+  /**
+   * <code>string name = 15;</code>
+   * @return The bytes for name.
+   */
+  com.google.protobuf.ByteString
+      getNameBytes();
+
+  /**
+   * <pre>
+   * Empty string means absent — proto3 has no null, and neither field has a
+   * meaningful empty value of its own.
+   * </pre>
+   *
+   * <code>string category = 16;</code>
+   * @return The category.
+   */
+  java.lang.String getCategory();
+  /**
+   * <pre>
+   * Empty string means absent — proto3 has no null, and neither field has a
+   * meaningful empty value of its own.
+   * </pre>
+   *
+   * <code>string category = 16;</code>
+   * @return The bytes for category.
+   */
+  com.google.protobuf.ByteString
+      getCategoryBytes();
+
+  /**
+   * <code>string evidence_url = 17;</code>
+   * @return The evidenceUrl.
+   */
+  java.lang.String getEvidenceUrl();
+  /**
+   * <code>string evidence_url = 17;</code>
+   * @return The bytes for evidenceUrl.
+   */
+  com.google.protobuf.ByteString
+      getEvidenceUrlBytes();
+
+  /**
+   * <code>string origin = 18;</code>
+   * @return The origin.
+   */
+  java.lang.String getOrigin();
+  /**
+   * <code>string origin = 18;</code>
+   * @return The bytes for origin.
+   */
+  com.google.protobuf.ByteString
+      getOriginBytes();
+
+  /**
+   * <code>string chain_id = 19;</code>
+   * @return The chainId.
+   */
+  java.lang.String getChainId();
+  /**
+   * <code>string chain_id = 19;</code>
+   * @return The bytes for chainId.
+   */
+  com.google.protobuf.ByteString
+      getChainIdBytes();
 }

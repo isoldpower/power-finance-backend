@@ -2,21 +2,22 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from ..entities import BalanceCheckpointEntity, TransactionEntity, WalletEntity
+from ..entities import BalanceCheckpointEntity, MoneyFlowEntity, WalletEntity
+from ..entities.wallet import UNCHANGED
 from ..events import WalletDeletedEvent, WalletUpdatedEvent
-from ..exceptions import InvalidTransactionAmountError
-from ..value_objects import TransactionData
+from ..exceptions import WalletClosedError, WalletNotEmptyError
+from ..value_objects import WalletData
 from ._aggregate_root import AggregateRoot
 
 
 class WalletAggregate(AggregateRoot[WalletEntity]):
     _checkpoint: BalanceCheckpointEntity | None
-    _unsettled_transactions: list[TransactionEntity]
+    _unsettled_transactions: list[MoneyFlowEntity]
 
     def __init__(
         self,
         wallet_entity: WalletEntity,
-        unsettled_transactions: list[TransactionEntity],
+        unsettled_transactions: list[MoneyFlowEntity],
         balance_checkpoint: BalanceCheckpointEntity | None,
     ) -> None:
         super().__init__(root=wallet_entity)
@@ -34,27 +35,29 @@ class WalletAggregate(AggregateRoot[WalletEntity]):
 
         return base + unsettled
 
-    def apply_transaction(self, amount: Decimal) -> "TransactionEntity":
-        if amount == Decimal("0"):
-            raise InvalidTransactionAmountError(amount=amount)
+    @property
+    def owned(self) -> Decimal:
+        return self.balance - self.root.zero_balance
 
-        new_transaction = TransactionEntity.create(
-            user_id=int(self.root.user_id),
-            data=TransactionData(
-                source_wallet_id=UUID(self.unique_id),
-                amount=amount,
-                cancels_other=None,
-                adjusts_other=None,
-            ),
-            _event_collector=self.event_collector,
-        )
+    @property
+    def is_empty(self) -> bool:
+        return self.owned == Decimal("0")
 
-        self._unsettled_transactions.append(new_transaction)
-        return new_transaction
+    def record(self, flow: MoneyFlowEntity) -> None:
+        if self.root.deleted_at is not None:
+            raise WalletClosedError(UUID(self.unique_id))
+
+        self._unsettled_transactions.append(flow)
 
     def soft_delete(self, now: datetime) -> None:
         if self.root.deleted_at is not None:
             return
+
+        if not self.is_empty:
+            raise WalletNotEmptyError(
+                balance=self.balance,
+                zero_balance=self.root.zero_balance,
+            )
 
         self.root.mark_deleted(now)
         self.event_collector.collect(
@@ -66,17 +69,49 @@ class WalletAggregate(AggregateRoot[WalletEntity]):
         )
 
     def rename(self, new_title: str, now: datetime) -> None:
+        self.update_metadata(now=now, title=new_title)
+
+    def replace(self, data: WalletData, now: datetime) -> None:
+        self.update_metadata(
+            now=now,
+            title=data.title,
+            category=data.category,
+            color=data.color,
+            favorite=data.favorite,
+            zero_balance=data.zero_balance,
+        )
+
+    def update_metadata(
+        self,
+        now: datetime,
+        title: str | object = UNCHANGED,
+        category: str | object = UNCHANGED,
+        color: str | object = UNCHANGED,
+        favorite: bool | object = UNCHANGED,
+        zero_balance: Decimal | object = UNCHANGED,
+    ) -> None:
         previous_title = self.root.title
-        if new_title == previous_title:
+        changed = self.root.update_metadata(
+            now=now,
+            title=title,
+            category=category,
+            color=color,
+            favorite=favorite,
+            zero_balance=zero_balance,
+        )
+        if not changed:
             return
 
-        self.root.rename(new_title=new_title, now=now)
         self.event_collector.collect(
             WalletUpdatedEvent(
                 wallet_id=UUID(self.unique_id),
                 user_id=int(self.root.user_id),
                 previous_title=previous_title,
-                new_title=new_title,
+                new_title=self.root.title,
                 updated_at=now,
+                category=self.root.category,
+                color=self.root.color,
+                favorite=self.root.favorite,
+                zero_balance=self.root.zero_balance,
             )
         )

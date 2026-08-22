@@ -1,3 +1,4 @@
+from datetime import UTC
 from decimal import Decimal
 
 from django.db.models import F
@@ -22,17 +23,14 @@ class RemoveTransactionReadModel(Effect):
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, TransactionDeleted)
         await handle_database_errors(
-            self._remove_transaction,
+            self._cancel_transaction,
             payload,
             resource_id=payload.transaction_id,
         )
 
-    async def _remove_transaction(
-        self,
-        payload: TransactionDeleted,
-    ) -> None:
+    async def _cancel_transaction(self, payload: TransactionDeleted) -> None:
         async with aatomic():
-            cancelled_transaction = await self._try_delete_transaction(payload.transaction_id)
+            cancelled_transaction = await self._try_cancel(payload)
 
             if cancelled_transaction:
                 await self._apply_wallet_update(
@@ -40,33 +38,39 @@ class RemoveTransactionReadModel(Effect):
                     cancelled_amount=cancelled_transaction.amount,
                 )
 
-    async def _try_delete_transaction(
-        self,
-        transaction_id: str,
-    ) -> TransactionReadModel | None:
+    async def _try_cancel(self, payload: TransactionDeleted) -> TransactionReadModel | None:
         transaction_row = await (
-            TransactionReadModel.objects.select_for_update().filter(id=transaction_id).afirst()
+            TransactionReadModel.objects.select_for_update()
+            .filter(id=payload.transaction_id)
+            .afirst()
         )
 
         if transaction_row is None:
-            log_transaction_postgres_absent_on_delete(transaction_id)
-
+            log_transaction_postgres_absent_on_delete(payload.transaction_id)
+            return None
+        elif transaction_row.deleted_at is not None:
             return None
 
-        await transaction_row.adelete()
-        log_transaction_postgres_removed(transaction_id, transaction_row.amount)
+        deleted_at = payload.deleted_at.ToDatetime(tzinfo=UTC)
+        transaction_row.deleted_at = deleted_at
+        transaction_row.updated_at = deleted_at
+        await transaction_row.asave(update_fields=["deleted_at", "updated_at"])
 
+        log_transaction_postgres_removed(payload.transaction_id, transaction_row.amount)
         return transaction_row
 
     async def _apply_wallet_update(
         self,
         wallet_id: str,
         cancelled_amount: Decimal,
-    ):
+    ) -> None:
         (
             await WalletReadModel.objects.filter(id=wallet_id).aupdate(
                 balance=F("balance") - cancelled_amount
             )
         )
 
-        log_transaction_postgres_wallet_reversal(wallet_id, cancelled_amount)
+        log_transaction_postgres_wallet_reversal(
+            wallet_id,
+            cancelled_amount,
+        )

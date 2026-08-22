@@ -17,11 +17,16 @@ class WalletModel(models.Model):
     deleted_at = models.DateTimeField(blank=True, null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, related_name="owner")
 
+    category = models.CharField(max_length=120, blank=True, default="")
+    color = models.CharField(max_length=9, blank=True, default="")
+    favorite = models.BooleanField(default=False)
+    zero_balance = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+
     objects = SoftDeleteManager()
 
     class Meta:
         db_table = "finances_wallets"
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *arguments, **keyword_arguments):
         self.deleted_at = timezone.now()
         self.save(update_fields=["deleted_at", "updated_at"])

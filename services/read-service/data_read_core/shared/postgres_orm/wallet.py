@@ -11,10 +11,22 @@ class WalletReadModel(models.Model):
     balance = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField(null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    category = models.CharField(max_length=120, blank=True, default="")
+    color = models.CharField(max_length=9, blank=True, default="")
+    favorite = models.BooleanField(default=False)
+    zero_balance = models.DecimalField(max_digits=20, decimal_places=2, default=0)
 
     class Meta:
         db_table = "read_wallets"
         indexes = [
+            models.Index(
+                fields=["user_id", "-favorite", "-created_at", "-id"],
+                include=["title", "currency_code", "balance", "zero_balance"],
+                condition=models.Q(deleted_at__isnull=True),
+                name="rw_user_favorite_idx",
+            ),
             models.Index(
                 fields=["user_id", "-created_at", "-id"],
                 include=["title", "currency_code", "balance"],

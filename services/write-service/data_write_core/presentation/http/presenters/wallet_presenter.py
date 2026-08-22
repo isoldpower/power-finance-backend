@@ -10,13 +10,15 @@ class WalletHttpPresenter:
         return {
             "id": str(wallet.id),
             "name": wallet.name,
-            "balance": await money_at_scale(
-                wallet.balance_amount,
-                wallet.currency,
-            ),
             "created_at": to_iso(wallet.created_at),
             "updated_at": to_iso(wallet.updated_at),
-            "deleted_at": None,
+            "deleted_at": to_iso(wallet.deleted_at),
+            "category": wallet.category,
+            "currency": wallet.currency,
+            "money": await money_at_scale(wallet.balance_amount, wallet.currency),
+            "zero_balance": await money_at_scale(wallet.zero_balance, wallet.currency),
+            "favorite": wallet.favorite,
+            "color": wallet.color,
         }
 
     @staticmethod

@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cwallet.proto\x12\x17power_finance.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe4\x01\n\rWalletCreated\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12/\n\x0boccurred_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x16\n\x0eschema_version\x18\x03 \x01(\x05\x12\x11\n\twallet_id\x18\n \x01(\t\x12\x0f\n\x07user_id\x18\x0b \x01(\x05\x12\r\n\x05title\x18\x0c \x01(\t\x12\x15\n\rcurrency_code\x18\r \x01(\t\x12.\n\ncreated_at\x18\x0e \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"\xbe\x01\n\rWalletDeleted\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12/\n\x0boccurred_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x16\n\x0eschema_version\x18\x03 \x01(\x05\x12\x11\n\twallet_id\x18\n \x01(\t\x12\x0f\n\x07user_id\x18\x0b \x01(\x05\x12.\n\ndeleted_at\x18\x0c \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"\xe9\x01\n\rWalletUpdated\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12/\n\x0boccurred_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x16\n\x0eschema_version\x18\x03 \x01(\x05\x12\x11\n\twallet_id\x18\n \x01(\t\x12\x0f\n\x07user_id\x18\x0b \x01(\x05\x12\x16\n\x0eprevious_title\x18\x0c \x01(\t\x12\x11\n\tnew_title\x18\r \x01(\t\x12.\n\nupdated_at\x18\x0e \x01(\x0b\x32\x1a.google.protobuf.TimestampBz\n\x1a\x63om.powerfinance.events.v1B\x0bWalletProtoP\x01ZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cwallet.proto\x12\x17power_finance.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xad\x02\n\rWalletCreated\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12/\n\x0boccurred_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x16\n\x0eschema_version\x18\x03 \x01(\x05\x12\x11\n\twallet_id\x18\n \x01(\t\x12\x0f\n\x07user_id\x18\x0b \x01(\x05\x12\r\n\x05title\x18\x0c \x01(\t\x12\x15\n\rcurrency_code\x18\r \x01(\t\x12.\n\ncreated_at\x18\x0e \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x10\n\x08\x63\x61tegory\x18\x0f \x01(\t\x12\r\n\x05\x63olor\x18\x10 \x01(\t\x12\x10\n\x08\x66\x61vorite\x18\x11 \x01(\x08\x12\x14\n\x0czero_balance\x18\x12 \x01(\t\"\xbe\x01\n\rWalletDeleted\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12/\n\x0boccurred_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x16\n\x0eschema_version\x18\x03 \x01(\x05\x12\x11\n\twallet_id\x18\n \x01(\t\x12\x0f\n\x07user_id\x18\x0b \x01(\x05\x12.\n\ndeleted_at\x18\x0c \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"\xb2\x02\n\rWalletUpdated\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12/\n\x0boccurred_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x16\n\x0eschema_version\x18\x03 \x01(\x05\x12\x11\n\twallet_id\x18\n \x01(\t\x12\x0f\n\x07user_id\x18\x0b \x01(\x05\x12\x16\n\x0eprevious_title\x18\x0c \x01(\t\x12\x11\n\tnew_title\x18\r \x01(\t\x12.\n\nupdated_at\x18\x0e \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x10\n\x08\x63\x61tegory\x18\x0f \x01(\t\x12\r\n\x05\x63olor\x18\x10 \x01(\t\x12\x10\n\x08\x66\x61vorite\x18\x11 \x01(\x08\x12\x14\n\x0czero_balance\x18\x12 \x01(\tBz\n\x1a\x63om.powerfinance.events.v1B\x0bWalletProtoP\x01ZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,9 +34,9 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'\n\032com.powerfinance.events.v1B\013WalletProtoP\001ZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1'
   _globals['_WALLETCREATED']._serialized_start=75
-  _globals['_WALLETCREATED']._serialized_end=303
-  _globals['_WALLETDELETED']._serialized_start=306
-  _globals['_WALLETDELETED']._serialized_end=496
-  _globals['_WALLETUPDATED']._serialized_start=499
-  _globals['_WALLETUPDATED']._serialized_end=732
+  _globals['_WALLETCREATED']._serialized_end=376
+  _globals['_WALLETDELETED']._serialized_start=379
+  _globals['_WALLETDELETED']._serialized_end=569
+  _globals['_WALLETUPDATED']._serialized_start=572
+  _globals['_WALLETUPDATED']._serialized_end=878
 # @@protoc_insertion_point(module_scope)

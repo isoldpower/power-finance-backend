@@ -12,14 +12,17 @@ from .notification_serializer import (
     PaginatedNotificationResponseSerializer,
 )
 from .transaction_serializer import (
+    EnvelopedTransactionChainResponseSerializer,
     EnvelopedTransactionResponseSerializer,
+    PaginatedTransactionFlowSerializer,
     PaginatedTransactionResponseSerializer,
-    TransactionPreviewResponseSerializer,
     TransactionResponseSerializer,
 )
 from .wallet_serializer import (
+    EnvelopedWalletDetailResponseSerializer,
     EnvelopedWalletResponseSerializer,
     PaginatedWalletResponseSerializer,
+    WalletDetailResponseSerializer,
     WalletResponseSerializer,
 )
 from .webhook_serializer import (
@@ -37,7 +40,9 @@ __all__ = [
     "AcknowledgedNotificationsResponseSerializer",
     "CollectionMetaSerializer",
     "EnvelopedNotificationResponseSerializer",
+    "EnvelopedTransactionChainResponseSerializer",
     "EnvelopedTransactionResponseSerializer",
+    "EnvelopedWalletDetailResponseSerializer",
     "EnvelopedWalletResponseSerializer",
     "EnvelopedWebhookResponseSerializer",
     "EnvelopedWebhookSubscriptionResponseSerializer",
@@ -46,12 +51,13 @@ __all__ = [
     "MutationMetaSerializer",
     "NotificationResponseSerializer",
     "PaginatedNotificationResponseSerializer",
+    "PaginatedTransactionFlowSerializer",
     "PaginatedTransactionResponseSerializer",
     "PaginatedWalletResponseSerializer",
     "PaginatedWebhookResponseSerializer",
     "PaginatedWebhookSubscriptionResponseSerializer",
-    "TransactionPreviewResponseSerializer",
     "TransactionResponseSerializer",
+    "WalletDetailResponseSerializer",
     "WalletResponseSerializer",
     "WebhookResponseSerializer",
     "WebhookSubscriptionResponseSerializer",

@@ -6,6 +6,7 @@ from redis.asyncio import Redis
 from data_read_core.shared.redis_cache import get_redis
 
 CACHE_TTL_SECONDS = 300
+WALLET_CACHE_SCHEMA = "s2"
 
 
 def get_filter_hash(filters: dict) -> str:
@@ -23,7 +24,10 @@ def get_list_cache_key(
     limit: int,
     cursor: str,
 ) -> str:
-    return f"read:wallets:{user_id}:v{version}:f{filter_hash}:l{limit}:c{cursor}"
+    return (
+        f"read:wallets:{WALLET_CACHE_SCHEMA}:{user_id}"
+        f":v{version}:f{filter_hash}:l{limit}:c{cursor}"
+    )
 
 
 def get_list_version_key(user_id: int) -> str:

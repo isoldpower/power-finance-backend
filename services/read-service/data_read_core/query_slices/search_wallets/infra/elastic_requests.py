@@ -18,6 +18,7 @@ async def search_owned_wallets(
             "bool": {
                 "must": [filter_query],
                 "filter": [{"term": {"user_id": user_id}}],
+                "must_not": [{"exists": {"field": "deleted_at"}}],
             }
         },
         **elasticsearch_page_arguments(page),

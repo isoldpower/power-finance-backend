@@ -53,6 +53,15 @@ class WalletCurrencyImmutableError(DomainError):
         )
 
 
+class WalletNotEmptyError(DomainError):
+    def __init__(self, balance: Decimal, zero_balance: Decimal) -> None:
+        self.balance = balance
+        self.zero_balance = zero_balance
+        super().__init__(
+            f"Wallet is not empty: balance {balance} differs from its zero point {zero_balance}."
+        )
+
+
 class CurrencyMismatchError(DomainError):
     def __init__(self, from_currency: str, to_currency: str) -> None:
         self.from_currency = from_currency
@@ -99,13 +108,55 @@ class TransactionDoesNotBelongToWalletError(DomainError):
         super().__init__(f"Transaction {transaction_id} does not belong to wallet {wallet_id}.")
 
 
+class TransactionDirectionChangeError(DomainError):
+    def __init__(self, transaction_id: UUID, current_type: str, requested_type: str) -> None:
+        self.transaction_id = transaction_id
+        self.current_type = current_type
+        self.requested_type = requested_type
+        super().__init__(
+            f"Transaction {transaction_id} is an {current_type} and cannot be adjusted "
+            f"into an {requested_type}."
+        )
+
+
+class TransactionChainCycleError(DomainError):
+    def __init__(self) -> None:
+        super().__init__("Chain entries form a cycle through their `after` references.")
+
+
+class TransactionChainUnknownReferenceError(DomainError):
+    def __init__(self, index: int, reference: str) -> None:
+        self.index = index
+        self.reference = reference
+        super().__init__(f"Chain entry {index} references unknown temporary id {reference!r}.")
+
+
+class TransactionChainTooLongError(DomainError):
+    def __init__(self, length: int, maximum: int) -> None:
+        self.length = length
+        self.maximum = maximum
+        super().__init__(f"A chain carries at most {maximum} entries, got {length}.")
+
+
+class TransactionChainNotFoundError(DomainError):
+    def __init__(self, chain_id: UUID) -> None:
+        self.chain_id = chain_id
+        super().__init__(f"Transaction chain {chain_id} not found.")
+
+
+class WalletClosedError(DomainError):
+    def __init__(self, wallet_id: UUID) -> None:
+        self.wallet_id = wallet_id
+        super().__init__(f"Wallet {wallet_id} is closed and cannot take new transactions.")
+
+
 class TransactionAlreadyCancelledError(DomainError):
     def __init__(self, transaction_id: UUID) -> None:
         self.transaction_id = transaction_id
         super().__init__(f"Transaction {transaction_id} has already been cancelled.")
 
 
-class ConflictingTransactionDataError(DomainError):
+class ConflictingMoneyFlowDataError(DomainError):
     def __init__(self) -> None:
         super().__init__("Transaction cannot both cancel and adjust another transaction.")
 

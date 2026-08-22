@@ -1,7 +1,3 @@
-"""Keyset pagination: an `ordering` to walk, a `cursor` naming a position in it,
-a `scan` that says which way to read, and a `store` adapter to query with.
-"""
-
 from .config import (
     CURSOR_PARAMETER_NAME,
     DEFAULT_LIMIT,
@@ -24,8 +20,10 @@ from .ordering import (
     BOOLEAN_CODEC,
     CREATED_AT_DESC,
     DATETIME_CODEC,
+    FAVORITE_CREATED_AT_DESC,
     INTEGER_CODEC,
     TEXT_CODEC,
+    TRANSACTION_FEED,
     UUID_CODEC,
     BooleanCodec,
     DateTimeCodec,
@@ -46,6 +44,8 @@ from .stores import apply_keyset, keyset_predicate, keyset_slice
 __all__ = [
     "BOOLEAN_CODEC",
     "CREATED_AT_DESC",
+    "FAVORITE_CREATED_AT_DESC",
+    "TRANSACTION_FEED",
     "CURSOR_CODEC",
     "CURSOR_PARAMETER_NAME",
     "CURSOR_VERSION",

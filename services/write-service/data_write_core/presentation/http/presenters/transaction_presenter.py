@@ -1,9 +1,11 @@
 from write_service.common.timestamps import to_iso
 
-from data_write_core.application.dtos import TransactionDTO, TransactionPlainDTO
-from data_write_core.application.money_scales import amount_at_scale
-
-from .wallet_presenter import WalletHttpPresenter
+from data_write_core.application.dtos import (
+    TransactionChainDTO,
+    TransactionDTO,
+    TransactionPlainDTO,
+)
+from data_write_core.application.money_scales import amount_at_scale, money_at_scale
 
 
 class TransactionHttpPresenter:
@@ -11,21 +13,32 @@ class TransactionHttpPresenter:
     async def present_one(transaction: TransactionDTO) -> dict:
         return {
             "id": str(transaction.id),
-            "amount": await amount_at_scale(
-                transaction.amount,
-                transaction.currency_code,
-            ),
-            "currency": transaction.currency_code,
-            "wallet": await WalletHttpPresenter.present_one(transaction.source_wallet),
-            "cancels_other": (
-                str(transaction.cancels_other) if transaction.cancels_other else None
-            ),
-            "adjusts_other": (
-                str(transaction.adjusts_other) if transaction.adjusts_other else None
-            ),
+            "name": transaction.name,
             "created_at": to_iso(transaction.created_at),
-            "updated_at": None,
-            "deleted_at": None,
+            "updated_at": to_iso(transaction.updated_at),
+            "deleted_at": to_iso(transaction.deleted_at),
+            "money": await money_at_scale(transaction.amount, transaction.currency_code),
+            "type": str(transaction.transaction_type),
+            "origin": str(transaction.origin),
+            "wallet": {
+                "id": str(transaction.wallet.id),
+                "name": transaction.wallet.name,
+            },
+            "category": transaction.category,
+            "chain_id": str(transaction.chain_id) if transaction.chain_id else None,
+        }
+
+    @staticmethod
+    async def present_previews(transactions: list[TransactionDTO]) -> list[dict]:
+        return [
+            await TransactionHttpPresenter.present_one(transaction) for transaction in transactions
+        ]
+
+    @staticmethod
+    async def present_chain(chain: TransactionChainDTO) -> dict:
+        return {
+            "chain_id": str(chain.chain_id),
+            "transactions": await TransactionHttpPresenter.present_previews(chain.transactions),
         }
 
     @staticmethod

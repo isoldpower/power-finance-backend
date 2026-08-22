@@ -1,10 +1,3 @@
-"""Postgres projection effects — exercised against the real read models.
-
-Marked ``django_db(transaction=True)`` because the effects open
-``aatomic()`` blocks and use ``select_for_update`` / ``F`` expressions that
-must run on a real connection.
-"""
-
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -102,12 +95,24 @@ async def test_update_missing_wallet_is_a_noop():
     assert not await WalletReadModel.objects.filter(id=WALLET_ID).aexists()
 
 
-async def test_remove_wallet_deletes_row():
+async def test_remove_wallet_closes_row_without_dropping_it():
+    """A closed wallet leaves lists and search but keeps existing — its
+    transactions stay queryable and it still resolves by id."""
+
     await _make_wallet()
 
-    await RemoveWalletReadModel().apply(make_event(WalletDeleted(wallet_id=WALLET_ID, user_id=7)))
+    await RemoveWalletReadModel().apply(
+        make_event(
+            WalletDeleted(
+                wallet_id=WALLET_ID,
+                user_id=7,
+                deleted_at=_ts(datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)),
+            )
+        )
+    )
 
-    assert not await WalletReadModel.objects.filter(id=WALLET_ID).aexists()
+    wallet = await WalletReadModel.objects.aget(id=WALLET_ID)
+    assert wallet.deleted_at == datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
 
 
 async def test_update_transaction_adjusts_wallet_balance_by_delta():
@@ -144,16 +149,49 @@ async def test_update_transaction_to_same_amount_leaves_balance():
     assert wallet.balance == Decimal("100")
 
 
-async def test_remove_transaction_reverses_wallet_balance():
+async def test_remove_transaction_cancels_it_and_reverses_the_balance():
+    """The row survives with the amount it was FOR — that is what DELETE echoes
+    back. Only the wallet balance moves, mirroring the inverse ledger flow."""
+
     await _make_wallet(balance=Decimal("100"))
     await _make_transaction(Decimal("40"))
 
     await RemoveTransactionReadModel().apply(
-        make_event(TransactionDeleted(transaction_id=TX_ID, wallet_id=WALLET_ID, user_id=7))
+        make_event(
+            TransactionDeleted(
+                transaction_id=TX_ID,
+                wallet_id=WALLET_ID,
+                user_id=7,
+                deleted_at=_ts(datetime(2026, 2, 1, tzinfo=UTC)),
+            )
+        )
     )
 
     wallet = await WalletReadModel.objects.aget(id=WALLET_ID)
-    assert not await TransactionReadModel.objects.filter(id=TX_ID).aexists()
+    transaction = await TransactionReadModel.objects.aget(id=TX_ID)
+    assert transaction.deleted_at == datetime(2026, 2, 1, tzinfo=UTC)
+    assert transaction.amount == Decimal("40")
+    assert wallet.balance == Decimal("60")
+
+
+async def test_cancelling_twice_does_not_reverse_the_balance_twice():
+    """A redelivered TransactionDeleted must not invent money."""
+
+    await _make_wallet(balance=Decimal("100"))
+    await _make_transaction(Decimal("40"))
+    event = make_event(
+        TransactionDeleted(
+            transaction_id=TX_ID,
+            wallet_id=WALLET_ID,
+            user_id=7,
+            deleted_at=_ts(datetime(2026, 2, 1, tzinfo=UTC)),
+        )
+    )
+
+    await RemoveTransactionReadModel().apply(event)
+    await RemoveTransactionReadModel().apply(event)
+
+    wallet = await WalletReadModel.objects.aget(id=WALLET_ID)
     assert wallet.balance == Decimal("60")
 
 

@@ -2,22 +2,29 @@ from write_service.common.timestamps import to_iso
 
 from data_write_core.application.dtos import (
     NotificationDTO,
-    TransactionPlainDTO,
+    TransactionDTO,
     WalletDTO,
     WebhookDTO,
     WebhookSubscriptionDTO,
 )
-from data_write_core.application.money_scales import amount_at_scale, money_at_scale
+from data_write_core.application.money_scales import money_at_scale
+from data_write_core.application.queries import FallbackWalletDetail
+from data_write_core.presentation.http.presenters import TransactionHttpPresenter
 
 
 async def present_wallet(wallet: WalletDTO) -> dict:
     return {
         "id": str(wallet.id),
         "name": wallet.name,
-        "balance": await money_at_scale(wallet.balance_amount, wallet.currency),
         "created_at": to_iso(wallet.created_at),
         "updated_at": to_iso(wallet.updated_at),
-        "deleted_at": None,
+        "deleted_at": to_iso(wallet.deleted_at),
+        "category": wallet.category,
+        "currency": wallet.currency,
+        "money": await money_at_scale(wallet.balance_amount, wallet.currency),
+        "zero_balance": await money_at_scale(wallet.zero_balance, wallet.currency),
+        "favorite": wallet.favorite,
+        "color": wallet.color,
     }
 
 
@@ -25,20 +32,23 @@ async def present_wallets(wallets: list[WalletDTO]) -> list[dict]:
     return [await present_wallet(wallet) for wallet in wallets]
 
 
-async def present_transaction(transaction: TransactionPlainDTO) -> dict:
+async def present_wallet_detail(detail: FallbackWalletDetail) -> dict:
+    currency = detail.wallet.currency
+
     return {
-        "id": str(transaction.id),
-        "wallet_id": str(transaction.source_wallet_id),
-        "amount": await amount_at_scale(transaction.amount, transaction.currency_code),
-        "currency": transaction.currency_code,
-        "occurred_at": to_iso(transaction.created_at),
-        "created_at": to_iso(transaction.created_at),
-        "updated_at": None,
-        "deleted_at": None,
+        **await present_wallet(detail.wallet),
+        "period": {
+            "inflow": await money_at_scale(detail.inflow, currency),
+            "outflow": await money_at_scale(detail.outflow, currency),
+        },
     }
 
 
-async def present_transactions(transactions: list[TransactionPlainDTO]) -> list[dict]:
+async def present_transaction(transaction: TransactionDTO) -> dict:
+    return await TransactionHttpPresenter.present_one(transaction)
+
+
+async def present_transactions(transactions: list[TransactionDTO]) -> list[dict]:
     return [await present_transaction(transaction) for transaction in transactions]
 
 

@@ -35,22 +35,22 @@ from ._serializers import EnvelopedNotificationDetailSerializer
 )
 @async_api_view(["GET"])
 @read_at_least_gate
-async def get_notification(request, pk=None):
+async def get_notification(request, notification_id=None):
     logger = get_query_logger("get_notification")
     log_request_received(
         logger,
         "get_notification",
-        id=pk,
+        id=notification_id,
         user_id=request.user.id,
     )
 
     fetched = await GetNotificationQueryHandler().handle(
-        GetNotificationQuery(user_id=request.user.id, notification_id=pk)
+        GetNotificationQuery(user_id=request.user.id, notification_id=notification_id)
     )
     log_request_served(
         logger,
         "get_notification",
-        id=pk,
+        id=notification_id,
     )
 
     return ok(

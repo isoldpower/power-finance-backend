@@ -3,18 +3,33 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
+from data_write_core.domain.value_objects import TransactionOrigin, TransactionType
+
 from .wallet_dto import WalletDTO
 
 
 @dataclass(frozen=True)
 class TransactionDTO:
     id: UUID
+    user_id: int
+    name: str
     amount: Decimal
     currency_code: str
-    source_wallet: WalletDTO
+    transaction_type: TransactionType
+    origin: TransactionOrigin
+    wallet: WalletDTO
     created_at: datetime
-    cancels_other: UUID | None = None
-    adjusts_other: UUID | None = None
+    updated_at: datetime | None = None
+    deleted_at: datetime | None = None
+    category: str | None = None
+    evidence_url: str | None = None
+    chain_id: UUID | None = None
+
+
+@dataclass(frozen=True)
+class TransactionChainDTO:
+    chain_id: UUID
+    transactions: list[TransactionDTO]
 
 
 @dataclass(frozen=True)
@@ -24,5 +39,6 @@ class TransactionPlainDTO:
     currency_code: str
     source_wallet_id: str
     created_at: datetime
+    transaction_id: UUID | None = None
     cancels_other: UUID | None = None
     adjusts_other: UUID | None = None

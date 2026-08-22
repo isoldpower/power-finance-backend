@@ -21,9 +21,14 @@ def _wallet(wallet_id: str = "w1", user_id: int = 7) -> WalletDTO:
         user_id=user_id,
         name="Main",
         balance_amount="100.00",
+        zero_balance_amount="0.00",
         currency="USD",
         created_at="2026-01-01T00:00:00+00:00",
         updated_at=None,
+        deleted_at=None,
+        category="",
+        color="",
+        favorite=False,
     )
 
 

@@ -45,12 +45,12 @@ class WebhookEventResourceView(WebhookView, CommandResponseMixin):
     )
     @idempotent(required=False)
     @trace_handler_flow
-    async def delete(self, request, pk=None, subscription_id=None):
+    async def delete(self, request, webhook_id=None, subscription_id=None):
         removed, write_version = await RemoveWebhookSubscriptionCommandHandler().handle(
             RemoveWebhookSubscriptionCommand(
                 user_id=int(request.user.unique_id),
                 user_external_id=request.user.external_id,
-                webhook_id=pk,
+                webhook_id=webhook_id,
                 subscription_id=subscription_id,
             )
         )

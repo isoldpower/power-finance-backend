@@ -6,7 +6,11 @@ from data_read_core.shared.logging import (
     log_request_received,
     log_request_served,
 )
-from data_read_core.shared.pagination import CREATED_AT_DESC, PageRequest, build_page
+from data_read_core.shared.pagination import (
+    FAVORITE_CREATED_AT_DESC,
+    PageRequest,
+    build_page,
+)
 from data_read_core.shared.read_at_least import read_at_least_gate
 from data_read_core.shared.rest_framework import (
     CURSOR_PARAMETER,
@@ -24,7 +28,10 @@ from ._serializers import PaginatedWalletPreviewSerializer
 @extend_schema(
     operation_id="wallets_list",
     summary="List wallets",
-    description="Retrieve a page of your wallets, newest first.",
+    description=(
+        "Retrieve a page of your wallets: favorites first, then newest first. "
+        "Closed wallets are excluded."
+    ),
     parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER],
     responses={
         200: PaginatedWalletPreviewSerializer,
@@ -41,7 +48,7 @@ async def list_wallets(request):
         user_id=request.user.id,
     )
 
-    page_request = PageRequest.from_request(request, CREATED_AT_DESC)
+    page_request = PageRequest.from_request(request, FAVORITE_CREATED_AT_DESC)
     fetched = await ListWalletsQueryHandler().handle(
         ListWalletsQuery(user_id=request.user.id, page=page_request)
     )

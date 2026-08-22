@@ -1,7 +1,9 @@
 from .notification_serializer import BatchAcknowledgeRequestSerializer
 from .transaction_serializer import (
+    AdjustTransactionRequestSerializer,
+    CreateTransactionChainRequestSerializer,
     CreateTransactionRequestSerializer,
-    UpdateTransactionRequestSerializer,
+    PatchTransactionRequestSerializer,
 )
 from .wallet_serializer import (
     CreateWalletRequestSerializer,
@@ -16,12 +18,14 @@ from .webhook_serializer import (
 
 __all__ = [
     "BatchAcknowledgeRequestSerializer",
+    "AdjustTransactionRequestSerializer",
+    "CreateTransactionChainRequestSerializer",
     "CreateTransactionRequestSerializer",
     "CreateWalletRequestSerializer",
     "CreateWebhookRequestSerializer",
     "SubscribeWebhookToEventRequestSerializer",
     "UpdateWebhookRequestSerializer",
     "ReplaceWalletRequestSerializer",
-    "UpdateTransactionRequestSerializer",
+    "PatchTransactionRequestSerializer",
     "UpdateWalletRequestSerializer",
 ]

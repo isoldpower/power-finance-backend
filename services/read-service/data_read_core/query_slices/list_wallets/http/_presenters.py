@@ -7,10 +7,15 @@ async def present_one(wallet: WalletDTO) -> dict:
     return {
         "id": wallet.id,
         "name": wallet.name,
-        "balance": await money_at_scale(wallet.balance_amount, wallet.currency),
         "created_at": wallet.created_at,
         "updated_at": wallet.updated_at,
-        "deleted_at": None,
+        "deleted_at": wallet.deleted_at,
+        "category": wallet.category,
+        "currency": wallet.currency,
+        "money": await money_at_scale(wallet.balance_amount, wallet.currency),
+        "zero_balance": await money_at_scale(wallet.zero_balance_amount, wallet.currency),
+        "favorite": wallet.favorite,
+        "color": wallet.color,
     }
 
 

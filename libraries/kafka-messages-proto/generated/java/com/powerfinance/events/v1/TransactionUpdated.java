@@ -6,6 +6,11 @@
 package com.powerfinance.events.v1;
 
 /**
+ * <pre>
+ * An amount restatement, appended to the ledger as an adjusting flow. No HTTP
+ * route raises this yet — see API_DIFF.md on adjustments.
+ * </pre>
+ *
  * Protobuf type {@code power_finance.events.v1.TransactionUpdated}
  */
 @com.google.protobuf.Generated
@@ -574,6 +579,11 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
+   * <pre>
+   * An amount restatement, appended to the ledger as an adjusting flow. No HTTP
+   * route raises this yet — see API_DIFF.md on adjustments.
+   * </pre>
+   *
    * Protobuf type {@code power_finance.events.v1.TransactionUpdated}
    */
   public static final class Builder extends

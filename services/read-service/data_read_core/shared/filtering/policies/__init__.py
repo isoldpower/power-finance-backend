@@ -1,11 +1,4 @@
-"""Field policies, keyed by the resource they govern.
-
-They live here rather than next to the `/search` slice that first needed them
-because `/search` is not their only consumer: an automation rule's
-`trigger.filter_body` is validated against the policy of the trigger's subject
-resource, with the same operators and the same failure codes, from a different
-entry point entirely.
-"""
+"""Field policies, keyed by the resource they govern."""
 
 from ..entities import FilterPolicy
 from .transactions import TRANSACTION_FILTER_POLICY

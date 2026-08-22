@@ -42,7 +42,7 @@ class WebhookEventListView(WebhookView, CommandResponseMixin):
     )
     @idempotent(required=False)
     @trace_handler_flow
-    async def post(self, request, pk=None):
+    async def post(self, request, webhook_id=None):
         serializer = SubscribeWebhookToEventRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -50,7 +50,7 @@ class WebhookEventListView(WebhookView, CommandResponseMixin):
             AddWebhookSubscriptionCommand(
                 user_id=int(request.user.unique_id),
                 user_external_id=request.user.external_id,
-                webhook_id=pk,
+                webhook_id=webhook_id,
                 event_type=serializer.validated_data["event_type"],
             )
         )

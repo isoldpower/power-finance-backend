@@ -1,0 +1,168 @@
+from dataclasses import dataclass
+from datetime import datetime
+from decimal import Decimal
+from uuid import UUID
+
+from kafka_messages import WalletUpdated
+
+from data_write_core.domain.aggregates import WalletAggregate
+from data_write_core.domain.entities import WalletEntity
+from data_write_core.domain.entities.wallet import UNCHANGED
+from data_write_core.domain.value_objects import WalletData
+from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
+from data_write_core.infrastructure.outbox_saga import (
+    FinalizedSagaCoordinator,
+    PostgresAction,
+    PostgresOutboxEmissionStep,
+    PostgresWriteStep,
+)
+
+from ..._amount_scale import ensure_amount_scale
+from ...bootstrap import get_repository_registry
+from ...dtos import WalletDTO, wallet_to_dto
+from ...interfaces import MoneyFlowRepository, OutboxRepository, WalletRepository
+from ..command_base import CommandHandlerBase
+from ..loader_mixins import LoadWalletMixin
+
+
+@dataclass(frozen=True)
+class UpdateExistingWalletCommand:
+    user_id: int
+    user_external_id: str
+    wallet_id: UUID
+    new_name: str | object = UNCHANGED
+    category: str | object = UNCHANGED
+    color: str | object = UNCHANGED
+    favorite: bool | object = UNCHANGED
+    zero_balance: Decimal | object = UNCHANGED
+
+
+class UpdateExistingWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWalletMixin):
+    _wallet_repository: WalletRepository
+    _transaction_repository: MoneyFlowRepository
+    _outbox_repository: OutboxRepository
+
+    def __init__(
+        self,
+        wallet_repository: WalletRepository | None = None,
+        money_flow_repository: MoneyFlowRepository | None = None,
+        outbox_repository: OutboxRepository | None = None,
+    ) -> None:
+        if wallet_repository is None or money_flow_repository is None or outbox_repository is None:
+            registry = get_repository_registry()
+            wallet_repository = wallet_repository or registry.wallet_repository
+            money_flow_repository = money_flow_repository or registry.money_flow_repository
+            outbox_repository = outbox_repository or registry.outbox_repository
+
+        LoadWalletMixin.__init__(self, wallet_repository, money_flow_repository)
+
+        self._wallet_repository = wallet_repository
+        self._transaction_repository = money_flow_repository
+        self._outbox_repository = outbox_repository
+
+    async def handle(self, command: UpdateExistingWalletCommand) -> tuple[WalletDTO, int]:
+        wallet_aggregate = await self.load_wallet_aggregate(
+            wallet_id=command.wallet_id,
+            user_id=command.user_id,
+        )
+
+        return await self.update_and_emit(wallet_aggregate, command)
+
+    async def update_and_emit(
+        self,
+        wallet_aggregate: WalletAggregate,
+        command: UpdateExistingWalletCommand,
+    ) -> tuple[WalletDTO, int]:
+        if isinstance(command.zero_balance, Decimal):
+            await ensure_amount_scale(
+                command.zero_balance,
+                wallet_aggregate.root.currency_code,
+            )
+
+        timestamp_now = datetime.now()
+        previous_data = wallet_aggregate.root.snapshot()
+        wallet_aggregate.update_metadata(
+            now=timestamp_now,
+            title=command.new_name,
+            category=command.category,
+            color=command.color,
+            favorite=command.favorite,
+            zero_balance=command.zero_balance,
+        )
+        updated_wallet, latest_sequence = await self._run_transactions_saga(
+            wallet_aggregate=wallet_aggregate,
+            previous_state=previous_data,
+            timestamp=timestamp_now,
+            partition_key=command.user_external_id,
+        )
+        wallet_dto = wallet_to_dto(
+            wallet=updated_wallet,
+            balance_amount=wallet_aggregate.balance,
+        )
+
+        await self._publish_domain_events(wallet_aggregate)
+        return wallet_dto, latest_sequence
+
+    async def _run_transactions_saga(
+        self,
+        wallet_aggregate: WalletAggregate,
+        previous_state: WalletData,
+        timestamp: datetime,
+        partition_key: str,
+    ) -> tuple[WalletEntity, int]:
+        wallet_holder: dict[str, WalletEntity] = {}
+        persist_update, undo_update = self._get_save_unsave_lambdas(
+            wallet_holder=wallet_holder,
+            wallet_aggregate=wallet_aggregate,
+            previous_state=previous_state,
+        )
+
+        saga_coordinator = FinalizedSagaCoordinator(
+            transaction_steps=[
+                PostgresWriteStep(
+                    forward_action=persist_update,
+                    compensate_action=undo_update,
+                ),
+            ],
+            final_step=PostgresOutboxEmissionStep(
+                outbox_repository=self._outbox_repository,
+                entries=[
+                    build_outbox_entry(
+                        WalletUpdated(
+                            wallet_id=wallet_aggregate.unique_id,
+                            user_id=int(wallet_aggregate.root.user_id),
+                            previous_title=previous_state.title,
+                            new_title=wallet_aggregate.root.title,
+                            updated_at=datetime_to_timestamp(timestamp),
+                            category=wallet_aggregate.root.category,
+                            color=wallet_aggregate.root.color,
+                            favorite=wallet_aggregate.root.favorite,
+                            zero_balance=str(wallet_aggregate.root.zero_balance),
+                        ),
+                        aggregate_type="wallet",
+                        aggregate_id=wallet_aggregate.unique_id,
+                        partition_key=partition_key,
+                    )
+                ],
+            ),
+        )
+
+        latest_sequence = await saga_coordinator.run_transaction()
+        return wallet_holder["wallet"], latest_sequence
+
+    def _get_save_unsave_lambdas(
+        self,
+        wallet_holder: dict[str, WalletEntity],
+        wallet_aggregate: WalletAggregate,
+        previous_state: WalletData,
+    ) -> tuple[PostgresAction, PostgresAction]:
+        async def persist_update() -> None:
+            wallet_holder["wallet"] = await self._wallet_repository.save_wallet(
+                wallet_aggregate.root,
+            )
+
+        async def undo_update() -> None:
+            wallet_aggregate.root.apply(previous_state, datetime.now())
+            await self._wallet_repository.save_wallet(wallet_aggregate.root)
+
+        return persist_update, undo_update

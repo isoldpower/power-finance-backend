@@ -23,6 +23,7 @@ from .notification_events import (
 from .transaction_events import (
     subscribe_transaction_created,
     subscribe_transaction_deleted,
+    subscribe_transaction_metadata_updated,
     subscribe_transaction_updated,
 )
 from .user_events import subscribe_user_synced
@@ -46,6 +47,7 @@ _KNOWN_HANDLERS: list[Callable[[EventRouter, ProbesDictionary], None]] = [
     subscribe_wallet_created,
     subscribe_transaction_created,
     subscribe_transaction_updated,
+    subscribe_transaction_metadata_updated,
     subscribe_transaction_deleted,
     subscribe_notification_created,
     subscribe_notifications_acknowledged,

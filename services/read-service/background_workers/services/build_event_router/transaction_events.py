@@ -15,9 +15,16 @@ from data_read_core.write_reactions import (
     TrackAppliedSeq,
     TrackEsAppliedSeq,
     UpdateTransactionDocument,
+    UpdateTransactionMetadataDocument,
+    UpdateTransactionMetadataReadModel,
     UpdateTransactionReadModel,
 )
-from kafka_messages import TransactionCreated, TransactionDeleted, TransactionUpdated
+from kafka_messages import (
+    TransactionCreated,
+    TransactionDeleted,
+    TransactionMetadataUpdated,
+    TransactionUpdated,
+)
 
 from ._health_guards import guard_all
 from ._types import ProbesDictionary
@@ -94,4 +101,37 @@ def subscribe_transaction_updated(
     router.register(
         "TransactionUpdated",
         guard_all(transaction_updated, probes),
+    )
+
+
+def subscribe_transaction_metadata_updated(
+    router: EventRouter,
+    probes: ProbesDictionary,
+):
+    metadata_updated = ExecutionPlan(
+        [
+            SyncProcessGroup(
+                [
+                    TrackAppliedSeq(
+                        UpdateTransactionMetadataReadModel(),
+                        TransactionMetadataUpdated,
+                    ),
+                    EvictTransactionCache(TransactionMetadataUpdated),
+                    BumpTransactionListVersion(TransactionMetadataUpdated),
+                ]
+            ),
+            SyncProcessGroup(
+                [
+                    TrackEsAppliedSeq(
+                        UpdateTransactionMetadataDocument(),
+                        TransactionMetadataUpdated,
+                    )
+                ]
+            ),
+        ]
+    )
+
+    router.register(
+        "TransactionMetadataUpdated",
+        guard_all(metadata_updated, probes),
     )

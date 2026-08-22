@@ -13,6 +13,7 @@ from .notification_pb2 import (
 from .transaction_pb2 import (
     TransactionCreated,
     TransactionDeleted,
+    TransactionMetadataUpdated,
     TransactionUpdated,
 )
 from .user_pb2 import UserSynced
@@ -40,6 +41,7 @@ __all__ = [
     "NotificationsAcknowledged",
     "TransactionCreated",
     "TransactionDeleted",
+    "TransactionMetadataUpdated",
     "TransactionUpdated",
     "UserSynced",
     "WalletCreated",

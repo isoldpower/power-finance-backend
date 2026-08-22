@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from .domain_event import DomainEvent
@@ -19,3 +20,7 @@ class WalletUpdatedEvent(DomainEvent):
     previous_title: str
     new_title: str
     updated_at: datetime
+    category: str = ""
+    color: str = ""
+    favorite: bool = False
+    zero_balance: Decimal = Decimal("0")

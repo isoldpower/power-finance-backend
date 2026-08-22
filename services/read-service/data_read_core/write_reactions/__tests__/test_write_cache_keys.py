@@ -1,9 +1,3 @@
-"""Cache-key builders used by the write-side eviction/version effects.
-
-The read path builds the same keys; pinning the format here guards against a
-silent divergence that would orphan cache entries.
-"""
-
 from data_read_core.query_slices.get_webhook.infra import (
     get_single_cache_key as get_read_single_webhook_key,
 )
@@ -25,11 +19,11 @@ from data_read_core.write_reactions._cache_keys import (
 
 
 def test_single_wallet_key():
-    assert get_single_wallet_key("w1") == "read:wallet:w1"
+    assert get_single_wallet_key("w1") == "read:wallet:s2:w1"
 
 
 def test_single_transaction_key():
-    assert get_single_transaction_key("t1") == "read:transaction:t1"
+    assert get_single_transaction_key("t1") == "read:transaction:s2:t1"
 
 
 def test_wallet_list_version_key_is_per_user():

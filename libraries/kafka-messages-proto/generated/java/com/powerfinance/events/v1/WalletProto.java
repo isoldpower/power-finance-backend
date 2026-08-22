@@ -51,27 +51,31 @@ public final class WalletProto extends com.google.protobuf.GeneratedFile {
   static {
     java.lang.String[] descriptorData = {
       "\n\014wallet.proto\022\027power_finance.events.v1\032" +
-      "\037google/protobuf/timestamp.proto\"\344\001\n\rWal" +
+      "\037google/protobuf/timestamp.proto\"\255\002\n\rWal" +
       "letCreated\022\020\n\010event_id\030\001 \001(\t\022/\n\013occurred" +
       "_at\030\002 \001(\0132\032.google.protobuf.Timestamp\022\026\n" +
       "\016schema_version\030\003 \001(\005\022\021\n\twallet_id\030\n \001(\t" +
       "\022\017\n\007user_id\030\013 \001(\005\022\r\n\005title\030\014 \001(\t\022\025\n\rcurr" +
       "ency_code\030\r \001(\t\022.\n\ncreated_at\030\016 \001(\0132\032.go" +
-      "ogle.protobuf.Timestamp\"\276\001\n\rWalletDelete" +
-      "d\022\020\n\010event_id\030\001 \001(\t\022/\n\013occurred_at\030\002 \001(\013" +
-      "2\032.google.protobuf.Timestamp\022\026\n\016schema_v" +
-      "ersion\030\003 \001(\005\022\021\n\twallet_id\030\n \001(\t\022\017\n\007user_" +
-      "id\030\013 \001(\005\022.\n\ndeleted_at\030\014 \001(\0132\032.google.pr" +
-      "otobuf.Timestamp\"\351\001\n\rWalletUpdated\022\020\n\010ev" +
+      "ogle.protobuf.Timestamp\022\020\n\010category\030\017 \001(" +
+      "\t\022\r\n\005color\030\020 \001(\t\022\020\n\010favorite\030\021 \001(\010\022\024\n\014ze" +
+      "ro_balance\030\022 \001(\t\"\276\001\n\rWalletDeleted\022\020\n\010ev" +
       "ent_id\030\001 \001(\t\022/\n\013occurred_at\030\002 \001(\0132\032.goog" +
       "le.protobuf.Timestamp\022\026\n\016schema_version\030" +
       "\003 \001(\005\022\021\n\twallet_id\030\n \001(\t\022\017\n\007user_id\030\013 \001(" +
-      "\005\022\026\n\016previous_title\030\014 \001(\t\022\021\n\tnew_title\030\r" +
-      " \001(\t\022.\n\nupdated_at\030\016 \001(\0132\032.google.protob" +
-      "uf.TimestampBz\n\032com.powerfinance.events." +
-      "v1B\013WalletProtoP\001ZMgithub.com/power-fina" +
-      "nce/kafka-messages-proto/generated/go/ev" +
-      "ents/v1;eventsv1b\006proto3"
+      "\005\022.\n\ndeleted_at\030\014 \001(\0132\032.google.protobuf." +
+      "Timestamp\"\262\002\n\rWalletUpdated\022\020\n\010event_id\030" +
+      "\001 \001(\t\022/\n\013occurred_at\030\002 \001(\0132\032.google.prot" +
+      "obuf.Timestamp\022\026\n\016schema_version\030\003 \001(\005\022\021" +
+      "\n\twallet_id\030\n \001(\t\022\017\n\007user_id\030\013 \001(\005\022\026\n\016pr" +
+      "evious_title\030\014 \001(\t\022\021\n\tnew_title\030\r \001(\t\022.\n" +
+      "\nupdated_at\030\016 \001(\0132\032.google.protobuf.Time" +
+      "stamp\022\020\n\010category\030\017 \001(\t\022\r\n\005color\030\020 \001(\t\022\020" +
+      "\n\010favorite\030\021 \001(\010\022\024\n\014zero_balance\030\022 \001(\tBz" +
+      "\n\032com.powerfinance.events.v1B\013WalletProt" +
+      "oP\001ZMgithub.com/power-finance/kafka-mess" +
+      "ages-proto/generated/go/events/v1;events" +
+      "v1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -83,7 +87,7 @@ public final class WalletProto extends com.google.protobuf.GeneratedFile {
     internal_static_power_finance_events_v1_WalletCreated_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_power_finance_events_v1_WalletCreated_descriptor,
-        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "WalletId", "UserId", "Title", "CurrencyCode", "CreatedAt", });
+        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "WalletId", "UserId", "Title", "CurrencyCode", "CreatedAt", "Category", "Color", "Favorite", "ZeroBalance", });
     internal_static_power_finance_events_v1_WalletDeleted_descriptor =
       getDescriptor().getMessageType(1);
     internal_static_power_finance_events_v1_WalletDeleted_fieldAccessorTable = new
@@ -95,7 +99,7 @@ public final class WalletProto extends com.google.protobuf.GeneratedFile {
     internal_static_power_finance_events_v1_WalletUpdated_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_power_finance_events_v1_WalletUpdated_descriptor,
-        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "WalletId", "UserId", "PreviousTitle", "NewTitle", "UpdatedAt", });
+        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "WalletId", "UserId", "PreviousTitle", "NewTitle", "UpdatedAt", "Category", "Color", "Favorite", "ZeroBalance", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
   }

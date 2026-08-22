@@ -1,98 +1,148 @@
 from datetime import datetime
-from uuid import UUID, uuid4
+from decimal import Decimal
+from uuid import UUID
 
-from ..events import EventCollector, TransactionCreatedEvent
-from ..value_objects import TransactionData
+from ..events import EventCollector
+from ..value_objects import TransactionMetadata, TransactionOrigin, TransactionType
 from ._entity_root import EntityRoot
 
+UNCHANGED = object()
 
-class TransactionEntity(EntityRoot, TransactionData):
+
+class TransactionEntity(EntityRoot, TransactionMetadata):
     _user_id: str
+    _wallet_id: UUID
     _created_at: datetime
+    _updated_at: datetime | None
+    _deleted_at: datetime | None
 
     def __init__(
         self,
         id: UUID,
-        data: TransactionData,
         user_id: str,
+        wallet_id: UUID,
+        metadata: TransactionMetadata,
         created_at: datetime,
         event_collector: EventCollector,
-    ):
+        updated_at: datetime | None = None,
+        deleted_at: datetime | None = None,
+    ) -> None:
         EntityRoot.__init__(self, unique_id=str(id), collector=event_collector)
-        TransactionData.__init__(
+        TransactionMetadata.__init__(
             self,
-            source_wallet_id=data.source_wallet_id,
-            amount=data.amount,
-            cancels_other=data.cancels_other,
-            adjusts_other=data.adjusts_other,
+            name=metadata.name,
+            category=metadata.category,
+            evidence_url=metadata.evidence_url,
+            origin=metadata.origin,
+            chain_id=metadata.chain_id,
         )
 
         self._user_id = user_id
+        self._wallet_id = wallet_id
         self._created_at = created_at
+        self._updated_at = updated_at
+        self._deleted_at = deleted_at
+
+    @property
+    def user_id(self) -> str:
+        return self._user_id
+
+    @property
+    def wallet_id(self) -> UUID:
+        return self._wallet_id
 
     @property
     def created_at(self) -> datetime:
         return self._created_at
 
     @property
-    def user_id(self) -> str:
-        return self._user_id
+    def updated_at(self) -> datetime | None:
+        return self._updated_at
+
+    @property
+    def deleted_at(self) -> datetime | None:
+        return self._deleted_at
+
+    def mark_cancelled(self, now: datetime) -> None:
+        self._deleted_at = now
+        self._updated_at = now
+
+    def restore(self, now: datetime) -> None:
+        self._deleted_at = None
+        self._updated_at = now
+
+    def snapshot(self) -> TransactionMetadata:
+        return TransactionMetadata(
+            name=self.name,
+            category=self.category,
+            evidence_url=self.evidence_url,
+            origin=self.origin,
+            chain_id=self.chain_id,
+        )
+
+    def apply(self, metadata: TransactionMetadata, now: datetime) -> None:
+        self.name = metadata.name
+        self.category = metadata.category
+        self.evidence_url = metadata.evidence_url
+        self._updated_at = now
+
+    def update_metadata(
+        self,
+        now: datetime,
+        name: str | object = UNCHANGED,
+        category: str | None | object = UNCHANGED,
+        evidence_url: str | None | object = UNCHANGED,
+    ) -> bool:
+        changed = False
+        for field, value in (
+            ("name", name),
+            ("category", category),
+            ("evidence_url", evidence_url),
+        ):
+            if value is UNCHANGED or getattr(self, field) == value:
+                continue
+
+            setattr(self, field, value)
+            changed = True
+
+        if changed:
+            self._updated_at = now
+
+        return changed
+
+    @staticmethod
+    def type_for(amount: Decimal) -> TransactionType:
+        return TransactionType.EXPENSE if amount < 0 else TransactionType.INCOME
+
+    @staticmethod
+    def signed(amount: Decimal, transaction_type: TransactionType) -> Decimal:
+        magnitude = abs(amount)
+
+        return -magnitude if transaction_type is TransactionType.EXPENSE else magnitude
 
     @classmethod
     def create(
         cls,
-        user_id: int,
-        data: TransactionData,
-        _event_collector: EventCollector | None = None,
-    ) -> "TransactionEntity":
-        created_transaction = cls(
-            id=uuid4(),
-            data=data,
-            user_id=str(user_id),
-            created_at=datetime.now(),
-            event_collector=_event_collector or EventCollector(),
-        )
-
-        created_transaction.events_occurred(
-            TransactionCreatedEvent(
-                transaction_id=UUID(created_transaction.unique_id),
-                wallet_id=created_transaction.source_wallet_id,
-                created_at=created_transaction.created_at,
-                user_id=int(created_transaction.user_id),
-                amount=created_transaction.amount,
-            )
-        )
-
-        return created_transaction
-
-    @classmethod
-    def from_persistence(
-        cls,
         id: UUID,
         user_id: int,
+        wallet_id: UUID,
+        metadata: TransactionMetadata,
         created_at: datetime,
-        data: TransactionData,
         _event_collector: EventCollector | None = None,
     ) -> "TransactionEntity":
         return cls(
             id=id,
-            data=data,
             user_id=str(user_id),
+            wallet_id=wallet_id,
+            metadata=metadata,
             created_at=created_at,
             event_collector=_event_collector or EventCollector(),
         )
 
-    def create_inverse(
-        self,
-        event_collector: EventCollector | None = None,
-    ) -> "TransactionEntity":
-        return TransactionEntity.create(
-            user_id=int(self.user_id),
-            data=TransactionData(
-                source_wallet_id=self.source_wallet_id,
-                amount=-self.amount,
-                cancels_other=UUID(self.unique_id),
-                adjusts_other=None,
-            ),
-            _event_collector=event_collector,
-        )
+
+__all__ = [
+    "UNCHANGED",
+    "TransactionEntity",
+    "TransactionOrigin",
+    "TransactionType",
+]

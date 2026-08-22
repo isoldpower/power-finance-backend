@@ -17,11 +17,13 @@ token like the target says.
 
 | implemented                                                                                                 | notes                          |
 |-------------------------------------------------------------------------------------------------------------|--------------------------------|
-| `GET /wallets`, `GET /wallets/{id}`                                                                         | shape differs, see below       |
+| `GET /wallets`, `GET /wallets/{id}`                                                                         | detail takes `?period=`        |
 | `POST /wallets`, `PATCH /wallets/{id}`, `PUT /wallets/{id}`, `DELETE /wallets/{id}`                         | `PUT` is not in the target     |
-| `POST /wallets/search`                                                                                      | —                              |
-| `GET /transactions`, `GET /transactions/{id}`                                                               | shape differs, see below       |
-| `POST /transactions`, `PATCH /transactions/{id}`, `DELETE /transactions/{id}`                               | bodies differ, see below       |
+| `POST /wallets/search`                                                                                      | favourites lead the results    |
+| `GET /transactions`, `GET /transactions/{id}`                                                               | detail has no `postings` yet   |
+| `POST /transactions`, `PATCH /transactions/{id}`, `DELETE /transactions/{id}`                               | `PATCH` is metadata-only       |
+| `POST /transactions/{id}/adjust`                                                                            | not in the target; see below   |
+| `POST /transactions/chains`, `DELETE /transactions/chains/{chain-id}`                                       | transfers; see below           |
 | `POST /transactions/search`                                                                                 | —                              |
 | `GET /notifications`, `GET /notifications/{id}`                                                             | shape differs, see below       |
 | `POST /notifications/{id}/ack`, `POST /notifications/ack`, `DELETE /notifications/{id}`                     | last two are not in the target |
@@ -39,7 +41,6 @@ nothing routes them, so no handler shapes the failure:
 
 - the whole **Accounts**, **Goals**, **Metrics**, **Actions**, **Automations**
   and **Assistant** slices;
-- `POST /transactions/chains` and `DELETE /transactions/chains/{chain-id}`;
 - `GET /notifications/count` — the bell badge has to come from
   `GET /notifications?...` for now;
 - `GET /webhooks/event-types` — the event vocabulary is not served anywhere, so
@@ -49,35 +50,158 @@ nothing routes them, so no handler shapes the failure:
 ## Resource shapes
 
 ### Transactions
-- The money field is spelled **`amount` + `currency` as two flat siblings**, not
-  a nested object. The target's examples nest it under `money`; its Conventions
-  section says the field is called `amount`. Neither spelling is what we emit
-  today: `{"amount": "90", "currency": "JPY"}` at the top level of the resource.
-  The string itself already follows the Money Shape rules (canonical decimal at
-  the currency's scale);
-- Fields the target has and we do not emit: `name`, `type`, `origin`,
-  `category`, `chain_id`, `evidence`, and the embedded `wallet: {id, name}`
-  object on list items;
-- Fields we emit that the target does not have: `wallet_id` (a plain id instead
-  of the embedded wallet object), `occurred_at` (when the money moved, distinct
-  from `created_at`);
-- On the WRITE side only (`POST` / `PATCH` / `DELETE` responses) the transaction
-  carries an embedded `wallet` object plus `cancels_other` / `adjusts_other` —
-  ids of the ledger rows an edit or a delete appended. Reads never carry those;
-- `GET /transactions/{id}` returns the same fields as a list item. No `postings`,
-  no `analysis`, no `history` — those belong to the unbuilt Accounts slice.
+Transactions match the target preview shape. Two things are worth reading twice:
+what a "transaction" actually is underneath, and where amount adjustments went.
+
+- **A transaction is not a ledger row.** It is a mutable record — `name`,
+  `category`, `evidence`, `origin`, `chain_id` — that OWNS one or more immutable
+  money flows in the ledger. Creating one appends a flow; adjusting appends the
+  difference; cancelling appends an inverse. Nothing ever rewrites a flow, which
+  is why `PATCH` can be guaranteed never to touch money: the endpoint has no
+  reach into the place money lives;
+- **`money.amount` is always a positive magnitude and `type` carries the
+  direction.** Internally the flows are signed and `type` is read off that sign,
+  so the two cannot drift apart — there is no stored `type` to disagree with the
+  money. `expense` is negative, `income` positive;
+- **a cancelled transaction still reports the amount it was FOR.** `DELETE`
+  echoes that figure back beside `deleted_at`, and so does detail. The wallet
+  balance is the separate question, and it does return to where it stood;
+- cancelled transactions leave `GET /transactions` and `POST /transactions/search`
+  but still resolve by id. There is no `include_deleted` flag;
+- **`occurred_at` is ours, not the target's.** It records when the money moved,
+  as distinct from when the row was written, and it is filterable on
+  `POST /transactions/search`. The target orders and reports on `created_at`
+  alone, and so do we — `occurred_at` is additive;
+- `GET /transactions/{id}` returns `postings: []` and `analysis: null` rather
+  than omitting them, so a client never has to branch on the keys existing. Both
+  are filled by the unbuilt Accounts slice. `evidence` is real and returns
+  `{"url": ...}` or null;
+- ordering is `created_at DESC, chain_id ASC NULLS LAST, id DESC` exactly as
+  documented. Chain members share a commit timestamp, so a transfer's legs arrive
+  contiguously — though they may still straddle a page boundary;
+
+#### Correcting an amount: POST /transactions/{id}/adjust
+`PATCH /transactions/{id}` is metadata-only, per the target. Correcting an
+**amount** is a different operation and has its own endpoint:
+
+```
+POST /api/v1/transactions/{id}/adjust
+{ "amount": "70.00" }
+```
+
+- `amount` is the new **TOTAL**, not a delta. A user correcting a receipt types
+  the right figure, not the difference from the wrong one;
+- it stays a positive magnitude. Direction comes from the transaction's existing
+  `type` and **cannot be changed here** — an expense stays an expense. Something
+  that needs to become an income is a different operation, so cancel it and
+  create the one you meant;
+- the response is the preview shape with the new folded amount. The transaction
+  keeps its `id`, its `created_at`, and its place in the feed;
+- because the amount is absolute rather than incremental, re-sending the same
+  request is a no-op. A retry cannot double-count;
+- 409 if the transaction is already cancelled.
+
+**The original is never rewritten and never cancelled.** The difference is
+appended to the ledger as an adjusting flow linked back to the opening one, and
+the transaction's amount becomes the new fold. Correcting 50.00 to 70.00 leaves
+the 50.00 flow in place and adds a −20.00 beside it; the wallet balance moves by
+20.00, not by 70.00. Corrections compose — adjust twice and there are three
+flows and one transaction.
+
+That is the whole reason to adjust rather than cancel-and-recreate: the audit
+trail survives, and so does every reference to the transaction's id.
+
+**Ahead of the target.** The specification reassigns `PATCH` to metadata and
+defers adjustment transactions to a later revision, so it names no path for this.
+Additive under the versioning rules, so it is legal inside v1 — but expect the
+path or body to be renamed when the specification chooses one. `PATCH` still
+ignores an unknown `new_amount` key rather than rejecting it, so a client on the
+old spelling changes nothing and fails silently; move it to this endpoint.
+
+#### Chains
+- `POST /transactions/chains` is how transfers are expressed: an `expense` on one
+  wallet and an `income` on another, committed atomically. `after` references
+  `temporary_id`s in the same request and is a DEPENDENCY, not a sequence
+  number — entries with no dependency commit in the order they were written;
+- every leg of a chain shares one `created_at`. That is what makes the ordering
+  keep them together;
+- **the chain response's `meta.transactions` cursor never points anywhere.** The
+  target specifies the pagination triple, so it is emitted, but a chain holds at
+  most 100 entries and all of them are in the response — `next_cursor` and
+  `prev_cursor` are always null. Do not build a paging loop against it. There is
+  no endpoint that reads a chain by id; to re-read one, filter
+  `POST /transactions/search` on `chain_id`;
+- a failure anywhere rolls the whole chain back and no `chain_id` is issued.
+  `error.details[].field` points at the offending entry by index, e.g.
+  `transactions[1].after`;
+- `DELETE /transactions/chains/{chain-id}` cancels every leg the same way a
+  single DELETE does. Repeating it returns 200 with the same body;
 
 ### Wallets
-- The balance is under **`balance`**, not `money`: `{"balance": {"amount":
-  "50.00", "currency": "RUB"}}`. It IS a nested money object, unlike the
-  transaction amount;
-- Fields the target has and we do not emit: `currency` as a top-level field
-  (it is only inside `balance`), `category`, `favorite`, `color`,
-  `zero_balance`;
-- Because `favorite` does not exist, wallets are ordered `created_at DESC, id
-  DESC` — favourites do NOT lead the list yet;
-- `GET /wallets/{id}` returns the same fields as a list item. No `last_month`,
-  no `recent`.
+Wallets match the target shape. The one thing worth reading twice is what
+`zero_balance` means.
+
+- **`zero_balance` is a credit datum, not a floor.** It is the point at which
+  the wallet holds nothing of the user's own money. The balance MAY go below it,
+  and below it the user owes `zero_balance - balance`. What the user actually
+  owns is `balance - zero_balance`: a fresh credit card with a 100 limit opens
+  at balance 100 and owns 0; spend 30 and it owns -30. An ordinary cash wallet
+  has `zero_balance` 0, so it owns its whole balance;
+- **`money.amount` is the SPENDABLE balance, not the owned figure.** The target
+  carries `money` and `zero_balance` side by side precisely so a client can
+  derive the difference itself. Nothing hides the credit line;
+- when Metrics land, net worth will sum `balance - zero_balance` and the drawn
+  portion of a credit line will be a liability. Do not build a client-side net
+  worth that adds `money.amount` across wallets — an unspent credit line is not
+  the user's money;
+- `opening_balance` is POST-only. It is never echoed back in any response,
+  because it is not stored on the wallet: it is realised as a real opening
+  TRANSACTION at creation, which is what moves the balance. Omitting it opens
+  the wallet on its datum (`opening_balance` defaults to `zero_balance`), owning
+  and owing nothing. Expect that opening entry to appear in
+  `GET /transactions` — until Phase 3 it has no `name` or `type` to tell it
+  apart by, only its timestamp;
+- wallets are ordered `favorite DESC, created_at DESC, id DESC`. The leading key
+  is applied AFTER filtering, so a favourite that does not match a
+  `POST /wallets/search` filter is absent like any other non-match;
+- **DELETE closes a wallet only when `balance == zero_balance`** — settled in
+  both directions. Money still in it and debt still owed on it both answer 409
+  `wallet_not_empty`. Move the balance to its datum with `POST /transactions`
+  first, then retry. Closing an already-closed wallet is 200 with the same body,
+  and stays 200 even if the balance later drifts;
+- a closed wallet leaves lists and search but **still resolves by id**. There is
+  no `include_deleted` flag anywhere;
+- **`GET /wallets/{id}` emits `period`, not the target's `last_month`, and takes
+  a `?period=` query param.** The target hardcodes the window to the previous
+  calendar month and gives wallet detail no way to ask for anything else, which
+  forces a client that wants any other range onto `POST /transactions/search`
+  plus client-side aggregation. We take `period=last_week|last_month|last_year|all_time`,
+  default `last_month`, and renamed the response key to match — a field called
+  `last_month` holding nineteen months would be actively misleading;
+- every window except `all_time` is a **CALENDAR** window, not a rolling count of
+  days: `last_month` on the 3rd is the whole of the previous month, not the
+  preceding 30 days. Windows are half-open, so consecutive ones tile without
+  double-counting the boundary instant. `all_time` genuinely drops both bounds
+  rather than reaching for an old epoch;
+- boundaries are resolved in the caller's `X-User-Timezone`, so two clients in
+  different zones can legitimately see different figures for the same wallet and
+  the same `period`. That is the one thing the timezone preference decides;
+- `period.inflow` / `period.outflow` are both positive magnitudes in the
+  WALLET's currency — nothing is converted, this is wallet detail, not Metrics;
+- the window is echoed in `meta.period`. An unknown value is **422
+  `validation_failed`** with `details[].field: "period"`, not a silent fall back
+  to the default: answering about a different window than the one asked for is
+  worse than refusing;
+- `period` is never cached even when `meta.cached` is `true` — that flag reports
+  on the wallet body, which is the part actually served twice;
+- `GET /wallets/{id}` embeds `recent`: the wallet's own transaction feed, in the
+  SAME preview shape and the same order as `GET /transactions`, paginated through
+  the endpoint's `limit`/`cursor` and reported under `meta.recent`. Cancelled
+  transactions are excluded, as everywhere else. Like `last_month`, it is
+  computed per request and never cached;
+- `PUT /wallets/{id}` is not in the target. It replaces the whole editable
+  representation, so an omitted field resets to its default — unlike `PATCH`,
+  where an omitted field is left alone.
 
 ### Notifications
 - The fields are **`short`, `message`, `is_read`** — not `title`, `body`,
@@ -156,19 +280,31 @@ nothing routes them, so no handler shapes the failure:
 
 ## Request bodies
 
-- `POST /transactions` takes `{source_wallet_id, amount}` — not `wallet_id`, and
-  none of `name` / `currency` / `type` / `origin` / `category` / `evidence`. The
-  currency comes from the wallet. `Idempotency-Key` is required, as documented;
-- `PATCH /transactions/{id}` takes `{new_amount}` and adjusts the AMOUNT. The
-  target's PATCH edits metadata (`name`, `category`, `evidence`) and never
-  touches money. This is the largest single divergence in the slice: the same
-  verb and path mean different things;
-- `PATCH /wallets/{id}` takes `{new_name}` only — not `name`, and none of
-  `favorite` / `category` / `zero_balance` / `color`;
-- `PUT /wallets/{id}` exists (not in the target) and takes `{name, currency}`.
-  Sending a different currency than the wallet was created with fails with 422;
-- `POST /wallets` takes `{name, currency}` — no `color`, `opening_balance`,
-  `zero_balance` or `category`;
+- `POST /transactions` takes `{name, wallet_id, currency, amount, type,
+  origin?, category?, evidence?}` as the target says. `amount` is a positive
+  magnitude — `type` states the direction. `Idempotency-Key` is required;
+- `PATCH /transactions/{id}` takes `{name?, category?, evidence?}` and nothing
+  else. `new_amount` is gone and sending it changes nothing — corrections go to
+  `POST /transactions/{id}/adjust`, described above;
+- `POST /transactions/{id}/adjust` takes `{amount}`, the new total as a positive
+  magnitude. Not in the target;
+- `POST /transactions/chains` takes `{transactions: [...]}` where each entry is a
+  `POST /transactions` body plus `temporary_id` and `after`. At most 100 entries;
+  more is 422 `chain_too_long`. One `Idempotency-Key` covers the whole chain;
+- `PATCH /wallets/{id}` takes `{name?, favorite?, category?, zero_balance?,
+  color?}` as the target says. Every field is optional and an omitted one is
+  left alone, so `{}` is a legal no-op. It renamed the field from `new_name` to
+  `name` in Phase 2 — a client still sending `new_name` now silently changes
+  nothing rather than failing;
+- `PUT /wallets/{id}` exists (not in the target) and takes `{name, currency}`
+  plus the same optional metadata as `PATCH`. Unlike `PATCH`, an omitted field
+  RESETS to its default, since PUT replaces the representation. Sending a
+  different currency than the wallet was created with fails with 422;
+- `POST /wallets` takes `{name, currency, category?, color?, zero_balance?,
+  opening_balance?}`. `color` is validated as a CSS hex colour
+  (`#RGB` / `#RRGGBB` / `#RRGGBBAA`) — the target shows one but names no format;
+- `zero_balance` and `opening_balance` are flat decimal strings validated
+  against the wallet currency's scale, as the target describes;
 - `POST /webhooks` takes `{title, url}`; `PATCH /webhooks/{id}` takes
   `{title?, url?}`. Neither accepts `enabled`;
 - `POST /webhooks/{id}/events` takes `{event_type}`, not `{event}`.

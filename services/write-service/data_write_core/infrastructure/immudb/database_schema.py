@@ -24,6 +24,7 @@ def _initialize_schema(client: ImmudbClient) -> None:
         CREATE TABLE IF NOT EXISTS transactions ( \
         id                  VARCHAR[36]  NOT NULL, \
         user_id             INTEGER      NOT NULL, \
+        transaction_id      VARCHAR[36]  NOT NULL, \
         source_wallet_id    VARCHAR[36]  NOT NULL, \
         amount              VARCHAR[32]  NOT NULL, \
         created_at          VARCHAR[32]  NOT NULL, \
@@ -36,6 +37,7 @@ def _initialize_schema(client: ImmudbClient) -> None:
     client.sqlExec(
         "\
         CREATE INDEX IF NOT EXISTS ON transactions(user_id); \
+        CREATE INDEX IF NOT EXISTS ON transactions(transaction_id); \
         CREATE INDEX IF NOT EXISTS ON transactions(source_wallet_id); \
         CREATE INDEX IF NOT EXISTS ON transactions(cancels_other); \
     "

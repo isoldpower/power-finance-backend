@@ -63,11 +63,11 @@ class FallbackTransactionResourceView(FallbackReadView):
         },
     )
     @trace_handler_flow
-    async def get(self, request, pk=None):
+    async def get(self, request, transaction_id=None):
         transaction = await GetFallbackTransactionQueryHandler().handle(
             GetFallbackTransactionQuery(
                 user_id=int(request.user.unique_id),
-                transaction_id=pk,
+                transaction_id=transaction_id,
             )
         )
 

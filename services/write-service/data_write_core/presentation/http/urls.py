@@ -16,7 +16,15 @@ from .views.notifications import (
     NotificationBatchAckView,
     NotificationResourceView,
 )
-from .views.transactions import TransactionListView, TransactionResourceView
+from .views.transaction_chains import (
+    TransactionChainListView,
+    TransactionChainResourceView,
+)
+from .views.transactions import (
+    TransactionAdjustView,
+    TransactionListView,
+    TransactionResourceView,
+)
 from .views.wallets import WalletListView, WalletResourceView
 from .views.webhooks import (
     WebhookEventListView,
@@ -33,22 +41,22 @@ urlpatterns = [
         name="webhooks-list",
     ),
     path(
-        "webhooks/<uuid:pk>",
+        "webhooks/<uuid:webhook_id>",
         WebhookResourceView.as_view(),
         name="webhooks-resource",
     ),
     path(
-        "webhooks/<uuid:pk>/secret",
+        "webhooks/<uuid:webhook_id>/secret",
         WebhookSecretView.as_view(),
         name="webhooks-secret",
     ),
     path(
-        "webhooks/<uuid:pk>/events",
+        "webhooks/<uuid:webhook_id>/events",
         WebhookEventListView.as_view(),
         name="webhooks-event-list",
     ),
     path(
-        "webhooks/<uuid:pk>/events/<uuid:subscription_id>",
+        "webhooks/<uuid:webhook_id>/events/<uuid:subscription_id>",
         WebhookEventResourceView.as_view(),
         name="webhooks-event-resource",
     ),
@@ -63,7 +71,7 @@ urlpatterns = [
         name="notifications-ack",
     ),
     path(
-        "notifications/<uuid:pk>",
+        "notifications/<uuid:notification_id>",
         NotificationResourceView.as_view(),
         name="notifications-resource",
     ),
@@ -73,9 +81,24 @@ urlpatterns = [
         name="transactions-list",
     ),
     path(
-        "transactions/<uuid:pk>",
+        "transactions/chains",
+        TransactionChainListView.as_view(),
+        name="transaction-chains-list",
+    ),
+    path(
+        "transactions/chains/<uuid:chain_id>",
+        TransactionChainResourceView.as_view(),
+        name="transaction-chains-resource",
+    ),
+    path(
+        "transactions/<uuid:transaction_id>",
         TransactionResourceView.as_view(),
         name="transactions-resource",
+    ),
+    path(
+        "transactions/<uuid:transaction_id>/adjust",
+        TransactionAdjustView.as_view(),
+        name="transactions-adjust",
     ),
     path(
         "wallets",
@@ -83,7 +106,7 @@ urlpatterns = [
         name="wallets-list",
     ),
     path(
-        "wallets/<uuid:pk>",
+        "wallets/<uuid:wallet_id>",
         WalletResourceView.as_view(),
         name="wallets-resource",
     ),
@@ -93,7 +116,7 @@ urlpatterns = [
         name="fallback-wallets-list",
     ),
     path(
-        "fallback-reads/wallets/<uuid:pk>",
+        "fallback-reads/wallets/<uuid:wallet_id>",
         FallbackWalletResourceView.as_view(),
         name="fallback-wallets-resource",
     ),
@@ -103,7 +126,7 @@ urlpatterns = [
         name="fallback-transactions-list",
     ),
     path(
-        "fallback-reads/transactions/<uuid:pk>",
+        "fallback-reads/transactions/<uuid:transaction_id>",
         FallbackTransactionResourceView.as_view(),
         name="fallback-transactions-resource",
     ),
@@ -113,12 +136,12 @@ urlpatterns = [
         name="fallback-webhooks-list",
     ),
     path(
-        "fallback-reads/webhooks/<uuid:pk>",
+        "fallback-reads/webhooks/<uuid:webhook_id>",
         FallbackWebhookResourceView.as_view(),
         name="fallback-webhooks-resource",
     ),
     path(
-        "fallback-reads/webhooks/<uuid:pk>/events",
+        "fallback-reads/webhooks/<uuid:webhook_id>/events",
         FallbackWebhookEventListView.as_view(),
         name="fallback-webhooks-event-list",
     ),
@@ -128,7 +151,7 @@ urlpatterns = [
         name="fallback-notifications-list",
     ),
     path(
-        "fallback-reads/notifications/<uuid:pk>",
+        "fallback-reads/notifications/<uuid:notification_id>",
         FallbackNotificationResourceView.as_view(),
         name="fallback-notifications-resource",
     ),

@@ -6,7 +6,11 @@ from data_read_core.shared.logging import (
     log_request_received,
     log_request_served,
 )
-from data_read_core.shared.pagination import CREATED_AT_DESC, PageRequest, build_page
+from data_read_core.shared.pagination import (
+    FAVORITE_CREATED_AT_DESC,
+    PageRequest,
+    build_page,
+)
 from data_read_core.shared.read_at_least import es_read_at_least_gate
 from data_read_core.shared.rest_framework import (
     CURSOR_PARAMETER,
@@ -56,7 +60,7 @@ async def search_wallets(request):
 
     page_request = PageRequest.from_request(
         request,
-        CREATED_AT_DESC,
+        FAVORITE_CREATED_AT_DESC,
         query_material=filter_body,
     )
     fetched = await SearchWalletsQueryHandler().handle(

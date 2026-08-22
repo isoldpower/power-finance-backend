@@ -1,72 +1,57 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from uuid import UUID
 
-from data_write_core.domain.entities import BalanceCheckpointEntity, TransactionEntity
+from write_service.common.pagination import PageRequest
+
+from data_write_core.domain.entities import TransactionEntity
 
 
 class TransactionRepository(ABC):
     @abstractmethod
-    async def get_user_transactions(
-        self,
-        user_id: int,
-    ) -> list[TransactionEntity]:
+    async def create_transaction(self, transaction: TransactionEntity) -> TransactionEntity:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def save_transaction(self, transaction: TransactionEntity) -> TransactionEntity:
         raise NotImplementedError()
 
     @abstractmethod
     async def get_user_transaction_by_id(
         self,
-        user_id: int,
         transaction_id: UUID,
+        user_id: int,
     ) -> TransactionEntity:
         raise NotImplementedError()
 
     @abstractmethod
-    async def create_transaction(
-        self,
-        transaction: TransactionEntity,
-    ) -> TransactionEntity:
-        raise NotImplementedError()
-
-    @abstractmethod
-    async def delete_transaction_by_id(
+    async def get_user_transactions(
         self,
         user_id: int,
-        transaction_id: UUID,
-    ) -> TransactionEntity:
-        raise NotImplementedError()
-
-    @abstractmethod
-    async def get_cancelling_transaction(
-        self,
-        transaction_id: UUID,
-    ) -> TransactionEntity | None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    async def get_adjusting_transaction(
-        self,
-        transaction_id: UUID,
-    ) -> TransactionEntity | None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    async def get_unsettled_transactions(
-        self,
-        wallet_id: UUID,
-        settled_at: str | None = None,
+        page: PageRequest | None = None,
     ) -> list[TransactionEntity]:
         raise NotImplementedError()
 
     @abstractmethod
-    async def get_checkpoint(
-        self,
-        wallet_id: UUID,
-    ) -> BalanceCheckpointEntity | None:
+    async def count_user_transactions(self, user_id: int) -> int:
         raise NotImplementedError()
 
     @abstractmethod
-    async def save_checkpoint(
+    async def hard_delete_transaction(self, transaction_id: UUID) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def create_chain(self, chain_id: UUID, user_id: int, created_at: datetime) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def get_chain_transactions(
         self,
-        checkpoint: BalanceCheckpointEntity,
-    ) -> None:
+        chain_id: UUID,
+        user_id: int,
+    ) -> list[TransactionEntity]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def hard_delete_chain(self, chain_id: UUID) -> None:
         raise NotImplementedError()

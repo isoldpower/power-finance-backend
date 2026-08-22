@@ -50,7 +50,7 @@ def test_cache_key_embeds_version_filter_and_page():
         cursor="Y3Vyc29y",
     )
 
-    assert key == "read:wallets:7:v3:fabc123:l10:cY3Vyc29y"
+    assert key == "read:wallets:s2:7:v3:fabc123:l10:cY3Vyc29y"
 
 
 def test_first_page_and_cursor_page_get_different_keys():

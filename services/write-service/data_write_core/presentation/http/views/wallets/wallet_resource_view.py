@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
@@ -11,6 +13,7 @@ from data_write_core.application.commands import (
     UpdateExistingWalletCommand,
     UpdateExistingWalletCommandHandler,
 )
+from data_write_core.domain.entities.wallet import UNCHANGED
 
 from ...decorators import trace_handler_flow
 from ...presenters import WalletHttpPresenter
@@ -34,8 +37,12 @@ WALLET_ID_PARAMETER = OpenApiParameter(
 class WalletResourceView(WalletView, CommandResponseMixin):
     @extend_schema(
         operation_id="wallets_partial_update",
-        summary="Rename a wallet",
-        description="Update a wallet's display name.",
+        summary="Update a wallet",
+        description=(
+            "Partial update of a wallet's client-managed metadata. An omitted "
+            "field is left alone. Balance and currency are derived and cannot "
+            "be patched."
+        ),
         parameters=[WALLET_ID_PARAMETER],
         request=UpdateWalletRequestSerializer,
         responses={
@@ -46,16 +53,21 @@ class WalletResourceView(WalletView, CommandResponseMixin):
     )
     @idempotent(required=False)
     @trace_handler_flow
-    async def patch(self, request, pk=None):
+    async def patch(self, request, wallet_id=None):
         serializer = UpdateWalletRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        validated = serializer.validated_data
         updated_wallet, write_version = await UpdateExistingWalletCommandHandler().handle(
             UpdateExistingWalletCommand(
                 user_id=int(request.user.unique_id),
                 user_external_id=request.user.external_id,
-                wallet_id=pk,
-                new_name=serializer.validated_data["new_name"],
+                wallet_id=wallet_id,
+                new_name=validated.get("name", UNCHANGED),
+                category=validated.get("category", UNCHANGED),
+                color=validated.get("color", UNCHANGED),
+                favorite=validated.get("favorite", UNCHANGED),
+                zero_balance=validated.get("zero_balance", UNCHANGED),
             )
         )
 
@@ -85,7 +97,7 @@ class WalletResourceView(WalletView, CommandResponseMixin):
     )
     @idempotent(required=False)
     @trace_handler_flow
-    async def put(self, request, pk=None):
+    async def put(self, request, wallet_id=None):
         serializer = ReplaceWalletRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated = serializer.validated_data
@@ -94,9 +106,13 @@ class WalletResourceView(WalletView, CommandResponseMixin):
             ReplaceWalletCommand(
                 user_id=int(request.user.unique_id),
                 user_external_id=request.user.external_id,
-                wallet_id=pk,
+                wallet_id=wallet_id,
                 name=validated["name"],
                 currency_code=validated["currency"],
+                category=validated["category"],
+                color=validated["color"],
+                favorite=validated["favorite"],
+                zero_balance=validated["zero_balance"] or Decimal("0"),
             )
         )
 
@@ -112,9 +128,11 @@ class WalletResourceView(WalletView, CommandResponseMixin):
         operation_id="wallets_delete",
         summary="Soft-delete a wallet",
         description=(
-            "Marks the wallet as deleted (sets deleted_at). The row is "
-            "preserved so transaction history remains queryable. Repeating the "
-            "call is a no-op that returns the same body."
+            "Closes the wallet (sets deleted_at). The row is preserved so "
+            "transaction history remains queryable, but the wallet leaves lists "
+            "and search. Only a settled wallet closes: its balance must sit "
+            "exactly on `zero_balance`, otherwise 409 `wallet_not_empty`. "
+            "Repeating the call is a no-op that returns the same body."
         ),
         parameters=[WALLET_ID_PARAMETER],
         responses={
@@ -125,12 +143,12 @@ class WalletResourceView(WalletView, CommandResponseMixin):
     )
     @idempotent(required=False)
     @trace_handler_flow
-    async def delete(self, request, pk=None):
+    async def delete(self, request, wallet_id=None):
         deleted_wallet, write_version = await SoftDeleteWalletCommandHandler().handle(
             SoftDeleteWalletCommand(
                 user_id=int(request.user.unique_id),
                 user_external_id=request.user.external_id,
-                wallet_id=pk,
+                wallet_id=wallet_id,
             )
         )
 

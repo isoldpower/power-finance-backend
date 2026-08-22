@@ -38,12 +38,12 @@ class NotificationResourceView(NotificationView, CommandResponseMixin):
     )
     @idempotent(required=False)
     @trace_handler_flow
-    async def delete(self, request, pk=None):
+    async def delete(self, request, notification_id=None):
         deleted_notification, write_version = await DeleteNotificationCommandHandler().handle(
             DeleteNotificationCommand(
                 user_id=int(request.user.unique_id),
                 user_external_id=request.user.external_id,
-                notification_id=pk,
+                notification_id=notification_id,
             )
         )
 

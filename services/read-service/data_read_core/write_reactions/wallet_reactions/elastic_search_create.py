@@ -20,8 +20,13 @@ class IndexWalletDocument(Effect):
             "title": payload.title,
             "currency_code": payload.currency_code,
             "balance": 0,
+            "zero_balance": payload.zero_balance or "0",
             "created_at": payload.created_at.ToDatetime(tzinfo=UTC).isoformat(),
             "updated_at": None,
+            "deleted_at": None,
+            "category": payload.category,
+            "color": payload.color,
+            "favorite": payload.favorite,
         }
 
         await get_elasticsearch().index(
@@ -29,4 +34,7 @@ class IndexWalletDocument(Effect):
             id=payload.wallet_id,
             document=document,
         )
-        log_wallet_elastic_created(payload.wallet_id, WALLETS_INDEX)
+        log_wallet_elastic_created(
+            payload.wallet_id,
+            WALLETS_INDEX,
+        )

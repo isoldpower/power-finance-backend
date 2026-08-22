@@ -62,11 +62,11 @@ class FallbackNotificationResourceView(FallbackReadView):
         },
     )
     @trace_handler_flow
-    async def get(self, request, pk=None):
+    async def get(self, request, notification_id=None):
         notification = await GetFallbackNotificationQueryHandler().handle(
             GetFallbackNotificationQuery(
                 user_id=int(request.user.unique_id),
-                notification_id=pk,
+                notification_id=notification_id,
             )
         )
 

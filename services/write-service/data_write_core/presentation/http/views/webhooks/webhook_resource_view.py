@@ -43,7 +43,7 @@ class WebhookResourceView(WebhookView, CommandResponseMixin):
     )
     @idempotent(required=False)
     @trace_handler_flow
-    async def patch(self, request, pk=None):
+    async def patch(self, request, webhook_id=None):
         serializer = UpdateWebhookRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated = serializer.validated_data
@@ -52,7 +52,7 @@ class WebhookResourceView(WebhookView, CommandResponseMixin):
             UpdateWebhookCommand(
                 user_id=int(request.user.unique_id),
                 user_external_id=request.user.external_id,
-                webhook_id=pk,
+                webhook_id=webhook_id,
                 title=validated.get("title"),
                 url=validated.get("url"),
             )
@@ -78,12 +78,12 @@ class WebhookResourceView(WebhookView, CommandResponseMixin):
     )
     @idempotent(required=False)
     @trace_handler_flow
-    async def delete(self, request, pk=None):
+    async def delete(self, request, webhook_id=None):
         deleted_webhook, write_version = await DeleteWebhookCommandHandler().handle(
             DeleteWebhookCommand(
                 user_id=int(request.user.unique_id),
                 user_external_id=request.user.external_id,
-                webhook_id=pk,
+                webhook_id=webhook_id,
             )
         )
 

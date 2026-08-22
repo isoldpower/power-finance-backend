@@ -1,22 +1,34 @@
 from rest_framework import serializers
 
 from .envelope import collection_response, resource_response
-from .wallet_serializer import WalletResponseSerializer
+from .wallet_serializer import MoneySerializer
+
+
+class TransactionWalletSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
 
 
 class TransactionResponseSerializer(serializers.Serializer):
     id = serializers.UUIDField(help_text="Transaction ID")
-    amount = serializers.CharField(help_text="Decimal string at the currency's scale.")
-    currency = serializers.CharField()
-    wallet = WalletResponseSerializer()
-    cancels_other = serializers.UUIDField(allow_null=True)
-    adjusts_other = serializers.UUIDField(allow_null=True)
+    name = serializers.CharField()
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField(allow_null=True)
     deleted_at = serializers.DateTimeField(allow_null=True)
+    money = MoneySerializer(help_text="A positive magnitude; direction is `type`.")
+    type = serializers.CharField(help_text="expense or income, derived from the money's sign.")
+    origin = serializers.CharField()
+    wallet = TransactionWalletSerializer()
+    category = serializers.CharField(allow_null=True)
+    chain_id = serializers.UUIDField(allow_null=True)
 
 
-class TransactionPreviewResponseSerializer(serializers.Serializer):
+class TransactionChainResponseSerializer(serializers.Serializer):
+    chain_id = serializers.UUIDField()
+    transactions = TransactionResponseSerializer(many=True)
+
+
+class TransactionFlowSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     amount = serializers.CharField()
     currency = serializers.CharField()
@@ -29,4 +41,6 @@ class TransactionPreviewResponseSerializer(serializers.Serializer):
 
 
 EnvelopedTransactionResponseSerializer = resource_response(TransactionResponseSerializer)
-PaginatedTransactionResponseSerializer = collection_response(TransactionPreviewResponseSerializer)
+EnvelopedTransactionChainResponseSerializer = resource_response(TransactionChainResponseSerializer)
+PaginatedTransactionResponseSerializer = collection_response(TransactionResponseSerializer)
+PaginatedTransactionFlowSerializer = collection_response(TransactionFlowSerializer)

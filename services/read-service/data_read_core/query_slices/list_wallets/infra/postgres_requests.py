@@ -3,15 +3,16 @@ from data_read_core.shared.postgres_orm import WalletReadModel
 
 
 def _owned_queryset(user_id: int):
-    return WalletReadModel.objects.filter(user_id=user_id)
+    return WalletReadModel.objects.filter(
+        user_id=user_id,
+        deleted_at__isnull=True,
+    )
 
 
 async def fetch_owned_wallets(
     user_id: int,
     page: PageRequest,
 ) -> list[WalletReadModel]:
-    """One page plus the lookahead row `build_page` needs to mint cursors."""
-
     queryset = apply_keyset(
         _owned_queryset(user_id),
         page,

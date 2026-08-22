@@ -1,10 +1,3 @@
-"""Elasticsearch projection effects — verified against a fake ES client.
-
-These are pure projection effects: no DB except the transaction index, which
-reads the owning wallet's currency. That lookup is stubbed so every case here
-stays a unit test.
-"""
-
 from datetime import UTC, datetime
 
 from fakes import FakeElasticsearch, make_event
@@ -36,6 +29,7 @@ from data_read_core.write_reactions.transaction_reactions import (
 from data_read_core.write_reactions.transaction_reactions import (
     elastic_search_update as tx_update,
 )
+from data_read_core.write_reactions.transaction_reactions._utilities import WalletLabel
 from data_read_core.write_reactions.wallet_reactions import (
     elastic_search_create as wl_create,
 )
@@ -47,6 +41,7 @@ from data_read_core.write_reactions.wallet_reactions import (
 )
 
 WALLET_ID = "11111111-1111-1111-1111-111111111111"
+CHAIN_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 TX_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 
 
@@ -65,14 +60,21 @@ def _use_fake_es(monkeypatch, module) -> FakeElasticsearch:
 async def test_index_transaction_writes_full_document(monkeypatch):
     fake = _use_fake_es(monkeypatch, tx_create)
 
-    async def _currency(_wallet_id: str) -> str:
-        return "EUR"
+    async def _label(_wallet_id: str) -> WalletLabel:
+        return WalletLabel(currency_code="EUR", name="Random Credit Card")
 
-    monkeypatch.setattr(tx_create, "_wallet_currency", _currency)
+    monkeypatch.setattr(tx_create, "_wallet_label", _label)
 
     event = make_event(
         TransactionCreated(
-            transaction_id=TX_ID, wallet_id=WALLET_ID, user_id=7, amount="25.50", created_at=_ts()
+            transaction_id=TX_ID,
+            wallet_id=WALLET_ID,
+            user_id=7,
+            amount="-25.50",
+            created_at=_ts(),
+            name="Groceries store",
+            category="Food",
+            origin="manual",
         )
     )
     await IndexTransactionDocument().apply(event)
@@ -80,10 +82,105 @@ async def test_index_transaction_writes_full_document(monkeypatch):
     assert len(fake.indexed) == 1
     index, doc_id, document = fake.indexed[0]
     assert (index, doc_id) == (TRANSACTIONS_INDEX, TX_ID)
-    assert document["amount"] == 25.5
+    assert document["amount"] == -25.5
     assert document["currency_code"] == "EUR"
+    assert document["wallet_name"] == "Random Credit Card"
     assert document["user_id"] == 7
+    assert document["name"] == "Groceries store"
+    assert document["category"] == "Food"
     assert document["occurred_at"] == document["created_at"]
+
+
+async def test_indexed_type_is_read_off_the_sign(monkeypatch):
+    """`type` is stored so search can filter on it, but it is never a second
+    source of truth — it is derived from the amount at index time."""
+
+    fake = _use_fake_es(monkeypatch, tx_create)
+
+    async def _label(_wallet_id: str) -> WalletLabel:
+        return WalletLabel(currency_code="EUR", name="Wallet")
+
+    monkeypatch.setattr(tx_create, "_wallet_label", _label)
+
+    for amount, expected in (("-25.50", "expense"), ("25.50", "income")):
+        await IndexTransactionDocument().apply(
+            make_event(
+                TransactionCreated(
+                    transaction_id=TX_ID,
+                    wallet_id=WALLET_ID,
+                    user_id=7,
+                    amount=amount,
+                    created_at=_ts(),
+                )
+            )
+        )
+        assert fake.indexed[-1][2]["type"] == expected
+
+
+async def test_a_chained_transaction_carries_its_chain_into_the_sort_column(monkeypatch):
+    fake = _use_fake_es(monkeypatch, tx_create)
+
+    async def _label(_wallet_id: str) -> WalletLabel:
+        return WalletLabel(currency_code="EUR", name="Wallet")
+
+    monkeypatch.setattr(tx_create, "_wallet_label", _label)
+
+    await IndexTransactionDocument().apply(
+        make_event(
+            TransactionCreated(
+                transaction_id=TX_ID,
+                wallet_id=WALLET_ID,
+                user_id=7,
+                amount="-25.50",
+                created_at=_ts(),
+                chain_id=CHAIN_ID,
+            )
+        )
+    )
+
+    document = fake.indexed[-1][2]
+    assert document["chain_id"] == CHAIN_ID
+    assert document["chain_sort"] == CHAIN_ID
+
+
+async def test_indexed_amount_survives_an_adjustment_in_the_same_type(monkeypatch):
+    """Create and update must agree on how the amount is spelled, or the two
+    reactions write different types into the same scaled_float field."""
+
+    created = _use_fake_es(monkeypatch, tx_create)
+
+    async def _label(_wallet_id: str) -> WalletLabel:
+        return WalletLabel(currency_code="EUR", name="Wallet")
+
+    monkeypatch.setattr(tx_create, "_wallet_label", _label)
+    await IndexTransactionDocument().apply(
+        make_event(
+            TransactionCreated(
+                transaction_id=TX_ID,
+                wallet_id=WALLET_ID,
+                user_id=7,
+                amount="-25.50",
+                created_at=_ts(),
+            )
+        )
+    )
+
+    updated = _use_fake_es(monkeypatch, tx_update)
+    await UpdateTransactionDocument().apply(
+        make_event(
+            TransactionUpdated(
+                transaction_id=TX_ID,
+                wallet_id=WALLET_ID,
+                user_id=7,
+                new_amount="-70.00",
+            )
+        )
+    )
+
+    indexed_amount = created.indexed[0][2]["amount"]
+    patched_amount = updated.updated[0][2]["amount"]
+    assert type(indexed_amount) is type(patched_amount)
+    assert patched_amount == -70.0
 
 
 async def test_update_transaction_patches_amount_with_upsert(monkeypatch):
@@ -101,15 +198,29 @@ async def test_update_transaction_patches_amount_with_upsert(monkeypatch):
     assert doc_as_upsert is True
 
 
-async def test_remove_transaction_deletes_ignoring_404(monkeypatch):
+async def test_remove_transaction_stamps_cancelled_ignoring_404(monkeypatch):
+    """Cancelling keeps the document. Search hides it by filtering on
+    `deleted_at`, so dropping it would lose the field that hides it."""
+
     fake = _use_fake_es(monkeypatch, tx_delete)
 
     await RemoveTransactionDocument().apply(
-        make_event(TransactionDeleted(transaction_id=TX_ID, wallet_id=WALLET_ID, user_id=7))
+        make_event(
+            TransactionDeleted(
+                transaction_id=TX_ID,
+                wallet_id=WALLET_ID,
+                user_id=7,
+                deleted_at=_ts(),
+            )
+        )
     )
 
-    assert fake.deleted == [(TRANSACTIONS_INDEX, TX_ID)]
+    assert fake.deleted == []
     assert fake.options_kwargs == [{"ignore_status": 404}]
+
+    index, doc_id, doc, _ = fake.updated[0]
+    assert (index, doc_id) == (TRANSACTIONS_INDEX, TX_ID)
+    assert doc["deleted_at"] == "2026-01-02T03:04:05+00:00"
 
 
 async def test_index_wallet_writes_full_document(monkeypatch):
@@ -146,10 +257,19 @@ async def test_update_wallet_patches_title_with_upsert(monkeypatch):
     assert doc_as_upsert is True
 
 
-async def test_remove_wallet_deletes_ignoring_404(monkeypatch):
+async def test_remove_wallet_stamps_closed_ignoring_404(monkeypatch):
+    """Closing keeps the document. Search excludes closed wallets by filtering
+    on `deleted_at`, so dropping it would lose the very field that hides it."""
+
     fake = _use_fake_es(monkeypatch, wl_delete)
 
-    await RemoveWalletDocument().apply(make_event(WalletDeleted(wallet_id=WALLET_ID, user_id=7)))
+    await RemoveWalletDocument().apply(
+        make_event(WalletDeleted(wallet_id=WALLET_ID, user_id=7, deleted_at=_ts()))
+    )
 
-    assert fake.deleted == [(WALLETS_INDEX, WALLET_ID)]
+    assert fake.deleted == []
     assert fake.options_kwargs == [{"ignore_status": 404}]
+
+    index, doc_id, doc, _ = fake.updated[0]
+    assert (index, doc_id) == (WALLETS_INDEX, WALLET_ID)
+    assert doc["deleted_at"] == "2026-01-02T03:04:05+00:00"

@@ -23,6 +23,26 @@ class TransactionCreatedEvent(DomainEvent):
 
 
 @dataclass(frozen=True)
+class TransactionUpdatedEvent(DomainEvent):
+    transaction_id: UUID
+    wallet_id: UUID
+    user_id: int
+    previous_amount: Decimal
+    new_amount: Decimal
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class TransactionMetadataUpdatedEvent(DomainEvent):
+    transaction_id: UUID
+    user_id: int
+    name: str
+    category: str | None
+    evidence_url: str | None
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
 class TransactionDeletedEvent(DomainEvent):
     transaction_id: UUID
     wallet_id: UUID

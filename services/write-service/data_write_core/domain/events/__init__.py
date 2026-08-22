@@ -4,6 +4,8 @@ from .transaction_events import (
     TransactionCreatedEvent,
     TransactionDeletedEvent,
     TransactionEventParticipant,
+    TransactionMetadataUpdatedEvent,
+    TransactionUpdatedEvent,
 )
 from .wallet_events import (
     WalletDeletedEvent,
@@ -18,6 +20,8 @@ __all__ = [
     "TransactionEventParticipant",
     "TransactionCreatedEvent",
     "TransactionDeletedEvent",
+    "TransactionMetadataUpdatedEvent",
+    "TransactionUpdatedEvent",
     "WalletDeletedEvent",
     "WalletUpdatedEvent",
     "DomainEvent",

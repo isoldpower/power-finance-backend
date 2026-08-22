@@ -313,7 +313,95 @@ validated against `from_code`'s scale. The server does the rounding once; the cl
 ---
 
 ## Phase 2 — Wallets to target shape
+**STATUS: implemented.** (`recent` on wallet detail was deferred to Phase 3 and landed there.)
 Wallets are the most-used resource and the cheapest large win after Phase 0.
+
+Both `DECIDE` blocks below were answered, and the answers turned out to be the
+same answer:
+
+- **`zero_balance` is the wallet's DATUM, not a floor.** It is the point at which
+  the wallet holds nothing of the user's own money — a credit line. The balance
+  may go below it; below it the user OWES `zero_balance - balance`. What the user
+  owns is `balance - zero_balance`. A fresh credit card with a 100 limit opens at
+  balance 100 and owns 0; spend 30 and it owns -30. A cash wallet has a datum of
+  0 and owns its whole balance;
+- **DELETE closes only when `balance == zero_balance`** — settled in both
+  directions, since money left in the wallet and debt still owed on it are both
+  unfinished business. `WalletAggregate.is_empty` is that comparison, and the
+  guard sits after the already-closed check so a repeat DELETE still answers 200;
+- **net worth (Phase 6) sums `balance - zero_balance`**, and Phase 5 models the
+  drawn portion of a credit line as a liability. Nothing in Phase 2 computes it —
+  the point of settling it now was to make sure Phase 2 stored the right thing.
+  `WalletAggregate.owned` exists and is the figure those phases will fold;
+- **`opening_balance` reaches the ledger as a real transaction**, not as a
+  column. `POST /wallets` emits `WalletCreated` and, when the opening amount is
+  non-zero, a `TransactionCreated` alongside it in the same outbox emission. Both
+  balance derivations then need no special case at all — the write side folds it
+  as an unsettled transaction, the read side accumulates it from 0 — and Phase 5
+  adds the equity counter-posting with no migration and no backfill. The
+  "temporary inconsistency" the step warned about never gets created.
+
+Consistency check that ties the two together: a wallet is closeable exactly when
+it contributes zero to net worth.
+
+Other deviations from the steps as written:
+
+- **`opening_balance` defaults to `zero_balance`, not to zero.** Not a separate
+  decision so much as the only default consistent with the datum rule: a wallet
+  nobody funded should open OWNING and OWING nothing, and for a credit line that
+  means opening at its limit. For an ordinary wallet the datum is 0, so the two
+  defaults agree. Overrule this if a fresh credit card should instead open
+  already in debt for its full limit;
+- `opening_balance` is never stored and never echoed — the target's POST response
+  does not contain it either. Its opening transaction DOES show up in
+  `GET /transactions`, with nothing but a timestamp to tell it apart until
+  Phase 3 gives transactions a `name` and an `origin`;
+- `WalletCreated` / `WalletUpdated` carry the FULL post-update state in the new
+  fields rather than a diff. PATCH is partial, so a diff would need a presence
+  flag per field; an overwrite of the whole mutable set is smaller and
+  idempotent. `previous_title` / `new_title` stay as they were;
+- **the read projection no longer hard-deletes a closed wallet** — it stamps
+  `deleted_at` on the row and on the ES document. The target says a closed wallet
+  "continues its existence" and DELETE returns a body carrying `deleted_at`,
+  neither of which survives dropping the row. Lists and search filter it out;
+  `GET /wallets/{id}` still resolves it. `WalletReadModel` gained `deleted_at`
+  and the list index gained a partial-index condition on it;
+- `PATCH` renamed its field from `new_name` to the target's `name`. A client
+  still sending `new_name` now changes nothing instead of failing, since every
+  PATCH field is optional;
+- `PUT /wallets/{id}` is not in the target but exists, so it grew the same
+  fields. It keeps REPLACE semantics — an omitted field resets to its default —
+  against PATCH's leave-alone semantics;
+- `color` is validated as `#RGB` / `#RRGGBB` / `#RRGGBBAA`. The target shows
+  `#FF0000` but names no format;
+- `zero_balance` stores at `decimal_places=2` on both sides, matching the
+  existing `balance` column. That is wrong for JPY (0 digits) and BHD (3) — a
+  pre-existing debt of the balance column, now shared by one more field, not a
+  new one;
+- **the window became a query param, and the response key followed.** The target
+  hardcodes `last_month` and gives wallet detail no way to ask for another range,
+  which pushes any other window onto `POST /transactions/search` plus client-side
+  aggregation. `?period=last_week|last_month|last_year|all_time` (default
+  `last_month`) selects it, the response key is `period`, and `meta.period`
+  echoes the choice. Keeping the key `last_month` while the window is the
+  client's would have made the field lie. Recorded in API_DIFF.md;
+- every window except `all_time` is a CALENDAR window resolved in the caller's
+  timezone, and all of them are half-open so consecutive windows tile without
+  double-counting the boundary. `all_time` returns `(None, None)` and the bounds
+  are dropped from the query rather than widened to an arbitrary epoch. Both
+  services share the same `Period` enum and `period_bounds` helper;
+- **`period` is computed on every request and never cached**, like `recent`. The
+  window is chosen by the caller and resolved in their timezone, so it does not
+  belong under a cache key that identifies only the wallet. `meta.cached`
+  continues to report on the wallet body;
+- an unknown `period` is 422 `validation_failed` rather than a silent default —
+  consistent with how an invalid cursor is handled, and unlike the PREFERENCE
+  headers, which degrade quietly because the client did not ask for them;
+- the write side's fallback-read wallet detail computes `last_month` too, by
+  folding a windowed ImmuDB query in Python. The reroute is internal and must
+  never be visible to a client, so the two shapes have to match field for field;
+- the wallet filter policy needed no change: `name`, `currency`, `balance`,
+  `created_at` already matched Step 2.5 exactly.
 
 ### Step 2.1 — Domain and storage fields
 Add `category` (free-form string), `color`, `favorite`, `zero_balance`, and `opening_balance` to the
@@ -324,13 +412,12 @@ wallet aggregate, the write ORM, the outbox event payload (proto), and the read 
 migration, `libraries/kafka-messages-proto/`, `data_read_core/shared/postgres_orm/wallet.py` + read
 migration, `write_reactions/wallet_reactions/`.
 
-> **DECIDE.** `opening_balance` creates money from nothing. In a double-entry world it needs an
-> opening-balance equity posting, which is the Accounts slice (Phase 5). Until then it is a plain
-> starting figure on the wallet — record that as a known temporary inconsistency rather than
-> discovering it when the balance sheet fails to balance.
+> **DECIDED (2026-08-21).** `opening_balance` does not create money from nothing: it is emitted as a
+> real opening transaction, so the ledger is consistent from the first request and Phase 5 only adds
+> the equity counter-posting.
 
-> **DECIDE.** `zero_balance` is unexplained in the target. Read as "the balance the user considers
-> empty" (an alert floor, not a constraint) — confirm before wiring anything to it.
+> **DECIDED (2026-08-21).** `zero_balance` is a credit datum, not an alert floor and not a
+> constraint. See the STATUS block above.
 
 ### Step 2.2 — Preview shape and ordering
 Presenter emits the target preview object. Ordering becomes `favorite DESC, created_at DESC, id DESC`
@@ -346,6 +433,13 @@ Adds `last_month.inflow` / `last_month.outflow` (calendar month in the user's `t
 from Step 0.9, in the WALLET's currency — nothing converted) and the `recent` embedded collection
 paginated through the endpoint's `limit`/`cursor` with `meta.recent`.
 
+**Both landed — `last_month` in Phase 2, `recent` in Phase 3.** `recent` waited because its items are
+transaction previews carrying `name`, `type`, `origin`, `category` and `chain_id`, every one a Step
+3.1 field; shipping it earlier would have published a preview shape that changed one phase later. It
+now embeds the SAME preview object `GET /transactions` returns, in the same
+`created_at DESC, chain_id ASC NULLS LAST, id DESC` order, paginated through the endpoint's
+`limit`/`cursor` under `meta.recent`, and excluding cancelled transactions.
+
 ### Step 2.5 — `POST /wallets/search`
 Policy fields `name`, `currency`, `balance`, `created_at`. Favorites lead the matching results and
 never bypass the filter.
@@ -353,7 +447,82 @@ never bypass the filter.
 ---
 
 ## Phase 3 — Transactions to target shape
+**STATUS: implemented, all eight steps including chains.**
 The largest single phase. Split it exactly as listed; do not attempt chains before 3.1–3.6 land.
+
+The split in Step 3.1 came out DIFFERENT from — and better than — the step as
+written, on a suggestion made while scoping it. The step proposed keeping the
+ledger row as "the transaction" and hanging a mutable metadata row off it. The
+objection was exact: a ledger row is immutable, so `name`, `category` and
+`evidence` cannot live on it, and bolting them on through `adjusts_other` would
+mean a rename appends a row to an append-only MONEY ledger. What landed instead:
+
+- **a Transaction is a new aggregate** in the write Postgres, holding `name`,
+  `category`, `evidence_url`, `origin`, `chain_id` and `deleted_at`. It owns one
+  or more immutable **money flows** in ImmuDB. Creating appends one flow;
+  adjusting appends a delta linked by `adjusts_other`; cancelling appends an
+  inverse linked by `cancels_other`. Nothing ever rewrites a flow;
+- the old `TransactionEntity` became `MoneyFlowEntity`, and everything around it
+  followed: `MoneyFlowData`, `MoneyFlowMapper`, `MoneyFlowRepository`,
+  `ImmudbMoneyFlowRepository`, `ImmudbMoneyFlowStep`. `TransactionRepository` is
+  now the Postgres one. The rename touched ~160 references and is why the API's
+  word "transaction" and the code's word finally mean the same thing;
+- **`type` is not stored anywhere.** It is read off the sign of the folded flows:
+  negative is an expense, positive an income. `money.amount` goes out as a
+  positive magnitude and the direction rides in `type`, so the two cannot
+  contradict each other and an impossible state is unrepresentable. An
+  adjustment that would cross zero is refused with
+  `TransactionDirectionChangeError` — that is a different operation, not an edit;
+- **`amount` excludes cancelling flows.** A cancelled transaction still reports
+  the figure it was FOR, which is what DELETE echoes back and what detail shows
+  beside `deleted_at`. `ledger_effect` sums every flow and is what the wallet
+  balance follows — it nets to zero once cancelled. Two different questions, two
+  properties;
+- `collapse_ledger` and its `CollapsedTransaction` were DELETED. Folding the
+  ledger into user-facing transactions was exactly what the split made
+  structural: flows carry `transaction_id`, so the fold is a group-by, and
+  `TransactionAggregate.amount` is the whole of it;
+- **the opening balance from Phase 2 is now a real transaction**, named
+  "Opening balance", not an anonymous ledger row. The API_DIFF note about it
+  having "nothing but a timestamp to tell it apart" is resolved.
+
+Deviations from the remaining steps:
+
+- **`PATCH` no longer accepts `new_amount`; corrections moved to
+  `POST /transactions/{id}/adjust`.** The target reassigns PATCH to metadata and
+  defers adjustment transactions, so it names no path for restating an amount —
+  but correcting a figure has to remain possible without destroying the record,
+  and cancel-and-recreate would lose both the audit trail and every reference to
+  the id. The endpoint takes the new TOTAL as a positive magnitude, signs it with
+  the transaction's existing `type` (so a correction can never flip an expense
+  into an income), and appends the DIFFERENCE as an adjusting flow. Absolute
+  rather than incremental, so a retry cannot double-count. Ahead of the target
+  and recorded in API_DIFF.md; the path may be renamed when the spec chooses one;
+- **the read projection soft-cancels a transaction** instead of dropping the
+  row, matching what Phase 2 did for wallets and for the same reason: DELETE
+  returns a body carrying `deleted_at`, which does not survive dropping the row.
+  The reaction is idempotent — a redelivered `TransactionDeleted` must not
+  reverse the balance twice;
+- **Step 3.8's nullable `chain_id` keyset** is solved with a sentinel column.
+  `chain_sort` holds `chain_id` or the largest possible UUID, so
+  `chain_id ASC NULLS LAST` becomes a plain comparable value a cursor can carry.
+  That answers the Step 0.4 open decision for this ordering. The DTOs carry
+  `chain_sort` without presenting it, because the cursor is minted from the DTO;
+- **`wallet.name` is denormalised onto the transaction row.** The cost is a
+  reaction (`RenameWalletInTransactions`) that carries a wallet rename into every
+  transaction of that wallet — which is the trade the step asked for;
+- `TransactionMetadataUpdated` is a NEW event, separate from `TransactionUpdated`.
+  One is a rename, the other is money; a subscriber almost never wants both;
+- **chain pagination follows the target literally** (`meta.transactions` with a
+  cursor), per an explicit decision. Both cursors are always null because a chain
+  holds at most 100 entries and every one is in the response. API_DIFF.md records
+  that nothing consumes a chain cursor;
+- `GET /transactions/{id}` returns `postings: []` and `analysis: null` rather
+  than omitting them, so a client does not have to branch on the keys existing.
+  Both are filled by Phase 5;
+- transaction cache keys gained a schema segment (`read:transaction:s2:{id}`),
+  as the wallet ones did in Phase 2 — the cached DTO changed shape and stale
+  entries would otherwise reach a constructor that no longer accepts them.
 
 ### Step 3.1 — Split the immutable flow from the mutable metadata
 A transaction today is `(source_wallet_id, amount, cancels_other, adjusts_other)` in ImmuDB. The
@@ -404,12 +573,11 @@ through the existing SAGA steps, one idempotency key covering the whole chain, a
 `details[].field` pointing at the failing entry by index. Then
 `DELETE /transactions/chains/{chain-id}`, idempotent.
 
-> **DOC BUG.** The chain response paginates its `transactions` array through `meta.transactions` with
-> a default `limit` of 25, but a chain may hold 100 entries and the document also states there is no
-> endpoint that reads a chain by id. The remaining 75 legs are unreachable except through
-> `POST /transactions/search` on `chain_id`, which is not what a cursor implies. Recommend the chain
-> response return every entry with `"limit": null` under the Non-Paginated Endpoints rule; the bound
-> of 100 already keeps it small. Needs a decision before 3.7 is built.
+> **DECIDED (2026-08-21): implement the cursor as documented.** The chain response carries the
+> `meta.transactions` triple the target specifies. Both cursors are always null in practice — every
+> leg is in the response — so the triple is shape compliance, not a paging mechanism. Nothing
+> consumes a chain cursor; `POST /transactions/search` on `chain_id` remains the way to re-read a
+> chain. Recorded in API_DIFF.md so clients do not go looking for a cursor to follow.
 
 ### Step 3.8 — Ordering
 `created_at DESC, chain_id ASC NULLS LAST, id DESC` via the sentinel sort column from Step 0.4, with
@@ -650,11 +818,9 @@ Collected from the notes above, in the order they matter.
 
 | step | decision needed                                                                 |
 |------|----------------------------------------------------------------------------------|
-| 0.4  | keyset over nullable `chain_id` and over enum-ranked `severity` — sentinel columns |
+| 0.4  | keyset over enum-ranked `severity` — sentinel column (nullable `chain_id` answered in Phase 3) |
 | 0.8  | `details[].field` path syntax for a failure inside a filter tree                  |
 | 0.9  | cache keys must include reporting currency                                        |
-| 2.1  | what `zero_balance` means; how `opening_balance` reaches the ledger               |
-| 3.7  | chain response pagination vs. no chain-read endpoint                              |
 | 5.1  | entry `id` on postings/history; timestamps on the account shape                   |
 | 7.1  | explicit columns vs. JSON payload for notification `severity` / `subject`         |
 

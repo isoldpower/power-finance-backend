@@ -222,6 +222,11 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object amount_ = "";
   /**
+   * <pre>
+   * The outstanding amount at cancellation, signed. Reversing it returns the
+   * wallet balance to where it stood before the transaction.
+   * </pre>
+   *
    * <code>string amount = 13;</code>
    * @return The amount.
    */
@@ -239,6 +244,11 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * The outstanding amount at cancellation, signed. Reversing it returns the
+   * wallet balance to where it stood before the transaction.
+   * </pre>
+   *
    * <code>string amount = 13;</code>
    * @return The bytes for amount.
    */
@@ -283,6 +293,32 @@ private static final long serialVersionUID = 0L;
     return createdAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : createdAt_;
   }
 
+  public static final int DELETED_AT_FIELD_NUMBER = 16;
+  private com.google.protobuf.Timestamp deletedAt_;
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+   * @return Whether the deletedAt field is set.
+   */
+  @java.lang.Override
+  public boolean hasDeletedAt() {
+    return ((bitField0_ & 0x00000004) != 0);
+  }
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+   * @return The deletedAt.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Timestamp getDeletedAt() {
+    return deletedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : deletedAt_;
+  }
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.TimestampOrBuilder getDeletedAtOrBuilder() {
+    return deletedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : deletedAt_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -321,6 +357,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(15, getCreatedAt());
     }
+    if (((bitField0_ & 0x00000004) != 0)) {
+      output.writeMessage(16, getDeletedAt());
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -357,6 +396,10 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(15, getCreatedAt());
+    }
+    if (((bitField0_ & 0x00000004) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(16, getDeletedAt());
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -395,6 +438,11 @@ private static final long serialVersionUID = 0L;
       if (!getCreatedAt()
           .equals(other.getCreatedAt())) return false;
     }
+    if (hasDeletedAt() != other.hasDeletedAt()) return false;
+    if (hasDeletedAt()) {
+      if (!getDeletedAt()
+          .equals(other.getDeletedAt())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -425,6 +473,10 @@ private static final long serialVersionUID = 0L;
     if (hasCreatedAt()) {
       hash = (37 * hash) + CREATED_AT_FIELD_NUMBER;
       hash = (53 * hash) + getCreatedAt().hashCode();
+    }
+    if (hasDeletedAt()) {
+      hash = (37 * hash) + DELETED_AT_FIELD_NUMBER;
+      hash = (53 * hash) + getDeletedAt().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -558,6 +610,7 @@ private static final long serialVersionUID = 0L;
               .alwaysUseFieldBuilders) {
         internalGetOccurredAtFieldBuilder();
         internalGetCreatedAtFieldBuilder();
+        internalGetDeletedAtFieldBuilder();
       }
     }
     @java.lang.Override
@@ -579,6 +632,11 @@ private static final long serialVersionUID = 0L;
       if (createdAtBuilder_ != null) {
         createdAtBuilder_.dispose();
         createdAtBuilder_ = null;
+      }
+      deletedAt_ = null;
+      if (deletedAtBuilder_ != null) {
+        deletedAtBuilder_.dispose();
+        deletedAtBuilder_ = null;
       }
       return this;
     }
@@ -644,6 +702,12 @@ private static final long serialVersionUID = 0L;
             : createdAtBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.deletedAt_ = deletedAtBuilder_ == null
+            ? deletedAt_
+            : deletedAtBuilder_.build();
+        to_bitField0_ |= 0x00000004;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -690,6 +754,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasCreatedAt()) {
         mergeCreatedAt(other.getCreatedAt());
+      }
+      if (other.hasDeletedAt()) {
+        mergeDeletedAt(other.getDeletedAt());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -761,6 +828,13 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 122
+            case 130: {
+              input.readMessage(
+                  internalGetDeletedAtFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 130
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1181,6 +1255,11 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object amount_ = "";
     /**
+     * <pre>
+     * The outstanding amount at cancellation, signed. Reversing it returns the
+     * wallet balance to where it stood before the transaction.
+     * </pre>
+     *
      * <code>string amount = 13;</code>
      * @return The amount.
      */
@@ -1197,6 +1276,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * The outstanding amount at cancellation, signed. Reversing it returns the
+     * wallet balance to where it stood before the transaction.
+     * </pre>
+     *
      * <code>string amount = 13;</code>
      * @return The bytes for amount.
      */
@@ -1214,6 +1298,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * The outstanding amount at cancellation, signed. Reversing it returns the
+     * wallet balance to where it stood before the transaction.
+     * </pre>
+     *
      * <code>string amount = 13;</code>
      * @param value The amount to set.
      * @return This builder for chaining.
@@ -1227,6 +1316,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * The outstanding amount at cancellation, signed. Reversing it returns the
+     * wallet balance to where it stood before the transaction.
+     * </pre>
+     *
      * <code>string amount = 13;</code>
      * @return This builder for chaining.
      */
@@ -1237,6 +1331,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * The outstanding amount at cancellation, signed. Reversing it returns the
+     * wallet balance to where it stood before the transaction.
+     * </pre>
+     *
      * <code>string amount = 13;</code>
      * @param value The bytes for amount to set.
      * @return This builder for chaining.
@@ -1370,6 +1469,127 @@ private static final long serialVersionUID = 0L;
         createdAt_ = null;
       }
       return createdAtBuilder_;
+    }
+
+    private com.google.protobuf.Timestamp deletedAt_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> deletedAtBuilder_;
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+     * @return Whether the deletedAt field is set.
+     */
+    public boolean hasDeletedAt() {
+      return ((bitField0_ & 0x00000100) != 0);
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+     * @return The deletedAt.
+     */
+    public com.google.protobuf.Timestamp getDeletedAt() {
+      if (deletedAtBuilder_ == null) {
+        return deletedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : deletedAt_;
+      } else {
+        return deletedAtBuilder_.getMessage();
+      }
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+     */
+    public Builder setDeletedAt(com.google.protobuf.Timestamp value) {
+      if (deletedAtBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        deletedAt_ = value;
+      } else {
+        deletedAtBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+     */
+    public Builder setDeletedAt(
+        com.google.protobuf.Timestamp.Builder builderForValue) {
+      if (deletedAtBuilder_ == null) {
+        deletedAt_ = builderForValue.build();
+      } else {
+        deletedAtBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+     */
+    public Builder mergeDeletedAt(com.google.protobuf.Timestamp value) {
+      if (deletedAtBuilder_ == null) {
+        if (((bitField0_ & 0x00000100) != 0) &&
+          deletedAt_ != null &&
+          deletedAt_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
+          getDeletedAtBuilder().mergeFrom(value);
+        } else {
+          deletedAt_ = value;
+        }
+      } else {
+        deletedAtBuilder_.mergeFrom(value);
+      }
+      if (deletedAt_ != null) {
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+     */
+    public Builder clearDeletedAt() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      deletedAt_ = null;
+      if (deletedAtBuilder_ != null) {
+        deletedAtBuilder_.dispose();
+        deletedAtBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+     */
+    public com.google.protobuf.Timestamp.Builder getDeletedAtBuilder() {
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return internalGetDeletedAtFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+     */
+    public com.google.protobuf.TimestampOrBuilder getDeletedAtOrBuilder() {
+      if (deletedAtBuilder_ != null) {
+        return deletedAtBuilder_.getMessageOrBuilder();
+      } else {
+        return deletedAt_ == null ?
+            com.google.protobuf.Timestamp.getDefaultInstance() : deletedAt_;
+      }
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        internalGetDeletedAtFieldBuilder() {
+      if (deletedAtBuilder_ == null) {
+        deletedAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>(
+                getDeletedAt(),
+                getParentForChildren(),
+                isClean());
+        deletedAt_ = null;
+      }
+      return deletedAtBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:power_finance.events.v1.TransactionDeleted)

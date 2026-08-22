@@ -1,17 +1,12 @@
 from rest_framework import serializers
 
-from data_read_core.shared.rest_framework import collection_response
+from data_read_core.shared.rest_framework import collection_response, transaction_preview_fields
 
 
 class TransactionPreviewSerializer(serializers.Serializer):
-    id = serializers.UUIDField()
-    wallet_id = serializers.UUIDField()
-    amount = serializers.CharField(help_text="Decimal string at the currency's scale.")
-    currency = serializers.CharField(allow_blank=True)
-    occurred_at = serializers.DateTimeField()
-    created_at = serializers.DateTimeField()
-    updated_at = serializers.DateTimeField(allow_null=True)
-    deleted_at = serializers.DateTimeField(allow_null=True)
+    """The target's transaction preview."""
 
+
+TransactionPreviewSerializer._declared_fields.update(transaction_preview_fields())
 
 PaginatedTransactionPreviewSerializer = collection_response(TransactionPreviewSerializer)

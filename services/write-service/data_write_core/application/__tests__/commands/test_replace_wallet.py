@@ -8,7 +8,7 @@ from data_write_core.application.commands import (
 )
 from data_write_core.domain.exceptions import WalletCurrencyImmutableError
 
-from ..queries.fakes import FakeTransactionRepository, FakeWalletRepository, make_wallet
+from ..queries.fakes import FakeMoneyFlowRepository, FakeWalletRepository, make_wallet
 
 WALLET_A = "11111111-1111-1111-1111-111111111111"
 
@@ -17,7 +17,7 @@ async def test_replace_rejects_currency_change():
     wallet_repo = FakeWalletRepository([make_wallet(WALLET_A, currency="USD")])
     handler = ReplaceWalletCommandHandler(
         wallet_repository=wallet_repo,
-        transaction_repository=FakeTransactionRepository(),
+        money_flow_repository=FakeMoneyFlowRepository(),
         outbox_repository=object(),
     )
 

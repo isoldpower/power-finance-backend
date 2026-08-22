@@ -10,8 +10,8 @@ from .._utilities import decode_payload
 
 
 class UpdateWalletDocument(Effect):
-    """Patch the searchable fields of a wallet document on update. Upserts so a
-    title edit that races ahead of the create projection still lands."""
+    """Patch the searchable fields of a wallet document on update. Upserts so an
+    edit that races ahead of the create projection still lands."""
 
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, WalletUpdated)
@@ -20,6 +20,10 @@ class UpdateWalletDocument(Effect):
             "user_id": payload.user_id,
             "title": payload.new_title,
             "updated_at": payload.updated_at.ToDatetime(tzinfo=UTC).isoformat(),
+            "category": payload.category,
+            "color": payload.color,
+            "favorite": payload.favorite,
+            "zero_balance": payload.zero_balance or "0",
         }
 
         await get_elasticsearch().update(
@@ -28,4 +32,7 @@ class UpdateWalletDocument(Effect):
             doc=partial,
             doc_as_upsert=True,
         )
-        log_wallet_elastic_updated(payload.wallet_id, WALLETS_INDEX)
+        log_wallet_elastic_updated(
+            payload.wallet_id,
+            WALLETS_INDEX,
+        )

@@ -35,19 +35,19 @@ from ._serializers import EnvelopedWebhookDetailSerializer
 )
 @async_api_view(["GET"])
 @read_at_least_gate
-async def get_webhook(request, pk=None):
+async def get_webhook(request, webhook_id=None):
     logger = get_query_logger("get_webhook")
     log_request_received(
         logger,
         "get_webhook",
-        id=pk,
+        id=webhook_id,
         user_id=request.user.id,
     )
 
     fetched = await GetWebhookQueryHandler().handle(
-        GetWebhookQuery(user_id=request.user.id, webhook_id=pk)
+        GetWebhookQuery(user_id=request.user.id, webhook_id=webhook_id)
     )
-    log_request_served(logger, "get_webhook", id=pk)
+    log_request_served(logger, "get_webhook", id=webhook_id)
 
     return ok(
         present_one(fetched.resource),

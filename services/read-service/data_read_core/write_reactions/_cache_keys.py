@@ -1,5 +1,9 @@
+WALLET_CACHE_SCHEMA = "s2"
+TRANSACTION_CACHE_SCHEMA = "s2"
+
+
 def get_single_wallet_key(wallet_id: str) -> str:
-    return f"read:wallet:{wallet_id}"
+    return f"read:wallet:{WALLET_CACHE_SCHEMA}:{wallet_id}"
 
 
 def get_wallet_list_version_key(user_id: int) -> str:
@@ -7,7 +11,7 @@ def get_wallet_list_version_key(user_id: int) -> str:
 
 
 def get_single_transaction_key(transaction_id: str) -> str:
-    return f"read:transaction:{transaction_id}"
+    return f"read:transaction:{TRANSACTION_CACHE_SCHEMA}:{transaction_id}"
 
 
 def get_transaction_list_version_key(user_id: int) -> str:

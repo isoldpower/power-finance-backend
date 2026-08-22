@@ -1,9 +1,3 @@
-"""The fallback presenters must produce what the read service produces.
-
-The gateway can reroute a read here mid-session; a client that could tell the
-difference would be watching the consistency mechanism leak.
-"""
-
 from datetime import datetime
 from decimal import Decimal
 from unittest.mock import patch
@@ -11,7 +5,8 @@ from uuid import UUID
 
 import pytest
 
-from data_write_core.application.dtos import TransactionPlainDTO, WalletDTO
+from data_write_core.application.dtos import TransactionDTO, WalletDTO
+from data_write_core.domain.value_objects import TransactionOrigin, TransactionType
 from data_write_core.presentation.http.views.fallback_read._presenters import (
     present_transaction,
     present_wallet,
@@ -41,50 +36,69 @@ async def test_present_wallet_matches_read_service_shape():
         currency="USD",
         created_at=datetime(2026, 1, 1, 12, 0, 0),
         updated_at=datetime(2026, 1, 2, 12, 0, 0),
+        category="Savings",
+        color="#FF0000",
+        favorite=True,
+        zero_balance=Decimal("100.00"),
     )
 
     assert await present_wallet(wallet) == {
         "id": str(WALLET_ID),
         "name": "Vacation",
-        "balance": {"amount": "130.00", "currency": "USD"},
         "created_at": "2026-01-01T12:00:00+00:00",
         "updated_at": "2026-01-02T12:00:00+00:00",
         "deleted_at": None,
+        "category": "Savings",
+        "currency": "USD",
+        "money": {"amount": "130.00", "currency": "USD"},
+        "zero_balance": {"amount": "100.00", "currency": "USD"},
+        "favorite": True,
+        "color": "#FF0000",
     }
 
 
-async def test_present_transaction_matches_read_service_shape():
-    transaction = TransactionPlainDTO(
+def _transaction(amount: str, currency: str = "EUR") -> TransactionDTO:
+    return TransactionDTO(
         id=TX_ID,
-        amount=Decimal("12.50"),
-        currency_code="EUR",
-        source_wallet_id=str(WALLET_ID),
+        user_id=7,
+        name="Groceries store",
+        amount=Decimal(amount),
+        currency_code=currency,
+        transaction_type=TransactionType.EXPENSE,
+        origin=TransactionOrigin.MANUAL,
+        wallet=WalletDTO(
+            id=WALLET_ID,
+            user_id=7,
+            name="Random Credit Card",
+            balance_amount=Decimal("0"),
+            currency=currency,
+            created_at=datetime(2026, 1, 1, 12, 0, 0),
+            updated_at=datetime(2026, 1, 1, 12, 0, 0),
+        ),
         created_at=datetime(2026, 1, 1, 9, 30, 0),
+        category="Food",
     )
 
-    assert await present_transaction(transaction) == {
+
+async def test_present_transaction_matches_read_service_shape():
+    assert await present_transaction(_transaction("12.50")) == {
         "id": str(TX_ID),
-        "wallet_id": str(WALLET_ID),
-        "amount": "12.50",
-        "currency": "EUR",
-        "occurred_at": "2026-01-01T09:30:00+00:00",
+        "name": "Groceries store",
         "created_at": "2026-01-01T09:30:00+00:00",
         "updated_at": None,
         "deleted_at": None,
+        "money": {"amount": "12.50", "currency": "EUR"},
+        "type": "expense",
+        "origin": "manual",
+        "wallet": {"id": str(WALLET_ID), "name": "Random Credit Card"},
+        "category": "Food",
+        "chain_id": None,
     }
 
 
 async def test_amounts_are_emitted_at_the_currency_scale():
-    """Same code path, different scale: two digits for USD, none for JPY."""
+    """Same code path, different scale: two digits for EUR, none for JPY."""
 
-    transaction = TransactionPlainDTO(
-        id=TX_ID,
-        amount=Decimal("90"),
-        currency_code="JPY",
-        source_wallet_id=str(WALLET_ID),
-        created_at=datetime(2026, 1, 1, 9, 30, 0),
-    )
+    presented = await present_transaction(_transaction("90", currency="JPY"))
 
-    presented = await present_transaction(transaction)
-
-    assert presented["amount"] == "90"
+    assert presented["money"] == {"amount": "90", "currency": "JPY"}

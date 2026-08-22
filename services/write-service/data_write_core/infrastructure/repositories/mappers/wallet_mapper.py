@@ -14,6 +14,10 @@ class WalletMapper:
             created_at=model.created_at,
             updated_at=model.updated_at,
             deleted_at=model.deleted_at,
+            category=model.category,
+            color=model.color,
+            favorite=model.favorite,
+            zero_balance=model.zero_balance,
             event_collector=EventCollector(),
         )
 
@@ -25,5 +29,9 @@ class WalletMapper:
         model.user_id = int(entity.user_id)
         model.created_at = entity.created_at
         model.deleted_at = entity.deleted_at
+        model.category = entity.category
+        model.color = entity.color
+        model.favorite = entity.favorite
+        model.zero_balance = entity.zero_balance
 
         return model

@@ -41,23 +41,23 @@ from ._serializers import WebhookSubscriptionCollectionSerializer
 )
 @async_api_view(["GET"])
 @read_at_least_gate
-async def list_webhook_events(request, pk=None):
+async def list_webhook_events(request, webhook_id=None):
     logger = get_query_logger("list_webhook_events")
     log_request_received(
         logger,
         "list_webhook_events",
-        id=pk,
+        id=webhook_id,
         user_id=request.user.id,
     )
 
     fetched = await ListWebhookEventsQueryHandler().handle(
-        ListWebhookEventsQuery(user_id=request.user.id, webhook_id=pk)
+        ListWebhookEventsQuery(user_id=request.user.id, webhook_id=webhook_id)
     )
     page = CompletePage(fetched.rows, total=fetched.total)
     log_request_served(
         logger,
         "list_webhook_events",
-        id=pk,
+        id=webhook_id,
         total=page.total,
     )
 

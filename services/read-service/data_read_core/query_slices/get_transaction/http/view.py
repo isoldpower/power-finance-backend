@@ -35,19 +35,23 @@ from ._serializers import EnvelopedTransactionDetailSerializer
 )
 @async_api_view(["GET"])
 @read_at_least_gate
-async def get_transaction(request, pk=None):
+async def get_transaction(request, transaction_id=None):
     logger = get_query_logger("get_transaction")
     log_request_received(
         logger,
         "get_transaction",
-        id=pk,
+        id=transaction_id,
         user_id=request.user.id,
     )
 
     fetched = await GetTransactionQueryHandler().handle(
-        GetTransactionQuery(user_id=request.user.id, transaction_id=pk)
+        GetTransactionQuery(user_id=request.user.id, transaction_id=transaction_id)
     )
-    log_request_served(logger, "get_transaction", id=pk)
+    log_request_served(
+        logger,
+        "get_transaction",
+        id=transaction_id,
+    )
 
     return ok(
         await present_one(fetched.resource),

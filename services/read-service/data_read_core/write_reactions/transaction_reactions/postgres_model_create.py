@@ -1,11 +1,17 @@
 from datetime import UTC, datetime
 from decimal import Decimal
+from uuid import UUID
 
 from django.db.models import F
 from kafka_messages import TransactionCreated
 
 from data_read_core.shared.kafka_updates import Effect, EventMessage
-from data_read_core.shared.postgres_orm import TransactionReadModel, WalletReadModel, aatomic
+from data_read_core.shared.postgres_orm import (
+    NO_CHAIN_SENTINEL,
+    TransactionReadModel,
+    WalletReadModel,
+    aatomic,
+)
 
 from .._logger_shortcuts import (
     log_transaction_postgres_created,
@@ -13,7 +19,7 @@ from .._logger_shortcuts import (
     log_transaction_postgres_wallet_update,
 )
 from .._utilities import decode_payload, handle_database_errors
-from ._utilities import _wallet_currency
+from ._utilities import _wallet_label
 
 
 class CreateTransactionReadModel(Effect):
@@ -58,14 +64,23 @@ class CreateTransactionReadModel(Effect):
         payload: TransactionCreated,
         created_at: datetime,
     ) -> TransactionReadModel | None:
-        currency_code = await _wallet_currency(payload.wallet_id)
+        wallet = await _wallet_label(payload.wallet_id)
+        chain_id = UUID(payload.chain_id) if payload.chain_id else None
+
         new_resource, resource_created = await TransactionReadModel.objects.aget_or_create(
             id=payload.transaction_id,
             defaults={
                 "wallet_id": payload.wallet_id,
+                "wallet_name": wallet.name,
                 "user_id": payload.user_id,
                 "amount": amount,
-                "currency_code": currency_code,
+                "currency_code": wallet.currency_code,
+                "name": payload.name,
+                "category": payload.category or None,
+                "evidence_url": payload.evidence_url or None,
+                "origin": payload.origin or "manual",
+                "chain_id": chain_id,
+                "chain_sort": chain_id or NO_CHAIN_SENTINEL,
                 "occurred_at": created_at,
                 "created_at": created_at,
             },

@@ -10,7 +10,8 @@ from .._utilities import decode_payload
 
 
 class UpdateTransactionDocument(Effect):
-    """Patch the amount of a transaction document on update."""
+    """Patch the amount after an adjustment; `type` is not repatched because an
+    adjustment restates a magnitude and can never cross zero."""
 
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, TransactionUpdated)
@@ -28,4 +29,7 @@ class UpdateTransactionDocument(Effect):
             doc_as_upsert=True,
         )
 
-        log_transaction_elastic_updated(payload.transaction_id, TRANSACTIONS_INDEX)
+        log_transaction_elastic_updated(
+            payload.transaction_id,
+            TRANSACTIONS_INDEX,
+        )

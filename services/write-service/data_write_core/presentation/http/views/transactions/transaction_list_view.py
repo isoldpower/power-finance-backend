@@ -15,6 +15,7 @@ from ...serializers import (
     ErrorResponseSerializer,
 )
 from ..mixins import CommandResponseMixin
+from ._command_inputs import evidence_url_of, origin_of, transaction_type_of
 from .base import TransactionView
 
 
@@ -23,10 +24,11 @@ class TransactionListView(TransactionView, CommandResponseMixin):
         operation_id="transactions_create",
         summary="Create a new transaction",
         description=(
-            "Append a new transaction to the source wallet's history. "
-            "Requires an Idempotency-Key header: without one, a dropped "
-            "response or a double-tapped button creates a duplicate the API "
-            "has no way to detect after the fact."
+            "Record one money flow against a wallet. `amount` is a positive "
+            "magnitude and `type` states the direction. Requires an "
+            "Idempotency-Key header: without one, a dropped response or a "
+            "double-tapped button creates a duplicate the API has no way to "
+            "detect after the fact."
         ),
         request=CreateTransactionRequestSerializer,
         responses={
@@ -47,8 +49,13 @@ class TransactionListView(TransactionView, CommandResponseMixin):
             CreateTransactionCommand(
                 user_id=int(request.user.unique_id),
                 user_external_id=request.user.external_id,
-                source_wallet_id=validated["source_wallet_id"],
+                wallet_id=validated["wallet_id"],
                 amount=validated["amount"],
+                name=validated["name"],
+                transaction_type=transaction_type_of(validated),
+                origin=origin_of(validated),
+                category=validated.get("category"),
+                evidence_url=evidence_url_of(validated),
             )
         )
 

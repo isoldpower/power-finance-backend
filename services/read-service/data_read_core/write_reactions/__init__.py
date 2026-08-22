@@ -16,6 +16,8 @@ from .transaction_reactions import (
     RemoveTransactionDocument,
     RemoveTransactionReadModel,
     UpdateTransactionDocument,
+    UpdateTransactionMetadataDocument,
+    UpdateTransactionMetadataReadModel,
     UpdateTransactionReadModel,
 )
 from .user_reactions import ProjectUserReadModel
@@ -26,6 +28,7 @@ from .wallet_reactions import (
     IndexWalletDocument,
     RemoveWalletDocument,
     RemoveWalletReadModel,
+    RenameWalletInTransactions,
     UpdateWalletDocument,
     UpdateWalletReadModel,
 )
@@ -49,6 +52,8 @@ __all__ = [
     "RemoveNotificationReadModel",
     "CreateTransactionReadModel",
     "RemoveTransactionReadModel",
+    "UpdateTransactionMetadataDocument",
+    "UpdateTransactionMetadataReadModel",
     "UpdateTransactionReadModel",
     "EvictTransactionCache",
     "BumpTransactionListVersion",
@@ -73,5 +78,6 @@ __all__ = [
     "RemoveWebhookSubscriptionReadModel",
     "UpdateWebhookReadModel",
     "UpdateWalletDocument",
+    "RenameWalletInTransactions",
     "UpdateWalletReadModel",
 ]

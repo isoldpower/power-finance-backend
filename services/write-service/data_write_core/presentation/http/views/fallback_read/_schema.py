@@ -1,5 +1,6 @@
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter
+from write_service.common.timestamps import DEFAULT_PERIOD, Period
 
 LIMIT_PARAMETER = OpenApiParameter(
     "limit",
@@ -13,6 +14,20 @@ CURSOR_PARAMETER = OpenApiParameter(
     type=OpenApiTypes.STR,
     location=OpenApiParameter.QUERY,
     description="Opaque cursor from a previous response's `meta.next_cursor` or `meta.prev_cursor`.",
+)
+
+
+PERIOD_PARAMETER = OpenApiParameter(
+    "period",
+    type=OpenApiTypes.STR,
+    location=OpenApiParameter.QUERY,
+    enum=[period.value for period in Period],
+    default=DEFAULT_PERIOD.value,
+    description=(
+        "Window for the `period` inflow/outflow figures. Every value is a "
+        "CALENDAR window resolved in your timezone preference, not a rolling "
+        "count of days."
+    ),
 )
 
 

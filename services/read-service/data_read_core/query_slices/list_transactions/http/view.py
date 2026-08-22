@@ -6,7 +6,7 @@ from data_read_core.shared.logging import (
     log_request_received,
     log_request_served,
 )
-from data_read_core.shared.pagination import CREATED_AT_DESC, PageRequest, build_page
+from data_read_core.shared.pagination import TRANSACTION_FEED, PageRequest, build_page
 from data_read_core.shared.read_at_least import read_at_least_gate
 from data_read_core.shared.rest_framework import (
     CURSOR_PARAMETER,
@@ -41,7 +41,7 @@ async def list_transactions(request):
         user_id=request.user.id,
     )
 
-    page_request = PageRequest.from_request(request, CREATED_AT_DESC)
+    page_request = PageRequest.from_request(request, TRANSACTION_FEED)
     fetched = await ListTransactionsQueryHandler().handle(
         ListTransactionsQuery(user_id=request.user.id, page=page_request)
     )

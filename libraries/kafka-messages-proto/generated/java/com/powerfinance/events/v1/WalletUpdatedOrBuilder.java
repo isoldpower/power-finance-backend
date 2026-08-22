@@ -99,4 +99,58 @@ public interface WalletUpdatedOrBuilder extends
    * <code>.google.protobuf.Timestamp updated_at = 14;</code>
    */
   com.google.protobuf.TimestampOrBuilder getUpdatedAtOrBuilder();
+
+  /**
+   * <pre>
+   * Fields 15-18 carry the FULL post-update state, not a diff. PATCH is
+   * partial, so a diff would need a presence flag per field; projecting an
+   * overwrite of the whole mutable set is both smaller and idempotent.
+   * </pre>
+   *
+   * <code>string category = 15;</code>
+   * @return The category.
+   */
+  java.lang.String getCategory();
+  /**
+   * <pre>
+   * Fields 15-18 carry the FULL post-update state, not a diff. PATCH is
+   * partial, so a diff would need a presence flag per field; projecting an
+   * overwrite of the whole mutable set is both smaller and idempotent.
+   * </pre>
+   *
+   * <code>string category = 15;</code>
+   * @return The bytes for category.
+   */
+  com.google.protobuf.ByteString
+      getCategoryBytes();
+
+  /**
+   * <code>string color = 16;</code>
+   * @return The color.
+   */
+  java.lang.String getColor();
+  /**
+   * <code>string color = 16;</code>
+   * @return The bytes for color.
+   */
+  com.google.protobuf.ByteString
+      getColorBytes();
+
+  /**
+   * <code>bool favorite = 17;</code>
+   * @return The favorite.
+   */
+  boolean getFavorite();
+
+  /**
+   * <code>string zero_balance = 18;</code>
+   * @return The zeroBalance.
+   */
+  java.lang.String getZeroBalance();
+  /**
+   * <code>string zero_balance = 18;</code>
+   * @return The bytes for zeroBalance.
+   */
+  com.google.protobuf.ByteString
+      getZeroBalanceBytes();
 }

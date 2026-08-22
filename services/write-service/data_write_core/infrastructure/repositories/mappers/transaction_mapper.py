@@ -1,25 +1,43 @@
-from decimal import Decimal
 from uuid import UUID
 
-from django.utils.dateparse import parse_datetime
-
 from data_write_core.domain.entities import TransactionEntity
-from data_write_core.domain.value_objects import TransactionData
+from data_write_core.domain.events import EventCollector
+from data_write_core.domain.value_objects import TransactionMetadata, TransactionOrigin
+from data_write_core.infrastructure.orm import TransactionModel
 
 
 class TransactionMapper:
     @staticmethod
-    def to_domain(row: dict) -> TransactionEntity:
-        raw_cancels = row.get("cancels_other")
-        raw_adjusts = row.get("adjusts_other")
-        return TransactionEntity.from_persistence(
-            id=UUID(row["id"]),
-            user_id=int(row["user_id"]),
-            created_at=parse_datetime(row["created_at"]),
-            data=TransactionData(
-                source_wallet_id=UUID(row["source_wallet_id"]),
-                amount=Decimal(row["amount"]),
-                cancels_other=UUID(raw_cancels) if raw_cancels else None,
-                adjusts_other=UUID(raw_adjusts) if raw_adjusts else None,
+    def to_domain(model: TransactionModel) -> TransactionEntity:
+        return TransactionEntity(
+            id=model.id,
+            user_id=str(model.user_id),
+            wallet_id=model.wallet_id,
+            metadata=TransactionMetadata(
+                name=model.name,
+                category=model.category,
+                evidence_url=model.evidence_url,
+                origin=TransactionOrigin(model.origin),
+                chain_id=model.chain_id,
             ),
+            created_at=model.created_at,
+            updated_at=model.updated_at,
+            deleted_at=model.deleted_at,
+            event_collector=EventCollector(),
         )
+
+    @staticmethod
+    def apply_to_model(model: TransactionModel, entity: TransactionEntity) -> TransactionModel:
+        model.id = UUID(entity.unique_id)
+        model.user_id = int(entity.user_id)
+        model.wallet_id = entity.wallet_id
+        model.chain_id = entity.chain_id
+        model.name = entity.name
+        model.category = entity.category
+        model.evidence_url = entity.evidence_url
+        model.origin = str(entity.origin)
+        model.created_at = entity.created_at
+        model.updated_at = entity.updated_at
+        model.deleted_at = entity.deleted_at
+
+        return model

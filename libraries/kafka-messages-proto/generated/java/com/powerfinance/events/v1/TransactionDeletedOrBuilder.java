@@ -74,11 +74,21 @@ public interface TransactionDeletedOrBuilder extends
   int getUserId();
 
   /**
+   * <pre>
+   * The outstanding amount at cancellation, signed. Reversing it returns the
+   * wallet balance to where it stood before the transaction.
+   * </pre>
+   *
    * <code>string amount = 13;</code>
    * @return The amount.
    */
   java.lang.String getAmount();
   /**
+   * <pre>
+   * The outstanding amount at cancellation, signed. Reversing it returns the
+   * wallet balance to where it stood before the transaction.
+   * </pre>
+   *
    * <code>string amount = 13;</code>
    * @return The bytes for amount.
    */
@@ -99,4 +109,19 @@ public interface TransactionDeletedOrBuilder extends
    * <code>.google.protobuf.Timestamp created_at = 15;</code>
    */
   com.google.protobuf.TimestampOrBuilder getCreatedAtOrBuilder();
+
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+   * @return Whether the deletedAt field is set.
+   */
+  boolean hasDeletedAt();
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+   * @return The deletedAt.
+   */
+  com.google.protobuf.Timestamp getDeletedAt();
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+   */
+  com.google.protobuf.TimestampOrBuilder getDeletedAtOrBuilder();
 }

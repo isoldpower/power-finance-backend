@@ -345,3 +345,21 @@ def log_webhook_cache_evicted(key: str, removed: int) -> None:
         key,
         removed,
     )
+
+
+def log_transaction_postgres_metadata_updated(transaction_id: str, rows: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Updated transaction %s metadata (rows=%s).",
+        transaction_id,
+        rows,
+    )
+
+
+def log_wallet_name_denormalised(wallet_id: str, rows: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Carried wallet %s rename into %s transaction rows.",
+        wallet_id,
+        rows,
+    )

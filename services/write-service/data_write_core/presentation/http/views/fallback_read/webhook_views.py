@@ -72,11 +72,11 @@ class FallbackWebhookResourceView(FallbackReadView):
         },
     )
     @trace_handler_flow
-    async def get(self, request, pk=None):
+    async def get(self, request, webhook_id=None):
         webhook = await GetFallbackWebhookQueryHandler().handle(
             GetFallbackWebhookQuery(
                 user_id=int(request.user.unique_id),
-                webhook_id=pk,
+                webhook_id=webhook_id,
             )
         )
 
@@ -101,11 +101,11 @@ class FallbackWebhookEventListView(FallbackReadView):
         },
     )
     @trace_handler_flow
-    async def get(self, request, pk=None):
+    async def get(self, request, webhook_id=None):
         subscriptions = await ListFallbackWebhookSubscriptionsQueryHandler().handle(
             ListFallbackWebhookSubscriptionsQuery(
                 user_id=int(request.user.unique_id),
-                webhook_id=pk,
+                webhook_id=webhook_id,
             )
         )
 

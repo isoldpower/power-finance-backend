@@ -1,9 +1,10 @@
 from decimal import Decimal
 from uuid import UUID
 
+from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import (
+    MoneyFlowEntity,
     NotificationEntity,
-    TransactionEntity,
     WalletEntity,
     WebhookEntity,
     WebhookSubscriptionEntity,
@@ -73,26 +74,38 @@ def wallet_to_dto(wallet: WalletEntity, balance_amount: Decimal | None = None) -
         currency=wallet.currency_code,
         created_at=wallet.created_at,
         updated_at=wallet.updated_at,
+        category=wallet.category,
+        color=wallet.color,
+        favorite=wallet.favorite,
+        zero_balance=wallet.zero_balance,
+        deleted_at=wallet.deleted_at,
     )
 
 
 def transaction_to_dto(
-    transaction: TransactionEntity,
-    source_wallet: WalletDTO,
+    aggregate: TransactionAggregate,
+    wallet: WalletDTO,
 ) -> TransactionDTO:
     return TransactionDTO(
-        id=UUID(transaction.unique_id),
-        amount=transaction.amount,
-        source_wallet=source_wallet,
-        currency_code=source_wallet.currency,
-        created_at=transaction.created_at,
-        cancels_other=transaction.cancels_other,
-        adjusts_other=transaction.adjusts_other,
+        id=UUID(aggregate.unique_id),
+        user_id=int(aggregate.root.user_id),
+        name=aggregate.root.name,
+        amount=abs(aggregate.amount),
+        currency_code=wallet.currency,
+        transaction_type=aggregate.type,
+        origin=aggregate.root.origin,
+        wallet=wallet,
+        created_at=aggregate.root.created_at,
+        updated_at=aggregate.root.updated_at,
+        deleted_at=aggregate.root.deleted_at,
+        category=aggregate.root.category,
+        evidence_url=aggregate.root.evidence_url,
+        chain_id=aggregate.root.chain_id,
     )
 
 
 def transaction_to_plain_dto(
-    transaction: TransactionEntity,
+    transaction: MoneyFlowEntity,
     source_wallet: WalletDTO,
 ) -> TransactionPlainDTO:
     return TransactionPlainDTO(
@@ -101,6 +114,7 @@ def transaction_to_plain_dto(
         source_wallet_id=str(source_wallet.id),
         currency_code=source_wallet.currency,
         created_at=transaction.created_at,
+        transaction_id=transaction.transaction_id,
         cancels_other=transaction.cancels_other,
         adjusts_other=transaction.adjusts_other,
     )

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from data_read_core.shared.rest_framework import collection_response
+from data_read_core.shared.rest_framework import collection_response, transaction_preview_fields
 
 
 class FilterTransactionsRequestSerializer(serializers.Serializer):
@@ -8,14 +8,9 @@ class FilterTransactionsRequestSerializer(serializers.Serializer):
 
 
 class TransactionSearchResultSerializer(serializers.Serializer):
-    id = serializers.UUIDField()
-    wallet_id = serializers.UUIDField()
-    amount = serializers.CharField(help_text="Decimal string at the currency's scale.")
-    currency = serializers.CharField()
-    occurred_at = serializers.DateTimeField(allow_null=True)
-    created_at = serializers.DateTimeField()
-    updated_at = serializers.DateTimeField(allow_null=True)
-    deleted_at = serializers.DateTimeField(allow_null=True)
+    pass
 
+
+TransactionSearchResultSerializer._declared_fields.update(transaction_preview_fields())
 
 PaginatedTransactionSearchResultSerializer = collection_response(TransactionSearchResultSerializer)
