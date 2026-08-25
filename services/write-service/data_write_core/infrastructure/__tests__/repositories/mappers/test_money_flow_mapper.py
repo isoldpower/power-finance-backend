@@ -30,7 +30,7 @@ class TransactionMapperTests(SimpleTestCase):
 
         self.assertEqual(entity.unique_id, _ID)
         self.assertEqual(entity.user_id, "42")
-        self.assertEqual(entity.source_wallet_id, UUID(_WALLET))
+        self.assertEqual(entity.container_id, UUID(_WALLET))
         self.assertEqual(entity.amount, Decimal("12.50"))
         self.assertIsNone(entity.cancels_other)
         self.assertIsNone(entity.adjusts_other)

@@ -1,6 +1,7 @@
 from .request import (
     AdjustTransactionRequestSerializer,
     BatchAcknowledgeRequestSerializer,
+    CreateGoalRequestSerializer,
     CreateTransactionChainRequestSerializer,
     CreateTransactionRequestSerializer,
     CreateWalletRequestSerializer,
@@ -8,11 +9,13 @@ from .request import (
     PatchTransactionRequestSerializer,
     ReplaceWalletRequestSerializer,
     SubscribeWebhookToEventRequestSerializer,
+    UpdateGoalRequestSerializer,
     UpdateWalletRequestSerializer,
     UpdateWebhookRequestSerializer,
 )
 from .response import (
     AcknowledgedNotificationsResponseSerializer,
+    EnvelopedGoalResponseSerializer,
     EnvelopedNotificationResponseSerializer,
     EnvelopedTransactionChainResponseSerializer,
     EnvelopedTransactionResponseSerializer,
@@ -22,7 +25,9 @@ from .response import (
     EnvelopedWebhookSubscriptionResponseSerializer,
     EnvelopedWebhookWithSecretResponseSerializer,
     ErrorResponseSerializer,
+    GoalResponseSerializer,
     NotificationResponseSerializer,
+    PaginatedGoalResponseSerializer,
     PaginatedNotificationResponseSerializer,
     PaginatedTransactionFlowSerializer,
     PaginatedTransactionResponseSerializer,
@@ -38,6 +43,11 @@ from .response import (
 )
 
 __all__ = [
+    "CreateGoalRequestSerializer",
+    "EnvelopedGoalResponseSerializer",
+    "GoalResponseSerializer",
+    "PaginatedGoalResponseSerializer",
+    "UpdateGoalRequestSerializer",
     "AcknowledgedNotificationsResponseSerializer",
     "BatchAcknowledgeRequestSerializer",
     "AdjustTransactionRequestSerializer",

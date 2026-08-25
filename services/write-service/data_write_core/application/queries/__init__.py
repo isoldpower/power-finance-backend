@@ -1,3 +1,4 @@
+from .get_goal import GetFallbackGoalQuery, GetFallbackGoalQueryHandler
 from .get_notification import (
     GetFallbackNotificationQuery,
     GetFallbackNotificationQueryHandler,
@@ -14,6 +15,7 @@ from .get_webhook import (
     ListFallbackWebhookSubscriptionsQuery,
     ListFallbackWebhookSubscriptionsQueryHandler,
 )
+from .list_goals import ListFallbackGoalsQuery, ListFallbackGoalsQueryHandler
 from .list_notifications import (
     ListFallbackNotificationsQuery,
     ListFallbackNotificationsQueryHandler,
@@ -26,6 +28,10 @@ from .list_wallets import ListFallbackWalletsQuery, ListFallbackWalletsQueryHand
 from .list_webhooks import ListFallbackWebhooksQuery, ListFallbackWebhooksQueryHandler
 
 __all__ = [
+    "GetFallbackGoalQuery",
+    "GetFallbackGoalQueryHandler",
+    "ListFallbackGoalsQuery",
+    "ListFallbackGoalsQueryHandler",
     "GetFallbackNotificationQuery",
     "GetFallbackNotificationQueryHandler",
     "ListFallbackNotificationsQuery",

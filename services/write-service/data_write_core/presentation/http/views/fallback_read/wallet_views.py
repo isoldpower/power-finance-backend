@@ -20,6 +20,7 @@ from ...serializers import (
     PaginatedWalletResponseSerializer,
 )
 from ._presenters import present_wallet_detail, present_wallets
+from ._query_params import resolve_period
 from ._schema import (
     CURSOR_PARAMETER,
     LIMIT_PARAMETER,
@@ -72,15 +73,20 @@ class FallbackWalletResourceView(FallbackReadView):
     )
     @trace_handler_flow
     async def get(self, request, wallet_id=None):
+        period = resolve_period(request)
         detail = await GetFallbackWalletQueryHandler().handle(
             GetFallbackWalletQuery(
                 user_id=int(request.user.unique_id),
                 wallet_id=wallet_id,
                 zone=request.user.preferences.zone,
+                period=period,
             )
         )
 
         return ok(
             await present_wallet_detail(detail),
-            {"cached": False},
+            {
+                "cached": False,
+                "period": str(period),
+            },
         )

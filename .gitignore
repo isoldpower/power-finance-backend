@@ -127,3 +127,6 @@ openapi.json
 # =============================================================================
 infrastructure/debezium/.connect-data/
 infrastructure/kafka/.kafka-data/
+
+
+.phase-5-backup

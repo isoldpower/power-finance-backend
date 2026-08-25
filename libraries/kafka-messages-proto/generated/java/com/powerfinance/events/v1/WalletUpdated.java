@@ -290,12 +290,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object category_ = "";
   /**
-   * <pre>
-   * Fields 15-18 carry the FULL post-update state, not a diff. PATCH is
-   * partial, so a diff would need a presence flag per field; projecting an
-   * overwrite of the whole mutable set is both smaller and idempotent.
-   * </pre>
-   *
    * <code>string category = 15;</code>
    * @return The category.
    */
@@ -313,12 +307,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * Fields 15-18 carry the FULL post-update state, not a diff. PATCH is
-   * partial, so a diff would need a presence flag per field; projecting an
-   * overwrite of the whole mutable set is both smaller and idempotent.
-   * </pre>
-   *
    * <code>string category = 15;</code>
    * @return The bytes for category.
    */
@@ -1613,12 +1601,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object category_ = "";
     /**
-     * <pre>
-     * Fields 15-18 carry the FULL post-update state, not a diff. PATCH is
-     * partial, so a diff would need a presence flag per field; projecting an
-     * overwrite of the whole mutable set is both smaller and idempotent.
-     * </pre>
-     *
      * <code>string category = 15;</code>
      * @return The category.
      */
@@ -1635,12 +1617,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Fields 15-18 carry the FULL post-update state, not a diff. PATCH is
-     * partial, so a diff would need a presence flag per field; projecting an
-     * overwrite of the whole mutable set is both smaller and idempotent.
-     * </pre>
-     *
      * <code>string category = 15;</code>
      * @return The bytes for category.
      */
@@ -1658,12 +1634,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Fields 15-18 carry the FULL post-update state, not a diff. PATCH is
-     * partial, so a diff would need a presence flag per field; projecting an
-     * overwrite of the whole mutable set is both smaller and idempotent.
-     * </pre>
-     *
      * <code>string category = 15;</code>
      * @param value The category to set.
      * @return This builder for chaining.
@@ -1677,12 +1647,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Fields 15-18 carry the FULL post-update state, not a diff. PATCH is
-     * partial, so a diff would need a presence flag per field; projecting an
-     * overwrite of the whole mutable set is both smaller and idempotent.
-     * </pre>
-     *
      * <code>string category = 15;</code>
      * @return This builder for chaining.
      */
@@ -1693,12 +1657,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Fields 15-18 carry the FULL post-update state, not a diff. PATCH is
-     * partial, so a diff would need a presence flag per field; projecting an
-     * overwrite of the whole mutable set is both smaller and idempotent.
-     * </pre>
-     *
      * <code>string category = 15;</code>
      * @param value The bytes for category to set.
      * @return This builder for chaining.

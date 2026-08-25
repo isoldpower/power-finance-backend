@@ -1,5 +1,6 @@
 WALLET_CACHE_SCHEMA = "s2"
 TRANSACTION_CACHE_SCHEMA = "s2"
+GOAL_CACHE_SCHEMA = "s1"
 
 
 def get_single_wallet_key(wallet_id: str) -> str:
@@ -8,6 +9,14 @@ def get_single_wallet_key(wallet_id: str) -> str:
 
 def get_wallet_list_version_key(user_id: int) -> str:
     return f"ver:wallets:{user_id}"
+
+
+def get_single_goal_key(goal_id: str) -> str:
+    return f"read:goal:{GOAL_CACHE_SCHEMA}:{goal_id}"
+
+
+def get_goal_list_version_key(user_id: int) -> str:
+    return f"ver:goals:{user_id}"
 
 
 def get_single_transaction_key(transaction_id: str) -> str:

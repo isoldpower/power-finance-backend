@@ -19,9 +19,9 @@ class MoneyFlowMapper:
             created_at=parse_datetime(row["created_at"]),
             data=MoneyFlowData(
                 transaction_id=UUID(row.get("transaction_id") or row["id"]),
-                source_wallet_id=UUID(row["source_wallet_id"]),
+                container_id=UUID(row["source_wallet_id"]),
                 amount=Decimal(row["amount"]),
-                cancels_other=UUID(raw_cancels) if raw_cancels else None,
-                adjusts_other=UUID(raw_adjusts) if raw_adjusts else None,
+                cancels_other=(UUID(raw_cancels) if raw_cancels else None),
+                adjusts_other=(UUID(raw_adjusts) if raw_adjusts else None),
             ),
         )

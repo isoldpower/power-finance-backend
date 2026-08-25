@@ -140,7 +140,7 @@ docker-auth-check:
 		exit 1; }
 
 .PHONY: docker-build
-docker-build: ## Build all 4 services + the api-gateway image (override tag with IMAGE_TAG=...; default = git short SHA)
+docker-build: ## Build every service + the api-gateway image (override tag with IMAGE_TAG=...; default = git short SHA)
 	@for svc in $(DOCKER_SERVICES); do \
 		img=$(IMAGE_PREFIX)/$$svc-service; \
 		echo "==> building $$img:latest, $$img:$(IMAGE_TAG)"; \
@@ -151,7 +151,7 @@ docker-build: ## Build all 4 services + the api-gateway image (override tag with
 	@docker build -t "$(GATEWAY_IMAGE):latest" -t "$(GATEWAY_IMAGE):$(IMAGE_TAG)" $(GATEWAY_CONTEXT)
 
 .PHONY: docker-push
-docker-push: docker-auth-check docker-build ## Build + push all 4 services + the api-gateway to the GHCR registry
+docker-push: docker-auth-check docker-build ## Build + push every service + the api-gateway to the GHCR registry
 	@for svc in $(DOCKER_SERVICES); do \
 		img=$(IMAGE_PREFIX)/$$svc-service; \
 		echo "==> pushing $$img"; \

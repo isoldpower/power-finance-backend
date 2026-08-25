@@ -15,6 +15,11 @@ from kafka_client_py import (
 )
 
 from ._types import ProbesDictionary
+from .goal_events import (
+    subscribe_goal_created,
+    subscribe_goal_deleted,
+    subscribe_goal_updated,
+)
 from .notification_events import (
     subscribe_notification_created,
     subscribe_notification_deleted,
@@ -45,6 +50,9 @@ _KNOWN_HANDLERS: list[Callable[[EventRouter, ProbesDictionary], None]] = [
     subscribe_wallet_deleted,
     subscribe_wallet_updated,
     subscribe_wallet_created,
+    subscribe_goal_created,
+    subscribe_goal_updated,
+    subscribe_goal_deleted,
     subscribe_transaction_created,
     subscribe_transaction_updated,
     subscribe_transaction_metadata_updated,

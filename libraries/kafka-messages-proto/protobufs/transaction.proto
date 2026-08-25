@@ -27,6 +27,9 @@ message TransactionCreated {
   string evidence_url = 17;
   string origin = 18;
   string chain_id = 19;
+  string container_kind = 20;
+
+  reserved 21, 22;
 }
 
 message TransactionDeleted {

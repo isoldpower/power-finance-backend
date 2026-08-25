@@ -2,11 +2,13 @@ from django.urls import path
 
 from .convert_currency import convert_currency
 from .get_currency_rates import get_currency_rates
+from .get_goal import get_goal
 from .get_notification import get_notification
 from .get_transaction import get_transaction
 from .get_wallet import get_wallet
 from .get_webhook import get_webhook
 from .list_currencies import list_currencies
+from .list_goals import list_goals
 from .list_notifications import list_notifications
 from .list_transactions import list_transactions
 from .list_wallets import list_wallets
@@ -20,6 +22,8 @@ urlpatterns = [
     path("currencies", list_currencies),
     path("currencies/convert", convert_currency),
     path("currencies/rates/<str:code>", get_currency_rates),
+    path("goals", list_goals),
+    path("goals/<uuid:goal_id>", get_goal),
     path("wallets", list_wallets),
     path("wallets/search", search_wallets),
     path("wallets/<uuid:wallet_id>", get_wallet),

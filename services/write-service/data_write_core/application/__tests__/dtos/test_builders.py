@@ -9,6 +9,7 @@ from django.test import SimpleTestCase
 from data_write_core.application.dtos.builders import (
     transaction_to_dto,
     transaction_to_plain_dto,
+    wallet_dto_to_container,
     wallet_to_dto,
 )
 from data_write_core.application.dtos.transaction_dto import (
@@ -20,6 +21,7 @@ from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import MoneyFlowEntity, TransactionEntity, WalletEntity
 from data_write_core.domain.events import EventCollector
 from data_write_core.domain.value_objects import (
+    MoneyContainerKind,
     MoneyFlowData,
     TransactionMetadata,
     WalletData,
@@ -55,7 +57,7 @@ def _txn_entity(
         created_at=datetime(2026, 1, 1, 13),
         data=MoneyFlowData(
             transaction_id=uuid4(),
-            source_wallet_id=wallet_id,
+            container_id=wallet_id,
             amount=amount,
             cancels_other=cancels,
             adjusts_other=adjusts,
@@ -104,7 +106,8 @@ class TransactionToDtoTests(SimpleTestCase):
         transaction = TransactionEntity(
             id=uuid4(),
             user_id="9",
-            wallet_id=wallet_id,
+            container_id=wallet_id,
+            container_kind=MoneyContainerKind.WALLET,
             metadata=TransactionMetadata(name="Groceries", category="Food"),
             created_at=datetime(2026, 1, 1),
             event_collector=EventCollector(),
@@ -116,7 +119,7 @@ class TransactionToDtoTests(SimpleTestCase):
                 created_at=datetime(2026, 1, 1),
                 data=MoneyFlowData(
                     transaction_id=UUID(transaction.unique_id),
-                    source_wallet_id=wallet_id,
+                    container_id=wallet_id,
                     amount=Decimal(amount),
                 ),
             )
@@ -127,15 +130,17 @@ class TransactionToDtoTests(SimpleTestCase):
 
     def test_maps_the_aggregate_and_inlines_the_wallet(self) -> None:
         wallet = _wallet_entity()
-        wallet_dto = wallet_to_dto(wallet, balance_amount=Decimal("100"))
+        container_dto = wallet_dto_to_container(
+            wallet_to_dto(wallet, balance_amount=Decimal("100"))
+        )
         aggregate = self._aggregate(UUID(wallet.unique_id), "-12.50")
 
-        built_dto = transaction_to_dto(aggregate, wallet_dto)
+        built_dto = transaction_to_dto(aggregate, container_dto)
 
         self.assertIsInstance(built_dto, TransactionDTO)
         self.assertEqual(built_dto.id, UUID(aggregate.unique_id))
-        self.assertEqual(built_dto.wallet, wallet_dto)
-        self.assertEqual(built_dto.currency_code, wallet_dto.currency)
+        self.assertEqual(built_dto.container, container_dto)
+        self.assertEqual(built_dto.currency_code, container_dto.currency)
         self.assertEqual(built_dto.name, "Groceries")
         self.assertEqual(built_dto.category, "Food")
         self.assertIsNone(built_dto.chain_id)
@@ -146,7 +151,7 @@ class TransactionToDtoTests(SimpleTestCase):
         wallet = _wallet_entity()
         aggregate = self._aggregate(UUID(wallet.unique_id), "-12.50")
 
-        built_dto = transaction_to_dto(aggregate, wallet_to_dto(wallet))
+        built_dto = transaction_to_dto(aggregate, wallet_dto_to_container(wallet_to_dto(wallet)))
 
         self.assertEqual(built_dto.amount, Decimal("12.50"))
         self.assertEqual(str(built_dto.transaction_type), "expense")
@@ -155,7 +160,7 @@ class TransactionToDtoTests(SimpleTestCase):
         wallet = _wallet_entity()
         aggregate = self._aggregate(UUID(wallet.unique_id), "40")
 
-        built_dto = transaction_to_dto(aggregate, wallet_to_dto(wallet))
+        built_dto = transaction_to_dto(aggregate, wallet_dto_to_container(wallet_to_dto(wallet)))
 
         self.assertEqual(built_dto.amount, Decimal("40"))
         self.assertEqual(str(built_dto.transaction_type), "income")
@@ -164,7 +169,7 @@ class TransactionToDtoTests(SimpleTestCase):
         wallet = _wallet_entity()
         aggregate = self._aggregate(UUID(wallet.unique_id), "-50", "-20")
 
-        built_dto = transaction_to_dto(aggregate, wallet_to_dto(wallet))
+        built_dto = transaction_to_dto(aggregate, wallet_dto_to_container(wallet_to_dto(wallet)))
 
         self.assertEqual(built_dto.amount, Decimal("70"))
 
@@ -172,7 +177,7 @@ class TransactionToDtoTests(SimpleTestCase):
         wallet = _wallet_entity(currency="JPY")
         aggregate = self._aggregate(UUID(wallet.unique_id), "-10")
 
-        built_dto = transaction_to_dto(aggregate, wallet_to_dto(wallet))
+        built_dto = transaction_to_dto(aggregate, wallet_dto_to_container(wallet_to_dto(wallet)))
 
         self.assertEqual(built_dto.currency_code, "JPY")
 
@@ -183,9 +188,9 @@ class TransactionToPlainDtoTests(SimpleTestCase):
         wallet_dto = wallet_to_dto(wallet)
         transaction = _txn_entity(wallet_id=UUID(wallet.unique_id), amount=Decimal("7"))
 
-        plain = transaction_to_plain_dto(transaction, wallet_dto)
+        plain = transaction_to_plain_dto(transaction, wallet_dto_to_container(wallet_dto))
 
         self.assertIsInstance(plain, TransactionPlainDTO)
-        self.assertEqual(plain.source_wallet_id, str(wallet_dto.id))
+        self.assertEqual(plain.container_id, str(wallet_dto.id))
         self.assertEqual(plain.amount, Decimal("7"))
         self.assertEqual(plain.currency_code, wallet_dto.currency)

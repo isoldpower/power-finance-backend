@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from immudb.constants import COLUMN_NAME_MODE_FIELD
@@ -66,7 +67,7 @@ class ImmudbMoneyFlowRepository(MoneyFlowRepository):
             "id": str(transaction.unique_id),
             "user_id": int(transaction.user_id),
             "transaction_id": str(transaction.transaction_id),
-            "source_wallet_id": str(transaction.source_wallet_id),
+            "source_wallet_id": str(transaction.container_id),
             "amount": str(transaction.amount),
             "created_at": transaction.created_at.isoformat(),
         }
@@ -155,33 +156,34 @@ class ImmudbMoneyFlowRepository(MoneyFlowRepository):
 
     async def get_unsettled_flows(
         self,
-        wallet_id: UUID,
+        container_id: UUID,
         settled_at: str | None = None,
     ) -> list[MoneyFlowEntity]:
         if settled_at is not None:
             rows = self._immudb.sqlQuery(
                 f"SELECT * FROM {self._TRANSACTIONS_TABLE} "
-                f"WHERE source_wallet_id = @wallet_id AND created_at > @settled_at;",
-                {"wallet_id": str(wallet_id), "settled_at": settled_at},
+                f"WHERE source_wallet_id = @container_id AND created_at > @settled_at;",
+                {"container_id": str(container_id), "settled_at": settled_at},
                 COLUMN_NAME_MODE_FIELD,
             )
         else:
             rows = self._immudb.sqlQuery(
-                f"SELECT * FROM {self._TRANSACTIONS_TABLE} WHERE source_wallet_id = @wallet_id;",
-                {"wallet_id": str(wallet_id)},
+                f"SELECT * FROM {self._TRANSACTIONS_TABLE} WHERE source_wallet_id = @container_id;",
+                {"container_id": str(container_id)},
                 COLUMN_NAME_MODE_FIELD,
             )
 
         return [MoneyFlowMapper.to_domain(row) for row in self._verify(list(rows))]
 
-    async def get_wallet_flows_between(
+    async def get_container_flows_between(
         self,
-        wallet_id: UUID,
+        container_id: UUID,
         since: datetime | None,
         until: datetime | None,
     ) -> list[MoneyFlowEntity]:
-        conditions = ["source_wallet_id = @wallet_id"]
-        parameters: dict = {"wallet_id": str(wallet_id)}
+        conditions = ["source_wallet_id = @container_id"]
+        parameters: dict = {"container_id": str(container_id)}
+
         if since is not None:
             conditions.append("created_at >= @since")
             parameters["since"] = since.isoformat()
@@ -199,33 +201,32 @@ class ImmudbMoneyFlowRepository(MoneyFlowRepository):
 
     async def get_checkpoint(
         self,
-        wallet_id: UUID,
+        container_id: UUID,
     ) -> BalanceCheckpointEntity | None:
-        from decimal import Decimal
-
-        rows = list(
+        checkpoint_rows = list(
             self._immudb.sqlQuery(
-                f"SELECT * FROM {self._CHECKPOINTS_TABLE} WHERE wallet_id = @wallet_id;",
-                {"wallet_id": str(wallet_id)},
+                f"SELECT * FROM {self._CHECKPOINTS_TABLE} WHERE wallet_id = @container_id;",
+                {"container_id": str(container_id)},
                 COLUMN_NAME_MODE_FIELD,
             )
         )
-        if not rows:
+
+        if not checkpoint_rows:
             return None
-        row = rows[0]
+        latest_checkpoint = checkpoint_rows[0]
 
         return BalanceCheckpointEntity(
-            id=row["wallet_id"],
-            created_at=datetime.fromisoformat(row["settled_at"]),
-            balance=Decimal(row["balance"]),
+            id=latest_checkpoint["wallet_id"],
+            created_at=datetime.fromisoformat(latest_checkpoint["settled_at"]),
+            balance=Decimal(latest_checkpoint["balance"]),
         )
 
     async def save_checkpoint(self, checkpoint: BalanceCheckpointEntity) -> None:
         self._immudb.sqlExec(
             f"UPSERT INTO {self._CHECKPOINTS_TABLE} "
-            f"(wallet_id, balance, settled_at) VALUES (@wallet_id, @balance, @settled_at);",
+            f"(wallet_id, balance, settled_at) VALUES (@container_id, @balance, @settled_at);",
             {
-                "wallet_id": str(checkpoint.unique_id),
+                "container_id": str(checkpoint.unique_id),
                 "balance": str(checkpoint.balance),
                 "settled_at": checkpoint.created_at.isoformat(),
             },

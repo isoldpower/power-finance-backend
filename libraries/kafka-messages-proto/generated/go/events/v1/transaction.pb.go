@@ -22,24 +22,27 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// A transaction is one user-stated money operation. The money itself lives in
-// the ledger as one or more append-only flows; these events carry the FOLD of
-// those flows, which is what a reader needs.
 type TransactionCreated struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
 	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
 	SchemaVersion int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
 	TransactionId string                 `protobuf:"bytes,10,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
-	WalletId      string                 `protobuf:"bytes,11,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
-	UserId        int32                  `protobuf:"varint,12,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-Amount    string                     `protobuf:"bytes,13,opt,name=amount,proto3" json:"amount,omitempty"`
-	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	Name      string                 `protobuf:"bytes,15,opt,name=name,proto3" json:"name,omitempty"`
-	Category      string `protobuf:"bytes,16,opt,name=category,proto3" json:"category,omitempty"`
-	EvidenceUrl   string `protobuf:"bytes,17,opt,name=evidence_url,json=evidenceUrl,proto3" json:"evidence_url,omitempty"`
-	Origin        string `protobuf:"bytes,18,opt,name=origin,proto3" json:"origin,omitempty"`
-	ChainId       string `protobuf:"bytes,19,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
+	// Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
+	// original name because the API surface still calls it `wallet_id`, and renaming
+	// it would break every consumer for a cosmetic gain. `container_kind` says which.
+	WalletId    string                 `protobuf:"bytes,11,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
+	UserId      int32                  `protobuf:"varint,12,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Amount      string                 `protobuf:"bytes,13,opt,name=amount,proto3" json:"amount,omitempty"`
+	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Name        string                 `protobuf:"bytes,15,opt,name=name,proto3" json:"name,omitempty"`
+	Category    string                 `protobuf:"bytes,16,opt,name=category,proto3" json:"category,omitempty"`
+	EvidenceUrl string                 `protobuf:"bytes,17,opt,name=evidence_url,json=evidenceUrl,proto3" json:"evidence_url,omitempty"`
+	Origin      string                 `protobuf:"bytes,18,opt,name=origin,proto3" json:"origin,omitempty"`
+	ChainId     string                 `protobuf:"bytes,19,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
+	// "wallet" | "goal". Absent on messages written before Phase 4, which the read
+	// side reads as "wallet" — the only kind that existed then.
+	ContainerKind string `protobuf:"bytes,20,opt,name=container_kind,json=containerKind,proto3" json:"container_kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -165,6 +168,13 @@ func (x *TransactionCreated) GetChainId() string {
 	return ""
 }
 
+func (x *TransactionCreated) GetContainerKind() string {
+	if x != nil {
+		return x.ContainerKind
+	}
+	return ""
+}
+
 type TransactionDeleted struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -173,8 +183,6 @@ type TransactionDeleted struct {
 	TransactionId string                 `protobuf:"bytes,10,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
 	WalletId      string                 `protobuf:"bytes,11,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
 	UserId        int32                  `protobuf:"varint,12,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// The outstanding amount at cancellation, signed. Reversing it returns the
-	// wallet balance to where it stood before the transaction.
 	Amount        string                 `protobuf:"bytes,13,opt,name=amount,proto3" json:"amount,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	DeletedAt     *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
@@ -275,8 +283,6 @@ func (x *TransactionDeleted) GetDeletedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// An amount restatement, appended to the ledger as an adjusting flow. No HTTP
-// route raises this yet — see API_DIFF.md on adjustments.
 type TransactionUpdated struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	EventId        string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -385,8 +391,6 @@ func (x *TransactionUpdated) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// A PATCH. Carries the full post-update state rather than a diff, since PATCH
-// is partial and an overwrite of the whole mutable set is idempotent.
 type TransactionMetadataUpdated struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -499,7 +503,7 @@ var File_transaction_proto protoreflect.FileDescriptor
 
 const file_transaction_proto_rawDesc = "" +
 	"\n" +
-	"\x11transaction.proto\x12\x17power_finance.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc9\x03\n" +
+	"\x11transaction.proto\x12\x17power_finance.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfc\x03\n" +
 	"\x12TransactionCreated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -516,7 +520,8 @@ const file_transaction_proto_rawDesc = "" +
 	"\bcategory\x18\x10 \x01(\tR\bcategory\x12!\n" +
 	"\fevidence_url\x18\x11 \x01(\tR\vevidenceUrl\x12\x16\n" +
 	"\x06origin\x18\x12 \x01(\tR\x06origin\x12\x19\n" +
-	"\bchain_id\x18\x13 \x01(\tR\achainId\"\x84\x03\n" +
+	"\bchain_id\x18\x13 \x01(\tR\achainId\x12%\n" +
+	"\x0econtainer_kind\x18\x14 \x01(\tR\rcontainerKindJ\x04\b\x15\x10\x16J\x04\b\x16\x10\x17\"\x84\x03\n" +
 	"\x12TransactionDeleted\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +

@@ -1,3 +1,4 @@
+from enum import StrEnum
 from uuid import UUID
 
 from django.db import models
@@ -5,10 +6,16 @@ from django.db import models
 NO_CHAIN_SENTINEL = UUID("ffffffff-ffff-ffff-ffff-ffffffffffff")
 
 
+class MoneyContainers(StrEnum):
+    WALLET = "wallet"
+    GOAL = "goal"
+
+
 class TransactionReadModel(models.Model):
     id = models.UUIDField(primary_key=True)
     wallet_id = models.UUIDField()
     wallet_name = models.CharField(max_length=255, blank=True, default="")
+    container_kind = models.CharField(max_length=8, default=MoneyContainers.WALLET)
     user_id = models.BigIntegerField()
     amount = models.DecimalField(max_digits=20, decimal_places=2)
     currency_code = models.CharField(max_length=8, blank=True, default="")

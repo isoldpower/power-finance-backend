@@ -1,5 +1,13 @@
 from ._applied_seq import TrackAppliedSeq
 from ._es_applied_seq import TrackEsAppliedSeq
+from .goal_reactions import (
+    BumpGoalListVersion,
+    CreateGoalReadModel,
+    EvictGoalCache,
+    RemoveGoalReadModel,
+    RenameGoalInTransactions,
+    UpdateGoalReadModel,
+)
 from .notification_reactions import (
     AcknowledgeNotificationReadModels,
     BumpNotificationListVersion,
@@ -44,6 +52,12 @@ from .webhook_reactions import (
 )
 
 __all__ = [
+    "BumpGoalListVersion",
+    "CreateGoalReadModel",
+    "EvictGoalCache",
+    "RemoveGoalReadModel",
+    "RenameGoalInTransactions",
+    "UpdateGoalReadModel",
     "AcknowledgeNotificationReadModels",
     "BumpNotificationListVersion",
     "CreateNotificationReadModel",

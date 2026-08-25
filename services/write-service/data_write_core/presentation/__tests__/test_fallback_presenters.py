@@ -5,8 +5,12 @@ from uuid import UUID
 
 import pytest
 
-from data_write_core.application.dtos import TransactionDTO, WalletDTO
-from data_write_core.domain.value_objects import TransactionOrigin, TransactionType
+from data_write_core.application.dtos import MoneyContainerDTO, TransactionDTO, WalletDTO
+from data_write_core.domain.value_objects import (
+    MoneyContainerKind,
+    TransactionOrigin,
+    TransactionType,
+)
 from data_write_core.presentation.http.views.fallback_read._presenters import (
     present_transaction,
     present_wallet,
@@ -66,14 +70,11 @@ def _transaction(amount: str, currency: str = "EUR") -> TransactionDTO:
         currency_code=currency,
         transaction_type=TransactionType.EXPENSE,
         origin=TransactionOrigin.MANUAL,
-        wallet=WalletDTO(
+        container=MoneyContainerDTO(
             id=WALLET_ID,
-            user_id=7,
             name="Random Credit Card",
-            balance_amount=Decimal("0"),
             currency=currency,
-            created_at=datetime(2026, 1, 1, 12, 0, 0),
-            updated_at=datetime(2026, 1, 1, 12, 0, 0),
+            kind=MoneyContainerKind.WALLET,
         ),
         created_at=datetime(2026, 1, 1, 9, 30, 0),
         category="Food",

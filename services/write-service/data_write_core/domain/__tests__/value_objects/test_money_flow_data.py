@@ -14,13 +14,13 @@ class TransactionDataTests(SimpleTestCase):
         wallet_id = uuid4()
         data = MoneyFlowData(
             transaction_id=uuid4(),
-            source_wallet_id=wallet_id,
+            container_id=wallet_id,
             amount=Decimal("42.10"),
             cancels_other=None,
             adjusts_other=None,
         )
 
-        self.assertEqual(data.source_wallet_id, wallet_id)
+        self.assertEqual(data.container_id, wallet_id)
         self.assertEqual(data.amount, Decimal("42.10"))
         self.assertIsNone(data.cancels_other)
         self.assertIsNone(data.adjusts_other)
@@ -29,7 +29,7 @@ class TransactionDataTests(SimpleTestCase):
         cancelled_id = uuid4()
         data = MoneyFlowData(
             transaction_id=uuid4(),
-            source_wallet_id=uuid4(),
+            container_id=uuid4(),
             amount=Decimal("-10"),
             cancels_other=cancelled_id,
             adjusts_other=None,
@@ -42,7 +42,7 @@ class TransactionDataTests(SimpleTestCase):
         adjusted_id = uuid4()
         data = MoneyFlowData(
             transaction_id=uuid4(),
-            source_wallet_id=uuid4(),
+            container_id=uuid4(),
             amount=Decimal("5"),
             cancels_other=None,
             adjusts_other=adjusted_id,
@@ -55,7 +55,7 @@ class TransactionDataTests(SimpleTestCase):
         with self.assertRaises(ConflictingMoneyFlowDataError):
             MoneyFlowData(
                 transaction_id=uuid4(),
-                source_wallet_id=uuid4(),
+                container_id=uuid4(),
                 amount=Decimal("1"),
                 cancels_other=uuid4(),
                 adjusts_other=uuid4(),

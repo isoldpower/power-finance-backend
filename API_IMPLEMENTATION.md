@@ -586,8 +586,66 @@ a matching index.
 ---
 
 ## Phase 4 — Goals
+**STATUS: implemented, all three steps.**
 Depends on chains (Phase 3.7): funding and draining a goal is a transfer, and `DELETE` refuses a
 non-zero `progress`.
+
+Step 4.2's money container landed as an **exclusive arc** and was then converted to a **shared
+supertype table** (migration `0010_money_container_base`), which is where it now stands.
+
+- `MoneyContainerModel` (`finances_money_containers`) holds everything a wallet and a goal have in
+  common — id, `kind`, name, currency, owner, timestamps — and `WalletModel` and `GoalModel` are
+  multi-table children of it, each keeping only what is peculiar to its kind. Both child tables kept
+  their existing `id` column; it is now a foreign key into the parent rather than a bare uuid, so
+  the conversion moved columns without touching a primary key;
+- `TransactionModel` carries one mandatory `container` foreign key. The arc it replaced — two
+  nullable foreign keys under a `ft_exactly_one_container` check constraint — could not be violated
+  either, but it could only be read by asking which side was null, and it grew a column per kind.
+  The kind now lives on the container, which is the thing it describes, and is read across the key
+  rather than copied alongside it;
+- the ledger and the metadata are now the same id space by construction. ImmuDB records flows
+  against a container id and Postgres records a transaction against a container id; before, the
+  Postgres side held two columns whose union happened to be that space;
+- `DjangoMoneyContainerRepository` became one query. Resolving an id used to mean probing the wallet
+  table and then the goal table, hoping one owned it, with the miss costing two round trips;
+- above the repository nothing branches. `MoneyContainerRef` (id, kind, currency, title, is_closed)
+  is what commands pass around, `MoneyContainerAggregate` is the protocol both `WalletAggregate` and
+  `GoalAggregate` satisfy, and `DjangoMoneyContainerRepository.resolve` is the single place that
+  knows an id might name a goal. `LoadContainerMixin` replaced `LoadWalletMixin` on the whole
+  transaction path; `LoadedWallets` became `LoadedContainers` and the old module is gone;
+- `TransactionEntity.wallet_id` became `container_id` + `container_kind`, and the same rename went
+  through the transaction domain events. A field named `wallet_id` that may hold a goal id is
+  exactly the lie this step existed to prevent;
+- the ImmuDB ledger KEPT its column names. `transactions.source_wallet_id` and
+  `balance_checkpoints.wallet_id` hold container ids now. Renaming a column in an append-only store
+  forks its history for a cosmetic gain — every row written before the rename would still carry the
+  old name. The mapper bridges `container_id` ↔ `source_wallet_id`;
+- the read side has no foreign keys, so it took an explicit `container_kind` column instead. That
+  column is load-bearing in two queries: goal history and the goal-rename denormaliser both filter
+  on it, because `wallet_id` holds an id of either kind.
+
+> **COST OF THE CHANGE.** Every wallet and goal read is now a join, and a wallet list ordered by
+> `favorite` then `created_at` sorts across two tables, so that ordering can no longer be served by
+> one index. A third container kind is now a table plus a `kind` value rather than a column on
+> `finances_transactions` and a branch in the resolver, which is what the change bought.
+>
+> `0010` is written with `SeparateDatabaseAndState` and is reversible in both directions with data
+> intact — the rollback re-splits the single key back into the arc using the kind on the container
+> row, which is only possible while all three columns exist. Do not reorder its operations.
+
+Other notes from the build:
+
+- goal `history` entries are derived from the goal's transactions, one entry each, not from Phase 5
+  postings. A goal's history is a record of money moving in and out of it, which is knowable
+  deterministically; waiting for the dispatcher would have made the collection empty for no reason.
+  Entries carry an `id` — the target's examples omit one, which cannot work for a keyset cursor;
+- `GoalClosedError` maps to 409 `wallet_closed`, deliberately NOT a new code. The target defines that
+  code as "target wallet is soft-deleted", and from the client's side a goal IS the target it named
+  in `wallet_id`. A separate `goal_closed` would make callers branch on a distinction the request
+  never drew;
+- `TransactionCreated` gained `currency_code` and `container_name` (fields 21 and 22). Phase 5's
+  dispatcher has no access to anyone else's database and could not otherwise denominate a posting at
+  all. It also removes the read projection's ordering dependency on the wallet row existing first.
 
 ### Step 4.1 — Goal aggregate and storage
 `name`, `currency` (fixed at creation), `target`, `finish_at`, `url` (always `null` for now), the
@@ -613,6 +671,18 @@ No `/search` endpoint. That is a decision in the target, not an omission — do 
 ## Phase 5 — Accounts and postings
 The first slice with a real AI dependency, and the one Metrics is built on. Everything before this
 point is deterministic.
+
+> **STATUS: rolled back to unimplemented, deliberately.** A full implementation existed — a
+> template `ai-service` producer plus the whole read-service consumer side — and was removed so the
+> slice can be built by hand. Reference copies: `.phase-5-backup/` for the consumer side and the
+> contract, `scratch/ai-service-template` (branch) for the producer. `TransactionCreated` fields 21
+> and 22 were reserved rather than reused, so a reimplementation picks fresh numbers.
+>
+> Design conclusions worth keeping from that first pass, both reached after it was written:
+> **ai-service should OWN accounts and postings** rather than emitting into a projection it cannot
+> read — once the model picks an account rather than deriving one, decide-and-write has to be a
+> local transaction — and the producer needs a **transactional outbox**, because a publish failure
+> after commit otherwise loses a posting from the read side permanently.
 
 ### Step 5.1 — Chart of accounts and entries
 Account model (`group` ∈ assets/liabilities/equity, `name`, derived balance) and an entry/posting

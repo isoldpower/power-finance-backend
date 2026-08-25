@@ -53,16 +53,13 @@ class MoneyFlowRepository(ABC):
     @abstractmethod
     async def get_unsettled_flows(
         self,
-        wallet_id: UUID,
+        container_id: UUID,
         settled_at: str | None = None,
     ) -> list[MoneyFlowEntity]:
         raise NotImplementedError()
 
     @abstractmethod
     async def get_flows_for_transaction(self, transaction_id: UUID) -> list[MoneyFlowEntity]:
-        """Every ledger row belonging to one transaction, corrections included.
-        Their sum is the transaction's amount."""
-
         raise NotImplementedError()
 
     @abstractmethod
@@ -73,9 +70,9 @@ class MoneyFlowRepository(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    async def get_wallet_flows_between(
+    async def get_container_flows_between(
         self,
-        wallet_id: UUID,
+        container_id: UUID,
         since: datetime | None,
         until: datetime | None,
     ) -> list[MoneyFlowEntity]:
@@ -84,7 +81,7 @@ class MoneyFlowRepository(ABC):
     @abstractmethod
     async def get_checkpoint(
         self,
-        wallet_id: UUID,
+        container_id: UUID,
     ) -> BalanceCheckpointEntity | None:
         raise NotImplementedError()
 

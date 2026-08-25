@@ -56,11 +56,23 @@ public interface TransactionCreatedOrBuilder extends
       getTransactionIdBytes();
 
   /**
+   * <pre>
+   * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
+   * original name because the API surface still calls it `wallet_id`, and renaming
+   * it would break every consumer for a cosmetic gain. `container_kind` says which.
+   * </pre>
+   *
    * <code>string wallet_id = 11;</code>
    * @return The walletId.
    */
   java.lang.String getWalletId();
   /**
+   * <pre>
+   * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
+   * original name because the API surface still calls it `wallet_id`, and renaming
+   * it would break every consumer for a cosmetic gain. `container_kind` says which.
+   * </pre>
+   *
    * <code>string wallet_id = 11;</code>
    * @return The bytes for walletId.
    */
@@ -74,21 +86,11 @@ public interface TransactionCreatedOrBuilder extends
   int getUserId();
 
   /**
-   * <pre>
-   * Signed: negative means money left the wallet. `type` is this field's sign,
-   * so the two can never disagree and neither is stored twice.
-   * </pre>
-   *
    * <code>string amount = 13;</code>
    * @return The amount.
    */
   java.lang.String getAmount();
   /**
-   * <pre>
-   * Signed: negative means money left the wallet. `type` is this field's sign,
-   * so the two can never disagree and neither is stored twice.
-   * </pre>
-   *
    * <code>string amount = 13;</code>
    * @return The bytes for amount.
    */
@@ -123,21 +125,11 @@ public interface TransactionCreatedOrBuilder extends
       getNameBytes();
 
   /**
-   * <pre>
-   * Empty string means absent — proto3 has no null, and neither field has a
-   * meaningful empty value of its own.
-   * </pre>
-   *
    * <code>string category = 16;</code>
    * @return The category.
    */
   java.lang.String getCategory();
   /**
-   * <pre>
-   * Empty string means absent — proto3 has no null, and neither field has a
-   * meaningful empty value of its own.
-   * </pre>
-   *
    * <code>string category = 16;</code>
    * @return The bytes for category.
    */
@@ -179,4 +171,26 @@ public interface TransactionCreatedOrBuilder extends
    */
   com.google.protobuf.ByteString
       getChainIdBytes();
+
+  /**
+   * <pre>
+   * "wallet" | "goal". Absent on messages written before Phase 4, which the read
+   * side reads as "wallet" — the only kind that existed then.
+   * </pre>
+   *
+   * <code>string container_kind = 20;</code>
+   * @return The containerKind.
+   */
+  java.lang.String getContainerKind();
+  /**
+   * <pre>
+   * "wallet" | "goal". Absent on messages written before Phase 4, which the read
+   * side reads as "wallet" — the only kind that existed then.
+   * </pre>
+   *
+   * <code>string container_kind = 20;</code>
+   * @return The bytes for containerKind.
+   */
+  com.google.protobuf.ByteString
+      getContainerKindBytes();
 }

@@ -19,6 +19,7 @@ from data_write_core.domain.exceptions import (
     TransactionDirectionChangeError,
 )
 from data_write_core.domain.value_objects import (
+    MoneyContainerKind,
     MoneyFlowData,
     TransactionMetadata,
     TransactionType,
@@ -38,7 +39,8 @@ def _transaction(
     return TransactionEntity(
         id=TRANSACTION_ID,
         user_id="9",
-        wallet_id=WALLET_ID,
+        container_id=WALLET_ID,
+        container_kind=MoneyContainerKind.WALLET,
         metadata=TransactionMetadata(name=name, category=category),
         created_at=datetime(2026, 1, 1),
         deleted_at=deleted_at,
@@ -58,7 +60,7 @@ def _flow(
         created_at=datetime(2026, 1, 1),
         data=MoneyFlowData(
             transaction_id=TRANSACTION_ID,
-            source_wallet_id=WALLET_ID,
+            container_id=WALLET_ID,
             amount=Decimal(amount),
             cancels_other=cancels_other,
             adjusts_other=adjusts_other,

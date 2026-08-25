@@ -101,23 +101,11 @@ public interface WalletUpdatedOrBuilder extends
   com.google.protobuf.TimestampOrBuilder getUpdatedAtOrBuilder();
 
   /**
-   * <pre>
-   * Fields 15-18 carry the FULL post-update state, not a diff. PATCH is
-   * partial, so a diff would need a presence flag per field; projecting an
-   * overwrite of the whole mutable set is both smaller and idempotent.
-   * </pre>
-   *
    * <code>string category = 15;</code>
    * @return The category.
    */
   java.lang.String getCategory();
   /**
-   * <pre>
-   * Fields 15-18 carry the FULL post-update state, not a diff. PATCH is
-   * partial, so a diff would need a presence flag per field; projecting an
-   * overwrite of the whole mutable set is both smaller and idempotent.
-   * </pre>
-   *
    * <code>string category = 15;</code>
    * @return The bytes for category.
    */

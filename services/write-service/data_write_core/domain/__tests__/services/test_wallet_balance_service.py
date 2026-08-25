@@ -31,7 +31,7 @@ def _tx(amount: str) -> MoneyFlowEntity:
         created_at=datetime(2026, 1, 2),
         data=MoneyFlowData(
             transaction_id=uuid4(),
-            source_wallet_id=UUID(WALLET),
+            container_id=UUID(WALLET),
             amount=Decimal(amount),
             cancels_other=None,
             adjusts_other=None,

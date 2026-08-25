@@ -11,13 +11,15 @@ from data_write_core.infrastructure.outbox_saga import PostgresWriteStep
 from ...bootstrap import get_repository_registry
 from ...dtos import TransactionDTO, transaction_to_dto
 from ...interfaces import (
+    GoalRepository,
+    MoneyContainerRepository,
     MoneyFlowRepository,
     OutboxRepository,
     TransactionRepository,
     WalletRepository,
 )
 from ..command_base import CommandHandlerBase
-from ..loader_mixins import LoadTransactionMixin, LoadWalletMixin
+from ..loader_mixins import LoadContainerMixin, LoadTransactionMixin
 from .transaction_saga import run_transaction_saga
 
 
@@ -29,7 +31,9 @@ class DeleteTransactionCommand:
 
 
 class DeleteTransactionCommandHandler(
-    CommandHandlerBase[TransactionDTO], LoadWalletMixin, LoadTransactionMixin
+    CommandHandlerBase[TransactionDTO],
+    LoadContainerMixin,
+    LoadTransactionMixin,
 ):
     def __init__(
         self,
@@ -37,15 +41,29 @@ class DeleteTransactionCommandHandler(
         money_flow_repository: MoneyFlowRepository | None = None,
         wallet_repository: WalletRepository | None = None,
         outbox_repository: OutboxRepository | None = None,
+        goal_repository: GoalRepository | None = None,
+        container_repository: MoneyContainerRepository | None = None,
     ) -> None:
         registry = get_repository_registry()
         transaction_repository = transaction_repository or registry.transaction_repository
         money_flow_repository = money_flow_repository or registry.money_flow_repository
         wallet_repository = wallet_repository or registry.wallet_repository
         outbox_repository = outbox_repository or registry.outbox_repository
+        goal_repository = goal_repository or registry.goal_repository
+        container_repository = container_repository or registry.money_container_repository
 
-        LoadWalletMixin.__init__(self, wallet_repository, money_flow_repository)
-        LoadTransactionMixin.__init__(self, transaction_repository, money_flow_repository)
+        LoadContainerMixin.__init__(
+            self,
+            container_repository=container_repository,
+            wallet_repository=wallet_repository,
+            goal_repository=goal_repository,
+            money_flow_repository=money_flow_repository,
+        )
+        LoadTransactionMixin.__init__(
+            self,
+            transaction_repository,
+            money_flow_repository,
+        )
 
         self._transaction_repository = transaction_repository
         self._money_flow_repository = money_flow_repository
@@ -81,12 +99,12 @@ class DeleteTransactionCommandHandler(
         aggregate: TransactionAggregate,
         user_id: int,
     ) -> TransactionDTO:
-        wallet_dto = await self.load_wallet_dto(
-            wallet_id=aggregate.root.wallet_id,
+        container_dto = await self.load_container_dto(
+            container_id=aggregate.root.container_id,
             user_id=user_id,
         )
 
-        return transaction_to_dto(aggregate, wallet_dto)
+        return transaction_to_dto(aggregate, container_dto)
 
     async def _persist(
         self,
@@ -107,14 +125,17 @@ class DeleteTransactionCommandHandler(
 
         return await run_transaction_saga(
             postgres_steps=[
-                PostgresWriteStep(forward_action=forward, compensate_action=compensate)
+                PostgresWriteStep(
+                    forward_action=forward,
+                    compensate_action=compensate,
+                )
             ],
             flows=[aggregate.flows[-1]],
             entries=[
                 build_outbox_entry(
                     TransactionDeleted(
                         transaction_id=aggregate.unique_id,
-                        wallet_id=str(root.wallet_id),
+                        wallet_id=str(root.container_id),
                         user_id=int(root.user_id),
                         amount=str(outstanding),
                         created_at=datetime_to_timestamp(root.created_at),

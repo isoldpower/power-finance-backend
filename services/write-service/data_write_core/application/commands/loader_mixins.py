@@ -1,10 +1,22 @@
 import asyncio
 from uuid import UUID
 
-from data_write_core.domain.aggregates import TransactionAggregate, WalletAggregate
+from data_write_core.domain.aggregates import (
+    GoalAggregate,
+    MoneyContainerAggregate,
+    TransactionAggregate,
+    WalletAggregate,
+)
+from data_write_core.domain.value_objects import MoneyContainerKind
 
-from ..dtos import WalletDTO, wallet_to_dto
-from ..interfaces import MoneyFlowRepository, TransactionRepository, WalletRepository
+from ..dtos import MoneyContainerDTO, WalletDTO, container_to_dto, wallet_to_dto
+from ..interfaces import (
+    GoalRepository,
+    MoneyContainerRepository,
+    MoneyFlowRepository,
+    TransactionRepository,
+    WalletRepository,
+)
 
 
 class LoadWalletMixin:
@@ -71,3 +83,65 @@ class LoadTransactionMixin:
         )
 
         return TransactionAggregate(transaction_entity=transaction, flows=flows)
+
+
+class LoadContainerMixin:
+    def __init__(
+        self,
+        container_repository: MoneyContainerRepository,
+        wallet_repository: WalletRepository,
+        goal_repository: GoalRepository,
+        money_flow_repository: MoneyFlowRepository,
+    ) -> None:
+        self._container_repository = container_repository
+        self._container_wallet_repository = wallet_repository
+        self._container_goal_repository = goal_repository
+        self._container_flow_repository = money_flow_repository
+
+    async def load_container_aggregate(
+        self,
+        container_id: UUID,
+        user_id: int,
+    ) -> MoneyContainerAggregate:
+        reference = await self._container_repository.resolve(container_id, user_id)
+        checkpoint = await self._container_flow_repository.get_checkpoint(container_id)
+        settled_at = checkpoint.created_at.isoformat() if checkpoint else None
+        unsettled = await self._container_flow_repository.get_unsettled_flows(
+            container_id,
+            settled_at,
+        )
+
+        if reference.kind is MoneyContainerKind.GOAL:
+            goal = await self._container_goal_repository.get_user_goal_by_id(
+                goal_id=container_id,
+                user_id=user_id,
+            )
+
+            return GoalAggregate(
+                goal_entity=goal,
+                unsettled_flows=unsettled,
+                balance_checkpoint=checkpoint,
+            )
+
+        wallet = await self._container_wallet_repository.get_user_wallet_by_id(
+            wallet_id=container_id,
+            user_id=user_id,
+        )
+
+        return WalletAggregate(
+            wallet_entity=wallet,
+            unsettled_transactions=unsettled,
+            balance_checkpoint=checkpoint,
+        )
+
+    async def load_container_dto(
+        self,
+        container_id: UUID,
+        user_id: int,
+    ) -> MoneyContainerDTO:
+        reference = await self._container_repository.resolve(
+            container_id,
+            user_id,
+        )
+
+        return container_to_dto(reference)

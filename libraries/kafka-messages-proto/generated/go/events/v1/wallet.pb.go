@@ -35,9 +35,7 @@ type WalletCreated struct {
 	Category      string                 `protobuf:"bytes,15,opt,name=category,proto3" json:"category,omitempty"`
 	Color         string                 `protobuf:"bytes,16,opt,name=color,proto3" json:"color,omitempty"`
 	Favorite      bool                   `protobuf:"varint,17,opt,name=favorite,proto3" json:"favorite,omitempty"`
-	// Canonical decimal string at the wallet currency's scale. The datum the
-	// balance is measured from, not a floor — see the wallet's `zero_balance`.
-	ZeroBalance   string `protobuf:"bytes,18,opt,name=zero_balance,json=zeroBalance,proto3" json:"zero_balance,omitempty"`
+	ZeroBalance   string                 `protobuf:"bytes,18,opt,name=zero_balance,json=zeroBalance,proto3" json:"zero_balance,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -250,13 +248,10 @@ type WalletUpdated struct {
 	PreviousTitle string                 `protobuf:"bytes,12,opt,name=previous_title,json=previousTitle,proto3" json:"previous_title,omitempty"`
 	NewTitle      string                 `protobuf:"bytes,13,opt,name=new_title,json=newTitle,proto3" json:"new_title,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// Fields 15-18 carry the FULL post-update state, not a diff. PATCH is
-	// partial, so a diff would need a presence flag per field; projecting an
-	// overwrite of the whole mutable set is both smaller and idempotent.
-	Category      string `protobuf:"bytes,15,opt,name=category,proto3" json:"category,omitempty"`
-	Color         string `protobuf:"bytes,16,opt,name=color,proto3" json:"color,omitempty"`
-	Favorite      bool   `protobuf:"varint,17,opt,name=favorite,proto3" json:"favorite,omitempty"`
-	ZeroBalance   string `protobuf:"bytes,18,opt,name=zero_balance,json=zeroBalance,proto3" json:"zero_balance,omitempty"`
+	Category      string                 `protobuf:"bytes,15,opt,name=category,proto3" json:"category,omitempty"`
+	Color         string                 `protobuf:"bytes,16,opt,name=color,proto3" json:"color,omitempty"`
+	Favorite      bool                   `protobuf:"varint,17,opt,name=favorite,proto3" json:"favorite,omitempty"`
+	ZeroBalance   string                 `protobuf:"bytes,18,opt,name=zero_balance,json=zeroBalance,proto3" json:"zero_balance,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

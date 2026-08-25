@@ -10,7 +10,11 @@ from ..exceptions import (
     TransactionAlreadyCancelledError,
     TransactionDirectionChangeError,
 )
-from ..value_objects import MoneyFlowData, TransactionMetadata, TransactionType
+from ..value_objects import (
+    MoneyFlowData,
+    TransactionMetadata,
+    TransactionType,
+)
 from ._aggregate_root import AggregateRoot
 
 
@@ -75,7 +79,7 @@ class TransactionAggregate(AggregateRoot[TransactionEntity]):
             created_at=moment,
             data=MoneyFlowData(
                 transaction_id=UUID(self.unique_id),
-                source_wallet_id=self.root.wallet_id,
+                container_id=self.root.container_id,
                 amount=new_amount - current_amount,
                 adjusts_other=UUID(self.origin_flow.unique_id),
             ),
@@ -85,7 +89,7 @@ class TransactionAggregate(AggregateRoot[TransactionEntity]):
         self.event_collector.collect(
             TransactionUpdatedEvent(
                 transaction_id=UUID(self.unique_id),
-                wallet_id=self.root.wallet_id,
+                container_id=self.root.container_id,
                 user_id=int(self.root.user_id),
                 previous_amount=current_amount,
                 new_amount=new_amount,
@@ -105,7 +109,7 @@ class TransactionAggregate(AggregateRoot[TransactionEntity]):
             created_at=now,
             data=MoneyFlowData(
                 transaction_id=UUID(self.unique_id),
-                source_wallet_id=self.root.wallet_id,
+                container_id=self.root.container_id,
                 amount=-outstanding,
                 cancels_other=UUID(self.origin_flow.unique_id),
             ),
@@ -116,7 +120,7 @@ class TransactionAggregate(AggregateRoot[TransactionEntity]):
         self.event_collector.collect(
             TransactionDeletedEvent(
                 transaction_id=UUID(self.unique_id),
-                wallet_id=self.root.wallet_id,
+                container_id=self.root.container_id,
                 user_id=int(self.root.user_id),
                 amount=outstanding,
                 cancelled_by=UUID(inverse_flow.unique_id),

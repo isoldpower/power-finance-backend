@@ -20,23 +20,27 @@ class DjangoTransactionRepository(TransactionRepository):
 
     async def create_transaction(self, transaction: TransactionEntity) -> TransactionEntity:
         model = TransactionMapper.apply_to_model(TransactionModel(), transaction)
+
         await model.asave(force_insert=True)
 
-        return TransactionMapper.to_domain(model)
+        return transaction
 
     async def save_transaction(self, transaction: TransactionEntity) -> TransactionEntity:
         model = await TransactionModel.objects.aget(id=transaction.unique_id)
+
         TransactionMapper.apply_to_model(model, transaction)
         await model.asave()
 
-        return TransactionMapper.to_domain(model)
+        return transaction
 
     async def get_user_transaction_by_id(
         self,
         transaction_id: UUID,
         user_id: int,
     ) -> TransactionEntity:
-        model = await TransactionModel.objects.aget(id=transaction_id, user_id=user_id)
+        model = await TransactionModel.objects.select_related("container").aget(
+            id=transaction_id, user_id=user_id
+        )
 
         return TransactionMapper.to_domain(model)
 
@@ -45,7 +49,7 @@ class DjangoTransactionRepository(TransactionRepository):
         user_id: int,
         page: PageRequest | None = None,
     ) -> list[TransactionEntity]:
-        queryset = self._live(user_id)
+        queryset = self._live(user_id).select_related("container")
         rows = apply_keyset(queryset, page) if page else queryset.order_by("-created_at", "-id")
 
         return [TransactionMapper.to_domain(model) async for model in rows]
@@ -68,10 +72,11 @@ class DjangoTransactionRepository(TransactionRepository):
         chain_id: UUID,
         user_id: int,
     ) -> list[TransactionEntity]:
-        rows = TransactionModel.objects.filter(
-            chain_id=chain_id,
-            user_id=user_id,
-        ).order_by("created_at", "id")
+        rows = (
+            TransactionModel.objects.select_related("container")
+            .filter(chain_id=chain_id, user_id=user_id)
+            .order_by("created_at", "id")
+        )
 
         return [TransactionMapper.to_domain(model) async for model in rows]
 

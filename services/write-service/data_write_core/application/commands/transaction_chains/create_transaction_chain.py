@@ -15,19 +15,21 @@ from data_write_core.infrastructure.outbox_saga import PostgresWriteStep
 from ..._amount_scale import ensure_amount_scale
 from ...bootstrap import get_repository_registry
 from ...dtos import (
+    MoneyContainerDTO,
     TransactionChainDTO,
-    WalletDTO,
     transaction_to_dto,
 )
 from ...interfaces import (
+    GoalRepository,
+    MoneyContainerRepository,
     MoneyFlowRepository,
     OutboxRepository,
     TransactionRepository,
     WalletRepository,
 )
 from ..command_base import CommandHandlerBase
-from ..loaded_wallets import LoadedWallets
-from ..loader_mixins import LoadWalletMixin
+from ..loaded_containers import LoadedContainers
+from ..loader_mixins import LoadContainerMixin
 from ..transactions.create_transaction import (
     persist_transaction_step,
     transaction_created_entry,
@@ -57,7 +59,7 @@ class CreateTransactionChainCommand:
 
 
 class CreateTransactionChainCommandHandler(
-    CommandHandlerBase[TransactionChainDTO], LoadWalletMixin
+    CommandHandlerBase[TransactionChainDTO], LoadContainerMixin
 ):
     def __init__(
         self,
@@ -65,19 +67,24 @@ class CreateTransactionChainCommandHandler(
         money_flow_repository: MoneyFlowRepository | None = None,
         wallet_repository: WalletRepository | None = None,
         outbox_repository: OutboxRepository | None = None,
+        goal_repository: GoalRepository | None = None,
+        container_repository: MoneyContainerRepository | None = None,
     ) -> None:
-        if (
-            transaction_repository is None
-            or money_flow_repository is None
-            or wallet_repository is None
-            or outbox_repository is None
-        ):
-            registry = get_repository_registry()
-            transaction_repository = transaction_repository or registry.transaction_repository
-            money_flow_repository = money_flow_repository or registry.money_flow_repository
-            wallet_repository = wallet_repository or registry.wallet_repository
-            outbox_repository = outbox_repository or registry.outbox_repository
-        LoadWalletMixin.__init__(self, wallet_repository, money_flow_repository)
+        registry = get_repository_registry()
+        transaction_repository = transaction_repository or registry.transaction_repository
+        money_flow_repository = money_flow_repository or registry.money_flow_repository
+        wallet_repository = wallet_repository or registry.wallet_repository
+        outbox_repository = outbox_repository or registry.outbox_repository
+        goal_repository = goal_repository or registry.goal_repository
+        container_repository = container_repository or registry.money_container_repository
+
+        LoadContainerMixin.__init__(
+            self,
+            container_repository=container_repository,
+            wallet_repository=wallet_repository,
+            goal_repository=goal_repository,
+            money_flow_repository=money_flow_repository,
+        )
 
         self._transaction_repository = transaction_repository
         self._money_flow_repository = money_flow_repository
@@ -97,7 +104,7 @@ class CreateTransactionChainCommandHandler(
 
         chain_id = uuid4()
         committed_at = datetime.now()
-        aggregates, wallet_dtos = await self._build_aggregates(
+        aggregates, container_dtos = await self._build_aggregates(
             command,
             commit_order=commit_order,
             chain_id=chain_id,
@@ -118,7 +125,7 @@ class CreateTransactionChainCommandHandler(
                 transactions=[
                     transaction_to_dto(
                         aggregate,
-                        wallet_dtos[str(aggregate.root.wallet_id)],
+                        container_dtos[str(aggregate.root.container_id)],
                     )
                     for aggregate in aggregates
                 ],
@@ -132,12 +139,15 @@ class CreateTransactionChainCommandHandler(
         commit_order: list[int],
         chain_id: UUID,
         committed_at: datetime,
-    ) -> tuple[list[TransactionAggregate], dict[str, WalletDTO]]:
-        wallets = LoadedWallets(loader=self, user_id=command.user_id)
+    ) -> tuple[list[TransactionAggregate], dict[str, MoneyContainerDTO]]:
+        containers = LoadedContainers(
+            loader=self,
+            user_id=command.user_id,
+        )
         aggregates = [
             await self._build_entry(
                 command.entries[position],
-                wallets=wallets,
+                containers=containers,
                 user_id=command.user_id,
                 chain_id=chain_id,
                 committed_at=committed_at,
@@ -145,28 +155,28 @@ class CreateTransactionChainCommandHandler(
             for position in commit_order
         ]
 
-        return aggregates, wallets.as_dtos()
+        return aggregates, containers.as_dtos()
 
     async def _build_entry(
         self,
         entry: ChainEntryCommand,
-        wallets: LoadedWallets,
+        containers: LoadedContainers,
         user_id: int,
         chain_id: UUID,
         committed_at: datetime,
     ) -> TransactionAggregate:
-        wallet = await wallets.get(entry.wallet_id)
-        await ensure_amount_scale(entry.amount, wallet.root.currency_code)
+        container = await containers.get(entry.wallet_id)
+        await ensure_amount_scale(entry.amount, container.currency_code)
 
         aggregate = build_transaction(
             user_id=user_id,
-            wallet_id=entry.wallet_id,
+            container=container.as_reference(),
             metadata=_metadata_of(entry, chain_id),
             amount=entry.amount,
             transaction_type=entry.transaction_type,
             created_at=committed_at,
         )
-        wallet.record(aggregate.origin_flow)
+        container.record(aggregate.origin_flow)
 
         return aggregate
 

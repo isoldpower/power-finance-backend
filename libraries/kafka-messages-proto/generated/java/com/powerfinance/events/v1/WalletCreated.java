@@ -379,11 +379,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object zeroBalance_ = "";
   /**
-   * <pre>
-   * Canonical decimal string at the wallet currency's scale. The datum the
-   * balance is measured from, not a floor — see the wallet's `zero_balance`.
-   * </pre>
-   *
    * <code>string zero_balance = 18;</code>
    * @return The zeroBalance.
    */
@@ -401,11 +396,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * Canonical decimal string at the wallet currency's scale. The datum the
-   * balance is measured from, not a floor — see the wallet's `zero_balance`.
-   * </pre>
-   *
    * <code>string zero_balance = 18;</code>
    * @return The bytes for zeroBalance.
    */
@@ -1787,11 +1777,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object zeroBalance_ = "";
     /**
-     * <pre>
-     * Canonical decimal string at the wallet currency's scale. The datum the
-     * balance is measured from, not a floor — see the wallet's `zero_balance`.
-     * </pre>
-     *
      * <code>string zero_balance = 18;</code>
      * @return The zeroBalance.
      */
@@ -1808,11 +1793,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Canonical decimal string at the wallet currency's scale. The datum the
-     * balance is measured from, not a floor — see the wallet's `zero_balance`.
-     * </pre>
-     *
      * <code>string zero_balance = 18;</code>
      * @return The bytes for zeroBalance.
      */
@@ -1830,11 +1810,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Canonical decimal string at the wallet currency's scale. The datum the
-     * balance is measured from, not a floor — see the wallet's `zero_balance`.
-     * </pre>
-     *
      * <code>string zero_balance = 18;</code>
      * @param value The zeroBalance to set.
      * @return This builder for chaining.
@@ -1848,11 +1823,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Canonical decimal string at the wallet currency's scale. The datum the
-     * balance is measured from, not a floor — see the wallet's `zero_balance`.
-     * </pre>
-     *
      * <code>string zero_balance = 18;</code>
      * @return This builder for chaining.
      */
@@ -1863,11 +1833,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Canonical decimal string at the wallet currency's scale. The datum the
-     * balance is measured from, not a floor — see the wallet's `zero_balance`.
-     * </pre>
-     *
      * <code>string zero_balance = 18;</code>
      * @param value The bytes for zeroBalance to set.
      * @return This builder for chaining.

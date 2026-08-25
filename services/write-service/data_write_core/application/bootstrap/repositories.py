@@ -1,5 +1,7 @@
 from data_write_core.infrastructure.repositories import (
     DjangoCurrencyRepository,
+    DjangoGoalRepository,
+    DjangoMoneyContainerRepository,
     DjangoNotificationRepository,
     DjangoOutboxRepository,
     DjangoTransactionRepository,
@@ -15,6 +17,8 @@ from .state import ImmudbConnection, RepositoryRegistry
 def initialize_repositories(immudb_client: ImmudbConnection) -> RepositoryRegistry:
     return RepositoryRegistry(
         wallet_repository=DjangoWalletRepository(),
+        goal_repository=DjangoGoalRepository(),
+        money_container_repository=DjangoMoneyContainerRepository(),
         money_flow_repository=ImmudbMoneyFlowRepository(immudb_client),
         transaction_repository=DjangoTransactionRepository(),
         currency_repository=DjangoCurrencyRepository(),

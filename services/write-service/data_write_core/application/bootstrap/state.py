@@ -4,6 +4,8 @@ from typing import Any
 from ..interfaces import (
     CurrencyRepository,
     EventBus,
+    GoalRepository,
+    MoneyContainerRepository,
     MoneyFlowRepository,
     NotificationRepository,
     OutboxRepository,
@@ -23,6 +25,8 @@ class ImmudbConnection:
 @dataclass(frozen=True)
 class RepositoryRegistry:
     wallet_repository: "WalletRepository"
+    goal_repository: "GoalRepository"
+    money_container_repository: "MoneyContainerRepository"
     money_flow_repository: "MoneyFlowRepository"
     transaction_repository: "TransactionRepository"
     currency_repository: "CurrencyRepository"

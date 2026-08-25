@@ -10,6 +10,8 @@ from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import TransactionEntity, WalletEntity
 from data_write_core.domain.exceptions import UnsupportedCurrencyError
 from data_write_core.domain.value_objects import (
+    MoneyContainerKind,
+    MoneyContainerRef,
     OutboxEntry,
     TransactionMetadata,
     TransactionOrigin,
@@ -38,8 +40,11 @@ from ...interfaces import (
     WalletRepository,
 )
 from ..command_base import CommandHandlerBase
-from ..transactions.create_transaction import persist_transaction_step, transaction_created_entry
-from ..transactions.transaction_factory import build_transaction
+from ..transactions import (
+    build_transaction,
+    persist_transaction_step,
+    transaction_created_entry,
+)
 
 OPENING_BALANCE_NAME = "Opening balance"
 UNSET = object()
@@ -103,10 +108,16 @@ class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
             updated_at=timestamp_now,
         )
 
+        wallet_container = MoneyContainerRef(
+            id=UUID(new_wallet.unique_id),
+            kind=MoneyContainerKind.WALLET,
+            currency_code=new_wallet.currency_code,
+            title=new_wallet.title,
+        )
         opening_transaction = (
             build_transaction(
                 user_id=command.user_id,
-                wallet_id=UUID(new_wallet.unique_id),
+                container=wallet_container,
                 metadata=TransactionMetadata(
                     name=OPENING_BALANCE_NAME,
                     origin=TransactionOrigin.MANUAL,
@@ -128,7 +139,10 @@ class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
         if opening_transaction is not None:
             await self._publish_domain_events(opening_transaction)
 
-        return wallet_to_dto(persisted_wallet, balance_amount=opening_balance), write_version
+        return (
+            wallet_to_dto(persisted_wallet, balance_amount=opening_balance),
+            write_version,
+        )
 
     @staticmethod
     def _resolve_opening_balance(command: CreateNewWalletCommand) -> Decimal:
@@ -150,17 +164,20 @@ class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
             created_wallet=new_wallet,
         )
 
-        steps: list[SagaStep] = [
+        saga_steps: list[SagaStep] = [
             PostgresWriteStep(
                 forward_action=persist_wallet,
                 compensate_action=undo_persisted_wallet,
             ),
         ]
         if opening_transaction is not None:
-            steps.append(
-                persist_transaction_step(self._transaction_repository, opening_transaction)
+            saga_steps.append(
+                persist_transaction_step(
+                    self._transaction_repository,
+                    opening_transaction,
+                )
             )
-            steps.append(
+            saga_steps.append(
                 ImmudbMoneyFlowStep(
                     repository=self._money_flow_repository,
                     transaction=opening_transaction.origin_flow,
@@ -168,7 +185,7 @@ class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
             )
 
         saga_coordinator = FinalizedSagaCoordinator(
-            transaction_steps=steps,
+            transaction_steps=saga_steps,
             final_step=PostgresOutboxEmissionStep(
                 outbox_repository=self._outbox_repository,
                 entries=self._outbox_entries(
@@ -210,7 +227,6 @@ class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
             return entries
 
         entries.append(transaction_created_entry(opening_transaction, partition_key))
-
         return entries
 
     def _get_save_unsave_lambdas(

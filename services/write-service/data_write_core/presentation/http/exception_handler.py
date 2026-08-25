@@ -1,6 +1,5 @@
 from typing import Any
 
-from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.response import Response
 from write_service.common.http_contract import (
     ApiError,
@@ -13,46 +12,21 @@ from write_service.common.http_contract import (
     api_exception_handler,
 )
 
-from data_write_core.application.exceptions import FallbackTransactionNotVisibleError
 from data_write_core.domain import exceptions as domain
 
-MISSING_RESOURCES = (
-    ObjectDoesNotExist,
-    FallbackTransactionNotVisibleError,
-    domain.TransactionChainNotFoundError,
-    domain.WebhookNotFoundError,
-    domain.WebhookSubscriptionNotFoundError,
-    domain.NotificationNotFoundError,
-    domain.TransactionDoesNotBelongToWalletError,
+from ._exception_messages import (
+    FIELDS,
+    MESSAGES,
+    MISSING_RESOURCES,
+    UNPROCESSABLE_STATES,
 )
-
-UNPROCESSABLE_STATES = (
-    domain.TransactionDirectionChangeError,
-    domain.ConflictingMoneyFlowDataError,
-    domain.TransactionAlreadyAdjustedError,
-    domain.CannotCancelInverseTransactionError,
-    domain.CannotAdjustAdjustmentTransactionError,
-)
-
-AMOUNT_FIELD = "amount"
-CURRENCY_FIELD = "currency"
-EVENT_TYPE_FIELD = "event_type"
-
-ALREADY_CANCELLED_MESSAGE = "Transaction has already been cancelled"
-DUPLICATE_SUBSCRIPTION_MESSAGE = "Webhook already subscribes to that event"
-INSUFFICIENT_FUNDS_MESSAGE = "Wallet does not hold enough funds for this transaction"
-WALLET_NOT_EMPTY_MESSAGE = (
-    "Wallet still holds a balance away from its zero point — move it out before closing"
-)
-WALLET_CLOSED_MESSAGE = "Wallet is closed and cannot take new transactions"
-CHAIN_CYCLE_MESSAGE = "Chain entries reference each other in a cycle"
-
-CHAIN_ENTRY_FIELD = "transactions[{index}].after"
-IMMUTABLE_CURRENCY_MESSAGE = "Wallet currency is fixed at creation and cannot be replaced"
 
 
 def write_exception_handler(exception: Exception, context: dict[str, Any]) -> Response:
-    return api_exception_handler(translate(exception), context)
+    return api_exception_handler(
+        translate(exception),
+        context,
+    )
 
 
 def translate(exception: Exception) -> Exception:
@@ -63,17 +37,27 @@ def translate(exception: Exception) -> Exception:
     except MISSING_RESOURCES:
         return NotFound()
     except domain.TransactionAlreadyCancelledError:
-        return NotFound(ALREADY_CANCELLED_MESSAGE, code=ErrorCode.ALREADY_DELETED)
+        return NotFound(MESSAGES.ALREADY_CANCELLED, code=ErrorCode.ALREADY_DELETED)
     except domain.DuplicateWebhookSubscriptionError:
-        return Conflict(DUPLICATE_SUBSCRIPTION_MESSAGE, code=ErrorCode.SUBSCRIPTION_EXISTS)
+        return Conflict(MESSAGES.DUPLICATE_SUBSCRIPTION, code=ErrorCode.SUBSCRIPTION_EXISTS)
     except domain.InsufficientFundsError:
-        return Conflict(INSUFFICIENT_FUNDS_MESSAGE, code=ErrorCode.INSUFFICIENT_FUNDS)
+        return Conflict(MESSAGES.INSUFFICIENT_FUNDS, code=ErrorCode.INSUFFICIENT_FUNDS)
     except domain.WalletNotEmptyError:
-        return Conflict(WALLET_NOT_EMPTY_MESSAGE, code=ErrorCode.WALLET_NOT_EMPTY)
+        return Conflict(MESSAGES.WALLET_NOT_EMPTY, code=ErrorCode.WALLET_NOT_EMPTY)
     except domain.WalletClosedError:
-        return Conflict(WALLET_CLOSED_MESSAGE, code=ErrorCode.WALLET_CLOSED)
+        return Conflict(MESSAGES.WALLET_CLOSED, code=ErrorCode.WALLET_CLOSED)
+    except domain.GoalNotEmptyError:
+        return Conflict(MESSAGES.GOAL_NOT_EMPTY, code=ErrorCode.GOAL_NOT_EMPTY)
+    except domain.GoalClosedError:
+        return Conflict(
+            MESSAGES.GOAL_CLOSED,
+            code=ErrorCode.WALLET_CLOSED,
+        )
     except domain.TransactionChainCycleError:
-        return ValidationFailed(CHAIN_CYCLE_MESSAGE, code=ErrorCode.CHAIN_CYCLE)
+        return ValidationFailed(
+            MESSAGES.CHAIN_CYCLE,
+            code=ErrorCode.CHAIN_CYCLE,
+        )
     except domain.TransactionChainTooLongError as error:
         return ValidationFailed(str(error), code=ErrorCode.CHAIN_TOO_LONG)
     except domain.TransactionChainUnknownReferenceError as error:
@@ -82,7 +66,7 @@ def translate(exception: Exception) -> Exception:
             code=ErrorCode.CHAIN_UNKNOWN_REFERENCE,
             details=[
                 ErrorDetail(
-                    field=CHAIN_ENTRY_FIELD.format(index=error.index),
+                    field=FIELDS.CHAIN_ENTRY.format(index=error.index),
                     code=DetailCode.NOT_A_REFERENCE,
                     message=str(error),
                 )
@@ -102,18 +86,20 @@ def _translate_field_failure(exception: Exception) -> Exception:
         raise exception
     except domain.AmountPrecisionError as error:
         return _field_error(
-            AMOUNT_FIELD,
+            FIELDS.AMOUNT,
             DetailCode.AMOUNT_PRECISION,
             f"{error.currency_code} allows {error.decimals} fraction digits",
         )
     except (domain.NegativeMoneyError, domain.InvalidTransactionAmountError) as error:
-        return _field_error(AMOUNT_FIELD, DetailCode.OUT_OF_BOUNDS, str(error))
+        return _field_error(FIELDS.AMOUNT, DetailCode.OUT_OF_BOUNDS, str(error))
     except domain.CurrencyMismatchError as error:
-        return _field_error(CURRENCY_FIELD, DetailCode.CURRENCY_MISMATCH, str(error))
+        return _field_error(FIELDS.CURRENCY, DetailCode.CURRENCY_MISMATCH, str(error))
     except domain.WalletCurrencyImmutableError:
-        return _field_error(CURRENCY_FIELD, DetailCode.INVALID, IMMUTABLE_CURRENCY_MESSAGE)
+        return _field_error(FIELDS.CURRENCY, DetailCode.INVALID, MESSAGES.IMMUTABLE_CURRENCY)
+    except domain.GoalCurrencyImmutableError:
+        return _field_error(FIELDS.CURRENCY, DetailCode.INVALID, MESSAGES.IMMUTABLE_GOAL_CURRENCY)
     except domain.UnsupportedWebhookEventTypeError as error:
-        return _field_error(EVENT_TYPE_FIELD, DetailCode.UNKNOWN_EVENT_TYPE, str(error))
+        return _field_error(FIELDS.EVENT_TYPE, DetailCode.UNKNOWN_EVENT_TYPE, str(error))
     except UNPROCESSABLE_STATES as error:
         return ValidationFailed(str(error))
     except Exception:
@@ -121,4 +107,12 @@ def _translate_field_failure(exception: Exception) -> Exception:
 
 
 def _field_error(field: str, code: DetailCode, message: str) -> ValidationFailed:
-    return ValidationFailed(details=[ErrorDetail(field=field, code=code, message=message)])
+    return ValidationFailed(
+        details=[
+            ErrorDetail(
+                field=field,
+                code=code,
+                message=message,
+            )
+        ]
+    )

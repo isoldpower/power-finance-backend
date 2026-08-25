@@ -20,9 +20,12 @@ class TransactionHttpPresenter:
             "money": await money_at_scale(transaction.amount, transaction.currency_code),
             "type": str(transaction.transaction_type),
             "origin": str(transaction.origin),
+            # The target renders a goal-funded transaction under `wallet` too:
+            # clients treat the two interchangeably, and the container's kind is not
+            # part of the transaction shape.
             "wallet": {
-                "id": str(transaction.wallet.id),
-                "name": transaction.wallet.name,
+                "id": str(transaction.container.id),
+                "name": transaction.container.name,
             },
             "category": transaction.category,
             "chain_id": str(transaction.chain_id) if transaction.chain_id else None,
@@ -51,7 +54,7 @@ class TransactionHttpPresenter:
                     transaction.currency_code,
                 ),
                 "currency": transaction.currency_code,
-                "wallet_id": str(transaction.source_wallet_id),
+                "wallet_id": str(transaction.container_id),
                 "cancels_other": (
                     str(transaction.cancels_other) if transaction.cancels_other else None
                 ),

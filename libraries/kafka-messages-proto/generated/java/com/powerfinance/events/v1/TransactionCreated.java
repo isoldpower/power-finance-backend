@@ -6,12 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * A transaction is one user-stated money operation. The money itself lives in
- * the ledger as one or more append-only flows; these events carry the FOLD of
- * those flows, which is what a reader needs.
- * </pre>
- *
  * Protobuf type {@code power_finance.events.v1.TransactionCreated}
  */
 @com.google.protobuf.Generated
@@ -43,6 +37,7 @@ private static final long serialVersionUID = 0L;
     evidenceUrl_ = "";
     origin_ = "";
     chainId_ = "";
+    containerKind_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -183,6 +178,12 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object walletId_ = "";
   /**
+   * <pre>
+   * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
+   * original name because the API surface still calls it `wallet_id`, and renaming
+   * it would break every consumer for a cosmetic gain. `container_kind` says which.
+   * </pre>
+   *
    * <code>string wallet_id = 11;</code>
    * @return The walletId.
    */
@@ -200,6 +201,12 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
+   * original name because the API surface still calls it `wallet_id`, and renaming
+   * it would break every consumer for a cosmetic gain. `container_kind` says which.
+   * </pre>
+   *
    * <code>string wallet_id = 11;</code>
    * @return The bytes for walletId.
    */
@@ -233,11 +240,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object amount_ = "";
   /**
-   * <pre>
-   * Signed: negative means money left the wallet. `type` is this field's sign,
-   * so the two can never disagree and neither is stored twice.
-   * </pre>
-   *
    * <code>string amount = 13;</code>
    * @return The amount.
    */
@@ -255,11 +257,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * Signed: negative means money left the wallet. `type` is this field's sign,
-   * so the two can never disagree and neither is stored twice.
-   * </pre>
-   *
    * <code>string amount = 13;</code>
    * @return The bytes for amount.
    */
@@ -347,11 +344,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object category_ = "";
   /**
-   * <pre>
-   * Empty string means absent — proto3 has no null, and neither field has a
-   * meaningful empty value of its own.
-   * </pre>
-   *
    * <code>string category = 16;</code>
    * @return The category.
    */
@@ -369,11 +361,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * Empty string means absent — proto3 has no null, and neither field has a
-   * meaningful empty value of its own.
-   * </pre>
-   *
    * <code>string category = 16;</code>
    * @return The bytes for category.
    */
@@ -509,6 +496,55 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int CONTAINER_KIND_FIELD_NUMBER = 20;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object containerKind_ = "";
+  /**
+   * <pre>
+   * "wallet" | "goal". Absent on messages written before Phase 4, which the read
+   * side reads as "wallet" — the only kind that existed then.
+   * </pre>
+   *
+   * <code>string container_kind = 20;</code>
+   * @return The containerKind.
+   */
+  @java.lang.Override
+  public java.lang.String getContainerKind() {
+    java.lang.Object ref = containerKind_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      containerKind_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * "wallet" | "goal". Absent on messages written before Phase 4, which the read
+   * side reads as "wallet" — the only kind that existed then.
+   * </pre>
+   *
+   * <code>string container_kind = 20;</code>
+   * @return The bytes for containerKind.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getContainerKindBytes() {
+    java.lang.Object ref = containerKind_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      containerKind_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -562,6 +598,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(chainId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 19, chainId_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(containerKind_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 20, containerKind_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -614,6 +653,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(chainId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(19, chainId_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(containerKind_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(20, containerKind_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -661,6 +703,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getOrigin())) return false;
     if (!getChainId()
         .equals(other.getChainId())) return false;
+    if (!getContainerKind()
+        .equals(other.getContainerKind())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -702,6 +746,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getOrigin().hashCode();
     hash = (37 * hash) + CHAIN_ID_FIELD_NUMBER;
     hash = (53 * hash) + getChainId().hashCode();
+    hash = (37 * hash) + CONTAINER_KIND_FIELD_NUMBER;
+    hash = (53 * hash) + getContainerKind().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -800,12 +846,6 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * <pre>
-   * A transaction is one user-stated money operation. The money itself lives in
-   * the ledger as one or more append-only flows; these events carry the FOLD of
-   * those flows, which is what a reader needs.
-   * </pre>
-   *
    * Protobuf type {@code power_finance.events.v1.TransactionCreated}
    */
   public static final class Builder extends
@@ -867,6 +907,7 @@ private static final long serialVersionUID = 0L;
       evidenceUrl_ = "";
       origin_ = "";
       chainId_ = "";
+      containerKind_ = "";
       return this;
     }
 
@@ -946,6 +987,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00001000) != 0)) {
         result.chainId_ = chainId_;
       }
+      if (((from_bitField0_ & 0x00002000) != 0)) {
+        result.containerKind_ = containerKind_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1016,6 +1060,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getChainId().isEmpty()) {
         chainId_ = other.chainId_;
         bitField0_ |= 0x00001000;
+        onChanged();
+      }
+      if (!other.getContainerKind().isEmpty()) {
+        containerKind_ = other.containerKind_;
+        bitField0_ |= 0x00002000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1113,6 +1162,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00001000;
               break;
             } // case 154
+            case 162: {
+              containerKind_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00002000;
+              break;
+            } // case 162
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1429,6 +1483,12 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object walletId_ = "";
     /**
+     * <pre>
+     * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
+     * original name because the API surface still calls it `wallet_id`, and renaming
+     * it would break every consumer for a cosmetic gain. `container_kind` says which.
+     * </pre>
+     *
      * <code>string wallet_id = 11;</code>
      * @return The walletId.
      */
@@ -1445,6 +1505,12 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
+     * original name because the API surface still calls it `wallet_id`, and renaming
+     * it would break every consumer for a cosmetic gain. `container_kind` says which.
+     * </pre>
+     *
      * <code>string wallet_id = 11;</code>
      * @return The bytes for walletId.
      */
@@ -1462,6 +1528,12 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
+     * original name because the API surface still calls it `wallet_id`, and renaming
+     * it would break every consumer for a cosmetic gain. `container_kind` says which.
+     * </pre>
+     *
      * <code>string wallet_id = 11;</code>
      * @param value The walletId to set.
      * @return This builder for chaining.
@@ -1475,6 +1547,12 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
+     * original name because the API surface still calls it `wallet_id`, and renaming
+     * it would break every consumer for a cosmetic gain. `container_kind` says which.
+     * </pre>
+     *
      * <code>string wallet_id = 11;</code>
      * @return This builder for chaining.
      */
@@ -1485,6 +1563,12 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
+     * original name because the API surface still calls it `wallet_id`, and renaming
+     * it would break every consumer for a cosmetic gain. `container_kind` says which.
+     * </pre>
+     *
      * <code>string wallet_id = 11;</code>
      * @param value The bytes for walletId to set.
      * @return This builder for chaining.
@@ -1533,11 +1617,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object amount_ = "";
     /**
-     * <pre>
-     * Signed: negative means money left the wallet. `type` is this field's sign,
-     * so the two can never disagree and neither is stored twice.
-     * </pre>
-     *
      * <code>string amount = 13;</code>
      * @return The amount.
      */
@@ -1554,11 +1633,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Signed: negative means money left the wallet. `type` is this field's sign,
-     * so the two can never disagree and neither is stored twice.
-     * </pre>
-     *
      * <code>string amount = 13;</code>
      * @return The bytes for amount.
      */
@@ -1576,11 +1650,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Signed: negative means money left the wallet. `type` is this field's sign,
-     * so the two can never disagree and neither is stored twice.
-     * </pre>
-     *
      * <code>string amount = 13;</code>
      * @param value The amount to set.
      * @return This builder for chaining.
@@ -1594,11 +1663,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Signed: negative means money left the wallet. `type` is this field's sign,
-     * so the two can never disagree and neither is stored twice.
-     * </pre>
-     *
      * <code>string amount = 13;</code>
      * @return This builder for chaining.
      */
@@ -1609,11 +1673,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Signed: negative means money left the wallet. `type` is this field's sign,
-     * so the two can never disagree and neither is stored twice.
-     * </pre>
-     *
      * <code>string amount = 13;</code>
      * @param value The bytes for amount to set.
      * @return This builder for chaining.
@@ -1823,11 +1882,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object category_ = "";
     /**
-     * <pre>
-     * Empty string means absent — proto3 has no null, and neither field has a
-     * meaningful empty value of its own.
-     * </pre>
-     *
      * <code>string category = 16;</code>
      * @return The category.
      */
@@ -1844,11 +1898,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Empty string means absent — proto3 has no null, and neither field has a
-     * meaningful empty value of its own.
-     * </pre>
-     *
      * <code>string category = 16;</code>
      * @return The bytes for category.
      */
@@ -1866,11 +1915,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Empty string means absent — proto3 has no null, and neither field has a
-     * meaningful empty value of its own.
-     * </pre>
-     *
      * <code>string category = 16;</code>
      * @param value The category to set.
      * @return This builder for chaining.
@@ -1884,11 +1928,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Empty string means absent — proto3 has no null, and neither field has a
-     * meaningful empty value of its own.
-     * </pre>
-     *
      * <code>string category = 16;</code>
      * @return This builder for chaining.
      */
@@ -1899,11 +1938,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Empty string means absent — proto3 has no null, and neither field has a
-     * meaningful empty value of its own.
-     * </pre>
-     *
      * <code>string category = 16;</code>
      * @param value The bytes for category to set.
      * @return This builder for chaining.
@@ -2130,6 +2164,103 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       chainId_ = value;
       bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object containerKind_ = "";
+    /**
+     * <pre>
+     * "wallet" | "goal". Absent on messages written before Phase 4, which the read
+     * side reads as "wallet" — the only kind that existed then.
+     * </pre>
+     *
+     * <code>string container_kind = 20;</code>
+     * @return The containerKind.
+     */
+    public java.lang.String getContainerKind() {
+      java.lang.Object ref = containerKind_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        containerKind_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * "wallet" | "goal". Absent on messages written before Phase 4, which the read
+     * side reads as "wallet" — the only kind that existed then.
+     * </pre>
+     *
+     * <code>string container_kind = 20;</code>
+     * @return The bytes for containerKind.
+     */
+    public com.google.protobuf.ByteString
+        getContainerKindBytes() {
+      java.lang.Object ref = containerKind_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        containerKind_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * "wallet" | "goal". Absent on messages written before Phase 4, which the read
+     * side reads as "wallet" — the only kind that existed then.
+     * </pre>
+     *
+     * <code>string container_kind = 20;</code>
+     * @param value The containerKind to set.
+     * @return This builder for chaining.
+     */
+    public Builder setContainerKind(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      containerKind_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * "wallet" | "goal". Absent on messages written before Phase 4, which the read
+     * side reads as "wallet" — the only kind that existed then.
+     * </pre>
+     *
+     * <code>string container_kind = 20;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearContainerKind() {
+      containerKind_ = getDefaultInstance().getContainerKind();
+      bitField0_ = (bitField0_ & ~0x00002000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * "wallet" | "goal". Absent on messages written before Phase 4, which the read
+     * side reads as "wallet" — the only kind that existed then.
+     * </pre>
+     *
+     * <code>string container_kind = 20;</code>
+     * @param value The bytes for containerKind to set.
+     * @return This builder for chaining.
+     */
+    public Builder setContainerKindBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      containerKind_ = value;
+      bitField0_ |= 0x00002000;
       onChanged();
       return this;
     }

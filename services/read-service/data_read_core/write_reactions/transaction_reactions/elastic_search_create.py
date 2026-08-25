@@ -9,7 +9,7 @@ from data_read_core.shared.postgres_orm import NO_CHAIN_SENTINEL
 
 from .._logger_shortcuts import log_transaction_elastic_created
 from .._utilities import decode_payload
-from ._utilities import _wallet_label
+from ._utilities import _container_label
 
 
 class IndexTransactionDocument(Effect):
@@ -17,7 +17,10 @@ class IndexTransactionDocument(Effect):
 
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, TransactionCreated)
-        wallet = await _wallet_label(payload.wallet_id)
+        wallet = await _container_label(
+            payload.wallet_id,
+            payload.container_kind or None,
+        )
         amount = Decimal(payload.amount)
         created_at = payload.created_at.ToDatetime(tzinfo=UTC).isoformat()
 

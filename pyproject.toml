@@ -65,6 +65,8 @@ target-version = "py312"
 force-exclude = true
 extend-exclude = [
     "**/migrations/**",
+    # Reference copies of removed work; not on the import path.
+    ".phase-5-backup",
     "**/generated/**",
     ".venv",
     "old-structure",
@@ -102,6 +104,7 @@ explicit_package_bases = true
 namespace_packages = true
 exclude = [
     "/migrations/",
+    "\\.phase-5-backup/",
     "/__tests__/",
     "/generated/",
     ".venv",

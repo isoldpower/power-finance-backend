@@ -2,7 +2,11 @@ from uuid import UUID
 
 from data_write_core.domain.entities import TransactionEntity
 from data_write_core.domain.events import EventCollector
-from data_write_core.domain.value_objects import TransactionMetadata, TransactionOrigin
+from data_write_core.domain.value_objects import (
+    MoneyContainerKind,
+    TransactionMetadata,
+    TransactionOrigin,
+)
 from data_write_core.infrastructure.orm import TransactionModel
 
 
@@ -12,7 +16,8 @@ class TransactionMapper:
         return TransactionEntity(
             id=model.id,
             user_id=str(model.user_id),
-            wallet_id=model.wallet_id,
+            container_id=model.container_id,
+            container_kind=MoneyContainerKind(model.container.kind),
             metadata=TransactionMetadata(
                 name=model.name,
                 category=model.category,
@@ -30,7 +35,7 @@ class TransactionMapper:
     def apply_to_model(model: TransactionModel, entity: TransactionEntity) -> TransactionModel:
         model.id = UUID(entity.unique_id)
         model.user_id = int(entity.user_id)
-        model.wallet_id = entity.wallet_id
+        model.container_id = entity.container_id
         model.chain_id = entity.chain_id
         model.name = entity.name
         model.category = entity.category

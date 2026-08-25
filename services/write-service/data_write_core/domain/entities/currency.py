@@ -9,4 +9,7 @@ class CurrencyEntity(EntityRoot):
         currency_data: Currency,
         collector: EventCollector | None = None,
     ):
-        super().__init__(unique_id=currency_data.code, collector=collector or EventCollector())
+        super().__init__(
+            unique_id=currency_data.code,
+            collector=collector or EventCollector(),
+        )

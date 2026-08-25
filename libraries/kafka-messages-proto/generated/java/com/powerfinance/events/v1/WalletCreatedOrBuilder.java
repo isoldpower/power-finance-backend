@@ -131,21 +131,11 @@ public interface WalletCreatedOrBuilder extends
   boolean getFavorite();
 
   /**
-   * <pre>
-   * Canonical decimal string at the wallet currency's scale. The datum the
-   * balance is measured from, not a floor — see the wallet's `zero_balance`.
-   * </pre>
-   *
    * <code>string zero_balance = 18;</code>
    * @return The zeroBalance.
    */
   java.lang.String getZeroBalance();
   /**
-   * <pre>
-   * Canonical decimal string at the wallet currency's scale. The datum the
-   * balance is measured from, not a floor — see the wallet's `zero_balance`.
-   * </pre>
-   *
    * <code>string zero_balance = 18;</code>
    * @return The bytes for zeroBalance.
    */

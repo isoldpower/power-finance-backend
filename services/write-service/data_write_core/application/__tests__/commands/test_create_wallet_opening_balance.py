@@ -13,7 +13,12 @@ from data_write_core.application.commands.wallets.create_new_wallet import (
 )
 from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import TransactionEntity, WalletEntity
-from data_write_core.domain.value_objects import TransactionMetadata, WalletData
+from data_write_core.domain.value_objects import (
+    MoneyContainerKind,
+    MoneyContainerRef,
+    TransactionMetadata,
+    WalletData,
+)
 
 WALLET_ID = "11111111-1111-1111-1111-111111111111"
 
@@ -72,7 +77,12 @@ class TestOpeningOutboxEntries:
     def _opening_transaction(self, amount: str) -> TransactionAggregate:
         return build_transaction(
             user_id=7,
-            wallet_id=UUID(WALLET_ID),
+            container=MoneyContainerRef(
+                id=UUID(WALLET_ID),
+                kind=MoneyContainerKind.WALLET,
+                currency_code="USD",
+                title="Main",
+            ),
             metadata=TransactionMetadata(name=OPENING_BALANCE_NAME),
             amount=abs(Decimal(amount)),
             transaction_type=TransactionEntity.type_for(Decimal(amount)),
@@ -108,7 +118,7 @@ class TestOpeningOutboxEntries:
     def test_the_transaction_is_linked_to_the_wallet_it_opens(self):
         opening = self._opening_transaction("50.00")
 
-        assert opening.origin_flow.source_wallet_id == UUID(WALLET_ID)
+        assert opening.origin_flow.container_id == UUID(WALLET_ID)
         assert opening.amount == Decimal("50.00")
         assert opening.root.name == OPENING_BALANCE_NAME
 

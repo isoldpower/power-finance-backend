@@ -5,6 +5,11 @@ from .envelope import (
     collection_response,
     resource_response,
 )
+from .goal_serializer import (
+    EnvelopedGoalResponseSerializer,
+    GoalResponseSerializer,
+    PaginatedGoalResponseSerializer,
+)
 from .notification_serializer import (
     AcknowledgedNotificationsResponseSerializer,
     EnvelopedNotificationResponseSerializer,
@@ -37,6 +42,9 @@ from .webhook_serializer import (
 )
 
 __all__ = [
+    "EnvelopedGoalResponseSerializer",
+    "GoalResponseSerializer",
+    "PaginatedGoalResponseSerializer",
     "AcknowledgedNotificationsResponseSerializer",
     "CollectionMetaSerializer",
     "EnvelopedNotificationResponseSerializer",

@@ -1,22 +1,21 @@
 from datetime import UTC
 from decimal import Decimal
 
-from django.db.models import F
 from kafka_messages import TransactionDeleted
 
 from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import (
     TransactionReadModel,
-    WalletReadModel,
     aatomic,
 )
 
 from .._logger_shortcuts import (
     log_transaction_postgres_absent_on_delete,
+    log_transaction_postgres_container_reversal,
     log_transaction_postgres_removed,
-    log_transaction_postgres_wallet_reversal,
 )
 from .._utilities import decode_payload, handle_database_errors
+from ._utilities import apply_container_delta
 
 
 class RemoveTransactionReadModel(Effect):
@@ -33,8 +32,9 @@ class RemoveTransactionReadModel(Effect):
             cancelled_transaction = await self._try_cancel(payload)
 
             if cancelled_transaction:
-                await self._apply_wallet_update(
-                    wallet_id=cancelled_transaction.wallet_id,
+                await self._apply_container_update(
+                    container_id=cancelled_transaction.wallet_id,
+                    kind=cancelled_transaction.container_kind,
                     cancelled_amount=cancelled_transaction.amount,
                 )
 
@@ -56,21 +56,25 @@ class RemoveTransactionReadModel(Effect):
         transaction_row.updated_at = deleted_at
         await transaction_row.asave(update_fields=["deleted_at", "updated_at"])
 
-        log_transaction_postgres_removed(payload.transaction_id, transaction_row.amount)
+        log_transaction_postgres_removed(
+            payload.transaction_id,
+            transaction_row.amount,
+        )
         return transaction_row
 
-    async def _apply_wallet_update(
+    async def _apply_container_update(
         self,
-        wallet_id: str,
+        container_id: str,
+        kind: str,
         cancelled_amount: Decimal,
     ) -> None:
-        (
-            await WalletReadModel.objects.filter(id=wallet_id).aupdate(
-                balance=F("balance") - cancelled_amount
-            )
+        await apply_container_delta(
+            container_id,
+            kind,
+            -cancelled_amount,
         )
 
-        log_transaction_postgres_wallet_reversal(
-            wallet_id,
+        log_transaction_postgres_container_reversal(
+            container_id,
             cancelled_amount,
         )

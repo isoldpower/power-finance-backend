@@ -59,7 +59,7 @@ def _persisted_transaction(amount: Decimal, wallet_id: UUID) -> MoneyFlowEntity:
         created_at=datetime(2026, 1, 1, 12),
         data=MoneyFlowData(
             transaction_id=uuid4(),
-            source_wallet_id=wallet_id,
+            container_id=wallet_id,
             amount=amount,
             cancels_other=None,
             adjusts_other=None,

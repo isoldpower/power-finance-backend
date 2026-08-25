@@ -75,11 +75,15 @@ def log_transaction_postgres_created(transaction_id: str, amount: float) -> None
     )
 
 
-def log_transaction_postgres_wallet_update(wallet_id: str, amount: float, count: int) -> None:
+def log_transaction_postgres_container_update(
+    container_id: str,
+    amount: float,
+    count: int,
+) -> None:
     logger = get_workers_logger("write_message_consumer")
     logger.info(
-        "Adjusted wallet %s balance by %s (rows=%s).",
-        wallet_id,
+        "Adjusted container %s running total by %s (rows=%s).",
+        container_id,
         amount,
         count,
     )
@@ -102,7 +106,7 @@ def log_transaction_postgres_removed(transaction_id: str, amount: Decimal) -> No
     )
 
 
-def log_transaction_postgres_wallet_reversal(wallet_id: str, amount: Decimal) -> None:
+def log_transaction_postgres_container_reversal(wallet_id: str, amount: Decimal) -> None:
     logger = get_workers_logger("write_message_consumer")
     logger.info(
         "Reversed wallet %s balance by %s.",
@@ -362,4 +366,57 @@ def log_wallet_name_denormalised(wallet_id: str, rows: int) -> None:
         "Carried wallet %s rename into %s transaction rows.",
         wallet_id,
         rows,
+    )
+
+
+def log_goal_postgres_created(goal_id: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Received GoalCreated payload for goal %s.",
+        goal_id,
+    )
+
+
+def log_goal_postgres_removed(goal_id: str, count: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Closed goal %s in read store (rows=%s).",
+        goal_id,
+        count,
+    )
+
+
+def log_goal_postgres_updated(goal_id: str, count: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Updated goal %s in read store (rows=%s).",
+        goal_id,
+        count,
+    )
+
+
+def log_goal_list_version_bumped(user_id: int, version: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Bumped goal list version for user %s to %s.",
+        user_id,
+        version,
+    )
+
+
+def log_goal_cache_evicted(key: str, removed: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Evicted cache key %s (removed=%s).",
+        key,
+        removed,
+    )
+
+
+def log_goal_transactions_renamed(goal_id: str, count: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Renamed goal %s across its transactions (rows=%s).",
+        goal_id,
+        count,
     )

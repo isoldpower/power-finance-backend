@@ -1,5 +1,6 @@
 from .domain_event import DomainEvent
 from .events_collector import EventCollector
+from .goal_events import GoalDeletedEvent, GoalUpdatedEvent
 from .transaction_events import (
     TransactionCreatedEvent,
     TransactionDeletedEvent,
@@ -26,6 +27,8 @@ __all__ = [
     "WalletUpdatedEvent",
     "DomainEvent",
     "EventCollector",
+    "GoalDeletedEvent",
+    "GoalUpdatedEvent",
     "WebhookDeliveryStatusChangedEvent",
     "WebhookDeliveryStatus",
 ]

@@ -48,7 +48,10 @@ class GetFallbackWalletQueryHandler:
             user_id=query.user_id,
         )
 
-        checkpoint, unsettled = await load_balance_inputs(wallet, self._transaction_repository)
+        checkpoint, unsettled = await load_balance_inputs(
+            wallet,
+            self._transaction_repository,
+        )
         balance = reconstruct_balance(wallet, checkpoint, unsettled)
         inflow, outflow = await self._period_flows(query)
 
@@ -60,8 +63,8 @@ class GetFallbackWalletQueryHandler:
 
     async def _period_flows(self, query: GetFallbackWalletQuery) -> tuple[Decimal, Decimal]:
         since, until = period_bounds(query.period, query.zone)
-        entries = await self._transaction_repository.get_wallet_flows_between(
-            wallet_id=query.wallet_id,
+        entries = await self._transaction_repository.get_container_flows_between(
+            container_id=query.wallet_id,
             since=since,
             until=until,
         )

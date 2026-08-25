@@ -82,7 +82,5 @@ class WebhookEntity(EntityRoot):
         return self._secret
 
     def restore_secret(self, previous_secret: str, now: datetime) -> None:
-        """Inverse of rotate_secret. Compensation hook only — used by SAGA
-        rollback when an outbox emission fails after the rotation commit."""
         self._secret = previous_secret
         self._updated_at = now

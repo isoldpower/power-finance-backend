@@ -6,7 +6,7 @@ from ..entities import BalanceCheckpointEntity, MoneyFlowEntity, WalletEntity
 from ..entities.wallet import UNCHANGED
 from ..events import WalletDeletedEvent, WalletUpdatedEvent
 from ..exceptions import WalletClosedError, WalletNotEmptyError
-from ..value_objects import WalletData
+from ..value_objects import MoneyContainerKind, MoneyContainerRef, WalletData
 from ._aggregate_root import AggregateRoot
 
 
@@ -36,6 +36,23 @@ class WalletAggregate(AggregateRoot[WalletEntity]):
         return base + unsettled
 
     @property
+    def currency_code(self) -> str:
+        return self.root.currency_code
+
+    @property
+    def is_closed(self) -> bool:
+        return self.root.deleted_at is not None
+
+    def as_reference(self) -> MoneyContainerRef:
+        return MoneyContainerRef(
+            id=UUID(self.unique_id),
+            kind=MoneyContainerKind.WALLET,
+            currency_code=self.root.currency_code,
+            title=self.root.title,
+            is_closed=self.is_closed,
+        )
+
+    @property
     def owned(self) -> Decimal:
         return self.balance - self.root.zero_balance
 
@@ -44,7 +61,7 @@ class WalletAggregate(AggregateRoot[WalletEntity]):
         return self.owned == Decimal("0")
 
     def record(self, flow: MoneyFlowEntity) -> None:
-        if self.root.deleted_at is not None:
+        if self.is_closed:
             raise WalletClosedError(UUID(self.unique_id))
 
         self._unsettled_transactions.append(flow)

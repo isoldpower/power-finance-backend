@@ -1,6 +1,8 @@
 from django.urls import path
 
 from .views.fallback_read import (
+    FallbackGoalListView,
+    FallbackGoalResourceView,
     FallbackNotificationListView,
     FallbackNotificationResourceView,
     FallbackTransactionListView,
@@ -11,6 +13,7 @@ from .views.fallback_read import (
     FallbackWebhookListView,
     FallbackWebhookResourceView,
 )
+from .views.goals import GoalListView, GoalResourceView
 from .views.notifications import (
     NotificationAckView,
     NotificationBatchAckView,
@@ -99,6 +102,26 @@ urlpatterns = [
         "transactions/<uuid:transaction_id>/adjust",
         TransactionAdjustView.as_view(),
         name="transactions-adjust",
+    ),
+    path(
+        "goals",
+        GoalListView.as_view(),
+        name="goals-list",
+    ),
+    path(
+        "goals/<uuid:goal_id>",
+        GoalResourceView.as_view(),
+        name="goals-resource",
+    ),
+    path(
+        "fallback-reads/goals",
+        FallbackGoalListView.as_view(),
+        name="fallback-goals-list",
+    ),
+    path(
+        "fallback-reads/goals/<uuid:goal_id>",
+        FallbackGoalResourceView.as_view(),
+        name="fallback-goals-resource",
     ),
     path(
         "wallets",

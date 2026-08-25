@@ -3,7 +3,12 @@ from decimal import Decimal
 from uuid import UUID
 
 from ..events import EventCollector
-from ..value_objects import TransactionMetadata, TransactionOrigin, TransactionType
+from ..value_objects import (
+    MoneyContainerKind,
+    TransactionMetadata,
+    TransactionOrigin,
+    TransactionType,
+)
 from ._entity_root import EntityRoot
 
 UNCHANGED = object()
@@ -11,7 +16,8 @@ UNCHANGED = object()
 
 class TransactionEntity(EntityRoot, TransactionMetadata):
     _user_id: str
-    _wallet_id: UUID
+    _container_id: UUID
+    _container_kind: MoneyContainerKind
     _created_at: datetime
     _updated_at: datetime | None
     _deleted_at: datetime | None
@@ -20,7 +26,8 @@ class TransactionEntity(EntityRoot, TransactionMetadata):
         self,
         id: UUID,
         user_id: str,
-        wallet_id: UUID,
+        container_id: UUID,
+        container_kind: MoneyContainerKind,
         metadata: TransactionMetadata,
         created_at: datetime,
         event_collector: EventCollector,
@@ -38,7 +45,8 @@ class TransactionEntity(EntityRoot, TransactionMetadata):
         )
 
         self._user_id = user_id
-        self._wallet_id = wallet_id
+        self._container_id = container_id
+        self._container_kind = container_kind
         self._created_at = created_at
         self._updated_at = updated_at
         self._deleted_at = deleted_at
@@ -48,8 +56,12 @@ class TransactionEntity(EntityRoot, TransactionMetadata):
         return self._user_id
 
     @property
-    def wallet_id(self) -> UUID:
-        return self._wallet_id
+    def container_id(self) -> UUID:
+        return self._container_id
+
+    @property
+    def container_kind(self) -> MoneyContainerKind:
+        return self._container_kind
 
     @property
     def created_at(self) -> datetime:
@@ -125,7 +137,8 @@ class TransactionEntity(EntityRoot, TransactionMetadata):
         cls,
         id: UUID,
         user_id: int,
-        wallet_id: UUID,
+        container_id: UUID,
+        container_kind: MoneyContainerKind,
         metadata: TransactionMetadata,
         created_at: datetime,
         _event_collector: EventCollector | None = None,
@@ -133,7 +146,8 @@ class TransactionEntity(EntityRoot, TransactionMetadata):
         return cls(
             id=id,
             user_id=str(user_id),
-            wallet_id=wallet_id,
+            container_id=container_id,
+            container_kind=container_kind,
             metadata=metadata,
             created_at=created_at,
             event_collector=_event_collector or EventCollector(),
@@ -142,6 +156,7 @@ class TransactionEntity(EntityRoot, TransactionMetadata):
 
 __all__ = [
     "UNCHANGED",
+    "MoneyContainerKind",
     "TransactionEntity",
     "TransactionOrigin",
     "TransactionType",

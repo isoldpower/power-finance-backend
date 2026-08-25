@@ -6,11 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * A PATCH. Carries the full post-update state rather than a diff, since PATCH
- * is partial and an overwrite of the whole mutable set is idempotent.
- * </pre>
- *
  * Protobuf type {@code power_finance.events.v1.TransactionMetadataUpdated}
  */
 @com.google.protobuf.Generated
@@ -579,11 +574,6 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * <pre>
-   * A PATCH. Carries the full post-update state rather than a diff, since PATCH
-   * is partial and an overwrite of the whole mutable set is idempotent.
-   * </pre>
-   *
    * Protobuf type {@code power_finance.events.v1.TransactionMetadataUpdated}
    */
   public static final class Builder extends

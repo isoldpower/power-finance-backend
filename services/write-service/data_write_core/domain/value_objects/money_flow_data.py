@@ -6,7 +6,7 @@ from ..exceptions import ConflictingMoneyFlowDataError
 
 class MoneyFlowData:
     transaction_id: UUID
-    source_wallet_id: UUID
+    container_id: UUID
     amount: Decimal
     cancels_other: UUID | None
     adjusts_other: UUID | None
@@ -14,7 +14,7 @@ class MoneyFlowData:
     def __init__(
         self,
         transaction_id: UUID,
-        source_wallet_id: UUID,
+        container_id: UUID,
         amount: Decimal,
         cancels_other: UUID | None = None,
         adjusts_other: UUID | None = None,
@@ -23,7 +23,7 @@ class MoneyFlowData:
             raise ConflictingMoneyFlowDataError()
 
         self.transaction_id = transaction_id
-        self.source_wallet_id = source_wallet_id
+        self.container_id = container_id
         self.amount = amount
         self.cancels_other = cancels_other
         self.adjusts_other = adjusts_other

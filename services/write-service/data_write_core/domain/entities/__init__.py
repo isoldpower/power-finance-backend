@@ -1,10 +1,14 @@
 from ._entity_root import EntityRoot
 from .balance_checkpoint import BalanceCheckpointEntity
 from .currency import CurrencyEntity
+from .goal import UNCHANGED as GOAL_UNCHANGED
+from .goal import GoalEntity
 from .internal_user import InternalUserEntity
 from .money_flow import MoneyFlowEntity
 from .notification import NotificationEntity
+from .transaction import UNCHANGED as TRANSACTION_UNCHANGED
 from .transaction import TransactionEntity
+from .wallet import UNCHANGED as WALLET_UNCHANGED
 from .wallet import WalletEntity
 from .webhook import WebhookEntity
 from .webhook_subscription import WebhookSubscriptionEntity
@@ -13,6 +17,7 @@ __all__ = [
     "EntityRoot",
     "WalletEntity",
     "CurrencyEntity",
+    "GoalEntity",
     "BalanceCheckpointEntity",
     "NotificationEntity",
     "MoneyFlowEntity",
@@ -20,4 +25,7 @@ __all__ = [
     "InternalUserEntity",
     "WebhookEntity",
     "WebhookSubscriptionEntity",
+    "TRANSACTION_UNCHANGED",
+    "GOAL_UNCHANGED",
+    "WALLET_UNCHANGED",
 ]

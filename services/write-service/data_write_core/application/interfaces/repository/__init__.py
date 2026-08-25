@@ -1,4 +1,6 @@
 from .currency_repository import CurrencyRepository
+from .goal_repository import GoalRepository
+from .money_container_repository import MoneyContainerRepository
 from .money_flow_repository import MoneyFlowRepository
 from .notification_repository import NotificationRepository
 from .outbox_repository import OutboxRepository
@@ -9,6 +11,8 @@ from .webhook_repository import WebhookRepository
 
 __all__ = [
     "CurrencyRepository",
+    "GoalRepository",
+    "MoneyContainerRepository",
     "NotificationRepository",
     "OutboxRepository",
     "MoneyFlowRepository",

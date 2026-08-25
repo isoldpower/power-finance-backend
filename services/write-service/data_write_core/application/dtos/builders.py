@@ -3,13 +3,16 @@ from uuid import UUID
 
 from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import (
+    GoalEntity,
     MoneyFlowEntity,
     NotificationEntity,
     WalletEntity,
     WebhookEntity,
     WebhookSubscriptionEntity,
 )
+from data_write_core.domain.value_objects import MoneyContainerKind, MoneyContainerRef
 
+from .goal_dto import GoalDTO, MoneyContainerDTO
 from .notification_dto import NotificationDTO
 from .transaction_dto import TransactionDTO, TransactionPlainDTO
 from .wallet_dto import WalletDTO
@@ -82,19 +85,53 @@ def wallet_to_dto(wallet: WalletEntity, balance_amount: Decimal | None = None) -
     )
 
 
+def goal_to_dto(goal: GoalEntity, progress: Decimal | None = None) -> GoalDTO:
+    return GoalDTO(
+        id=UUID(goal.unique_id),
+        user_id=int(goal.user_id),
+        name=goal.title,
+        currency=goal.currency_code,
+        target=goal.target,
+        progress=progress if progress is not None else Decimal("0"),
+        created_at=goal.created_at,
+        updated_at=goal.updated_at,
+        deleted_at=goal.deleted_at,
+        finish_at=goal.finish_at,
+        url=goal.url,
+    )
+
+
+def container_to_dto(container: MoneyContainerRef) -> MoneyContainerDTO:
+    return MoneyContainerDTO(
+        id=container.id,
+        name=container.title,
+        currency=container.currency_code,
+        kind=container.kind,
+    )
+
+
+def wallet_dto_to_container(wallet: WalletDTO) -> MoneyContainerDTO:
+    return MoneyContainerDTO(
+        id=wallet.id,
+        name=wallet.name,
+        currency=wallet.currency,
+        kind=MoneyContainerKind.WALLET,
+    )
+
+
 def transaction_to_dto(
     aggregate: TransactionAggregate,
-    wallet: WalletDTO,
+    container: MoneyContainerDTO,
 ) -> TransactionDTO:
     return TransactionDTO(
         id=UUID(aggregate.unique_id),
         user_id=int(aggregate.root.user_id),
         name=aggregate.root.name,
         amount=abs(aggregate.amount),
-        currency_code=wallet.currency,
+        currency_code=container.currency,
         transaction_type=aggregate.type,
         origin=aggregate.root.origin,
-        wallet=wallet,
+        container=container,
         created_at=aggregate.root.created_at,
         updated_at=aggregate.root.updated_at,
         deleted_at=aggregate.root.deleted_at,
@@ -106,13 +143,13 @@ def transaction_to_dto(
 
 def transaction_to_plain_dto(
     transaction: MoneyFlowEntity,
-    source_wallet: WalletDTO,
+    container: MoneyContainerDTO,
 ) -> TransactionPlainDTO:
     return TransactionPlainDTO(
         id=UUID(transaction.unique_id),
         amount=transaction.amount,
-        source_wallet_id=str(source_wallet.id),
-        currency_code=source_wallet.currency,
+        container_id=str(container.id),
+        currency_code=container.currency,
         created_at=transaction.created_at,
         transaction_id=transaction.transaction_id,
         cancels_other=transaction.cancels_other,

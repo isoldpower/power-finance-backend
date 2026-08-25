@@ -5,7 +5,7 @@ from uuid import UUID
 
 from data_write_core.domain.value_objects import TransactionOrigin, TransactionType
 
-from .wallet_dto import WalletDTO
+from .goal_dto import MoneyContainerDTO
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class TransactionDTO:
     currency_code: str
     transaction_type: TransactionType
     origin: TransactionOrigin
-    wallet: WalletDTO
+    container: MoneyContainerDTO
     created_at: datetime
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
@@ -37,7 +37,7 @@ class TransactionPlainDTO:
     id: UUID
     amount: Decimal
     currency_code: str
-    source_wallet_id: str
+    container_id: str
     created_at: datetime
     transaction_id: UUID | None = None
     cancels_other: UUID | None = None

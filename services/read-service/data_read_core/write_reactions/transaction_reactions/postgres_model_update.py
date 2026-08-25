@@ -1,12 +1,10 @@
 from decimal import Decimal
 
-from django.db.models import F
 from kafka_messages import TransactionUpdated
 
 from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import (
     TransactionReadModel,
-    WalletReadModel,
     aatomic,
 )
 
@@ -16,6 +14,7 @@ from .._logger_shortcuts import (
     log_transaction_postgres_updated,
 )
 from .._utilities import decode_payload, handle_database_errors
+from ._utilities import apply_container_delta
 
 
 class UpdateTransactionReadModel(Effect):
@@ -52,7 +51,11 @@ class UpdateTransactionReadModel(Effect):
                 transaction_row,
                 new_amount,
             )
-            await self._apply_wallet_update(transaction_row.wallet_id, amount_delta)
+            await self._apply_container_update(
+                transaction_row.wallet_id,
+                transaction_row.container_kind,
+                amount_delta,
+            )
         else:
             log_transaction_postgres_absent_on_update(transaction_id)
 
@@ -62,7 +65,10 @@ class UpdateTransactionReadModel(Effect):
         new_amount: Decimal,
     ) -> Decimal | None:
         if transaction_row.amount == new_amount:
-            log_transaction_postgres_unchanged(transaction_row.id, new_amount)
+            log_transaction_postgres_unchanged(
+                transaction_row.id,
+                new_amount,
+            )
             return None
 
         amount_delta = new_amount - transaction_row.amount
@@ -77,14 +83,17 @@ class UpdateTransactionReadModel(Effect):
         )
         return amount_delta
 
-    async def _apply_wallet_update(
+    async def _apply_container_update(
         self,
-        wallet_id: str,
+        container_id: str,
+        kind: str,
         amount_delta: Decimal | None,
     ) -> None:
         if not amount_delta:
             return
 
-        await WalletReadModel.objects.filter(id=wallet_id).aupdate(
-            balance=F("balance") + amount_delta
+        await apply_container_delta(
+            container_id,
+            kind,
+            amount_delta,
         )

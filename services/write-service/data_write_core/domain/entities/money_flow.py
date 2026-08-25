@@ -22,7 +22,7 @@ class MoneyFlowEntity(EntityRoot, MoneyFlowData):
         MoneyFlowData.__init__(
             self,
             transaction_id=data.transaction_id,
-            source_wallet_id=data.source_wallet_id,
+            container_id=data.container_id,
             amount=data.amount,
             cancels_other=data.cancels_other,
             adjusts_other=data.adjusts_other,
@@ -86,7 +86,7 @@ class MoneyFlowEntity(EntityRoot, MoneyFlowData):
             created_at=created_at,
             data=MoneyFlowData(
                 transaction_id=self.transaction_id,
-                source_wallet_id=self.source_wallet_id,
+                container_id=self.container_id,
                 amount=-self.amount,
                 cancels_other=UUID(self.unique_id),
             ),

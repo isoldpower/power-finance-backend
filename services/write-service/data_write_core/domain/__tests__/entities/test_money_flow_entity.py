@@ -16,7 +16,7 @@ def _money_flow_data(
 ) -> MoneyFlowData:
     return MoneyFlowData(
         transaction_id=uuid4(),
-        source_wallet_id=wallet_id or uuid4(),
+        container_id=wallet_id or uuid4(),
         amount=amount,
         cancels_other=None,
         adjusts_other=None,
@@ -76,7 +76,7 @@ class MoneyFlowFromPersistenceTests(SimpleTestCase):
             created_at=created_at,
             data=MoneyFlowData(
                 transaction_id=uuid4(),
-                source_wallet_id=wallet_id,
+                container_id=wallet_id,
                 amount=Decimal("12.50"),
                 cancels_other=None,
                 adjusts_other=None,
@@ -86,7 +86,7 @@ class MoneyFlowFromPersistenceTests(SimpleTestCase):
         self.assertEqual(money_flow.unique_id, str(txn_id))
         self.assertEqual(money_flow.user_id, "7")
         self.assertEqual(money_flow.created_at, created_at)
-        self.assertEqual(money_flow.source_wallet_id, wallet_id)
+        self.assertEqual(money_flow.container_id, wallet_id)
         self.assertEqual(money_flow.amount, Decimal("12.50"))
 
 
@@ -115,7 +115,7 @@ class MoneyFlowInverseTests(SimpleTestCase):
 
         inverse = original.create_inverse(event_collector=EventCollector())
 
-        self.assertEqual(inverse.source_wallet_id, wallet_id)
+        self.assertEqual(inverse.container_id, wallet_id)
         self.assertEqual(inverse.user_id, "88")
 
     def test_create_inverse_emits_nothing(self) -> None:

@@ -12,12 +12,17 @@ from write_service.common.pagination import (
 
 from data_write_core.domain.entities import (
     BalanceCheckpointEntity,
+    GoalEntity,
     MoneyFlowEntity,
     TransactionEntity,
     WalletEntity,
 )
 from data_write_core.domain.events import EventCollector
+from data_write_core.domain.exceptions import MoneyContainerNotFoundError
 from data_write_core.domain.value_objects import (
+    GoalData,
+    MoneyContainerKind,
+    MoneyContainerRef,
     MoneyFlowData,
     TransactionMetadata,
     TransactionOrigin,
@@ -29,7 +34,7 @@ from data_write_core.domain.value_objects import (
 class _KeyedRow:
     id: str
     created_at: datetime
-    wallet: WalletEntity
+    item: WalletEntity | GoalEntity | TransactionEntity
 
 
 def make_page(limit: int = 25, cursor=None) -> PageRequest:
@@ -62,6 +67,23 @@ def make_wallet(
     )
 
 
+def make_goal(
+    goal_id: str,
+    *,
+    user_id: int = 7,
+    currency: str = "USD",
+    title: str = "Goal",
+    target: str = "1000",
+    created_at: datetime | None = None,
+) -> GoalEntity:
+    return GoalEntity.create(
+        data=GoalData(title=title, currency_code=currency, target=Decimal(target)),
+        id=goal_id,
+        user_id=str(user_id),
+        created_at=created_at or datetime(2026, 1, 1),
+    )
+
+
 def make_flow(
     flow_id: str,
     wallet_id: str,
@@ -82,7 +104,7 @@ def make_flow(
         created_at=created_at or datetime(2026, 1, 1),
         data=MoneyFlowData(
             transaction_id=UUID(transaction_id or flow_id),
-            source_wallet_id=UUID(wallet_id),
+            container_id=UUID(wallet_id),
             amount=Decimal(amount),
             cancels_other=cancels_other,
             adjusts_other=adjusts_other,
@@ -105,7 +127,8 @@ def make_transaction_entity(
     return TransactionEntity(
         id=UUID(transaction_id),
         user_id=str(user_id),
-        wallet_id=UUID(wallet_id),
+        container_id=UUID(wallet_id),
+        container_kind=MoneyContainerKind.WALLET,
         metadata=TransactionMetadata(
             name=name,
             category=category,
@@ -156,12 +179,10 @@ class FakeTransactionRepository:
             return ordered
 
         rows = [
-            _KeyedRow(
-                id=transaction.unique_id, created_at=transaction.created_at, wallet=transaction
-            )
+            _KeyedRow(id=transaction.unique_id, created_at=transaction.created_at, item=transaction)
             for transaction in ordered
         ]
-        return [row.wallet for row in keyset_slice(rows, page)]
+        return [row.item for row in keyset_slice(rows, page)]
 
     async def count_user_transactions(self, user_id: int) -> int:
         return len(
@@ -222,14 +243,92 @@ class FakeWalletRepository:
             return ordered
 
         rows = [
-            _KeyedRow(id=wallet.unique_id, created_at=wallet.created_at, wallet=wallet)
+            _KeyedRow(id=wallet.unique_id, created_at=wallet.created_at, item=wallet)
             for wallet in ordered
         ]
 
-        return [row.wallet for row in keyset_slice(rows, page)]
+        return [row.item for row in keyset_slice(rows, page)]
 
     async def count_user_wallets(self, user_id: int) -> int:
         return len(self._wallets)
+
+    def as_containers(self) -> "FakeMoneyContainerRepository":
+        """The container view of the same wallets, for handlers on the transaction
+        path that resolve rather than load."""
+        return FakeMoneyContainerRepository(list(self._wallets.values()))
+
+
+class FakeGoalRepository:
+    def __init__(self, goals: list[GoalEntity] | None = None) -> None:
+        self._goals = {str(goal.unique_id): goal for goal in (goals or [])}
+
+    async def get_user_goal_by_id(self, goal_id, user_id: int) -> GoalEntity:
+        goal = self._goals.get(str(goal_id))
+        if goal is None:
+            raise LookupError(f"goal {goal_id} not found")
+        return goal
+
+    async def get_user_goals(
+        self, user_id: int, page: PageRequest | None = None
+    ) -> list[GoalEntity]:
+        ordered = sorted(
+            self._goals.values(),
+            key=lambda goal: goal.created_at,
+            reverse=True,
+        )
+        if page is None:
+            return ordered
+
+        rows = [
+            _KeyedRow(id=goal.unique_id, created_at=goal.created_at, item=goal) for goal in ordered
+        ]
+
+        return [row.item for row in keyset_slice(rows, page)]
+
+    async def count_user_goals(self, user_id: int) -> int:
+        return len(self._goals)
+
+
+class FakeMoneyContainerRepository:
+    """Resolves against the same wallet map the wallet fake serves, plus any goals
+    handed in. Nothing under test here cares which table an id came from — that is
+    the point of the abstraction — so the fake just answers with a reference."""
+
+    def __init__(
+        self,
+        wallets: list[WalletEntity] | None = None,
+        goals: list[GoalEntity] | None = None,
+    ) -> None:
+        self._references: dict[str, MoneyContainerRef] = {}
+        for wallet in wallets or []:
+            self._references[str(wallet.unique_id)] = MoneyContainerRef(
+                id=UUID(wallet.unique_id),
+                kind=MoneyContainerKind.WALLET,
+                currency_code=wallet.currency_code,
+                title=wallet.title,
+                is_closed=wallet.deleted_at is not None,
+            )
+        for goal in goals or []:
+            self._references[str(goal.unique_id)] = MoneyContainerRef(
+                id=UUID(goal.unique_id),
+                kind=MoneyContainerKind.GOAL,
+                currency_code=goal.currency_code,
+                title=goal.title,
+                is_closed=goal.deleted_at is not None,
+            )
+
+    async def resolve(self, container_id, user_id: int) -> MoneyContainerRef:
+        reference = self._references.get(str(container_id))
+        if reference is None:
+            raise MoneyContainerNotFoundError(UUID(str(container_id)))
+        return reference
+
+    async def resolve_many(self, container_ids, user_id: int) -> dict:
+        return {
+            UUID(str(container_id)): self._references[str(container_id)]
+            for container_id in container_ids
+            if str(container_id) in self._references
+        }
 
 
 class FakeMoneyFlowRepository:
@@ -277,10 +376,10 @@ class FakeMoneyFlowRepository:
             for transaction_id in transaction_ids
         }
 
-    async def get_wallet_flows_between(self, wallet_id, since, until):
+    async def get_container_flows_between(self, container_id, since, until):
         return [
             transaction
-            for transaction in self._unsettled.get(str(wallet_id), [])
+            for transaction in self._unsettled.get(str(container_id), [])
             if since <= _aware(transaction.created_at) < until
         ]
 

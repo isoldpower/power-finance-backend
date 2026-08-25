@@ -3,19 +3,22 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
+from ..value_objects import MoneyContainerKind
 from .domain_event import DomainEvent
 
 
 @dataclass(frozen=True)
 class TransactionEventParticipant:
-    wallet_id: UUID
+    container_id: UUID
+    container_kind: MoneyContainerKind
     currency_code: str
     amount: Decimal
 
 
 @dataclass(frozen=True)
 class TransactionCreatedEvent(DomainEvent):
-    wallet_id: UUID
+    container_id: UUID
+    container_kind: MoneyContainerKind
     user_id: int
     amount: Decimal
     transaction_id: UUID
@@ -25,7 +28,7 @@ class TransactionCreatedEvent(DomainEvent):
 @dataclass(frozen=True)
 class TransactionUpdatedEvent(DomainEvent):
     transaction_id: UUID
-    wallet_id: UUID
+    container_id: UUID
     user_id: int
     previous_amount: Decimal
     new_amount: Decimal
@@ -45,7 +48,7 @@ class TransactionMetadataUpdatedEvent(DomainEvent):
 @dataclass(frozen=True)
 class TransactionDeletedEvent(DomainEvent):
     transaction_id: UUID
-    wallet_id: UUID
+    container_id: UUID
     user_id: int
     amount: Decimal
     cancelled_by: UUID

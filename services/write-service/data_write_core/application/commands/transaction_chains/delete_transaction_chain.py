@@ -14,14 +14,16 @@ from data_write_core.infrastructure.outbox_saga import PostgresWriteStep
 from ...bootstrap import get_repository_registry
 from ...dtos import TransactionChainDTO, transaction_to_dto
 from ...interfaces import (
+    GoalRepository,
+    MoneyContainerRepository,
     MoneyFlowRepository,
     OutboxRepository,
     TransactionRepository,
     WalletRepository,
 )
 from ..command_base import CommandHandlerBase
-from ..loaded_wallets import LoadedWallets
-from ..loader_mixins import LoadWalletMixin
+from ..loaded_containers import LoadedContainers
+from ..loader_mixins import LoadContainerMixin
 from ..transactions.transaction_saga import run_transaction_saga
 
 TRANSACTION_AGGREGATE_TYPE = "transaction"
@@ -35,7 +37,7 @@ class DeleteTransactionChainCommand:
 
 
 class DeleteTransactionChainCommandHandler(
-    CommandHandlerBase[TransactionChainDTO], LoadWalletMixin
+    CommandHandlerBase[TransactionChainDTO], LoadContainerMixin
 ):
     _transaction_repository: TransactionRepository
     _money_flow_repository: MoneyFlowRepository
@@ -48,19 +50,24 @@ class DeleteTransactionChainCommandHandler(
         money_flow_repository: MoneyFlowRepository | None = None,
         wallet_repository: WalletRepository | None = None,
         outbox_repository: OutboxRepository | None = None,
+        goal_repository: GoalRepository | None = None,
+        container_repository: MoneyContainerRepository | None = None,
     ) -> None:
-        if (
-            transaction_repository is None
-            or money_flow_repository is None
-            or wallet_repository is None
-            or outbox_repository is None
-        ):
-            registry = get_repository_registry()
-            transaction_repository = transaction_repository or registry.transaction_repository
-            money_flow_repository = money_flow_repository or registry.money_flow_repository
-            wallet_repository = wallet_repository or registry.wallet_repository
-            outbox_repository = outbox_repository or registry.outbox_repository
-        LoadWalletMixin.__init__(self, wallet_repository, money_flow_repository)
+        registry = get_repository_registry()
+        transaction_repository = transaction_repository or registry.transaction_repository
+        money_flow_repository = money_flow_repository or registry.money_flow_repository
+        wallet_repository = wallet_repository or registry.wallet_repository
+        outbox_repository = outbox_repository or registry.outbox_repository
+        goal_repository = goal_repository or registry.goal_repository
+        container_repository = container_repository or registry.money_container_repository
+
+        LoadContainerMixin.__init__(
+            self,
+            container_repository=container_repository,
+            wallet_repository=wallet_repository,
+            goal_repository=goal_repository,
+            money_flow_repository=money_flow_repository,
+        )
 
         self._transaction_repository = transaction_repository
         self._money_flow_repository = money_flow_repository
@@ -109,15 +116,21 @@ class DeleteTransactionChainCommandHandler(
         command: DeleteTransactionChainCommand,
         aggregates: list[TransactionAggregate],
     ) -> TransactionChainDTO:
-        wallets = LoadedWallets(loader=self, user_id=command.user_id)
+        containers = LoadedContainers(
+            loader=self,
+            user_id=command.user_id,
+        )
         for aggregate in aggregates:
-            await wallets.get(aggregate.root.wallet_id)
+            await containers.get(aggregate.root.container_id)
 
-        wallet_dtos = wallets.as_dtos()
+        container_dtos = containers.as_dtos()
         return TransactionChainDTO(
             chain_id=command.chain_id,
             transactions=[
-                transaction_to_dto(aggregate, wallet_dtos[str(aggregate.root.wallet_id)])
+                transaction_to_dto(
+                    aggregate,
+                    container_dtos[str(aggregate.root.container_id)],
+                )
                 for aggregate in aggregates
             ],
         )
@@ -155,7 +168,7 @@ class DeleteTransactionChainCommandHandler(
         return build_outbox_entry(
             TransactionDeleted(
                 transaction_id=cancellation.transaction.unique_id,
-                wallet_id=str(root.wallet_id),
+                wallet_id=str(root.container_id),
                 user_id=int(root.user_id),
                 amount=str(cancellation.outstanding_amount),
                 created_at=datetime_to_timestamp(root.created_at),

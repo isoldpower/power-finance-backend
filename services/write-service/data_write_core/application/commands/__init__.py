@@ -1,3 +1,9 @@
+from .goals.create_new_goal import CreateNewGoalCommand, CreateNewGoalCommandHandler
+from .goals.soft_delete_goal import SoftDeleteGoalCommand, SoftDeleteGoalCommandHandler
+from .goals.update_existing_goal import (
+    UpdateExistingGoalCommand,
+    UpdateExistingGoalCommandHandler,
+)
 from .notifications.acknowledge_notifications import (
     AcknowledgeNotificationsCommand,
     AcknowledgeNotificationsCommandHandler,
@@ -77,6 +83,12 @@ from .webhooks.update_webhook import (
 )
 
 __all__ = [
+    "CreateNewGoalCommand",
+    "CreateNewGoalCommandHandler",
+    "SoftDeleteGoalCommand",
+    "SoftDeleteGoalCommandHandler",
+    "UpdateExistingGoalCommand",
+    "UpdateExistingGoalCommandHandler",
     "AddWebhookSubscriptionCommand",
     "AddWebhookSubscriptionCommandHandler",
     "CreateWebhookCommand",

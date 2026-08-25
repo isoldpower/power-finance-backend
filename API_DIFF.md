@@ -203,6 +203,36 @@ Wallets match the target shape. The one thing worth reading twice is what
   representation, so an omitted field resets to its default — unlike `PATCH`,
   where an omitted field is left alone.
 
+### Goals
+- Goals exist and match the target shape: `id`, `name`, `url` (always null),
+  `currency`, `finish_at`, the three structural timestamps, `target` and
+  `progress` as money objects;
+- **`progress` is derived and never writable.** It is folded from the
+  transactions touching the goal, exactly as a wallet's balance is. `PATCH`
+  accepts a `progress` key and discards it rather than rejecting it;
+- **`currency` is fixed at creation** and is not accepted by `PATCH`. Both
+  `target` and `progress` are denominated in it, so letting it move would
+  silently restate both;
+- **a goal id is accepted anywhere `wallet_id` is.** Funding a goal is an
+  ordinary `POST /transactions/chains` transfer — expense on a wallet, income on
+  the goal — and draining it is the same chain reversed. There is no contribution
+  endpoint;
+- a transaction that moves money in a goal still renders it under the key
+  **`wallet`**. That is what the target specifies; clients treat the two
+  interchangeably and the container's kind is not part of the transaction shape;
+- `DELETE /goals/{id}` refuses a non-zero `progress` with 409 `goal_not_empty`.
+  Posting to a CLOSED goal fails with 409 **`wallet_closed`** — the same code the
+  target defines for a soft-deleted target wallet, deliberately not a new one;
+- `GET /goals/{id}` embeds `history`: one entry per transaction touching the
+  goal, in the target's entry shape (`title`, `debit`, `created_at`,
+  `source_transaction`, `icon`, `money`), paginated under `meta.history`.
+  `debit` is true when money moved IN. `icon` is always `""` — nothing assigns
+  one yet;
+- **history entries carry an `id`.** The target's examples omit it; a
+  keyset-paginated collection needs a stable anchor;
+- there is **no `POST /goals/search`**, matching the target. That is a decision,
+  not a gap.
+
 ### Notifications
 - The fields are **`short`, `message`, `is_read`** — not `title`, `body`,
   `acknowledged_at`. `is_read` is a boolean, so there is no timestamp for when

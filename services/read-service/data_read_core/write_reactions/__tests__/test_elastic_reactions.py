@@ -29,7 +29,7 @@ from data_read_core.write_reactions.transaction_reactions import (
 from data_read_core.write_reactions.transaction_reactions import (
     elastic_search_update as tx_update,
 )
-from data_read_core.write_reactions.transaction_reactions._utilities import WalletLabel
+from data_read_core.write_reactions.transaction_reactions._utilities import ContainerLabel
 from data_read_core.write_reactions.wallet_reactions import (
     elastic_search_create as wl_create,
 )
@@ -60,10 +60,10 @@ def _use_fake_es(monkeypatch, module) -> FakeElasticsearch:
 async def test_index_transaction_writes_full_document(monkeypatch):
     fake = _use_fake_es(monkeypatch, tx_create)
 
-    async def _label(_wallet_id: str) -> WalletLabel:
-        return WalletLabel(currency_code="EUR", name="Random Credit Card")
+    async def _label(_container_id: str, _kind: str | None = None) -> ContainerLabel:
+        return ContainerLabel(currency_code="EUR", name="Random Credit Card", kind="wallet")
 
-    monkeypatch.setattr(tx_create, "_wallet_label", _label)
+    monkeypatch.setattr(tx_create, "_container_label", _label)
 
     event = make_event(
         TransactionCreated(
@@ -97,10 +97,10 @@ async def test_indexed_type_is_read_off_the_sign(monkeypatch):
 
     fake = _use_fake_es(monkeypatch, tx_create)
 
-    async def _label(_wallet_id: str) -> WalletLabel:
-        return WalletLabel(currency_code="EUR", name="Wallet")
+    async def _label(_container_id: str, _kind: str | None = None) -> ContainerLabel:
+        return ContainerLabel(currency_code="EUR", name="Wallet", kind="wallet")
 
-    monkeypatch.setattr(tx_create, "_wallet_label", _label)
+    monkeypatch.setattr(tx_create, "_container_label", _label)
 
     for amount, expected in (("-25.50", "expense"), ("25.50", "income")):
         await IndexTransactionDocument().apply(
@@ -120,10 +120,10 @@ async def test_indexed_type_is_read_off_the_sign(monkeypatch):
 async def test_a_chained_transaction_carries_its_chain_into_the_sort_column(monkeypatch):
     fake = _use_fake_es(monkeypatch, tx_create)
 
-    async def _label(_wallet_id: str) -> WalletLabel:
-        return WalletLabel(currency_code="EUR", name="Wallet")
+    async def _label(_container_id: str, _kind: str | None = None) -> ContainerLabel:
+        return ContainerLabel(currency_code="EUR", name="Wallet", kind="wallet")
 
-    monkeypatch.setattr(tx_create, "_wallet_label", _label)
+    monkeypatch.setattr(tx_create, "_container_label", _label)
 
     await IndexTransactionDocument().apply(
         make_event(
@@ -149,10 +149,10 @@ async def test_indexed_amount_survives_an_adjustment_in_the_same_type(monkeypatc
 
     created = _use_fake_es(monkeypatch, tx_create)
 
-    async def _label(_wallet_id: str) -> WalletLabel:
-        return WalletLabel(currency_code="EUR", name="Wallet")
+    async def _label(_container_id: str, _kind: str | None = None) -> ContainerLabel:
+        return ContainerLabel(currency_code="EUR", name="Wallet", kind="wallet")
 
-    monkeypatch.setattr(tx_create, "_wallet_label", _label)
+    monkeypatch.setattr(tx_create, "_container_label", _label)
     await IndexTransactionDocument().apply(
         make_event(
             TransactionCreated(

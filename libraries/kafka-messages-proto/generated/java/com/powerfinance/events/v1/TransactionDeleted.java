@@ -222,11 +222,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object amount_ = "";
   /**
-   * <pre>
-   * The outstanding amount at cancellation, signed. Reversing it returns the
-   * wallet balance to where it stood before the transaction.
-   * </pre>
-   *
    * <code>string amount = 13;</code>
    * @return The amount.
    */
@@ -244,11 +239,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * The outstanding amount at cancellation, signed. Reversing it returns the
-   * wallet balance to where it stood before the transaction.
-   * </pre>
-   *
    * <code>string amount = 13;</code>
    * @return The bytes for amount.
    */
@@ -1255,11 +1245,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object amount_ = "";
     /**
-     * <pre>
-     * The outstanding amount at cancellation, signed. Reversing it returns the
-     * wallet balance to where it stood before the transaction.
-     * </pre>
-     *
      * <code>string amount = 13;</code>
      * @return The amount.
      */
@@ -1276,11 +1261,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The outstanding amount at cancellation, signed. Reversing it returns the
-     * wallet balance to where it stood before the transaction.
-     * </pre>
-     *
      * <code>string amount = 13;</code>
      * @return The bytes for amount.
      */
@@ -1298,11 +1278,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The outstanding amount at cancellation, signed. Reversing it returns the
-     * wallet balance to where it stood before the transaction.
-     * </pre>
-     *
      * <code>string amount = 13;</code>
      * @param value The amount to set.
      * @return This builder for chaining.
@@ -1316,11 +1291,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The outstanding amount at cancellation, signed. Reversing it returns the
-     * wallet balance to where it stood before the transaction.
-     * </pre>
-     *
      * <code>string amount = 13;</code>
      * @return This builder for chaining.
      */
@@ -1331,11 +1301,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The outstanding amount at cancellation, signed. Reversing it returns the
-     * wallet balance to where it stood before the transaction.
-     * </pre>
-     *
      * <code>string amount = 13;</code>
      * @param value The bytes for amount to set.
      * @return This builder for chaining.
