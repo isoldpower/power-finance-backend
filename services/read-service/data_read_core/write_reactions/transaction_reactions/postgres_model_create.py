@@ -2,12 +2,12 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from kafka_messages import TransactionCreated
-
-from data_read_core.shared.kafka_updates import (
+from kafka_consumer_py import (
     Effect,
     EventMessage,
 )
+from kafka_messages import TransactionCreated
+
 from data_read_core.shared.postgres_orm import (
     NO_CHAIN_SENTINEL,
     TransactionReadModel,

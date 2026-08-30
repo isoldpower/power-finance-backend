@@ -21,6 +21,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=services/read-service/pyproject.toml,target=services/read-service/pyproject.toml \
     --mount=type=bind,source=libraries/kafka-client-py/pyproject.toml,target=libraries/kafka-client-py/pyproject.toml \
+    --mount=type=bind,source=libraries/kafka-consumer-py/pyproject.toml,target=libraries/kafka-consumer-py/pyproject.toml \
     --mount=type=bind,source=libraries/kafka-messages-proto/pyproject.toml,target=libraries/kafka-messages-proto/pyproject.toml \
     --mount=type=bind,source=libraries/saga-pattern-py/pyproject.toml,target=libraries/saga-pattern-py/pyproject.toml \
     --mount=type=bind,source=libraries/read-at-least-py/pyproject.toml,target=libraries/read-at-least-py/pyproject.toml \
@@ -28,6 +29,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project --no-dev --package read-service
 
 COPY libraries/kafka-client-py /app/libraries/kafka-client-py
+COPY libraries/kafka-consumer-py /app/libraries/kafka-consumer-py
 COPY libraries/saga-pattern-py /app/libraries/saga-pattern-py
 COPY libraries/kafka-messages-proto /app/libraries/kafka-messages-proto
 COPY libraries/read-at-least-py /app/libraries/read-at-least-py

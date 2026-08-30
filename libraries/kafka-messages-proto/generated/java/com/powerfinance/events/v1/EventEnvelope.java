@@ -6,13 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * Shared header every business event carries. Lives as separate fields
- * on each message rather than as a sub-message so the JSON wire format
- * stays flat (matches the legacy dict payload that consumers already
- * understand).
- * </pre>
- *
  * Protobuf type {@code power_finance.events.v1.EventEnvelope}
  */
 @com.google.protobuf.Generated
@@ -61,10 +54,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object eventId_ = "";
   /**
-   * <pre>
-   * UUID. Idempotency key — consumers dedupe on this.
-   * </pre>
-   *
    * <code>string event_id = 1;</code>
    * @return The eventId.
    */
@@ -82,10 +71,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * UUID. Idempotency key — consumers dedupe on this.
-   * </pre>
-   *
    * <code>string event_id = 1;</code>
    * @return The bytes for eventId.
    */
@@ -107,10 +92,6 @@ private static final long serialVersionUID = 0L;
   public static final int OCCURRED_AT_FIELD_NUMBER = 2;
   private com.google.protobuf.Timestamp occurredAt_;
   /**
-   * <pre>
-   * Wall-clock time the producer decided this event happened.
-   * </pre>
-   *
    * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
    * @return Whether the occurredAt field is set.
    */
@@ -119,10 +100,6 @@ private static final long serialVersionUID = 0L;
     return ((bitField0_ & 0x00000001) != 0);
   }
   /**
-   * <pre>
-   * Wall-clock time the producer decided this event happened.
-   * </pre>
-   *
    * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
    * @return The occurredAt.
    */
@@ -131,10 +108,6 @@ private static final long serialVersionUID = 0L;
     return occurredAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : occurredAt_;
   }
   /**
-   * <pre>
-   * Wall-clock time the producer decided this event happened.
-   * </pre>
-   *
    * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
    */
   @java.lang.Override
@@ -145,12 +118,6 @@ private static final long serialVersionUID = 0L;
   public static final int SCHEMA_VERSION_FIELD_NUMBER = 3;
   private int schemaVersion_ = 0;
   /**
-   * <pre>
-   * Bump on any breaking change to a concrete event's payload. Consumers
-   * that can't handle a higher version should route the message to the
-   * DLQ rather than partially process it.
-   * </pre>
-   *
    * <code>int32 schema_version = 3;</code>
    * @return The schemaVersion.
    */
@@ -343,13 +310,6 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * <pre>
-   * Shared header every business event carries. Lives as separate fields
-   * on each message rather than as a sub-message so the JSON wire format
-   * stays flat (matches the legacy dict payload that consumers already
-   * understand).
-   * </pre>
-   *
    * Protobuf type {@code power_finance.events.v1.EventEnvelope}
    */
   public static final class Builder extends
@@ -530,10 +490,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object eventId_ = "";
     /**
-     * <pre>
-     * UUID. Idempotency key — consumers dedupe on this.
-     * </pre>
-     *
      * <code>string event_id = 1;</code>
      * @return The eventId.
      */
@@ -550,10 +506,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * UUID. Idempotency key — consumers dedupe on this.
-     * </pre>
-     *
      * <code>string event_id = 1;</code>
      * @return The bytes for eventId.
      */
@@ -571,10 +523,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * UUID. Idempotency key — consumers dedupe on this.
-     * </pre>
-     *
      * <code>string event_id = 1;</code>
      * @param value The eventId to set.
      * @return This builder for chaining.
@@ -588,10 +536,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * UUID. Idempotency key — consumers dedupe on this.
-     * </pre>
-     *
      * <code>string event_id = 1;</code>
      * @return This builder for chaining.
      */
@@ -602,10 +546,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * UUID. Idempotency key — consumers dedupe on this.
-     * </pre>
-     *
      * <code>string event_id = 1;</code>
      * @param value The bytes for eventId to set.
      * @return This builder for chaining.
@@ -624,10 +564,6 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilder<
         com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> occurredAtBuilder_;
     /**
-     * <pre>
-     * Wall-clock time the producer decided this event happened.
-     * </pre>
-     *
      * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
      * @return Whether the occurredAt field is set.
      */
@@ -635,10 +571,6 @@ private static final long serialVersionUID = 0L;
       return ((bitField0_ & 0x00000002) != 0);
     }
     /**
-     * <pre>
-     * Wall-clock time the producer decided this event happened.
-     * </pre>
-     *
      * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
      * @return The occurredAt.
      */
@@ -650,10 +582,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Wall-clock time the producer decided this event happened.
-     * </pre>
-     *
      * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
      */
     public Builder setOccurredAt(com.google.protobuf.Timestamp value) {
@@ -670,10 +598,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Wall-clock time the producer decided this event happened.
-     * </pre>
-     *
      * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
      */
     public Builder setOccurredAt(
@@ -688,10 +612,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Wall-clock time the producer decided this event happened.
-     * </pre>
-     *
      * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
      */
     public Builder mergeOccurredAt(com.google.protobuf.Timestamp value) {
@@ -713,10 +633,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Wall-clock time the producer decided this event happened.
-     * </pre>
-     *
      * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
      */
     public Builder clearOccurredAt() {
@@ -730,10 +646,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Wall-clock time the producer decided this event happened.
-     * </pre>
-     *
      * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
      */
     public com.google.protobuf.Timestamp.Builder getOccurredAtBuilder() {
@@ -742,10 +654,6 @@ private static final long serialVersionUID = 0L;
       return internalGetOccurredAtFieldBuilder().getBuilder();
     }
     /**
-     * <pre>
-     * Wall-clock time the producer decided this event happened.
-     * </pre>
-     *
      * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
      */
     public com.google.protobuf.TimestampOrBuilder getOccurredAtOrBuilder() {
@@ -757,10 +665,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Wall-clock time the producer decided this event happened.
-     * </pre>
-     *
      * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
@@ -779,12 +683,6 @@ private static final long serialVersionUID = 0L;
 
     private int schemaVersion_ ;
     /**
-     * <pre>
-     * Bump on any breaking change to a concrete event's payload. Consumers
-     * that can't handle a higher version should route the message to the
-     * DLQ rather than partially process it.
-     * </pre>
-     *
      * <code>int32 schema_version = 3;</code>
      * @return The schemaVersion.
      */
@@ -793,12 +691,6 @@ private static final long serialVersionUID = 0L;
       return schemaVersion_;
     }
     /**
-     * <pre>
-     * Bump on any breaking change to a concrete event's payload. Consumers
-     * that can't handle a higher version should route the message to the
-     * DLQ rather than partially process it.
-     * </pre>
-     *
      * <code>int32 schema_version = 3;</code>
      * @param value The schemaVersion to set.
      * @return This builder for chaining.
@@ -811,12 +703,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Bump on any breaking change to a concrete event's payload. Consumers
-     * that can't handle a higher version should route the message to the
-     * DLQ rather than partially process it.
-     * </pre>
-     *
      * <code>int32 schema_version = 3;</code>
      * @return This builder for chaining.
      */

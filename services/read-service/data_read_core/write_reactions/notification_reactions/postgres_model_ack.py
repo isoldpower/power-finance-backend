@@ -1,6 +1,6 @@
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import NotificationsAcknowledged
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import NotificationReadModel
 
 from .._logger_shortcuts import log_notification_postgres_acknowledged
@@ -21,6 +21,9 @@ class AcknowledgeNotificationReadModels(Effect):
             id__in=list(payload.notification_ids),
             user_id=payload.user_id,
         ).aupdate(is_read=True)
-        log_notification_postgres_acknowledged(list(payload.notification_ids), updated)
+        log_notification_postgres_acknowledged(
+            list(payload.notification_ids),
+            updated,
+        )
 
         return updated

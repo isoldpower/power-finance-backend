@@ -17,6 +17,7 @@ dependencies = [
     "pydantic>=2.12,<3.0",
     "aiokafka>=0.11,<0.13",
     "kafka-client-py",
+    "kafka-consumer-py",
     "saga-pattern-py",
     "kafka-messages-proto",
     "read-at-least-py",
@@ -32,6 +33,7 @@ dev = [
 
 [tool.uv.sources]
 kafka-client-py = { workspace = true }
+kafka-consumer-py = { workspace = true }
 saga-pattern-py = { workspace = true }
 kafka-messages-proto = { workspace = true }
 read-at-least-py = { workspace = true }

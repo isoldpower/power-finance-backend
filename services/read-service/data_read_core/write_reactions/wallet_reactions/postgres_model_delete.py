@@ -1,9 +1,9 @@
 from datetime import UTC
 
+from kafka_consumer_py import EventMessage
+from kafka_consumer_py.processing import Effect
 from kafka_messages import WalletDeleted
 
-from data_read_core.shared.kafka_updates import EventMessage
-from data_read_core.shared.kafka_updates.processing import Effect
 from data_read_core.shared.postgres_orm import WalletReadModel
 
 from .._logger_shortcuts import log_wallet_postgres_removed

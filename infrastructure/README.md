@@ -1,8 +1,9 @@
 # Infrastructure
 
 Shared infrastructure for the CQRS workspace: the Kafka broker + topic
-inventory, the Kong API gateway (custom image + in-tree plugins), the write-side
-Postgres tuned for logical replication, and the Debezium outbox connector.
+inventory, the Kong API gateway (custom image + in-tree plugins), the per-service
+Postgres instances tuned for logical replication, and the Debezium outbox
+connector.
 
 ## Kafka broker
 
@@ -28,25 +29,55 @@ nodes.
 
 ## Kafka topics
 
-`kafka/topics.yml` is a catalogue, not a provisioning manifest. The dev broker
-runs with `KAFKA_AUTO_CREATE_TOPICS_ENABLE=true`, so topics are created on first
-produce/consume; a production cluster would turn auto-create off and provision
-these explicitly with per-topic partition/retention settings.
+`kafka/topics.yml` catalogues every stream and the services on each end of it:
+producers (and whether they publish directly or through a Debezium connector),
+consumers with their group ids, the message key, and the settings a real cluster
+should provision.
 
-- `events.async` — primary event stream. Debezium's Outbox Event Router
-  publishes every write-service outbox row here, keyed by the owning user's
-  external (Clerk) id for per-user ordering. Consumed by read-service
-  (projections), push-service (SSE fan-out) and webhook-service (config
-  projection + delivery dispatch).
-- `notifications.inbound` — inbound notification requests. Other services (e.g.
-  webhook-service after a delivery) produce `NotificationRequested` here; the
-  write-service inbound-notifications consumer persists each one, which re-enters
-  `events.async` as a `NotificationCreated` event through the outbox.
-- `events.retry` / `events.dlq` — shared retry/DLQ topics for the kafka-client
-  retry pipeline.
-- `webhooks.retry` / `webhooks.dlq` — webhook-service's own retry/DLQ topics,
-  kept separate from the shared `events.*` ones so webhook delivery backpressure
-  can't interfere with the read/push projection pipelines.
+Nothing reads the file. The dev broker runs with
+`KAFKA_AUTO_CREATE_TOPICS_ENABLE=true`, so a topic is created on first
+produce/consume with broker defaults and works whether or not it is listed —
+which is exactly why the catalogue has to be maintained by hand, and why the
+`settings` blocks describe an intended shape rather than a running one. A
+production cluster would turn auto-create off and provision from this file.
+
+The graph it records:
+
+| Topic | Produced by | Consumed by |
+| --- | --- | --- |
+| `events.async` | write-service, ai-service (both via Debezium) | read-service, ai-service, webhook-service, antifraud-service, push-service |
+| `notifications.inbound` | webhook-service | write-service |
+| `fraud.alerts` | antifraud-service | write-service |
+| `read-service.retry` | read-service | read-service |
+| `read-service.dlq` | read-service | — (terminal) |
+| `ai-service.retry` | ai-service | ai-service |
+| `ai-service.dlq` | ai-service | — (terminal) |
+| `webhooks.retry` | webhook-service | webhook-service |
+| `webhooks.dlq` | webhook-service | — (terminal) |
+
+`events.async` is the only topic with more than one producer — every service
+owning an outbox routes onto it through its own connector, stamping the same
+headers, so a consumer cannot tell which database a message came out of.
+
+**Retries are per service, not shared.** `kafka-client-py` still defaults to
+`events.retry`/`events.dlq`, but no service uses those defaults: read-service and
+ai-service subscribe to the same event types, so a shared retry topic would hand
+each of them the other's failures to reprocess — a re-dispatch that publishes a
+fresh set of postings, in ai-service's case. Each service therefore publishes to
+and consumes from its own pair, the way webhook-service always has.
+
+A retry topic is consumed by the same loop that reads `events.async`, and the
+loop holds a message back until its `x-retry-at` falls due: it rewinds the
+partition to that message's own offset and pauses it, so every other partition
+keeps moving and nothing behind it on the retry partition runs first. Sleeping
+instead would stall the consumer and, past `max_poll_interval_ms`, drop it out of
+its group. The DLQs stay terminal on purpose — a poison message waits there for a
+human.
+
+Kafka Connect's own `connect_configs`, `connect_offsets` and `connect_statuses`
+are deliberately not catalogued: Connect creates them through its admin client
+using the replication factors in `debezium/compose.yaml`, so they neither depend
+on auto-create nor carry domain events.
 
 ## Kong gateway
 
@@ -136,7 +167,45 @@ includes first) to enable logical replication for Debezium:
 - `max_slot_wal_keep_size = '2GB'` — bounds WAL retained for an idle/stalled
   replication slot.
 
+## AI-side Postgres
+
+`postgres/ai_config/postgresql.conf` is the same override applied to ai-service's
+own Postgres, which owns the chart of accounts and the derived entries. Its WAL
+has no reader today: the settings are in place ahead of ai-service's outbox so
+enabling one is a connector registration rather than a database recreation —
+`wal_level` cannot be changed without a restart, and a slot cannot be created
+retroactively for WAL that was never written.
+
 ## Debezium
 
-`debezium/connectors/outbox-connector.json` configures the Outbox Event Router
-that publishes write-service outbox rows to `events.async`.
+`debezium/compose.yaml` runs the single Kafka Connect cluster
+(`outbox-connect-cluster`). It lives here rather than in a service stack because
+more than one service now has an outbox, and each of them `include:`s this file;
+it depends on nothing but the broker, so any stack can bring it up alone.
+
+Registering a connector, though, belongs to the service that owns the table.
+Each stack contributes its own one-shot — `write-outbox-connector`,
+`ai-outbox-connector` — which waits for both Connect and its own Postgres before
+`PUT`ing its config. That is what keeps a single-service stack runnable: bringing
+up ai-service alone never tries to register a connector against a
+`postgres-write` that isn't there.
+
+`debezium/connectors/` holds one Outbox Event Router config per outbox:
+
+| Connector | Database | Table | Slot / publication |
+| --- | --- | --- | --- |
+| `outbox-connector.json` | `postgres-write` | `public.outbox_events` | `dbz_outbox_slot` / `dbz_outbox_publication` |
+| `ai-outbox-connector.json` | `postgres-ai` | `public.ai_outbox_events` | `dbz_ai_outbox_slot` / `dbz_ai_outbox_publication` |
+
+Both route to the same topic, `events.async`, keyed by `partitionkey` and
+carrying the same four headers (`event_id`, `aggregate_type`, `event_type`,
+`outbox_seq`), so a consumer cannot tell which database a message came out of —
+which is the point. The slot, publication and `topic.prefix` must differ per
+connector: a replication slot is per-database and Connect will not share one.
+
+Each connector needs its table to exist before its task can start —
+`publication.autocreate.mode: filtered` fails with "No table filters found" if
+`table.include.list` matches nothing. Run the service's migrations first
+(`ai-outbox-connector` waits on `ai-migrate` for exactly this reason); if a task
+does fail that way, `POST /connectors/<name>/tasks/0/restart` picks it up once
+the table is there.

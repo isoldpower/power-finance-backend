@@ -56,23 +56,11 @@ public interface TransactionCreatedOrBuilder extends
       getTransactionIdBytes();
 
   /**
-   * <pre>
-   * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
-   * original name because the API surface still calls it `wallet_id`, and renaming
-   * it would break every consumer for a cosmetic gain. `container_kind` says which.
-   * </pre>
-   *
    * <code>string wallet_id = 11;</code>
    * @return The walletId.
    */
   java.lang.String getWalletId();
   /**
-   * <pre>
-   * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
-   * original name because the API surface still calls it `wallet_id`, and renaming
-   * it would break every consumer for a cosmetic gain. `container_kind` says which.
-   * </pre>
-   *
    * <code>string wallet_id = 11;</code>
    * @return The bytes for walletId.
    */
@@ -173,21 +161,11 @@ public interface TransactionCreatedOrBuilder extends
       getChainIdBytes();
 
   /**
-   * <pre>
-   * "wallet" | "goal". Absent on messages written before Phase 4, which the read
-   * side reads as "wallet" — the only kind that existed then.
-   * </pre>
-   *
    * <code>string container_kind = 20;</code>
    * @return The containerKind.
    */
   java.lang.String getContainerKind();
   /**
-   * <pre>
-   * "wallet" | "goal". Absent on messages written before Phase 4, which the read
-   * side reads as "wallet" — the only kind that existed then.
-   * </pre>
-   *
    * <code>string container_kind = 20;</code>
    * @return The bytes for containerKind.
    */

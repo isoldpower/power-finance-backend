@@ -1,0 +1,124 @@
+# See ./README.md → "Stack"
+include:
+  - ../../infrastructure/debezium/compose.yaml
+
+x-ai-database-url: &ai-database-url
+  AI_DATABASE_URL: postgresql+psycopg://${AI_DATABASE_USER:-postgres}:${AI_DATABASE_PASSWORD:-postgres}@postgres-ai:5432/${AI_DATABASE_NAME:-power_finance_ai}
+
+services:
+  ai-service:
+    build:
+      context: ../..
+      dockerfile: services/ai-service/Dockerfile
+    image: power-finance/ai-service:dev
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      <<: *ai-database-url
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres-ai:
+        condition: service_healthy
+      ai-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [
+        "CMD-SHELL",
+        "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')\"",
+      ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  ai-dispatcher:
+    build:
+      context: ../..
+      dockerfile: services/ai-service/Dockerfile
+    image: power-finance/ai-service:dev
+    restart: unless-stopped
+    command: ["python", "-m", "background_workers.main"]
+    environment:
+      <<: *ai-database-url
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_OUTBOX_TOPIC: ${KAFKA_OUTBOX_TOPIC:-events.async}
+      KAFKA_AI_GROUP_ID: ${KAFKA_AI_GROUP_ID:-ai-service.dispatcher}
+      KAFKA_RETRY_TOPIC: ${KAFKA_RETRY_TOPIC:-ai-service.retry}
+      KAFKA_DLQ_TOPIC: ${KAFKA_DLQ_TOPIC:-ai-service.dlq}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres-ai:
+        condition: service_healthy
+      ai-migrate:
+        condition: service_completed_successfully
+    stop_grace_period: 30s
+
+  ai-migrate:
+    build:
+      context: ../..
+      dockerfile: services/ai-service/Dockerfile
+    image: power-finance/ai-service:dev
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      <<: *ai-database-url
+    depends_on:
+      postgres-ai:
+        condition: service_healthy
+
+  ai-outbox-connector:
+    image: curlimages/curl:8.9.1
+    restart: "no"
+    depends_on:
+      kafka-connect:
+        condition: service_healthy
+      postgres-ai:
+        condition: service_healthy
+      ai-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ../../infrastructure/debezium/connectors:/connectors:ro
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -eu
+        echo "Registering ai-outbox-connector"
+        curl -fsS -X PUT \
+          -H "Content-Type: application/json" \
+          --data @/connectors/ai-outbox-connector.json \
+          http://kafka-connect:8083/connectors/ai-outbox-connector/config
+        echo
+        echo "OK"
+
+  postgres-ai:
+    image: postgres:18.3
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${AI_DATABASE_PORT:-5436}:5432"
+    environment:
+      POSTGRES_DB: ${AI_DATABASE_NAME:-power_finance_ai}
+      POSTGRES_USER: ${AI_DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${AI_DATABASE_PASSWORD:-postgres}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_ai_data:/var/lib/postgresql/data
+      - ../../infrastructure/postgres/ai_config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    shm_size: 128mb
+    command:
+      - "postgres"
+      - "-c"
+      - "config_file=/etc/postgresql/postgresql.conf"
+    healthcheck:
+      test: [
+        "CMD-SHELL",
+        "pg_isready -U ${AI_DATABASE_USER:-postgres} -d ${AI_DATABASE_NAME:-power_finance_ai}",
+      ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_ai_data:

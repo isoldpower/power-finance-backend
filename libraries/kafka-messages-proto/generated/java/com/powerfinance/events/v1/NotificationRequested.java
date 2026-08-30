@@ -6,15 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * Command-style message on the inbound notifications topic: another
- * service asks the Write Service to create a notification. Unlike the
- * *Created/&#42;Acknowledged events above, this is NOT emitted through the
- * outbox — producers (e.g. webhook-service) publish it directly and the
- * Write Service consumer persists it, which then fans out the resulting
- * NotificationCreated through the regular outbox pipeline.
- * </pre>
- *
  * Protobuf type {@code power_finance.events.v1.NotificationRequested}
  */
 @com.google.protobuf.Generated
@@ -153,12 +144,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object userExternalId_ = "";
   /**
-   * <pre>
-   * The user's external (Clerk) id — becomes the partition key of the
-   * resulting outbox event so per-user ordering and push-service auth keep
-   * working downstream.
-   * </pre>
-   *
    * <code>string user_external_id = 11;</code>
    * @return The userExternalId.
    */
@@ -176,12 +161,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * The user's external (Clerk) id — becomes the partition key of the
-   * resulting outbox event so per-user ordering and push-service auth keep
-   * working downstream.
-   * </pre>
-   *
    * <code>string user_external_id = 11;</code>
    * @return The bytes for userExternalId.
    */
@@ -545,15 +524,6 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * <pre>
-   * Command-style message on the inbound notifications topic: another
-   * service asks the Write Service to create a notification. Unlike the
-   * *Created/&#42;Acknowledged events above, this is NOT emitted through the
-   * outbox — producers (e.g. webhook-service) publish it directly and the
-   * Write Service consumer persists it, which then fans out the resulting
-   * NotificationCreated through the regular outbox pipeline.
-   * </pre>
-   *
    * Protobuf type {@code power_finance.events.v1.NotificationRequested}
    */
   public static final class Builder extends
@@ -1067,12 +1037,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object userExternalId_ = "";
     /**
-     * <pre>
-     * The user's external (Clerk) id — becomes the partition key of the
-     * resulting outbox event so per-user ordering and push-service auth keep
-     * working downstream.
-     * </pre>
-     *
      * <code>string user_external_id = 11;</code>
      * @return The userExternalId.
      */
@@ -1089,12 +1053,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The user's external (Clerk) id — becomes the partition key of the
-     * resulting outbox event so per-user ordering and push-service auth keep
-     * working downstream.
-     * </pre>
-     *
      * <code>string user_external_id = 11;</code>
      * @return The bytes for userExternalId.
      */
@@ -1112,12 +1070,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The user's external (Clerk) id — becomes the partition key of the
-     * resulting outbox event so per-user ordering and push-service auth keep
-     * working downstream.
-     * </pre>
-     *
      * <code>string user_external_id = 11;</code>
      * @param value The userExternalId to set.
      * @return This builder for chaining.
@@ -1131,12 +1083,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The user's external (Clerk) id — becomes the partition key of the
-     * resulting outbox event so per-user ordering and push-service auth keep
-     * working downstream.
-     * </pre>
-     *
      * <code>string user_external_id = 11;</code>
      * @return This builder for chaining.
      */
@@ -1147,12 +1093,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The user's external (Clerk) id — becomes the partition key of the
-     * resulting outbox event so per-user ordering and push-service auth keep
-     * working downstream.
-     * </pre>
-     *
      * <code>string user_external_id = 11;</code>
      * @param value The bytes for userExternalId to set.
      * @return This builder for chaining.

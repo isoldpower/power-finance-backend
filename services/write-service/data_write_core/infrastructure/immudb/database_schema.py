@@ -2,6 +2,13 @@ from immudb import ImmudbClient
 from immudb.datatypesv2 import DatabaseSettingsV2
 from immudb.handler.useDatabase import dbUseResponse
 
+# Columns added after this table first shipped. `CREATE TABLE IF NOT EXISTS`
+# leaves an existing table alone, so a volume older than the column keeps
+# answering "column does not exist" until it is added explicitly. They are
+# nullable here even where the CREATE says NOT NULL: immudb refuses to add a
+# NOT NULL column to a table that already holds rows.
+_TRANSACTIONS_ADDED_COLUMNS: tuple[tuple[str, str], ...] = (("transaction_id", "VARCHAR[36]"),)
+
 
 def build_database(
     client: ImmudbClient,
@@ -34,6 +41,8 @@ def _initialize_schema(client: ImmudbClient) -> None:
     "
     )
 
+    _add_missing_columns(client, "transactions", _TRANSACTIONS_ADDED_COLUMNS)
+
     client.sqlExec(
         "\
         CREATE INDEX IF NOT EXISTS ON transactions(user_id); \
@@ -53,3 +62,15 @@ def _initialize_schema(client: ImmudbClient) -> None:
         PRIMARY KEY   wallet_id \
     );"
     )
+
+
+def _add_missing_columns(
+    client: ImmudbClient,
+    table: str,
+    columns: tuple[tuple[str, str], ...],
+) -> None:
+    existing = {row[1] for row in client.sqlQuery(f"SELECT * FROM COLUMNS('{table}');")}
+
+    for name, definition in columns:
+        if name not in existing:
+            client.sqlExec(f"ALTER TABLE {table} ADD COLUMN {name} {definition};")

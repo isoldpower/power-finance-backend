@@ -156,7 +156,6 @@ type GoalUpdated struct {
 	PreviousTitle string                 `protobuf:"bytes,12,opt,name=previous_title,json=previousTitle,proto3" json:"previous_title,omitempty"`
 	NewTitle      string                 `protobuf:"bytes,13,opt,name=new_title,json=newTitle,proto3" json:"new_title,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// The full post-update state, not a diff. A consumer applies these verbatim.
 	Target        string                 `protobuf:"bytes,15,opt,name=target,proto3" json:"target,omitempty"`
 	FinishAt      *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=finish_at,json=finishAt,proto3" json:"finish_at,omitempty"`
 	Url           string                 `protobuf:"bytes,17,opt,name=url,proto3" json:"url,omitempty"`

@@ -23,25 +23,16 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Command-style message on the inbound notifications topic: another
-// service asks the Write Service to create a notification. Unlike the
-// *Created/*Acknowledged events above, this is NOT emitted through the
-// outbox — producers (e.g. webhook-service) publish it directly and the
-// Write Service consumer persists it, which then fans out the resulting
-// NotificationCreated through the regular outbox pipeline.
 type NotificationRequested struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
-	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
-	SchemaVersion int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
-	UserId        int32                  `protobuf:"varint,10,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// The user's external (Clerk) id — becomes the partition key of the
-	// resulting outbox event so per-user ordering and push-service auth keep
-	// working downstream.
-	UserExternalId string           `protobuf:"bytes,11,opt,name=user_external_id,json=userExternalId,proto3" json:"user_external_id,omitempty"`
-	Short          string           `protobuf:"bytes,12,opt,name=short,proto3" json:"short,omitempty"`
-	Message        string           `protobuf:"bytes,13,opt,name=message,proto3" json:"message,omitempty"`
-	Payload        *structpb.Struct `protobuf:"bytes,14,opt,name=payload,proto3" json:"payload,omitempty"`
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	EventId        string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	SchemaVersion  int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	UserId         int32                  `protobuf:"varint,10,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	UserExternalId string                 `protobuf:"bytes,11,opt,name=user_external_id,json=userExternalId,proto3" json:"user_external_id,omitempty"`
+	Short          string                 `protobuf:"bytes,12,opt,name=short,proto3" json:"short,omitempty"`
+	Message        string                 `protobuf:"bytes,13,opt,name=message,proto3" json:"message,omitempty"`
+	Payload        *structpb.Struct       `protobuf:"bytes,14,opt,name=payload,proto3" json:"payload,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -141,12 +132,10 @@ type NotificationCreated struct {
 	UserId         int32                  `protobuf:"varint,11,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Short          string                 `protobuf:"bytes,12,opt,name=short,proto3" json:"short,omitempty"`
 	Message        string                 `protobuf:"bytes,13,opt,name=message,proto3" json:"message,omitempty"`
-	// Free-form context attached to the notification (deep links, resource
-	// ids, …). Optional — absent when the producer has nothing to attach.
-	Payload       *structpb.Struct       `protobuf:"bytes,14,opt,name=payload,proto3" json:"payload,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Payload        *structpb.Struct       `protobuf:"bytes,14,opt,name=payload,proto3" json:"payload,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *NotificationCreated) Reset() {
@@ -243,12 +232,10 @@ func (x *NotificationCreated) GetCreatedAt() *timestamppb.Timestamp {
 }
 
 type NotificationsAcknowledged struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
-	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
-	SchemaVersion int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
-	// Every notification the user acknowledged in this mutation; a single
-	// ack is a one-element batch.
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	EventId         string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt      *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	SchemaVersion   int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
 	NotificationIds []string               `protobuf:"bytes,10,rep,name=notification_ids,json=notificationIds,proto3" json:"notification_ids,omitempty"`
 	UserId          int32                  `protobuf:"varint,11,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	AcknowledgedAt  *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=acknowledged_at,json=acknowledgedAt,proto3" json:"acknowledged_at,omitempty"`

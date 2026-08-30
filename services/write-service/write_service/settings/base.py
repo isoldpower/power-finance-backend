@@ -196,5 +196,6 @@ LOGGING = {
         "data_write_core": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
         "http": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
         "background_workers": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "kafka_consumer_py": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
     },
 }

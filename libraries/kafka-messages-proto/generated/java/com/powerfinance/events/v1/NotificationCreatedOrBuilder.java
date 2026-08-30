@@ -86,31 +86,16 @@ public interface NotificationCreatedOrBuilder extends
       getMessageBytes();
 
   /**
-   * <pre>
-   * Free-form context attached to the notification (deep links, resource
-   * ids, …). Optional — absent when the producer has nothing to attach.
-   * </pre>
-   *
    * <code>.google.protobuf.Struct payload = 14;</code>
    * @return Whether the payload field is set.
    */
   boolean hasPayload();
   /**
-   * <pre>
-   * Free-form context attached to the notification (deep links, resource
-   * ids, …). Optional — absent when the producer has nothing to attach.
-   * </pre>
-   *
    * <code>.google.protobuf.Struct payload = 14;</code>
    * @return The payload.
    */
   com.google.protobuf.Struct getPayload();
   /**
-   * <pre>
-   * Free-form context attached to the notification (deep links, resource
-   * ids, …). Optional — absent when the producer has nothing to attach.
-   * </pre>
-   *
    * <code>.google.protobuf.Struct payload = 14;</code>
    */
   com.google.protobuf.StructOrBuilder getPayloadOrBuilder();

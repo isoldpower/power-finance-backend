@@ -20,6 +20,8 @@ env = environ.Env(
     KAFKA_BOOTSTRAP_SERVERS=(str, "localhost:9092"),
     KAFKA_OUTBOX_TOPIC=(str, "events.async"),
     KAFKA_READ_GROUP_ID=(str, "read-service.test-consumer"),
+    KAFKA_RETRY_TOPIC=(str, "read-service.retry"),
+    KAFKA_DLQ_TOPIC=(str, "read-service.dlq"),
     REDIS_URL=(str, "redis://localhost:6379/0"),
     ELASTICSEARCH_HOSTS=(list, ["https://localhost:9200"]),
     ELASTICSEARCH_USERNAME=(str, "elastic"),
@@ -148,6 +150,8 @@ KAFKA = {
     "BOOTSTRAP_SERVERS": env("KAFKA_BOOTSTRAP_SERVERS"),
     "OUTBOX_TOPIC": env("KAFKA_OUTBOX_TOPIC"),
     "READ_GROUP_ID": env("KAFKA_READ_GROUP_ID"),
+    "RETRY_TOPIC": env("KAFKA_RETRY_TOPIC"),
+    "DLQ_TOPIC": env("KAFKA_DLQ_TOPIC"),
 }
 
 LOGGING = {
@@ -171,6 +175,11 @@ LOGGING = {
     },
     "loggers": {
         "background_workers": {
+            "handlers": ["console"],
+            "level": env("LOG_LEVEL"),
+            "propagate": False,
+        },
+        "kafka_consumer_py": {
             "handlers": ["console"],
             "level": env("LOG_LEVEL"),
             "propagate": False,

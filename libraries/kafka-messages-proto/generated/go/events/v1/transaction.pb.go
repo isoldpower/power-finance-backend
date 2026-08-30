@@ -28,21 +28,16 @@ type TransactionCreated struct {
 	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
 	SchemaVersion int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
 	TransactionId string                 `protobuf:"bytes,10,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
-	// Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
-	// original name because the API surface still calls it `wallet_id`, and renaming
-	// it would break every consumer for a cosmetic gain. `container_kind` says which.
-	WalletId    string                 `protobuf:"bytes,11,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
-	UserId      int32                  `protobuf:"varint,12,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Amount      string                 `protobuf:"bytes,13,opt,name=amount,proto3" json:"amount,omitempty"`
-	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	Name        string                 `protobuf:"bytes,15,opt,name=name,proto3" json:"name,omitempty"`
-	Category    string                 `protobuf:"bytes,16,opt,name=category,proto3" json:"category,omitempty"`
-	EvidenceUrl string                 `protobuf:"bytes,17,opt,name=evidence_url,json=evidenceUrl,proto3" json:"evidence_url,omitempty"`
-	Origin      string                 `protobuf:"bytes,18,opt,name=origin,proto3" json:"origin,omitempty"`
-	ChainId     string                 `protobuf:"bytes,19,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
-	// "wallet" | "goal". Absent on messages written before Phase 4, which the read
-	// side reads as "wallet" — the only kind that existed then.
-	ContainerKind string `protobuf:"bytes,20,opt,name=container_kind,json=containerKind,proto3" json:"container_kind,omitempty"`
+	WalletId      string                 `protobuf:"bytes,11,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
+	UserId        int32                  `protobuf:"varint,12,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Amount        string                 `protobuf:"bytes,13,opt,name=amount,proto3" json:"amount,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Name          string                 `protobuf:"bytes,15,opt,name=name,proto3" json:"name,omitempty"`
+	Category      string                 `protobuf:"bytes,16,opt,name=category,proto3" json:"category,omitempty"`
+	EvidenceUrl   string                 `protobuf:"bytes,17,opt,name=evidence_url,json=evidenceUrl,proto3" json:"evidence_url,omitempty"`
+	Origin        string                 `protobuf:"bytes,18,opt,name=origin,proto3" json:"origin,omitempty"`
+	ChainId       string                 `protobuf:"bytes,19,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
+	ContainerKind string                 `protobuf:"bytes,20,opt,name=container_kind,json=containerKind,proto3" json:"container_kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

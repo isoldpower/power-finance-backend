@@ -178,12 +178,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object walletId_ = "";
   /**
-   * <pre>
-   * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
-   * original name because the API surface still calls it `wallet_id`, and renaming
-   * it would break every consumer for a cosmetic gain. `container_kind` says which.
-   * </pre>
-   *
    * <code>string wallet_id = 11;</code>
    * @return The walletId.
    */
@@ -201,12 +195,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
-   * original name because the API surface still calls it `wallet_id`, and renaming
-   * it would break every consumer for a cosmetic gain. `container_kind` says which.
-   * </pre>
-   *
    * <code>string wallet_id = 11;</code>
    * @return The bytes for walletId.
    */
@@ -500,11 +488,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object containerKind_ = "";
   /**
-   * <pre>
-   * "wallet" | "goal". Absent on messages written before Phase 4, which the read
-   * side reads as "wallet" — the only kind that existed then.
-   * </pre>
-   *
    * <code>string container_kind = 20;</code>
    * @return The containerKind.
    */
@@ -522,11 +505,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * "wallet" | "goal". Absent on messages written before Phase 4, which the read
-   * side reads as "wallet" — the only kind that existed then.
-   * </pre>
-   *
    * <code>string container_kind = 20;</code>
    * @return The bytes for containerKind.
    */
@@ -1483,12 +1461,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object walletId_ = "";
     /**
-     * <pre>
-     * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
-     * original name because the API surface still calls it `wallet_id`, and renaming
-     * it would break every consumer for a cosmetic gain. `container_kind` says which.
-     * </pre>
-     *
      * <code>string wallet_id = 11;</code>
      * @return The walletId.
      */
@@ -1505,12 +1477,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
-     * original name because the API surface still calls it `wallet_id`, and renaming
-     * it would break every consumer for a cosmetic gain. `container_kind` says which.
-     * </pre>
-     *
      * <code>string wallet_id = 11;</code>
      * @return The bytes for walletId.
      */
@@ -1528,12 +1494,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
-     * original name because the API surface still calls it `wallet_id`, and renaming
-     * it would break every consumer for a cosmetic gain. `container_kind` says which.
-     * </pre>
-     *
      * <code>string wallet_id = 11;</code>
      * @param value The walletId to set.
      * @return This builder for chaining.
@@ -1547,12 +1507,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
-     * original name because the API surface still calls it `wallet_id`, and renaming
-     * it would break every consumer for a cosmetic gain. `container_kind` says which.
-     * </pre>
-     *
      * <code>string wallet_id = 11;</code>
      * @return This builder for chaining.
      */
@@ -1563,12 +1517,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Holds a money CONTAINER id: a wallet id or a goal id. The field keeps its
-     * original name because the API surface still calls it `wallet_id`, and renaming
-     * it would break every consumer for a cosmetic gain. `container_kind` says which.
-     * </pre>
-     *
      * <code>string wallet_id = 11;</code>
      * @param value The bytes for walletId to set.
      * @return This builder for chaining.
@@ -2170,11 +2118,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object containerKind_ = "";
     /**
-     * <pre>
-     * "wallet" | "goal". Absent on messages written before Phase 4, which the read
-     * side reads as "wallet" — the only kind that existed then.
-     * </pre>
-     *
      * <code>string container_kind = 20;</code>
      * @return The containerKind.
      */
@@ -2191,11 +2134,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * "wallet" | "goal". Absent on messages written before Phase 4, which the read
-     * side reads as "wallet" — the only kind that existed then.
-     * </pre>
-     *
      * <code>string container_kind = 20;</code>
      * @return The bytes for containerKind.
      */
@@ -2213,11 +2151,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * "wallet" | "goal". Absent on messages written before Phase 4, which the read
-     * side reads as "wallet" — the only kind that existed then.
-     * </pre>
-     *
      * <code>string container_kind = 20;</code>
      * @param value The containerKind to set.
      * @return This builder for chaining.
@@ -2231,11 +2164,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * "wallet" | "goal". Absent on messages written before Phase 4, which the read
-     * side reads as "wallet" — the only kind that existed then.
-     * </pre>
-     *
      * <code>string container_kind = 20;</code>
      * @return This builder for chaining.
      */
@@ -2246,11 +2174,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * "wallet" | "goal". Absent on messages written before Phase 4, which the read
-     * side reads as "wallet" — the only kind that existed then.
-     * </pre>
-     *
      * <code>string container_kind = 20;</code>
      * @param value The bytes for containerKind to set.
      * @return This builder for chaining.

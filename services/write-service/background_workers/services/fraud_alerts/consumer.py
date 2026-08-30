@@ -1,10 +1,8 @@
-from background_workers.services.fraud_alerts.config import FraudAlertsConsumerConfig
-from background_workers.services.fraud_alerts.handler import (
-    FraudAlertHandler,
-    logger,
-)
-from background_workers.services.fraud_alerts.store import SuspendedUserStore
-from background_workers.services.kafka_consumer import KafkaConsumerRunner
+from kafka_consumer_py import KafkaConsumerRunner
+
+from .config import FraudAlertsConsumerConfig
+from .handler import FraudAlertHandler, logger
+from .store import SuspendedUserStore
 
 
 async def run_fraud_alerts_consumer(config: FraudAlertsConsumerConfig) -> None:

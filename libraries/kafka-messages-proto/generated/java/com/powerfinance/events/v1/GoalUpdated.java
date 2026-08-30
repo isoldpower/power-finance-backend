@@ -289,10 +289,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object target_ = "";
   /**
-   * <pre>
-   * The full post-update state, not a diff. A consumer applies these verbatim.
-   * </pre>
-   *
    * <code>string target = 15;</code>
    * @return The target.
    */
@@ -310,10 +306,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * The full post-update state, not a diff. A consumer applies these verbatim.
-   * </pre>
-   *
    * <code>string target = 15;</code>
    * @return The bytes for target.
    */
@@ -1574,10 +1566,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object target_ = "";
     /**
-     * <pre>
-     * The full post-update state, not a diff. A consumer applies these verbatim.
-     * </pre>
-     *
      * <code>string target = 15;</code>
      * @return The target.
      */
@@ -1594,10 +1582,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The full post-update state, not a diff. A consumer applies these verbatim.
-     * </pre>
-     *
      * <code>string target = 15;</code>
      * @return The bytes for target.
      */
@@ -1615,10 +1599,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The full post-update state, not a diff. A consumer applies these verbatim.
-     * </pre>
-     *
      * <code>string target = 15;</code>
      * @param value The target to set.
      * @return This builder for chaining.
@@ -1632,10 +1612,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The full post-update state, not a diff. A consumer applies these verbatim.
-     * </pre>
-     *
      * <code>string target = 15;</code>
      * @return This builder for chaining.
      */
@@ -1646,10 +1622,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The full post-update state, not a diff. A consumer applies these verbatim.
-     * </pre>
-     *
      * <code>string target = 15;</code>
      * @param value The bytes for target to set.
      * @return This builder for chaining.

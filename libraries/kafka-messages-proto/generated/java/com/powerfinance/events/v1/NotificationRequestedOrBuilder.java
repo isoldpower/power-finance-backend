@@ -50,23 +50,11 @@ public interface NotificationRequestedOrBuilder extends
   int getUserId();
 
   /**
-   * <pre>
-   * The user's external (Clerk) id — becomes the partition key of the
-   * resulting outbox event so per-user ordering and push-service auth keep
-   * working downstream.
-   * </pre>
-   *
    * <code>string user_external_id = 11;</code>
    * @return The userExternalId.
    */
   java.lang.String getUserExternalId();
   /**
-   * <pre>
-   * The user's external (Clerk) id — becomes the partition key of the
-   * resulting outbox event so per-user ordering and push-service auth keep
-   * working downstream.
-   * </pre>
-   *
    * <code>string user_external_id = 11;</code>
    * @return The bytes for userExternalId.
    */

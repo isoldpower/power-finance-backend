@@ -5,6 +5,7 @@ include:
   - services/push-service/compose.yaml
   - services/webhook-service/compose.yaml
   - services/antifraud-service/compose.yaml
+  - services/ai-service/compose.yaml
 
 services:
   api-gateway:

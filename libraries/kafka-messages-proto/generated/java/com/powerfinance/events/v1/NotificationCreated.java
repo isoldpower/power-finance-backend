@@ -260,11 +260,6 @@ private static final long serialVersionUID = 0L;
   public static final int PAYLOAD_FIELD_NUMBER = 14;
   private com.google.protobuf.Struct payload_;
   /**
-   * <pre>
-   * Free-form context attached to the notification (deep links, resource
-   * ids, …). Optional — absent when the producer has nothing to attach.
-   * </pre>
-   *
    * <code>.google.protobuf.Struct payload = 14;</code>
    * @return Whether the payload field is set.
    */
@@ -273,11 +268,6 @@ private static final long serialVersionUID = 0L;
     return ((bitField0_ & 0x00000002) != 0);
   }
   /**
-   * <pre>
-   * Free-form context attached to the notification (deep links, resource
-   * ids, …). Optional — absent when the producer has nothing to attach.
-   * </pre>
-   *
    * <code>.google.protobuf.Struct payload = 14;</code>
    * @return The payload.
    */
@@ -286,11 +276,6 @@ private static final long serialVersionUID = 0L;
     return payload_ == null ? com.google.protobuf.Struct.getDefaultInstance() : payload_;
   }
   /**
-   * <pre>
-   * Free-form context attached to the notification (deep links, resource
-   * ids, …). Optional — absent when the producer has nothing to attach.
-   * </pre>
-   *
    * <code>.google.protobuf.Struct payload = 14;</code>
    */
   @java.lang.Override
@@ -1334,11 +1319,6 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.SingleFieldBuilder<
         com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> payloadBuilder_;
     /**
-     * <pre>
-     * Free-form context attached to the notification (deep links, resource
-     * ids, …). Optional — absent when the producer has nothing to attach.
-     * </pre>
-     *
      * <code>.google.protobuf.Struct payload = 14;</code>
      * @return Whether the payload field is set.
      */
@@ -1346,11 +1326,6 @@ private static final long serialVersionUID = 0L;
       return ((bitField0_ & 0x00000080) != 0);
     }
     /**
-     * <pre>
-     * Free-form context attached to the notification (deep links, resource
-     * ids, …). Optional — absent when the producer has nothing to attach.
-     * </pre>
-     *
      * <code>.google.protobuf.Struct payload = 14;</code>
      * @return The payload.
      */
@@ -1362,11 +1337,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Free-form context attached to the notification (deep links, resource
-     * ids, …). Optional — absent when the producer has nothing to attach.
-     * </pre>
-     *
      * <code>.google.protobuf.Struct payload = 14;</code>
      */
     public Builder setPayload(com.google.protobuf.Struct value) {
@@ -1383,11 +1353,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Free-form context attached to the notification (deep links, resource
-     * ids, …). Optional — absent when the producer has nothing to attach.
-     * </pre>
-     *
      * <code>.google.protobuf.Struct payload = 14;</code>
      */
     public Builder setPayload(
@@ -1402,11 +1367,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Free-form context attached to the notification (deep links, resource
-     * ids, …). Optional — absent when the producer has nothing to attach.
-     * </pre>
-     *
      * <code>.google.protobuf.Struct payload = 14;</code>
      */
     public Builder mergePayload(com.google.protobuf.Struct value) {
@@ -1428,11 +1388,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Free-form context attached to the notification (deep links, resource
-     * ids, …). Optional — absent when the producer has nothing to attach.
-     * </pre>
-     *
      * <code>.google.protobuf.Struct payload = 14;</code>
      */
     public Builder clearPayload() {
@@ -1446,11 +1401,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Free-form context attached to the notification (deep links, resource
-     * ids, …). Optional — absent when the producer has nothing to attach.
-     * </pre>
-     *
      * <code>.google.protobuf.Struct payload = 14;</code>
      */
     public com.google.protobuf.Struct.Builder getPayloadBuilder() {
@@ -1459,11 +1409,6 @@ private static final long serialVersionUID = 0L;
       return internalGetPayloadFieldBuilder().getBuilder();
     }
     /**
-     * <pre>
-     * Free-form context attached to the notification (deep links, resource
-     * ids, …). Optional — absent when the producer has nothing to attach.
-     * </pre>
-     *
      * <code>.google.protobuf.Struct payload = 14;</code>
      */
     public com.google.protobuf.StructOrBuilder getPayloadOrBuilder() {
@@ -1475,11 +1420,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Free-form context attached to the notification (deep links, resource
-     * ids, …). Optional — absent when the producer has nothing to attach.
-     * </pre>
-     *
      * <code>.google.protobuf.Struct payload = 14;</code>
      */
     private com.google.protobuf.SingleFieldBuilder<

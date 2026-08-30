@@ -1,8 +1,3 @@
-from data_read_core.shared.kafka_updates import (
-    EventRouter,
-    ExecutionPlan,
-    SyncProcessGroup,
-)
 from data_read_core.write_reactions import (
     BumpTransactionListVersion,
     BumpWalletListVersion,
@@ -18,6 +13,11 @@ from data_read_core.write_reactions import (
     UpdateTransactionMetadataDocument,
     UpdateTransactionMetadataReadModel,
     UpdateTransactionReadModel,
+)
+from kafka_consumer_py import (
+    EventRouter,
+    ExecutionPlan,
+    SyncProcessGroup,
 )
 from kafka_messages import (
     TransactionCreated,

@@ -1,8 +1,8 @@
 from datetime import UTC
 
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import TransactionMetadataUpdated
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import TransactionReadModel
 
 from .._logger_shortcuts import log_transaction_postgres_metadata_updated

@@ -1,9 +1,9 @@
 from datetime import UTC
 
 from google.protobuf.json_format import MessageToDict
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import NotificationCreated
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import NotificationReadModel
 
 from .._logger_shortcuts import log_notification_postgres_created

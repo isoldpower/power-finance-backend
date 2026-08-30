@@ -22,6 +22,7 @@ dependencies = [
     "immudb-py>=1.5,<2.0",
     "aiokafka>=0.11,<0.13",
     "kafka-client-py",
+    "kafka-consumer-py",
 ]
 
 [dependency-groups]
@@ -36,6 +37,7 @@ correlation-py = { workspace = true }
 saga-pattern-py = { workspace = true }
 kafka-messages-proto = { workspace = true }
 kafka-client-py = { workspace = true }
+kafka-consumer-py = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

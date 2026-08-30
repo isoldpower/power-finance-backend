@@ -2,12 +2,12 @@ from data_read_core.shared.health_guard import (
     POSTGRES_CONNECTIVITY_ERRORS,
     HealthGuardedHandler,
 )
-from data_read_core.shared.kafka_updates import (
+from data_read_core.write_reactions import ProjectUserReadModel
+from kafka_consumer_py import (
     EventRouter,
     ExecutionPlan,
     SyncProcessGroup,
 )
-from data_read_core.write_reactions import ProjectUserReadModel
 
 from ._types import ProbesDictionary
 

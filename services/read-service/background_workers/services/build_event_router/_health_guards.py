@@ -4,7 +4,7 @@ from data_read_core.shared.health_guard import (
     REDIS_CONNECTIVITY_ERRORS,
     HealthGuardedHandler,
 )
-from data_read_core.shared.kafka_updates import (
+from kafka_consumer_py import (
     ExecutionPlan,
     Handler,
 )

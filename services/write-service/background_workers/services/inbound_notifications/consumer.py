@@ -1,9 +1,7 @@
-from background_workers.services.inbound_notifications.config import InboundConsumerConfig
-from background_workers.services.inbound_notifications.handler import (
-    handle_notification_request,
-    logger,
-)
-from background_workers.services.kafka_consumer import KafkaConsumerRunner
+from kafka_consumer_py import KafkaConsumerRunner
+
+from .config import InboundConsumerConfig
+from .handler import handle_notification_request, logger
 
 
 async def run_inbound_notifications_consumer(config: InboundConsumerConfig) -> None:

@@ -1,0 +1,32 @@
+# See ../README.md → "Debezium"
+include:
+  - ../kafka/compose.yaml
+
+services:
+  kafka-connect:
+    image: debezium/connect:2.7.3.Final
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      BOOTSTRAP_SERVERS: "kafka:9092"
+      GROUP_ID: "outbox-connect-cluster"
+      CONFIG_STORAGE_TOPIC: "connect_configs"
+      OFFSET_STORAGE_TOPIC: "connect_offsets"
+      STATUS_STORAGE_TOPIC: "connect_statuses"
+      CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+      OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+      STATUS_STORAGE_REPLICATION_FACTOR: "1"
+      KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+      VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    expose:
+      - "8083"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/ >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s

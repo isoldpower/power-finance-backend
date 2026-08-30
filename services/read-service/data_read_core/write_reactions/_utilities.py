@@ -5,8 +5,8 @@ from django.db import DataError, IntegrityError
 from google.protobuf.json_format import Parse, ParseError
 from google.protobuf.message import Message
 from kafka_client_py import PoisonError
+from kafka_consumer_py import EventMessage
 
-from data_read_core.shared.kafka_updates import EventMessage
 from data_read_core.shared.postgres_orm import aatomic
 
 from ._logger_shortcuts import (

@@ -1,8 +1,3 @@
-from data_read_core.shared.kafka_updates import (
-    EventRouter,
-    ExecutionPlan,
-    SyncProcessGroup,
-)
 from data_read_core.write_reactions import (
     BumpWebhookListVersion,
     CreateWebhookReadModel,
@@ -13,6 +8,11 @@ from data_read_core.write_reactions import (
     RemoveWebhookSubscriptionReadModel,
     TrackAppliedSeq,
     UpdateWebhookReadModel,
+)
+from kafka_consumer_py import (
+    EventRouter,
+    ExecutionPlan,
+    SyncProcessGroup,
 )
 from kafka_messages import (
     WebhookEndpointCreated,

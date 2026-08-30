@@ -1,9 +1,9 @@
 from datetime import UTC
 
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import WalletDeleted
 
 from data_read_core.shared.elasticsearch import WALLETS_INDEX, get_elasticsearch
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 
 from .._logger_shortcuts import log_wallet_elastic_removed
 from .._utilities import decode_payload

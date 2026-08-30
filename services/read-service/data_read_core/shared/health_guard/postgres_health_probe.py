@@ -5,8 +5,7 @@ from django.db import (
     OperationalError,
     connections,
 )
-
-from .health_probe import HealthProbe
+from kafka_consumer_py.health import HealthProbe
 
 POSTGRES_CONNECTIVITY_ERRORS: tuple[type[BaseException], ...] = (
     OperationalError,

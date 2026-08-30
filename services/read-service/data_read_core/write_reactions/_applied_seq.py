@@ -1,6 +1,6 @@
 from google.protobuf.message import Message
+from kafka_consumer_py import Effect, EventMessage
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import aatomic
 from data_read_core.shared.read_at_least import record_applied_seq
 

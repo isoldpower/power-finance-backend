@@ -1,6 +1,6 @@
 from google.protobuf.message import Message
+from kafka_consumer_py import Effect, EventMessage
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.redis_cache import get_redis
 
 from .._cache_keys import get_webhook_list_version_key

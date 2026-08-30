@@ -22,11 +22,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Emitted by the write service when an internal user is first synced from a
-// gateway identity. Lets the read service project the same external -> internal
-// id mapping into its own user table, so read-side ownership checks resolve to
-// the same internal user_id the write service stamped on wallet/transaction
-// events.
 type UserSynced struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`

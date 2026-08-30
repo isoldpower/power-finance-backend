@@ -49,6 +49,7 @@
 | **read-service** | Python · Django | Projects `events.async` into Postgres + Elasticsearch read models; Redis caches; RAL |
 | **push-service** | Go | SSE fan-out of `events.async`, per-user gateway auth, Prometheus metrics |
 | **webhook-service** | Go | Signed webhook delivery with retry/DLQ; owns its Postgres; Goose migrations |
+| **ai-service** | Python · FastAPI | Derives the double-entry postings behind each transaction; owns its Postgres (SQLAlchemy + Alembic); assistant surface |
 
 Shared code lives in `libraries/` (Python: `correlation-py`, `kafka-client-py`,
 `read-at-least-py`, `saga-pattern-py`, `kafka-messages-proto`; Go:
@@ -69,9 +70,10 @@ service stack is also standalone-runnable from its own directory
 
 ## Repository layout
 
-- `services/` — `write-service`, `read-service` (Python/Django, uv workspace
-  members), `push-service`, `webhook-service` (Go, `go mod`). Each has its own
-  README.
+- `services/` — `write-service`, `read-service` (Python/Django), `ai-service`
+  (Python/FastAPI) — all uv workspace members — plus `push-service`,
+  `webhook-service` (Go, `go mod`) and `antifraud-service` (Java/Flink). Each
+  has its own README.
 - `libraries/` — shared Python libs and the Go `kafka-client-go`.
 - `infrastructure/` — Kafka, Kong gateway, Postgres, Debezium —
   [infrastructure/README.md](infrastructure/README.md).
@@ -88,7 +90,7 @@ directory.
   `make -C services/<service>-service <subcommand>` (e.g. `make write up`,
   `make read test`, `make webhook migrate`). `make <service>` with no subcommand
   falls into that service's default goal. Router targets are `write`, `read`,
-  `push`, `webhook`; root targets (`help`, `test`, `lint`, …) are only defined
+  `push`, `webhook`, `antifraud`, `ai`; root targets (`help`, `test`, `lint`, …) are only defined
   when not routing, so a service subcommand sharing a name doesn't collide. Use
   `make help`, not `make write help`, for the root.
 - **Setup / quality:** `make install` (sync the uv workspace + wire the hook),

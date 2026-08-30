@@ -1,8 +1,3 @@
-from data_read_core.shared.kafka_updates import (
-    EventRouter,
-    ExecutionPlan,
-    SyncProcessGroup,
-)
 from data_read_core.write_reactions import (
     BumpGoalListVersion,
     BumpTransactionListVersion,
@@ -13,7 +8,16 @@ from data_read_core.write_reactions import (
     TrackAppliedSeq,
     UpdateGoalReadModel,
 )
-from kafka_messages import GoalCreated, GoalDeleted, GoalUpdated
+from kafka_consumer_py import (
+    EventRouter,
+    ExecutionPlan,
+    SyncProcessGroup,
+)
+from kafka_messages import (
+    GoalCreated,
+    GoalDeleted,
+    GoalUpdated,
+)
 
 from ._health_guards import guard_all
 from ._types import ProbesDictionary

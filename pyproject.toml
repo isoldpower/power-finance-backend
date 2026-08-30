@@ -4,6 +4,7 @@ name = "power-finance-cqrs"
 version = "0.0.0"
 description = "Power Finance — CQRS architecture monorepo (Write, Read, Push services + shared Python libraries + infrastructure)."
 requires-python = ">=3.12"
+dependencies = []
 
 [tool.uv.workspace]
 members = [
@@ -13,10 +14,12 @@ members = [
     "libraries/correlation-py",
     "libraries/events-py",
     "libraries/kafka-client-py",
+    "libraries/kafka-consumer-py",
     "libraries/kafka-messages-proto",
     "libraries/observability-py",
     "libraries/read-at-least-py",
     "libraries/saga-pattern-py",
+    "services/ai-service",
 ]
 
 # immudb-py 1.5.0 ships broken metadata: it declares a dependency on the Hive
@@ -65,6 +68,8 @@ target-version = "py312"
 force-exclude = true
 extend-exclude = [
     "**/migrations/**",
+    # Alembic's equivalent of a migrations directory.
+    "**/alembic/versions/**",
     # Reference copies of removed work; not on the import path.
     ".phase-5-backup",
     "**/generated/**",
@@ -96,6 +101,10 @@ indent-style = "space"
 
 [tool.mypy]
 python_version = "3.12"
+# pydantic-settings fills every field from the environment, so a field with no
+# default is not a required constructor argument. Only pydantic's own plugin
+# knows that; without it every `Settings()` call needs a type: ignore.
+plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
 check_untyped_defs = false
 warn_unused_ignores = true
@@ -104,6 +113,7 @@ explicit_package_bases = true
 namespace_packages = true
 exclude = [
     "/migrations/",
+    "/alembic/versions/",
     "\\.phase-5-backup/",
     "/__tests__/",
     "/generated/",

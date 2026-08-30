@@ -10,21 +10,13 @@ option java_outer_classname = "NotificationProto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
-// Command-style message on the inbound notifications topic: another
-// service asks the Write Service to create a notification. Unlike the
-// *Created/*Acknowledged events above, this is NOT emitted through the
-// outbox — producers (e.g. webhook-service) publish it directly and the
-// Write Service consumer persists it, which then fans out the resulting
-// NotificationCreated through the regular outbox pipeline.
+
 message NotificationRequested {
   string event_id = 1;
   google.protobuf.Timestamp occurred_at = 2;
   int32 schema_version = 3;
 
   int32 user_id = 10;
-  // The user's external (Clerk) id — becomes the partition key of the
-  // resulting outbox event so per-user ordering and push-service auth keep
-  // working downstream.
   string user_external_id = 11;
   string short = 12;
   string message = 13;
@@ -40,8 +32,6 @@ message NotificationCreated {
   int32 user_id = 11;
   string short = 12;
   string message = 13;
-  // Free-form context attached to the notification (deep links, resource
-  // ids, …). Optional — absent when the producer has nothing to attach.
   google.protobuf.Struct payload = 14;
   google.protobuf.Timestamp created_at = 15;
 }
@@ -51,8 +41,6 @@ message NotificationsAcknowledged {
   google.protobuf.Timestamp occurred_at = 2;
   int32 schema_version = 3;
 
-  // Every notification the user acknowledged in this mutation; a single
-  // ack is a one-element batch.
   repeated string notification_ids = 10;
   int32 user_id = 11;
   google.protobuf.Timestamp acknowledged_at = 12;

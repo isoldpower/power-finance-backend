@@ -1,9 +1,189 @@
 # See ../README.md → "Kafka topics"
+#
+# A catalogue of the event streams and the services on each end of them. Nothing
+# reads this file: the dev broker auto-creates topics on first use, so `settings`
+# describes the shape a real cluster should provision, not what is running.
+
 topics:
   - name: events.async
+    purpose: >-
+      Primary event stream. Every service that owns a transactional outbox
+      publishes here through its own Debezium Outbox Event Router connector, and
+      every projection, fan-out and derivation reads from it.
+    key: >-
+      The owning user's external (Clerk) id, or "GLOBAL" for events no user owns.
+      Per-user ordering and push-service's SSE authorisation both depend on it.
+    headers: [event_id, aggregate_type, event_type, outbox_seq]
+    producers:
+      - service: write-service
+        via: debezium
+        connector: outbox-connector
+        table: public.outbox_events
+      - service: ai-service
+        via: debezium
+        connector: ai-outbox-connector
+        table: public.ai_outbox_events
+    consumers:
+      - service: read-service
+        group: read-service.write-consumer
+        does: Postgres + Elasticsearch projections, cache invalidation
+      - service: ai-service
+        group: ai-service.dispatcher
+        does: derives the postings behind each transaction
+      - service: webhook-service
+        group: webhook-service.deliveries
+        does: webhook config projection and delivery dispatch
+      - service: antifraud-service
+        group: antifraud-service
+        does: Flink scoring of the deep fraud path
+      - service: push-service
+        group: null
+        does: >-
+          SSE fan-out. Groupless on purpose — every replica reads every
+          partition from the end, so no offsets are committed and no replica
+          takes partitions from another.
+    settings:
+      partitions: 12
+      replication_factor: 1
+      retention: 7d
+      cleanup_policy: delete
+
   - name: notifications.inbound
-  - name: events.retry
-  - name: events.dlq
-  - name: webhooks.retry
-  - name: webhooks.dlq
+    purpose: >-
+      Inbound notification requests. A command topic, not an event stream: the
+      producer asks write-service to create a notification, which then re-enters
+      events.async as NotificationCreated through the outbox.
+    key: null
+    producers:
+      - service: webhook-service
+        via: direct
+        does: asks for a notification after a delivery outcome
+    consumers:
+      - service: write-service
+        group: write-service.notifications-inbound
+        does: persists each request, which the outbox then publishes
+    settings:
+      partitions: 6
+      replication_factor: 1
+      retention: 7d
+      cleanup_policy: delete
+
   - name: fraud.alerts
+    purpose: >-
+      Deep-path fraud signals. Kept off events.async so a scoring backlog cannot
+      delay the projection and push pipelines.
+    key: null
+    producers:
+      - service: antifraud-service
+        via: direct
+        does: emits an alert when a scored transaction crosses the threshold
+    consumers:
+      - service: write-service
+        group: write-service.fraud-alerts
+        does: applies the alert to the transaction it names
+    settings:
+      partitions: 3
+      replication_factor: 1
+      retention: 30d
+      cleanup_policy: delete
+
+  - name: read-service.retry
+    purpose: >-
+      Read-service's retry topic. Its consumer subscribes to this alongside
+      events.async and holds each message until its x-retry-at falls due.
+    key: inherited from the failed event
+    producers:
+      - service: read-service
+        via: kafka-client-py
+    consumers:
+      - service: read-service
+        group: read-service.write-consumer
+        does: re-attempts the projection that failed
+    settings:
+      partitions: 6
+      replication_factor: 1
+      retention: 7d
+      cleanup_policy: delete
+
+  - name: read-service.dlq
+    purpose: >-
+      Read-service's dead-letter topic. Terminal by design: a poison event lands
+      here and waits for a human, so having no consumer is the intended state.
+    key: inherited from the failed event
+    producers:
+      - service: read-service
+        via: kafka-client-py
+    consumers: []
+    settings:
+      partitions: 3
+      replication_factor: 1
+      retention: 30d
+      cleanup_policy: delete
+
+  - name: ai-service.retry
+    purpose: >-
+      Ai-service's retry topic. Separate from read-service's on purpose: the two
+      subscribe to the same event types, so one shared retry topic would hand
+      each service the other's failures to reprocess.
+    key: inherited from the failed event
+    producers:
+      - service: ai-service
+        via: kafka-client-py
+    consumers:
+      - service: ai-service
+        group: ai-service.dispatcher
+        does: re-attempts the dispatch that failed
+    settings:
+      partitions: 6
+      replication_factor: 1
+      retention: 7d
+      cleanup_policy: delete
+
+  - name: ai-service.dlq
+    purpose: Ai-service's dead-letter topic. Terminal, like read-service's.
+    key: inherited from the failed event
+    producers:
+      - service: ai-service
+        via: kafka-client-py
+    consumers: []
+    settings:
+      partitions: 3
+      replication_factor: 1
+      retention: 30d
+      cleanup_policy: delete
+
+  - name: webhooks.retry
+    purpose: >-
+      Webhook-service's own retry topic, separate from events.retry so webhook
+      delivery backpressure cannot interfere with the projection pipelines.
+    key: inherited from the failed delivery
+    producers:
+      - service: webhook-service
+        via: kafka-client-go
+    consumers:
+      - service: webhook-service
+        group: webhook-service.deliveries
+        does: re-attempts the delivery under its own backoff schedule
+    settings:
+      partitions: 6
+      replication_factor: 1
+      retention: 7d
+      cleanup_policy: delete
+
+  - name: webhooks.dlq
+    purpose: Webhook-service's dead-letter topic. Terminal, like events.dlq.
+    key: inherited from the failed delivery
+    producers:
+      - service: webhook-service
+        via: kafka-client-go
+    consumers: []
+    settings:
+      partitions: 3
+      replication_factor: 1
+      retention: 30d
+      cleanup_policy: delete
+
+# Kafka Connect's own storage topics — connect_configs, connect_offsets,
+# connect_statuses — are deliberately absent. Connect creates them itself with
+# the replication factors set in ../debezium/compose.yaml, and they carry no
+# domain events.

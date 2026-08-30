@@ -44,43 +44,23 @@ public interface NotificationsAcknowledgedOrBuilder extends
   int getSchemaVersion();
 
   /**
-   * <pre>
-   * Every notification the user acknowledged in this mutation; a single
-   * ack is a one-element batch.
-   * </pre>
-   *
    * <code>repeated string notification_ids = 10;</code>
    * @return A list containing the notificationIds.
    */
   java.util.List<java.lang.String>
       getNotificationIdsList();
   /**
-   * <pre>
-   * Every notification the user acknowledged in this mutation; a single
-   * ack is a one-element batch.
-   * </pre>
-   *
    * <code>repeated string notification_ids = 10;</code>
    * @return The count of notificationIds.
    */
   int getNotificationIdsCount();
   /**
-   * <pre>
-   * Every notification the user acknowledged in this mutation; a single
-   * ack is a one-element batch.
-   * </pre>
-   *
    * <code>repeated string notification_ids = 10;</code>
    * @param index The index of the element to return.
    * @return The notificationIds at the given index.
    */
   java.lang.String getNotificationIds(int index);
   /**
-   * <pre>
-   * Every notification the user acknowledged in this mutation; a single
-   * ack is a one-element batch.
-   * </pre>
-   *
    * <code>repeated string notification_ids = 10;</code>
    * @param index The index of the value to return.
    * @return The bytes of the notificationIds at the given index.

@@ -1,12 +1,14 @@
 from inspect import isawaitable
 
+from kafka_consumer_py.health import HealthProbe
 from redis.exceptions import RedisError
 
 from data_read_core.shared.redis_cache import get_redis
 
-from .health_probe import HealthProbe
-
-REDIS_CONNECTIVITY_ERRORS: tuple[type[BaseException], ...] = (RedisError, OSError)
+REDIS_CONNECTIVITY_ERRORS: tuple[type[BaseException], ...] = (
+    RedisError,
+    OSError,
+)
 
 
 class RedisHealthProbe(HealthProbe):

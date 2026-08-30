@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from background_workers.services.kafka_consumer import ConsumerConfig
+from kafka_consumer_py import ConsumerConfig
 
 
 @dataclass(frozen=True, slots=True)

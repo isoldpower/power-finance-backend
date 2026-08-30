@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package power_finance.events.v1;
+
+option go_package = "github.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1";
+option java_package = "com.powerfinance.events.v1";
+option java_multiple_files = true;
+option java_outer_classname = "AccountProto";
+
+import "google/protobuf/timestamp.proto";
+
+
+enum AccountGroup {
+  ACCOUNT_GROUP_WRONG = 0;
+  ACCOUNT_GROUP_ASSETS = 1;
+  ACCOUNT_GROUP_LIABILITIES = 2;
+  ACCOUNT_GROUP_EQUITY = 3;
+}
+
+message AccountCreated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string account_id = 101;
+  string user_external_id = 102;
+  int32 user_id = 103;
+  AccountGroup account_group = 104;
+  string name = 105;
+  string balance = 106;
+
+  // Reserved for future expansion.
+  reserved 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119;
+
+  google.protobuf.Timestamp created_at = 120;
+}
+
+message AccountUpdated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string account_id = 101;
+  string user_external_id = 102;
+  int32 user_id = 103;
+  string previous_balance = 104;
+  string new_balance = 105;
+  AccountGroup account_group = 106;
+  string name = 107;
+
+  // Reserved for future expansion.
+  reserved 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119;
+
+  google.protobuf.Timestamp updated_at = 120;
+}

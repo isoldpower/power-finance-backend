@@ -41,9 +41,13 @@ writes nothing under `/app` at runtime.
 
 ## Debezium outbox
 
-The `kafka-connect` worker (Debezium) tails `postgres-write`'s WAL via logical
-replication and forwards `outbox_events` rows through the Outbox Event Router SMT
-onto Kafka. It is write-side-only because it knows the write schema — other
-services owning an outbox would run their own Connect worker. The one-shot
-`debezium-bootstrap` PUTs the connector config to Connect's REST API once it's
-healthy (`PUT .../config` is idempotent, so reruns update in place).
+Debezium tails `postgres-write`'s WAL via logical replication and forwards
+`outbox_events` rows through the Outbox Event Router SMT onto Kafka. The
+`kafka-connect` worker running it is shared, not write-side-only — it lives in
+[`infrastructure/debezium`](../../infrastructure/debezium) and hosts one
+connector per service that owns an outbox. What stays here is the registration:
+the one-shot `write-outbox-connector` PUTs *this* service's connector config to
+Connect's REST API once both Connect and `postgres-write` are healthy
+(`PUT .../config` is idempotent, so reruns update in place). Keeping it here is
+what lets the write stack come up alone without registering connectors against
+databases it does not run.

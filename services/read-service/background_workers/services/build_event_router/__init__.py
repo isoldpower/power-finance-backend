@@ -1,17 +1,18 @@
 from collections.abc import Callable
 
-from data_read_core.shared.kafka_updates import (
-    ConsumerConfig,
-    EventRouter,
-    KafkaEventRouter,
-    build_consumer_loop,
-)
+from django.conf import settings
 from kafka_client_py import (
     AsyncPublisher,
     DLQPublisher,
     ProducerConfig,
     RetryPolicy,
     RetryPublisher,
+)
+from kafka_consumer_py import (
+    ConsumerConfig,
+    EventRouter,
+    KafkaEventRouter,
+    build_consumer_loop,
 )
 
 from ._types import ProbesDictionary
@@ -80,8 +81,8 @@ async def build_event_router(config: ConsumerConfig) -> None:
             config=config,
             router=router,
             retry_policy=RetryPolicy(),
-            retry_publisher=RetryPublisher(publisher),
-            dlq_publisher=DLQPublisher(publisher),
+            retry_publisher=RetryPublisher(publisher, topic=settings.KAFKA["RETRY_TOPIC"]),
+            dlq_publisher=DLQPublisher(publisher, topic=settings.KAFKA["DLQ_TOPIC"]),
         )
         await consumer_loop.run()
     finally:

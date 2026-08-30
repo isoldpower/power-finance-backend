@@ -22,20 +22,11 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Shared header every business event carries. Lives as separate fields
-// on each message rather than as a sub-message so the JSON wire format
-// stays flat (matches the legacy dict payload that consumers already
-// understand).
 type EventEnvelope struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// UUID. Idempotency key — consumers dedupe on this.
-	EventId string `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
-	// Wall-clock time the producer decided this event happened.
-	OccurredAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
-	// Bump on any breaking change to a concrete event's payload. Consumers
-	// that can't handle a higher version should route the message to the
-	// DLQ rather than partially process it.
-	SchemaVersion int32 `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	SchemaVersion int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

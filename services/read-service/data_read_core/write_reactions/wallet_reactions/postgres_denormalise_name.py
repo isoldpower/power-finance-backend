@@ -1,6 +1,6 @@
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import WalletUpdated
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import TransactionReadModel
 
 from .._logger_shortcuts import log_wallet_name_denormalised

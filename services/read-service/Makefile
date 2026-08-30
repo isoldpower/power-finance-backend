@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
-
 COMPOSE := docker compose -f compose.yaml
+
 
 .PHONY: help
 help: ## Show available targets

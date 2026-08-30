@@ -1,9 +1,9 @@
 from datetime import UTC
 from decimal import Decimal
 
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import GoalCreated
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import GoalReadModel
 
 from .._logger_shortcuts import log_goal_postgres_created
@@ -26,8 +26,6 @@ class CreateGoalReadModel(Effect):
             title=payload.title,
             currency_code=payload.currency_code,
             target=Decimal(payload.target or "0"),
-            # A goal opens empty. Progress moves only as transaction reactions
-            # land, never as part of creation.
             progress=Decimal("0"),
             url=payload.url or None,
             finish_at=(

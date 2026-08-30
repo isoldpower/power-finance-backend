@@ -101,19 +101,11 @@ public interface GoalUpdatedOrBuilder extends
   com.google.protobuf.TimestampOrBuilder getUpdatedAtOrBuilder();
 
   /**
-   * <pre>
-   * The full post-update state, not a diff. A consumer applies these verbatim.
-   * </pre>
-   *
    * <code>string target = 15;</code>
    * @return The target.
    */
   java.lang.String getTarget();
   /**
-   * <pre>
-   * The full post-update state, not a diff. A consumer applies these verbatim.
-   * </pre>
-   *
    * <code>string target = 15;</code>
    * @return The bytes for target.
    */

@@ -1,8 +1,3 @@
-from data_read_core.shared.kafka_updates import (
-    EventRouter,
-    ExecutionPlan,
-    SyncProcessGroup,
-)
 from data_read_core.write_reactions import (
     AcknowledgeNotificationReadModels,
     BumpNotificationListVersion,
@@ -11,6 +6,11 @@ from data_read_core.write_reactions import (
     EvictNotificationCache,
     RemoveNotificationReadModel,
     TrackAppliedSeq,
+)
+from kafka_consumer_py import (
+    EventRouter,
+    ExecutionPlan,
+    SyncProcessGroup,
 )
 from kafka_messages import (
     NotificationCreated,

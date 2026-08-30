@@ -37,8 +37,12 @@ dist/
 # Local databases / env / secrets
 *.sqlite3
 **/db.sqlite3
+# Both forms, for the same reason .venv needs both: a bare pattern only matches
+# the context root, and every service keeps its own .env one level down.
 .env
 .env.*
+**/.env
+**/.env.*
 *.local
 
 # Editor / OS cruft
