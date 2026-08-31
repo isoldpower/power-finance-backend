@@ -116,6 +116,7 @@ class CreateTransactionChainCommandHandler(
             user_id=command.user_id,
             committed_at=committed_at,
             partition_key=command.user_external_id,
+            container_dtos=container_dtos,
         )
         await self._publish_domain_events(*aggregates)
 
@@ -187,6 +188,7 @@ class CreateTransactionChainCommandHandler(
         user_id: int,
         committed_at: datetime,
         partition_key: str,
+        container_dtos: dict[str, MoneyContainerDTO],
     ) -> int:
         repository = self._transaction_repository
         steps: list[PostgresWriteStep] = [
@@ -202,7 +204,12 @@ class CreateTransactionChainCommandHandler(
             postgres_steps=steps,
             flows=chain_flows(aggregates),
             entries=[
-                transaction_created_entry(aggregate, partition_key) for aggregate in aggregates
+                transaction_created_entry(
+                    aggregate,
+                    partition_key,
+                    currency_of(aggregate, container_dtos),
+                )
+                for aggregate in aggregates
             ],
             money_flow_repository=self._money_flow_repository,
             outbox_repository=self._outbox_repository,
@@ -232,7 +239,20 @@ class CreateTransactionChainCommandHandler(
         )
 
 
-def _metadata_of(entry: ChainEntryCommand, chain_id: UUID) -> TransactionMetadata:
+def currency_of(
+    aggregate: TransactionAggregate,
+    container_dtos: dict[str, MoneyContainerDTO],
+) -> str:
+    """A chain can span containers — a transfer is two entries against two of
+    them — so each transaction takes its own container's currency."""
+
+    return container_dtos[str(aggregate.root.container_id)].currency
+
+
+def _metadata_of(
+    entry: ChainEntryCommand,
+    chain_id: UUID,
+) -> TransactionMetadata:
     return TransactionMetadata(
         name=entry.name,
         category=entry.category,

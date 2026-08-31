@@ -24,6 +24,7 @@ from service_core.write_reactions import (
     user_created,
 )
 
+from ..transaction_created.__tests__.fakes import FixedRates
 from .fakes import (
     EXTERNAL_ID,
     TRANSACTION_ID,
@@ -76,9 +77,9 @@ async def _project() -> None:
 
 
 async def _dispatch() -> None:
-    await transaction_created.DispatchPostings(build_created_dispatcher).apply(
-        make_event(make_transaction_created(), outbox_seq=1)
-    )
+    await transaction_created.DispatchPostings(
+        build_created_dispatcher, exchange_rates=FixedRates()
+    ).apply(make_event(make_transaction_created(), outbox_seq=1))
 
 
 async def test_seeding_publishes_one_account_created_per_account():
@@ -156,7 +157,9 @@ async def test_a_re_dispatch_names_its_group_by_the_same_enum():
 
     updated = make_event(make_transaction_updated(new_amount="200.00"), outbox_seq=2)
     await transaction_updated.UpdateProjectedTransactionAmount().apply(updated)
-    await transaction_updated.DispatchPostings(build_updated_dispatcher).apply(updated)
+    await transaction_updated.DispatchPostings(
+        build_updated_dispatcher, exchange_rates=FixedRates()
+    ).apply(updated)
 
     groups = {
         row.payload["account_group"]
@@ -260,7 +263,7 @@ async def test_a_posting_payload_carries_the_leg_as_stored():
     assert leg.payload["transaction_id"] == str(TRANSACTION_ID)
     assert leg.payload["user_id"] == USER_ID
     assert leg.payload["amount"] == "125.00"
-    assert leg.payload["currency_code"] == ""
+    assert leg.payload["currency_code"] == "EUR"
     assert UUID(leg.payload["posting_id"])
 
 
@@ -328,6 +331,7 @@ async def test_nothing_is_published_when_the_transaction_rolls_back():
         await transaction_created.DispatchPostings(
             build_created_dispatcher,
             _SabotagedUnitOfWork,
+            exchange_rates=FixedRates(),
         ).apply(make_event(make_transaction_created(), outbox_seq=1))
 
     assert await _published_types() == []

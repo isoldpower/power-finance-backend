@@ -34,6 +34,7 @@ class AccountModel(ModelBase):
     group: Mapped[str] = mapped_column(String(16))
     name: Mapped[str] = mapped_column(String(120))
     balance: Mapped[Decimal] = mapped_column(Numeric(20, 2), default=0)
+    currency_code: Mapped[str] = mapped_column(String(3), default="USD")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

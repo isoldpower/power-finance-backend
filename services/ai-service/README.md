@@ -30,7 +30,7 @@ Inside `service_core`:
 | Slice | What it is |
 | --- | --- |
 | `write_reactions/` | One package per **event** — `user_created`, `transaction_created`, `transaction_updated`, `transaction_deleted`. |
-| `assistant_chat/` | The chat websocket, as a slice with an `http/` edge like read-service's query slices. |
+| `assistant_chat/` | One package per **conversation** — today just `advice_conversation`, the `/chat/advice` socket. Laid out like a `write_reactions` slice, with an `http/` edge as read-service's query slices have. |
 | `shared/db_connection/` | The engine, the models, `session_scope`, the settings and the Alembic chain. |
 | `shared/kafka_outbox/` | The outbox mechanism: the row shape, the proto-to-row builder, the port and its SQLAlchemy adapter. |
 | `shared/health_guard/` | `PostgresHealthProbe` and the connectivity errors, shared by the consumer's `HealthGuardedHandler` and by `health_probes`. |
@@ -50,6 +50,19 @@ Each `write_reactions` slice is laid out the same way, one concept per file:
 | `exceptions/` | one failure per file |
 | `events/` | one outbox message per file, plus the function that orders a whole set of them |
 | `dispatchers/` | the `PostingDispatcher` seam and its template adapter (the two dispatching slices only) |
+
+`assistant_chat/advice_conversation` is the same shape, with the names its own
+work needs:
+
+| Inside the slice | Holds |
+| --- | --- |
+| *(slice root)* | `chat_session` and `message_router` — the conversation itself |
+| `contracts/` | the vocabulary: `Termination`, `ConnectionContext`, `RoutedReplies`, and the `MessageHandler`, `ChatTransport` and `TerminationSignal` ports |
+| `handlers/` | one `MessageHandler` per file — the seam a model goes behind, the way `dispatchers/` is the seam for postings |
+| `signals/` | one `TerminationSignal` per file: the process shutdown one, and the one that never fires |
+| `infrastructure/` | the only modules that have heard of FastAPI — the transport, the gateway header, the context builder |
+| `http/` | the router, which is where those are assembled |
+| `exceptions/` | one failure per file |
 
 Each slice holds exactly the types, ports and adapters that one event needs —
 nothing wider. `transaction_deleted` never
@@ -162,6 +175,22 @@ A dispatch replaces the whole leg set rather than diffing it — legs have no
 identity outside the transaction that caused them, which makes replacement both
 simpler and idempotent under redelivery.
 
+## Public surface
+
+One route, behind the gateway:
+
+| Endpoint | What it is | Auth |
+| --- | --- | --- |
+| `GET /api/v1/chat/advice` | WebSocket upgrade; the assistant socket | `X-User-Id`, set by Kong's `clerk-jwt` plugin |
+
+Kong forwards `/api/v1/chat` here — a longer path than the read route's bare
+`/api/v1`, which is what stops the upgrade being offered to read-service. The
+handshake is refused with a policy-violation close before it is accepted when
+`X-User-Id` is absent: a request without it did not come through Kong. This
+service never sees a token and never validates one; it trusts the header, which
+holds only because the gateway is the sole route in and no host port is
+published.
+
 ## Health
 
 `health_probes` serves three endpoints off the ASGI app, outside the versioned
@@ -258,9 +287,9 @@ The image runs as an unprivileged `app` user; unlike read-service there is no
 
 ## Stack
 
-- **ai-service** — the assistant app and the health probes, behind Kong once it
-  is routed (no published host port). Reads the same tables the dispatcher
-  writes. Healthchecked on `/health/live`.
+- **ai-service** — the assistant app and the health probes, behind Kong (no
+  published host port; the gateway is the only way in). Reads the same tables
+  the dispatcher writes. Healthchecked on `/health/live`.
 - **ai-dispatcher** — the long-lived worker tailing `events.async`. No port and
   no healthcheck; a stable consumer group so offsets survive restarts and
   partitions can be shared across replicas. `stop_grace_period: 30s` gives the
@@ -306,13 +335,23 @@ replay does not need a redeploy.
 
 ## Known gaps
 
-- **postings carry no currency.** `TransactionCreated` fields 21 and 22 held
-  `currency_code` and `container_name` and went back to `reserved` when Phase 5
-  was rolled back. Until they are re-added under fresh numbers, `Entry.currency_code`
-  is null and a dispatcher cannot denominate a leg;
-- **nobody consumes what it publishes.** The events reach `events.async`, but
-  read-service does not subscribe to them yet, so its account endpoints still
-  return nothing;
-- **the assistant app is a stub.** `ai-service` ships in the stack, but it
-  serves one echo websocket and is not routed through Kong yet, so nothing
-  outside the compose network can reach it.
+- **account balances are currency-blind.** Postings carry a currency now, but
+  `ai_accounts.balance` is a single `Numeric(20, 2)` and the identity is
+  `(user_id, group, name)`. A user holding wallets in two currencies gets
+  correctly denominated legs that still sum into one meaningless total. Fixing
+  it is a schema decision — an account per currency, or a balances-per-currency
+  table — not a patch;
+- **the assistant app is a stub.** Routed, authenticated, and with its whole
+  lifecycle finished — but what it serves is still one echo: `TempMessageHandler`
+  greets whoever a message names, and anything else is unroutable. Nothing reads
+  the ledger it sits next to. Writing a real one is implementing `MessageHandler`
+  and registering it in `build_chat_router`;
+- **two terminations are declared but never raised.** `Termination.unauthenticated()`
+  and `Termination.handler_failed()` exist in the vocabulary with no code path
+  behind them: the refusal happens in `gateway_auth` before a session exists, and
+  nothing yet catches a handler that throws. Either wire them or drop them —
+  a close code nothing can produce is a lie about the protocol;
+- **the socket cannot be opened from a browser as it stands.** Auth is the
+  `Authorization` header the gateway verifies, and the browser WebSocket API
+  cannot set headers. A subprotocol or query-parameter token would be needed
+  first — the same constraint push-service's SSE stream already lives with.

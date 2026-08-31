@@ -1,0 +1,2 @@
+class RateUnavailable(Exception):
+    pass

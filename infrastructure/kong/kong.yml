@@ -10,9 +10,6 @@ services:
     connect_timeout: 5000
     write_timeout: 30000
     read_timeout: 30000
-    # There is ONE public surface, /api/v1. The read/write split lives here, in
-    # the router, rather than in the paths a client types: reads and writes of
-    # the same resource share a URL and differ only by method.
     routes:
       - name: write-api-v1
         paths:
@@ -79,10 +76,6 @@ services:
         strip_path: false
         preserve_host: false
         methods: [GET, OPTIONS]
-      # The /search endpoints are READS that arrive as POST, because a filter
-      # tree does not survive a query string. Their longer path outranks the
-      # write route's bare /api/v1 prefix, which is what keeps them on the read
-      # side without inventing a separate URL space for them.
       - name: read-api-v1-search
         paths:
           - /api/v1/wallets/search
@@ -145,11 +138,33 @@ services:
     write_timeout: 3600000
     read_timeout: 3600000
     routes:
-      # Longer than the read route's /api/v1 prefix, so the stream reaches
-      # push-service while every other GET under /api/v1 goes to read-service.
       - name: notifications-stream
         paths:
           - /api/v1/notifications/stream
+        strip_path: false
+        preserve_host: false
+        methods: [GET, OPTIONS]
+    plugins:
+      - name: clerk-jwt
+        config:
+          issuer_url: "{vault://env/clerk-issuer-url}"
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 100
+          redis_key_prefix: "clerk:jwks:"
+
+  - name: ai-service
+    host: ai-service
+    port: 8000
+    protocol: http
+    connect_timeout: 5000
+    write_timeout: 3600000
+    read_timeout: 3600000
+    routes:
+      - name: assistant-chat
+        paths:
+          - /api/v1/chat
         strip_path: false
         preserve_host: false
         methods: [GET, OPTIONS]

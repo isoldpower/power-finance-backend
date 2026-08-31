@@ -26,6 +26,7 @@ class ProjectedTransaction(ModelBase):
     container_id: Mapped[UUID]
     container_kind: Mapped[str] = mapped_column(String(16))
     amount: Mapped[Decimal] = mapped_column(Numeric(20, 2))
+    currency_code: Mapped[str] = mapped_column(String(3), default="")
 
     name: Mapped[str] = mapped_column(String(120), default="")
     category: Mapped[str] = mapped_column(String(120), default="")

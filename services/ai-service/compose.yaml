@@ -5,6 +5,16 @@ include:
 x-ai-database-url: &ai-database-url
   AI_DATABASE_URL: postgresql+psycopg://${AI_DATABASE_USER:-postgres}:${AI_DATABASE_PASSWORD:-postgres}@postgres-ai:5432/${AI_DATABASE_NAME:-power_finance_ai}
 
+x-exchange-rates-env: &exchange-rates-env
+  # Postings are booked in USD whatever they were spent in, so the dispatcher
+  # needs the rate feed. `.env` is deliberately not in the image, so these come
+  # through compose like every other runtime setting.
+  EXCHANGE_RATES_PROVIDER: ${EXCHANGE_RATES_PROVIDER:-open-er-api}
+  EXCHANGE_RATES_BASE_URL: ${EXCHANGE_RATES_BASE_URL:-https://open.er-api.com/v6/latest}
+  EXCHANGE_RATES_TIMEOUT_SECONDS: ${EXCHANGE_RATES_TIMEOUT_SECONDS:-5.0}
+  EXCHANGE_RATES_TTL_SECONDS: ${EXCHANGE_RATES_TTL_SECONDS:-900}
+  EXCHANGE_RATES_MAX_AGE_SECONDS: ${EXCHANGE_RATES_MAX_AGE_SECONDS:-172800}
+
 services:
   ai-service:
     build:
@@ -40,7 +50,7 @@ services:
     restart: unless-stopped
     command: ["python", "-m", "background_workers.main"]
     environment:
-      <<: *ai-database-url
+      <<: [*ai-database-url, *exchange-rates-env]
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_OUTBOX_TOPIC: ${KAFKA_OUTBOX_TOPIC:-events.async}
       KAFKA_AI_GROUP_ID: ${KAFKA_AI_GROUP_ID:-ai-service.dispatcher}

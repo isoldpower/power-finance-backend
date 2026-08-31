@@ -24,6 +24,7 @@ from service_core.write_reactions import (
     user_created,
 )
 
+from ..transaction_created.__tests__.fakes import FixedRates
 from .fakes import (
     TRANSACTION_ID,
     USER_ID,
@@ -166,6 +167,7 @@ async def test_legs_already_flushed_are_rolled_back_when_a_later_step_fails():
         await transaction_created.DispatchPostings(
             build_created_dispatcher,
             _SabotagedUnitOfWork,
+            exchange_rates=FixedRates(),
         ).apply(make_event(make_transaction_created(), outbox_seq=1))
 
     assert await _count(EntryModel) == 0
@@ -186,7 +188,7 @@ async def test_a_dispatcher_that_raises_writes_nothing():
         )
 
     with pytest.raises(transaction_created.UnknownAccountsError):
-        await transaction_created.DispatchPostings(_explode).apply(
+        await transaction_created.DispatchPostings(_explode, exchange_rates=FixedRates()).apply(
             make_event(make_transaction_created(), outbox_seq=1)
         )
 
@@ -201,9 +203,9 @@ async def test_a_dispatch_that_succeeds_still_commits():
         make_event(make_transaction_created(), outbox_seq=1)
     )
 
-    await transaction_created.DispatchPostings(build_created_dispatcher).apply(
-        make_event(make_transaction_created(), outbox_seq=1)
-    )
+    await transaction_created.DispatchPostings(
+        build_created_dispatcher, exchange_rates=FixedRates()
+    ).apply(make_event(make_transaction_created(), outbox_seq=1))
 
     assert await _count(EntryModel) == len(CREATED_TEMPLATE_ACCOUNTS)
     async with session_scope() as session:

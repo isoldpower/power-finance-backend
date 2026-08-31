@@ -420,3 +420,52 @@ def log_goal_transactions_renamed(goal_id: str, count: int) -> None:
         goal_id,
         count,
     )
+
+
+def log_account_postgres_created(account_id: str, name: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Projected account %s (%s) into Postgres.", account_id, name)
+
+
+def log_account_postgres_duplication(account_id: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Account %s was already projected; redelivery ignored.", account_id)
+
+
+def log_account_postgres_updated(account_id: str, balance: Decimal) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Restated account %s balance to %s.", account_id, balance)
+
+
+def log_posting_postgres_created(posting_id: str, transaction_id: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Projected posting %s of transaction %s.", posting_id, transaction_id)
+
+
+def log_posting_postgres_duplication(posting_id: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Posting %s was already projected; redelivery ignored.", posting_id)
+
+
+def log_posting_postgres_removed(posting_id: str, removed_count: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Removed %s row(s) for posting %s.", removed_count, posting_id)
+
+
+def log_dispatch_postgres_recorded(transaction_id: str, balanced: bool) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Recorded dispatch verdict for transaction %s (balanced=%s).",
+        transaction_id,
+        balanced,
+    )
+
+
+def log_account_list_version_bumped(user_id: int, version: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Bumped account list version for user %s to %s.", user_id, version)
+
+
+def log_account_postings_version_bumped(account_id: str, version: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Bumped posting list version for account %s to %s.", account_id, version)

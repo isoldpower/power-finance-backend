@@ -19,7 +19,7 @@ def signed_amount():
     )
 
     return case(
-        (raises_the_balance, EntryModel.amount),
-        (or_(debit_normal, credit_normal), -EntryModel.amount),
+        (raises_the_balance, EntryModel.book_amount),
+        (or_(debit_normal, credit_normal), -EntryModel.book_amount),
         else_=0,
     )

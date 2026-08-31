@@ -1,6 +1,12 @@
 from data_read_core.query_slices.get_webhook.infra import (
     get_single_cache_key as get_read_single_webhook_key,
 )
+from data_read_core.query_slices.list_account_postings.infra import (
+    get_list_version_key as get_read_account_postings_version_key,
+)
+from data_read_core.query_slices.list_accounts.infra import (
+    get_list_version_key as get_read_account_list_version_key,
+)
 from data_read_core.query_slices.list_webhook_events.infra import (
     get_events_cache_key as get_read_webhook_events_key,
 )
@@ -8,6 +14,8 @@ from data_read_core.query_slices.list_webhooks.infra import (
     get_list_version_key as get_read_webhook_list_version_key,
 )
 from data_read_core.write_reactions._cache_keys import (
+    get_account_list_version_key,
+    get_account_postings_version_key,
     get_single_transaction_key,
     get_single_wallet_key,
     get_single_webhook_key,
@@ -55,3 +63,25 @@ def test_webhook_write_keys_match_read_side_keys():
     assert get_single_webhook_key("wh1") == get_read_single_webhook_key("wh1")
     assert get_webhook_list_version_key(7) == get_read_webhook_list_version_key(7)
     assert get_webhook_events_key("wh1") == get_read_webhook_events_key("wh1")
+
+
+def test_account_list_version_key_is_per_user():
+    assert get_account_list_version_key(7) == "ver:accounts:7"
+
+
+def test_account_postings_version_key_is_per_account():
+    assert get_account_postings_version_key("a1") == "ver:account_postings:a1"
+
+
+def test_account_write_keys_match_read_side_keys():
+    """The bump and the lookup are written in two different slices. If they
+    ever disagree the cache silently stops invalidating — pages keep serving a
+    ledger that has already moved."""
+
+    assert get_account_list_version_key(7) == get_read_account_list_version_key(7)
+    assert get_account_postings_version_key("a1") == get_read_account_postings_version_key("a1")
+
+
+def test_account_namespaces_do_not_collide_with_wallets_or_transactions():
+    assert get_account_list_version_key(7) != get_wallet_list_version_key(7)
+    assert get_account_list_version_key(7) != get_transaction_list_version_key(7)

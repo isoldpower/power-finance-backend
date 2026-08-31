@@ -138,17 +138,37 @@ Concurrent-connection limits belong on Push Service itself. Its route also uses
 1-hour proxy timeouts (SSE is long-lived) with nginx proxy buffering disabled
 (`KONG_NGINX_PROXY_PROXY_BUFFERING=off`).
 
+`/api/v1/chat` (ai-service WebSocket) is rate-limited the same way, which is to
+say not at all, and for the same reason: a socket is one request no matter how
+many messages cross it, so the per-request counters would only ever cap how
+often a client reconnects. Per-message limits belong on AI Service — worth
+having there once the socket does anything expensive, since an assistant turn
+costs far more than a notification. Being long-lived in the same way, it gets
+the same 1-hour proxy timeouts rather than the request-shaped ones the read
+and write routes use.
+
+The socket carries no token of its own. The browser WebSocket API cannot set
+request headers, so a client that cannot send `Authorization` on the handshake
+cannot open this route — the same constraint the SSE stream already lives with,
+and the same one that would have to be solved (subprotocol or query parameter)
+before a plain `new WebSocket(...)` works from a page.
+
 There is one public surface, `/api/v1`, and the read/write split lives in the
 router rather than in the paths a client types: reads and writes of the same
 resource share a URL and differ only by method. `GET` goes to the Read Service,
 `POST`/`PUT`/`PATCH`/`DELETE` to the Write Service.
 
-Two kinds of route beat that bare prefix by being longer:
+Three kinds of route beat that bare prefix by being longer:
 
 - the search endpoints (`/api/v1/{wallets,transactions,webhooks}/search`), which
   are reads that arrive as `POST` because a filter tree does not survive a query
-  string, and are routed to the Read Service;
-- `/api/v1/notifications/stream`, which is routed to Push Service.
+  string. Their longer path outranks the write route's bare `/api/v1`, which is
+  what keeps them on the read side without inventing a separate URL space for
+  them;
+- `/api/v1/notifications/stream`, which is routed to Push Service;
+- `/api/v1/chat`, which is routed to AI Service. A WebSocket handshake arrives
+  as a `GET`, so without the longer path the upgrade would be offered to Read
+  Service, which does not speak it.
 
 `/api/v1/fallback-reads/…` is internal to the `read-fallback` plugin and is
 never a public path.

@@ -3,9 +3,18 @@ include:
   - ../../infrastructure/kafka/compose.yaml
   - ./compose.elastic.yaml
 
+x-read-database-env: &read-database-env
+  DJANGO_SETTINGS_MODULE: read_service.settings.local
+  SECRET_KEY: ${READ_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+  DATABASE_HOST: postgres-read
+  DATABASE_PORT: 5432
+  DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
+  DATABASE_USER: ${READ_DATABASE_USER:-postgres}
+  DATABASE_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
+
 x-elasticsearch-env: &elasticsearch-env
   ELASTICSEARCH_HOSTS: https://es01:9200
-  ELASTICSEARCH_USERNAME: elastic
+  ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME:-elastic}
   ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD:-changeme}
   ELASTICSEARCH_CA_CERTS: /certs/ca/ca.crt
   ELASTICSEARCH_VERIFY_CERTS: "true"
@@ -15,6 +24,19 @@ services:
     healthcheck:
       interval: 250ms
       start_period: 0s
+
+  read-migrate:
+    build:
+      context: ../..
+      dockerfile: services/read-service/Dockerfile
+    image: power-finance/read-service:dev
+    restart: "no"
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    environment:
+      <<: *read-database-env
+    depends_on:
+      postgres-read:
+        condition: service_healthy
 
   read-service:
     build:
@@ -46,6 +68,8 @@ services:
     depends_on:
       postgres-read:
         condition: service_healthy
+      read-migrate:
+        condition: service_completed_successfully
       read-redis:
         condition: service_healthy
       read-es-init:
@@ -95,6 +119,8 @@ services:
         condition: service_healthy
       postgres-read:
         condition: service_healthy
+      read-migrate:
+        condition: service_completed_successfully
       read-redis:
         condition: service_healthy
       read-es-init:

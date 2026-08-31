@@ -15,6 +15,7 @@ class TransactionFacts:
     amount: Decimal
     created_at: datetime
 
+    currency_code: str = ""
     name: str = ""
     category: str = ""
     evidence_url: str = ""

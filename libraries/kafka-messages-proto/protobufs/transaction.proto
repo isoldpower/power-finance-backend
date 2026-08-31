@@ -29,7 +29,8 @@ message TransactionCreated {
   string chain_id = 19;
   string container_kind = 20;
 
-  reserved 21, 22;
+  string currency_code = 21;
+  reserved 22;
 }
 
 message TransactionDeleted {

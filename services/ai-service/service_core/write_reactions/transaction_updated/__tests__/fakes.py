@@ -33,6 +33,7 @@ def build_transaction_facts(
     *,
     amount: Decimal = Decimal("125.00"),
     name: str = "Groceries",
+    currency_code: str = "EUR",
 ) -> TransactionFacts:
     """The facts a dispatcher is handed, without a database to read them from."""
 
@@ -43,6 +44,7 @@ def build_transaction_facts(
         container_kind="wallet",
         amount=amount,
         created_at=datetime(2026, 8, 25, 12, 0, tzinfo=UTC),
+        currency_code=currency_code,
         name=name,
         category="food",
         origin="manual",
@@ -59,3 +61,24 @@ TEMPLATE_ACCOUNTS: tuple[TemplateAccount, ...] = (
 
 def build_template_dispatcher(accounts) -> TemplateDispatcher:
     return TemplateDispatcher(accounts, TEMPLATE_ACCOUNTS)
+
+
+class FixedRates:
+    """An `ExchangeRates` that quotes what the test says.
+
+    Booking multiplies by a rate, so without this the arithmetic under test
+    would be whatever the live feed happened to say today — and the suite would
+    need the internet to pass. Same-currency short-circuits to 1, as the real
+    service does, so a test only has to name the rate it cares about.
+    """
+
+    def __init__(self, rate: Decimal = Decimal(1)) -> None:
+        self.rate = rate
+        self.asked: list[tuple[str, str]] = []
+
+    async def rate_between(self, base_code: str, quote_code: str) -> tuple[Decimal, object]:
+        self.asked.append((base_code, quote_code))
+        if base_code.upper() == quote_code.upper():
+            return Decimal(1), None
+
+        return self.rate, None

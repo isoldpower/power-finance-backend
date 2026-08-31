@@ -9,7 +9,13 @@ from ..contracts import TransactionFacts
 from ..repositories import ProjectedTransactionRepository
 from ._facts import facts_of
 
-_REPROJECTED_FIELDS = ("amount", "name", "category", "evidence_url")
+_REPROJECTED_FIELDS = (
+    "amount",
+    "currency_code",
+    "name",
+    "category",
+    "evidence_url",
+)
 
 
 class SqlAlchemyProjectedTransactionRepository(ProjectedTransactionRepository):
@@ -31,6 +37,7 @@ class SqlAlchemyProjectedTransactionRepository(ProjectedTransactionRepository):
             "container_id": facts.container_id,
             "container_kind": facts.container_kind,
             "amount": facts.amount,
+            "currency_code": facts.currency_code,
             "name": facts.name,
             "category": facts.category,
             "evidence_url": facts.evidence_url,

@@ -38,6 +38,9 @@ type TransactionCreated struct {
 	Origin        string                 `protobuf:"bytes,18,opt,name=origin,proto3" json:"origin,omitempty"`
 	ChainId       string                 `protobuf:"bytes,19,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
 	ContainerKind string                 `protobuf:"bytes,20,opt,name=container_kind,json=containerKind,proto3" json:"container_kind,omitempty"`
+	// The container's currency at the moment of creation. A transaction cannot
+	// change container, so this never changes for a given transaction id.
+	CurrencyCode  string `protobuf:"bytes,21,opt,name=currency_code,json=currencyCode,proto3" json:"currency_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -166,6 +169,13 @@ func (x *TransactionCreated) GetChainId() string {
 func (x *TransactionCreated) GetContainerKind() string {
 	if x != nil {
 		return x.ContainerKind
+	}
+	return ""
+}
+
+func (x *TransactionCreated) GetCurrencyCode() string {
+	if x != nil {
+		return x.CurrencyCode
 	}
 	return ""
 }
@@ -498,7 +508,7 @@ var File_transaction_proto protoreflect.FileDescriptor
 
 const file_transaction_proto_rawDesc = "" +
 	"\n" +
-	"\x11transaction.proto\x12\x17power_finance.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfc\x03\n" +
+	"\x11transaction.proto\x12\x17power_finance.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9b\x04\n" +
 	"\x12TransactionCreated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -516,7 +526,8 @@ const file_transaction_proto_rawDesc = "" +
 	"\fevidence_url\x18\x11 \x01(\tR\vevidenceUrl\x12\x16\n" +
 	"\x06origin\x18\x12 \x01(\tR\x06origin\x12\x19\n" +
 	"\bchain_id\x18\x13 \x01(\tR\achainId\x12%\n" +
-	"\x0econtainer_kind\x18\x14 \x01(\tR\rcontainerKindJ\x04\b\x15\x10\x16J\x04\b\x16\x10\x17\"\x84\x03\n" +
+	"\x0econtainer_kind\x18\x14 \x01(\tR\rcontainerKind\x12#\n" +
+	"\rcurrency_code\x18\x15 \x01(\tR\fcurrencyCodeJ\x04\b\x16\x10\x17\"\x84\x03\n" +
 	"\x12TransactionDeleted\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +

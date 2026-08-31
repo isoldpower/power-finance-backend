@@ -79,11 +79,21 @@ async def test_a_negative_amount_still_produces_positive_legs():
     assert [leg.amount for leg in postings.legs] == [Decimal("40.00"), Decimal("40.00")]
 
 
-async def test_legs_carry_no_currency():
-    """Not an oversight: `TransactionUpdated` carries no currency code, so the
-    dispatcher has nothing to denominate them with."""
+async def test_legs_carry_the_transaction_s_currency():
+    """Re-valued legs are denominated the same as the originals: the currency
+    comes from the projection, which an update never touches."""
 
-    postings = await build_template_dispatcher(_accounts()).dispatch(build_transaction_facts())
+    postings = await build_template_dispatcher(_accounts()).dispatch(
+        build_transaction_facts(currency_code="JPY")
+    )
+
+    assert {leg.currency_code for leg in postings.legs} == {"JPY"}
+
+
+async def test_a_transaction_with_no_known_currency_leaves_the_legs_undenominated():
+    postings = await build_template_dispatcher(_accounts()).dispatch(
+        build_transaction_facts(currency_code="")
+    )
 
     assert {leg.currency_code for leg in postings.legs} == {None}
 

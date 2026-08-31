@@ -33,6 +33,7 @@ def make_transaction_created(
     user_id: int = USER_ID,
     amount: str = "125.00",
     name: str = "Groceries",
+    currency_code: str = "EUR",
 ) -> TransactionCreated:
     return TransactionCreated(
         event_id="evt-1",
@@ -40,6 +41,7 @@ def make_transaction_created(
         wallet_id=str(CONTAINER_ID),
         user_id=user_id,
         amount=amount,
+        currency_code=currency_code,
         name=name,
         category="food",
         origin="manual",

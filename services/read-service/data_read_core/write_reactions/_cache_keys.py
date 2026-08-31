@@ -35,6 +35,14 @@ def get_notification_list_version_key(user_id: int) -> str:
     return f"ver:notifications:{user_id}"
 
 
+def get_account_list_version_key(user_id: int) -> str:
+    return f"ver:accounts:{user_id}"
+
+
+def get_account_postings_version_key(account_id: str) -> str:
+    return f"ver:account_postings:{account_id}"
+
+
 def get_single_webhook_key(webhook_id: str) -> str:
     return f"read:webhook:{webhook_id}"
 

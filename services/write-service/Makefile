@@ -14,8 +14,8 @@ run: ## Start the Write Service locally with uvicorn (autoreload, no docker)
 		--reload --host $(UVICORN_HOST) --port $(UVICORN_PORT)
 
 .PHONY: test
-test: ## Run Write Service tests (sqlite, hermetic)
-	uv run python manage.py test --settings=write_service.settings.test
+test: ## Run Write Service tests (pytest, sqlite, hermetic)
+	uv run pytest -q
 
 .PHONY: build-image
 build-image: ## Build the Write Service Docker image (context = repo root)

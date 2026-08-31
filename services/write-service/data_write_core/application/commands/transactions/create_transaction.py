@@ -102,6 +102,7 @@ class CreateTransactionCommandHandler(CommandHandlerBase[TransactionDTO], LoadCo
         latest_version = await self._persist(
             aggregate,
             command.user_external_id,
+            container.currency_code,
         )
         transaction_dto = transaction_to_dto(
             aggregate,
@@ -111,7 +112,12 @@ class CreateTransactionCommandHandler(CommandHandlerBase[TransactionDTO], LoadCo
         await self._publish_domain_events(aggregate)
         return transaction_dto, latest_version
 
-    async def _persist(self, aggregate: TransactionAggregate, partition_key: str) -> int:
+    async def _persist(
+        self,
+        aggregate: TransactionAggregate,
+        partition_key: str,
+        currency_code: str,
+    ) -> int:
         return await run_transaction_saga(
             postgres_steps=[
                 persist_transaction_step(
@@ -120,7 +126,13 @@ class CreateTransactionCommandHandler(CommandHandlerBase[TransactionDTO], LoadCo
                 )
             ],
             flows=aggregate.flows,
-            entries=[transaction_created_entry(aggregate, partition_key)],
+            entries=[
+                transaction_created_entry(
+                    aggregate,
+                    partition_key,
+                    currency_code,
+                )
+            ],
             money_flow_repository=self._money_flow_repository,
             outbox_repository=self._outbox_repository,
         )
@@ -142,7 +154,11 @@ def persist_transaction_step(
     )
 
 
-def transaction_created_entry(aggregate: TransactionAggregate, partition_key: str):
+def transaction_created_entry(
+    aggregate: TransactionAggregate,
+    partition_key: str,
+    currency_code: str,
+):
     root = aggregate.root
 
     return build_outbox_entry(
@@ -158,6 +174,7 @@ def transaction_created_entry(aggregate: TransactionAggregate, partition_key: st
             evidence_url=root.evidence_url or "",
             origin=str(root.origin),
             chain_id=str(root.chain_id) if root.chain_id else "",
+            currency_code=currency_code,
         ),
         aggregate_type="transaction",
         aggregate_id=aggregate.unique_id,

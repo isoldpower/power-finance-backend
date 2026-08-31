@@ -32,6 +32,7 @@ class TemplateDispatcher:
                     debit=account.debit,
                     amount=transaction_amount,
                     position=position,
+                    currency_code=transaction.currency_code or None,
                 )
                 for position, (account, account_id) in enumerate(
                     zip(self._template, account_ids, strict=True)

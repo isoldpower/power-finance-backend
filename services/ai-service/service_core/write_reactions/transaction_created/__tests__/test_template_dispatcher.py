@@ -79,11 +79,25 @@ async def test_a_negative_amount_still_produces_positive_legs():
     assert [leg.amount for leg in postings.legs] == [Decimal("40.00"), Decimal("40.00")]
 
 
-async def test_legs_carry_no_currency():
-    """Not an oversight: `TransactionCreated` carries no currency code, so the
-    dispatcher has nothing to denominate them with."""
+async def test_legs_carry_the_transaction_s_currency():
+    """A leg is a claim about money, and money without a unit is a number. The
+    currency comes from the container the transaction was created against."""
 
-    postings = await build_template_dispatcher(_accounts()).dispatch(build_transaction_facts())
+    postings = await build_template_dispatcher(_accounts()).dispatch(
+        build_transaction_facts(currency_code="JPY")
+    )
+
+    assert {leg.currency_code for leg in postings.legs} == {"JPY"}
+
+
+async def test_a_transaction_with_no_known_currency_leaves_the_legs_undenominated():
+    """Transactions projected before `TransactionCreated` carried a currency
+    keep an empty code. Storing that as `""` would claim the currency is known
+    and empty; `None` says it was never recorded."""
+
+    postings = await build_template_dispatcher(_accounts()).dispatch(
+        build_transaction_facts(currency_code="")
+    )
 
     assert {leg.currency_code for leg in postings.legs} == {None}
 

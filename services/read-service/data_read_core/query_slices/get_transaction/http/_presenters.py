@@ -25,6 +25,24 @@ async def present_one(transaction: TransactionDTO) -> dict:
         "category": transaction.category,
         "chain_id": transaction.chain_id,
         "evidence": ({"url": transaction.evidence_url} if transaction.evidence_url else None),
-        "postings": [],
-        "analysis": None,
+        "postings": [
+            await _present_posting(posting, transaction.currency)
+            for posting in transaction.postings
+        ],
+        "analysis": transaction.analysis,
+    }
+
+
+async def _present_posting(posting: dict, fallback_currency: str) -> dict:
+    return {
+        "id": posting["id"],
+        "account_id": posting["account_id"],
+        "title": posting["title"],
+        "icon": posting["icon"],
+        "debit": posting["debit"],
+        "position": posting["position"],
+        "money": await money_at_scale(
+            Decimal(posting["amount"]),
+            posting["currency_code"] or fallback_currency,
+        ),
     }

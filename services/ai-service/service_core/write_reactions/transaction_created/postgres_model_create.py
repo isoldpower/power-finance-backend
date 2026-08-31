@@ -28,6 +28,7 @@ class ProjectTransaction(Effect):
             container_kind=payload.container_kind,
             amount=parse_money(payload.amount),
             created_at=payload.created_at.ToDatetime(tzinfo=UTC),
+            currency_code=payload.currency_code,
             name=payload.name,
             category=payload.category,
             evidence_url=payload.evidence_url,

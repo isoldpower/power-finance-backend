@@ -38,6 +38,7 @@ private static final long serialVersionUID = 0L;
     origin_ = "";
     chainId_ = "";
     containerKind_ = "";
+    currencyCode_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -523,6 +524,55 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int CURRENCY_CODE_FIELD_NUMBER = 21;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object currencyCode_ = "";
+  /**
+   * <pre>
+   * The container's currency at the moment of creation. A transaction cannot
+   * change container, so this never changes for a given transaction id.
+   * </pre>
+   *
+   * <code>string currency_code = 21;</code>
+   * @return The currencyCode.
+   */
+  @java.lang.Override
+  public java.lang.String getCurrencyCode() {
+    java.lang.Object ref = currencyCode_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      currencyCode_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * The container's currency at the moment of creation. A transaction cannot
+   * change container, so this never changes for a given transaction id.
+   * </pre>
+   *
+   * <code>string currency_code = 21;</code>
+   * @return The bytes for currencyCode.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getCurrencyCodeBytes() {
+    java.lang.Object ref = currencyCode_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      currencyCode_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -579,6 +629,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(containerKind_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 20, containerKind_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(currencyCode_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 21, currencyCode_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -634,6 +687,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(containerKind_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(20, containerKind_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(currencyCode_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(21, currencyCode_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -683,6 +739,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getChainId())) return false;
     if (!getContainerKind()
         .equals(other.getContainerKind())) return false;
+    if (!getCurrencyCode()
+        .equals(other.getCurrencyCode())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -726,6 +784,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getChainId().hashCode();
     hash = (37 * hash) + CONTAINER_KIND_FIELD_NUMBER;
     hash = (53 * hash) + getContainerKind().hashCode();
+    hash = (37 * hash) + CURRENCY_CODE_FIELD_NUMBER;
+    hash = (53 * hash) + getCurrencyCode().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -886,6 +946,7 @@ private static final long serialVersionUID = 0L;
       origin_ = "";
       chainId_ = "";
       containerKind_ = "";
+      currencyCode_ = "";
       return this;
     }
 
@@ -968,6 +1029,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00002000) != 0)) {
         result.containerKind_ = containerKind_;
       }
+      if (((from_bitField0_ & 0x00004000) != 0)) {
+        result.currencyCode_ = currencyCode_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1043,6 +1107,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getContainerKind().isEmpty()) {
         containerKind_ = other.containerKind_;
         bitField0_ |= 0x00002000;
+        onChanged();
+      }
+      if (!other.getCurrencyCode().isEmpty()) {
+        currencyCode_ = other.currencyCode_;
+        bitField0_ |= 0x00004000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1145,6 +1214,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00002000;
               break;
             } // case 162
+            case 170: {
+              currencyCode_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00004000;
+              break;
+            } // case 170
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2184,6 +2258,103 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       containerKind_ = value;
       bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object currencyCode_ = "";
+    /**
+     * <pre>
+     * The container's currency at the moment of creation. A transaction cannot
+     * change container, so this never changes for a given transaction id.
+     * </pre>
+     *
+     * <code>string currency_code = 21;</code>
+     * @return The currencyCode.
+     */
+    public java.lang.String getCurrencyCode() {
+      java.lang.Object ref = currencyCode_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        currencyCode_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The container's currency at the moment of creation. A transaction cannot
+     * change container, so this never changes for a given transaction id.
+     * </pre>
+     *
+     * <code>string currency_code = 21;</code>
+     * @return The bytes for currencyCode.
+     */
+    public com.google.protobuf.ByteString
+        getCurrencyCodeBytes() {
+      java.lang.Object ref = currencyCode_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        currencyCode_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The container's currency at the moment of creation. A transaction cannot
+     * change container, so this never changes for a given transaction id.
+     * </pre>
+     *
+     * <code>string currency_code = 21;</code>
+     * @param value The currencyCode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCurrencyCode(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      currencyCode_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The container's currency at the moment of creation. A transaction cannot
+     * change container, so this never changes for a given transaction id.
+     * </pre>
+     *
+     * <code>string currency_code = 21;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCurrencyCode() {
+      currencyCode_ = getDefaultInstance().getCurrencyCode();
+      bitField0_ = (bitField0_ & ~0x00004000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The container's currency at the moment of creation. A transaction cannot
+     * change container, so this never changes for a given transaction id.
+     * </pre>
+     *
+     * <code>string currency_code = 21;</code>
+     * @param value The bytes for currencyCode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCurrencyCodeBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      currencyCode_ = value;
+      bitField0_ |= 0x00004000;
       onChanged();
       return this;
     }

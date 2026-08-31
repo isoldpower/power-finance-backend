@@ -1,5 +1,15 @@
-from .http import chat_router
+from .advice_conversation import (
+    ConnectionContext,
+    MessageHandler,
+    ProcessShutdownSignal,
+    Termination,
+    build_chat_router,
+)
 
 __all__ = [
-    "chat_router",
+    "ConnectionContext",
+    "MessageHandler",
+    "ProcessShutdownSignal",
+    "Termination",
+    "build_chat_router",
 ]

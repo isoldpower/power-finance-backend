@@ -16,6 +16,13 @@ from kafka_consumer_py import (
 )
 
 from ._types import ProbesDictionary
+from .account_events import (
+    subscribe_account_created,
+    subscribe_account_posting_created,
+    subscribe_account_posting_deleted,
+    subscribe_account_postings_dispatched,
+    subscribe_account_updated,
+)
 from .goal_events import (
     subscribe_goal_created,
     subscribe_goal_deleted,
@@ -48,6 +55,11 @@ from .webhook_events import (
 
 _KNOWN_HANDLERS: list[Callable[[EventRouter, ProbesDictionary], None]] = [
     subscribe_user_synced,
+    subscribe_account_created,
+    subscribe_account_updated,
+    subscribe_account_posting_created,
+    subscribe_account_posting_deleted,
+    subscribe_account_postings_dispatched,
     subscribe_wallet_deleted,
     subscribe_wallet_updated,
     subscribe_wallet_created,

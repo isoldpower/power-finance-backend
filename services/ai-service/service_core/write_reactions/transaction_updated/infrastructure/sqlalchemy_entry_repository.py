@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from service_core.shared.db_connection import EntryModel
 
-from ..contracts import PostingLeg, RemovedPosting, ReplacedPostings, StoredPosting
+from ..contracts import BookedLeg, RemovedPosting, ReplacedPostings, StoredPosting
 from ..repositories import EntryRepository
 
 
@@ -28,12 +28,13 @@ class SqlAlchemyEntryRepository(EntryRepository):
         self,
         transaction_id: UUID,
         user_id: int,
-        legs: Sequence[PostingLeg],
+        legs: Sequence[BookedLeg],
         now: datetime,
     ) -> ReplacedPostings:
         removed_postings = await self._remove(transaction_id)
-        created_postings = [StoredPosting(posting_id=uuid4(), leg=leg) for leg in legs]
-        for posting in created_postings:
+        created_postings = [StoredPosting(posting_id=uuid4(), leg=booked.leg) for booked in legs]
+
+        for posting, booked in zip(created_postings, legs, strict=True):
             posting_left = posting.leg
             self._session.add(
                 EntryModel(
@@ -46,13 +47,15 @@ class SqlAlchemyEntryRepository(EntryRepository):
                     debit=posting_left.debit,
                     amount=posting_left.amount,
                     currency_code=posting_left.currency_code,
+                    book_amount=booked.book_amount,
+                    book_currency=booked.book_currency,
+                    conversion_rate=booked.conversion_rate,
                     position=posting_left.position,
                     created_at=now,
                 )
             )
 
         await self._session.flush()
-
         return ReplacedPostings(
             removed=tuple(removed_postings),
             created=tuple(created_postings),

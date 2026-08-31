@@ -39,4 +39,4 @@ packages = ["ai_service", "service_core", "background_workers", "health_probes"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["service_core", "background_workers", "health_probes"]
+testpaths = ["service_core", "background_workers", "health_probes", "ai_service"]

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from service_core.shared.db_connection import AccountModel
 
-from ..contracts import AccountRecord, AccountSpec
+from ..contracts import BOOK_CURRENCY, AccountRecord, AccountSpec
 from ..repositories import AccountRepository
 
 
@@ -34,6 +34,7 @@ class SqlAlchemyAccountRepository(AccountRepository):
                         "group": spec.group,
                         "name": spec.name,
                         "balance": 0,
+                        "currency_code": BOOK_CURRENCY,
                         "created_at": now,
                     }
                     for spec in accounts

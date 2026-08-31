@@ -19,6 +19,16 @@ os.environ.setdefault("KAFKA_RETRY_TOPIC", "ai-service.retry")
 os.environ.setdefault("KAFKA_DLQ_TOPIC", "ai-service.dlq")
 os.environ.setdefault("LOG_LEVEL", "INFO")
 
+# No test may reach the live rate feed: booking multiplies by whatever it says,
+# so a suite that called it would assert today's exchange rate. Pointed at the
+# discard port, which refuses instantly — a dispatch that forgot to inject rates
+# fails loudly here instead of quietly depending on the internet.
+os.environ.setdefault("EXCHANGE_RATES_PROVIDER", "open-er-api")
+os.environ.setdefault("EXCHANGE_RATES_BASE_URL", "http://127.0.0.1:9/unreachable-in-tests")
+os.environ.setdefault("EXCHANGE_RATES_TIMEOUT_SECONDS", "0.25")
+os.environ.setdefault("EXCHANGE_RATES_TTL_SECONDS", "900")
+os.environ.setdefault("EXCHANGE_RATES_MAX_AGE_SECONDS", "172800")
+
 import pytest  # noqa: E402
 from service_core.shared.db_connection import (  # noqa: E402
     ModelBase,

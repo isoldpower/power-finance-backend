@@ -1,7 +1,7 @@
 from .sort_direction import SortDirection
 from .sort_key import SortKey
 from .sort_order import SortOrder
-from .value_codecs import BOOLEAN_CODEC, DATETIME_CODEC, UUID_CODEC
+from .value_codecs import BOOLEAN_CODEC, DATETIME_CODEC, TEXT_CODEC, UUID_CODEC
 
 CREATED_AT_DESC = SortOrder(
     keys=(
@@ -23,5 +23,13 @@ TRANSACTION_FEED = SortOrder(
         SortKey("created_at", SortDirection.DESCENDING, DATETIME_CODEC),
         SortKey("chain_sort", SortDirection.ASCENDING, UUID_CODEC),
         SortKey("id", SortDirection.DESCENDING, UUID_CODEC),
+    )
+)
+
+ACCOUNT_CHART = SortOrder(
+    keys=(
+        SortKey("group", SortDirection.ASCENDING, TEXT_CODEC),
+        SortKey("name", SortDirection.ASCENDING, TEXT_CODEC),
+        SortKey("id", SortDirection.ASCENDING, UUID_CODEC),
     )
 )

@@ -34,14 +34,14 @@ def _command(**overrides) -> CreateNewWalletCommand:
     return CreateNewWalletCommand(**defaults)
 
 
-def _wallet(zero_balance: str = "0") -> WalletEntity:
+def _wallet(zero_balance: str = "0", currency_code: str = "USD") -> WalletEntity:
     moment = datetime(2026, 1, 1)
     return WalletEntity.create(
         id=WALLET_ID,
         user_id="7",
         data=WalletData(
             title="New Card",
-            currency_code="USD",
+            currency_code=currency_code,
             zero_balance=Decimal(zero_balance),
         ),
         created_at=moment,
@@ -121,6 +121,19 @@ class TestOpeningOutboxEntries:
         assert opening.origin_flow.container_id == UUID(WALLET_ID)
         assert opening.amount == Decimal("50.00")
         assert opening.root.name == OPENING_BALANCE_NAME
+
+    def test_the_opening_transaction_is_denominated_in_the_wallet_s_currency(self):
+        """The opening balance is a real transaction, so ai-service posts it
+        like any other and needs a currency for it. The only source is the
+        wallet being created — there is no container row to read yet."""
+
+        entries = CreateNewWalletCommandHandler._outbox_entries(
+            _wallet(currency_code="JPY"),
+            self._opening_transaction("50.00"),
+            partition_key="user_abc",
+        )
+
+        assert entries[1].payload["currency_code"] == "JPY"
 
     def test_the_wallet_event_carries_the_datum_as_a_decimal_string(self):
         entries = CreateNewWalletCommandHandler._outbox_entries(

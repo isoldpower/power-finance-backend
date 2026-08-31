@@ -171,4 +171,26 @@ public interface TransactionCreatedOrBuilder extends
    */
   com.google.protobuf.ByteString
       getContainerKindBytes();
+
+  /**
+   * <pre>
+   * The container's currency at the moment of creation. A transaction cannot
+   * change container, so this never changes for a given transaction id.
+   * </pre>
+   *
+   * <code>string currency_code = 21;</code>
+   * @return The currencyCode.
+   */
+  java.lang.String getCurrencyCode();
+  /**
+   * <pre>
+   * The container's currency at the moment of creation. A transaction cannot
+   * change container, so this never changes for a given transaction id.
+   * </pre>
+   *
+   * <code>string currency_code = 21;</code>
+   * @return The bytes for currencyCode.
+   */
+  com.google.protobuf.ByteString
+      getCurrencyCodeBytes();
 }

@@ -5,7 +5,12 @@ from data_read_core.shared.query_results import FetchedResource
 from .cache_worker import CacheWorker
 from .dtos import GetTransactionQuery, TransactionDTO
 from .exceptions import TransactionNotFoundError
-from .infra import fetch_owned_transaction, get_redis_client
+from .infra import (
+    fetch_owned_transaction,
+    fetch_transaction_dispatch,
+    fetch_transaction_postings,
+    get_redis_client,
+)
 from .logger_shortcuts import log_served_from_cache, log_served_from_store
 
 
@@ -31,7 +36,11 @@ class GetTransactionQueryHandler:
         if model is None:
             raise TransactionNotFoundError()
 
-        transaction = TransactionDTO.from_read_model(model)
+        transaction = TransactionDTO.from_read_model(
+            model,
+            postings=await fetch_transaction_postings(query.transaction_id),
+            dispatch=await fetch_transaction_dispatch(query.transaction_id),
+        )
         await self._cache_worker.save_to_cache(transaction)
 
         log_served_from_store(query.transaction_id)

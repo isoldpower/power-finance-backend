@@ -226,7 +226,13 @@ class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
         if opening_transaction is None:
             return entries
 
-        entries.append(transaction_created_entry(opening_transaction, partition_key))
+        entries.append(
+            transaction_created_entry(
+                opening_transaction,
+                partition_key,
+                new_wallet.currency_code,
+            )
+        )
         return entries
 
     def _get_save_unsave_lambdas(

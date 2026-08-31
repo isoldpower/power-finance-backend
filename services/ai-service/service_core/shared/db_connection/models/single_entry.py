@@ -58,6 +58,10 @@ class EntryModel(ModelBase):
     debit: Mapped[bool] = mapped_column(Boolean)
     amount: Mapped[Decimal] = mapped_column(Numeric(20, 2))
     currency_code: Mapped[str | None] = mapped_column(String(3), default=None)
+
+    book_amount: Mapped[Decimal] = mapped_column(Numeric(20, 2))
+    book_currency: Mapped[str] = mapped_column(String(3), default="USD")
+    conversion_rate: Mapped[Decimal] = mapped_column(Numeric(24, 12))
     position: Mapped[int] = mapped_column(Integer)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

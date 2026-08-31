@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from service_core.shared.db_connection import EntryModel
 
-from ..contracts import PostingLeg, RemovedPosting, ReplacedPostings, StoredPosting
+from ..contracts import BookedLeg, RemovedPosting, ReplacedPostings, StoredPosting
 from ..repositories import EntryRepository
 
 
@@ -28,13 +28,13 @@ class SqlAlchemyEntryRepository(EntryRepository):
         self,
         transaction_id: UUID,
         user_id: int,
-        legs: Sequence[PostingLeg],
+        legs: Sequence[BookedLeg],
         now: datetime,
     ) -> ReplacedPostings:
         removed_transaction = await self._remove(transaction_id)
 
-        created_rows = [StoredPosting(posting_id=uuid4(), leg=leg) for leg in legs]
-        for posting in created_rows:
+        created_rows = [StoredPosting(posting_id=uuid4(), leg=booked.leg) for booked in legs]
+        for posting, booked in zip(created_rows, legs, strict=True):
             leg = posting.leg
             self._session.add(
                 EntryModel(
@@ -47,6 +47,9 @@ class SqlAlchemyEntryRepository(EntryRepository):
                     debit=leg.debit,
                     amount=leg.amount,
                     currency_code=leg.currency_code,
+                    book_amount=booked.book_amount,
+                    book_currency=booked.book_currency,
+                    conversion_rate=booked.conversion_rate,
                     position=leg.position,
                     created_at=now,
                 )
@@ -59,7 +62,7 @@ class SqlAlchemyEntryRepository(EntryRepository):
         )
 
     async def _remove(self, transaction_id: UUID) -> list[RemovedPosting]:
-        gone = await self._session.execute(
+        gone_postings = await self._session.execute(
             delete(EntryModel)
             .where(EntryModel.transaction_id == transaction_id)
             .returning(EntryModel.id, EntryModel.account_id)
@@ -67,5 +70,5 @@ class SqlAlchemyEntryRepository(EntryRepository):
 
         return [
             RemovedPosting(posting_id=posting_id, account_id=account_id)
-            for posting_id, account_id in gone.all()
+            for posting_id, account_id in gone_postings.all()
         ]

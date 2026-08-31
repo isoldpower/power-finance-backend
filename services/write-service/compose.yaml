@@ -2,7 +2,29 @@
 include:
   - ../../infrastructure/debezium/compose.yaml
 
+x-write-database-env: &write-database-env
+  DJANGO_SETTINGS_MODULE: write_service.settings.local
+  SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+  DATABASE_HOST: postgres-write
+  DATABASE_PORT: 5432
+  DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
+  DATABASE_USER: ${DATABASE_USER:-postgres}
+  DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+
 services:
+  write-migrate:
+    build:
+      context: ../..
+      dockerfile: services/write-service/Dockerfile
+    image: power-finance/write-service:dev
+    restart: "no"
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    environment:
+      <<: *write-database-env
+    depends_on:
+      postgres-write:
+        condition: service_healthy
+
   write-service:
     build:
       context: ../..
@@ -33,6 +55,8 @@ services:
     depends_on:
       postgres-write:
         condition: service_healthy
+      write-migrate:
+        condition: service_completed_successfully
       immudb:
         condition: service_started
       write-redis:
@@ -75,6 +99,8 @@ services:
         condition: service_healthy
       postgres-write:
         condition: service_healthy
+      write-migrate:
+        condition: service_completed_successfully
       immudb:
         condition: service_started
       write-redis:
@@ -118,6 +144,8 @@ services:
         condition: service_healthy
       postgres-write:
         condition: service_healthy
+      write-migrate:
+        condition: service_completed_successfully
       immudb:
         condition: service_started
       write-redis:

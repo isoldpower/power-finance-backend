@@ -11,6 +11,7 @@ def facts_of(row: ProjectedTransaction) -> TransactionFacts:
         container_kind=row.container_kind,
         amount=row.amount,
         created_at=row.created_at,
+        currency_code=row.currency_code,
         name=row.name,
         category=row.category,
         evidence_url=row.evidence_url,

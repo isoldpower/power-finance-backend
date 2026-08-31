@@ -98,9 +98,8 @@ test-libraries: | $(HOOK_SENTINEL) ## Run the pytest library suites (kafka-clien
 	cd $(READ_AT_LEAST_LIB_DIR) && uv run pytest -q
 
 .PHONY: test-write
-test-write: | $(HOOK_SENTINEL) ## Run Write Service tests (Django runner, postgres-write on host port 5433)
-	cd $(WRITE_SERVICE_DIR) && uv run python manage.py test \
-		--settings=write_service.settings.test
+test-write: | $(HOOK_SENTINEL) ## Run Write Service tests (pytest, postgres-write on host port 5433)
+	cd $(WRITE_SERVICE_DIR) && uv run pytest -q
 
 .PHONY: test-read
 test-read: | $(HOOK_SENTINEL) ## Run Read Service tests (pytest, postgres-read on host port 5434)

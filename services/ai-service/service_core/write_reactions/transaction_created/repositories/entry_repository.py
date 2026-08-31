@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
-from ..contracts import PostingLeg, ReplacedPostings
+from ..contracts import BookedLeg, ReplacedPostings
 
 
 class EntryRepository(ABC):
@@ -16,7 +16,7 @@ class EntryRepository(ABC):
         self,
         transaction_id: UUID,
         user_id: int,
-        legs: Sequence[PostingLeg],
+        legs: Sequence[BookedLeg],
         now: datetime,
     ) -> ReplacedPostings:
         raise NotImplementedError()
