@@ -46,6 +46,7 @@ class SqlAlchemyAccountRepository(AccountRepository):
                 AccountModel.group,
                 AccountModel.name,
                 AccountModel.balance,
+                AccountModel.currency_code,
                 AccountModel.created_at,
             )
         )
@@ -56,7 +57,8 @@ class SqlAlchemyAccountRepository(AccountRepository):
                 group=group,
                 name=name,
                 balance=balance,
+                currency_code=currency_code,
                 created_at=created_at,
             )
-            for account_id, group, name, balance, created_at in created.all()
+            for account_id, group, name, balance, currency_code, created_at in created.all()
         ]

@@ -34,6 +34,7 @@ private static final long serialVersionUID = 0L;
     accountGroup_ = 0;
     name_ = "";
     balance_ = "";
+    currencyCode_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -316,6 +317,55 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int CURRENCY_CODE_FIELD_NUMBER = 107;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object currencyCode_ = "";
+  /**
+   * <pre>
+   * The book currency the balance is denominated in. Every account of a user
+   * shares it: postings are converted into it before they are summed.
+   * </pre>
+   *
+   * <code>string currency_code = 107;</code>
+   * @return The currencyCode.
+   */
+  @java.lang.Override
+  public java.lang.String getCurrencyCode() {
+    java.lang.Object ref = currencyCode_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      currencyCode_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * The book currency the balance is denominated in. Every account of a user
+   * shares it: postings are converted into it before they are summed.
+   * </pre>
+   *
+   * <code>string currency_code = 107;</code>
+   * @return The bytes for currencyCode.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getCurrencyCodeBytes() {
+    java.lang.Object ref = currencyCode_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      currencyCode_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   public static final int CREATED_AT_FIELD_NUMBER = 120;
   private com.google.protobuf.Timestamp createdAt_;
   /**
@@ -383,6 +433,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(balance_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 106, balance_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(currencyCode_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 107, currencyCode_);
+    }
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(120, getCreatedAt());
     }
@@ -426,6 +479,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(balance_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(106, balance_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(currencyCode_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(107, currencyCode_);
+    }
     if (((bitField0_ & 0x00000002) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(120, getCreatedAt());
@@ -465,6 +521,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getName())) return false;
     if (!getBalance()
         .equals(other.getBalance())) return false;
+    if (!getCurrencyCode()
+        .equals(other.getCurrencyCode())) return false;
     if (hasCreatedAt() != other.hasCreatedAt()) return false;
     if (hasCreatedAt()) {
       if (!getCreatedAt()
@@ -501,6 +559,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getName().hashCode();
     hash = (37 * hash) + BALANCE_FIELD_NUMBER;
     hash = (53 * hash) + getBalance().hashCode();
+    hash = (37 * hash) + CURRENCY_CODE_FIELD_NUMBER;
+    hash = (53 * hash) + getCurrencyCode().hashCode();
     if (hasCreatedAt()) {
       hash = (37 * hash) + CREATED_AT_FIELD_NUMBER;
       hash = (53 * hash) + getCreatedAt().hashCode();
@@ -656,6 +716,7 @@ private static final long serialVersionUID = 0L;
       accountGroup_ = 0;
       name_ = "";
       balance_ = "";
+      currencyCode_ = "";
       createdAt_ = null;
       if (createdAtBuilder_ != null) {
         createdAtBuilder_.dispose();
@@ -726,6 +787,9 @@ private static final long serialVersionUID = 0L;
         result.balance_ = balance_;
       }
       if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.currencyCode_ = currencyCode_;
+      }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
         result.createdAt_ = createdAtBuilder_ == null
             ? createdAt_
             : createdAtBuilder_.build();
@@ -781,6 +845,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getBalance().isEmpty()) {
         balance_ = other.balance_;
         bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      if (!other.getCurrencyCode().isEmpty()) {
+        currencyCode_ = other.currencyCode_;
+        bitField0_ |= 0x00000200;
         onChanged();
       }
       if (other.hasCreatedAt()) {
@@ -859,11 +928,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000100;
               break;
             } // case 850
+            case 858: {
+              currencyCode_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 858
             case 962: {
               input.readMessage(
                   internalGetCreatedAtFieldBuilder().getBuilder(),
                   extensionRegistry);
-              bitField0_ |= 0x00000200;
+              bitField0_ |= 0x00000400;
               break;
             } // case 962
             default: {
@@ -1480,6 +1554,103 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
+    private java.lang.Object currencyCode_ = "";
+    /**
+     * <pre>
+     * The book currency the balance is denominated in. Every account of a user
+     * shares it: postings are converted into it before they are summed.
+     * </pre>
+     *
+     * <code>string currency_code = 107;</code>
+     * @return The currencyCode.
+     */
+    public java.lang.String getCurrencyCode() {
+      java.lang.Object ref = currencyCode_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        currencyCode_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The book currency the balance is denominated in. Every account of a user
+     * shares it: postings are converted into it before they are summed.
+     * </pre>
+     *
+     * <code>string currency_code = 107;</code>
+     * @return The bytes for currencyCode.
+     */
+    public com.google.protobuf.ByteString
+        getCurrencyCodeBytes() {
+      java.lang.Object ref = currencyCode_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        currencyCode_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The book currency the balance is denominated in. Every account of a user
+     * shares it: postings are converted into it before they are summed.
+     * </pre>
+     *
+     * <code>string currency_code = 107;</code>
+     * @param value The currencyCode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCurrencyCode(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      currencyCode_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The book currency the balance is denominated in. Every account of a user
+     * shares it: postings are converted into it before they are summed.
+     * </pre>
+     *
+     * <code>string currency_code = 107;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCurrencyCode() {
+      currencyCode_ = getDefaultInstance().getCurrencyCode();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The book currency the balance is denominated in. Every account of a user
+     * shares it: postings are converted into it before they are summed.
+     * </pre>
+     *
+     * <code>string currency_code = 107;</code>
+     * @param value The bytes for currencyCode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCurrencyCodeBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      currencyCode_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+
     private com.google.protobuf.Timestamp createdAt_;
     private com.google.protobuf.SingleFieldBuilder<
         com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> createdAtBuilder_;
@@ -1488,7 +1659,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the createdAt field is set.
      */
     public boolean hasCreatedAt() {
-      return ((bitField0_ & 0x00000200) != 0);
+      return ((bitField0_ & 0x00000400) != 0);
     }
     /**
      * <code>.google.protobuf.Timestamp created_at = 120;</code>
@@ -1513,7 +1684,7 @@ private static final long serialVersionUID = 0L;
       } else {
         createdAtBuilder_.setMessage(value);
       }
-      bitField0_ |= 0x00000200;
+      bitField0_ |= 0x00000400;
       onChanged();
       return this;
     }
@@ -1527,7 +1698,7 @@ private static final long serialVersionUID = 0L;
       } else {
         createdAtBuilder_.setMessage(builderForValue.build());
       }
-      bitField0_ |= 0x00000200;
+      bitField0_ |= 0x00000400;
       onChanged();
       return this;
     }
@@ -1536,7 +1707,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeCreatedAt(com.google.protobuf.Timestamp value) {
       if (createdAtBuilder_ == null) {
-        if (((bitField0_ & 0x00000200) != 0) &&
+        if (((bitField0_ & 0x00000400) != 0) &&
           createdAt_ != null &&
           createdAt_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
           getCreatedAtBuilder().mergeFrom(value);
@@ -1547,7 +1718,7 @@ private static final long serialVersionUID = 0L;
         createdAtBuilder_.mergeFrom(value);
       }
       if (createdAt_ != null) {
-        bitField0_ |= 0x00000200;
+        bitField0_ |= 0x00000400;
         onChanged();
       }
       return this;
@@ -1556,7 +1727,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp created_at = 120;</code>
      */
     public Builder clearCreatedAt() {
-      bitField0_ = (bitField0_ & ~0x00000200);
+      bitField0_ = (bitField0_ & ~0x00000400);
       createdAt_ = null;
       if (createdAtBuilder_ != null) {
         createdAtBuilder_.dispose();
@@ -1569,7 +1740,7 @@ private static final long serialVersionUID = 0L;
      * <code>.google.protobuf.Timestamp created_at = 120;</code>
      */
     public com.google.protobuf.Timestamp.Builder getCreatedAtBuilder() {
-      bitField0_ |= 0x00000200;
+      bitField0_ |= 0x00000400;
       onChanged();
       return internalGetCreatedAtFieldBuilder().getBuilder();
     }

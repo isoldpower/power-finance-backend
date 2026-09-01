@@ -7,7 +7,7 @@ from data_read_core.shared.logging import (
     log_request_served,
 )
 from data_read_core.shared.pagination import (
-    ACCOUNT_CHART,
+    CREATED_AT_DESC,
     PageRequest,
     build_page,
 )
@@ -21,21 +21,26 @@ from data_read_core.shared.rest_framework import (
 
 from ..dtos import ListAccountsQuery
 from ..query_handler import ListAccountsQueryHandler
-from ._presenters import present_many
-from ._serializers import PaginatedAccountPreviewSerializer
+from ._filters import read_filters
+from ._presenters import present_many, present_meta
+from ._serializers import ChartRequestSerializer, PaginatedAccountPreviewSerializer
 
 
 @extend_schema(
     operation_id="accounts_list",
     summary="List ledger accounts",
     description=(
-        "Retrieve a page of your double-entry chart of accounts, ordered by "
-        "group then name. These accounts are derived by the backend from your "
-        "transactions; they are not created or edited directly."
+        "Retrieve a page of your double-entry chart of accounts, newest first. "
+        "These accounts are derived by the backend from your transactions; they "
+        "are not created or edited directly.\n\n"
+        "`group` narrows the page but never reorders it — assets do not lead "
+        "liabilities. `meta.groups` reports every group regardless, so the tab "
+        "labels do not change when a tab is selected."
     ),
-    parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER],
+    parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER, ChartRequestSerializer],
     responses={
         200: PaginatedAccountPreviewSerializer,
+        409: ErrorResponseSerializer,
         422: ErrorResponseSerializer,
     },
 )
@@ -49,20 +54,38 @@ async def list_accounts(request):
         user_id=request.user.id,
     )
 
-    page_request = PageRequest.from_request(request, ACCOUNT_CHART)
-    fetched = await ListAccountsQueryHandler().handle(
-        ListAccountsQuery(user_id=request.user.id, page=page_request)
+    filters = await read_filters(request)
+    page_request = PageRequest.from_request(
+        request,
+        CREATED_AT_DESC,
+        query_material=filters.as_cache_material(),
+    )
+    fetched_accounts = await ListAccountsQueryHandler().handle(
+        ListAccountsQuery(
+            user_id=request.user.id,
+            page=page_request,
+            filters=filters,
+        )
     )
 
-    page = build_page(fetched.rows, fetched.total, page_request)
+    response_page = build_page(
+        fetched_accounts.rows,
+        fetched_accounts.total,
+        page_request,
+    )
     log_request_served(
         logger,
         "list_accounts",
         user_id=request.user.id,
-        total=page.total,
+        total=response_page.total,
     )
 
     return ok(
-        await present_many(page.items),
-        page.meta(cached=fetched.cached),
+        await present_many(response_page.items),
+        await present_meta(
+            response_page,
+            filters,
+            fetched_accounts.groups,
+            fetched_accounts.cached,
+        ),
     )

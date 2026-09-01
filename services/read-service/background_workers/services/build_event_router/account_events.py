@@ -1,19 +1,8 @@
-"""The ledger events ai-service publishes.
-
-Deliberately not wrapped in `TrackAppliedSeq`: that records one high-water mark
-per user of the *write-service* outbox sequence, and ai-service publishes from
-its own independent sequence. Feeding those numbers into the same counter would
-let an unrelated ledger event advance the mark a client is waiting on and make
-read-your-writes report a write as landed before it was. Read-your-writes on
-postings is not reachable through that counter anyway — ai-service only reacts
-once the client's write has already returned.
-"""
-
 from data_read_core.write_reactions import (
     BumpAccountListVersion,
-    BumpAccountPostingsVersion,
     CreateAccountPostingReadModel,
     CreateAccountReadModel,
+    EvictAccountCache,
     EvictTransactionCache,
     RecordAccountDispatch,
     RemoveAccountPostingReadModel,
@@ -67,6 +56,7 @@ def subscribe_account_updated(
                 [
                     UpdateAccountReadModel(),
                     BumpAccountListVersion(AccountUpdated),
+                    EvictAccountCache(AccountUpdated),
                 ]
             ),
         ]
@@ -87,10 +77,6 @@ def subscribe_account_posting_created(
             SyncProcessGroup(
                 [
                     CreateAccountPostingReadModel(),
-                    BumpAccountPostingsVersion(AccountPostingCreated),
-                    # The transaction detail carries its postings, so a new leg
-                    # makes the cached transaction stale even though the
-                    # transaction row itself did not change.
                     EvictTransactionCache(AccountPostingCreated),
                 ]
             ),
@@ -112,7 +98,6 @@ def subscribe_account_posting_deleted(
             SyncProcessGroup(
                 [
                     RemoveAccountPostingReadModel(),
-                    BumpAccountPostingsVersion(AccountPostingDeleted),
                     EvictTransactionCache(AccountPostingDeleted),
                 ]
             ),

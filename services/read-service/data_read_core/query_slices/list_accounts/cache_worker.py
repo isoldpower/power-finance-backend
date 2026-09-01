@@ -18,7 +18,7 @@ class CacheWorker:
     async def try_serve_from_cache(
         self,
         context: CacheOperationData,
-    ) -> tuple[list[AccountDTO], int] | None:
+    ) -> tuple[list[AccountDTO], int, dict[str, int]] | None:
         cache_key = await self._build_cache_key(context)
 
         return await self._try_retrieve_from_cache(cache_key)
@@ -28,11 +28,13 @@ class CacheWorker:
         context: CacheOperationData,
         accounts: list[AccountDTO],
         total: int,
+        groups: dict[str, int],
     ) -> None:
         cache_key = await self._build_cache_key(context)
         payload = {
             "accounts": [account.to_cache() for account in accounts],
             "total": total,
+            "groups": groups,
         }
 
         await self._redis_client.set(
@@ -59,7 +61,10 @@ class CacheWorker:
 
         return int(raw_version) if raw_version is not None else 0
 
-    async def _try_retrieve_from_cache(self, cache_key: str) -> tuple[list[AccountDTO], int] | None:
+    async def _try_retrieve_from_cache(
+        self,
+        cache_key: str,
+    ) -> tuple[list[AccountDTO], int, dict[str, int]] | None:
         cached_value = await self._redis_client.get(cache_key)
         if cached_value is None:
             return None
@@ -67,4 +72,4 @@ class CacheWorker:
         payload = json.loads(cached_value)
         accounts = [AccountDTO.from_cache(item) for item in payload["accounts"]]
 
-        return accounts, payload["total"]
+        return accounts, payload["total"], payload["groups"]

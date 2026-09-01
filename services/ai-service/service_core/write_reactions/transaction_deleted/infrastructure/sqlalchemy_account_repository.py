@@ -51,6 +51,7 @@ class SqlAlchemyAccountRepository(AccountRepository):
                 AccountModel.id,
                 AccountModel.group,
                 AccountModel.name,
+                AccountModel.currency_code,
                 balances_before.c.previous,
                 AccountModel.balance,
             )
@@ -61,8 +62,9 @@ class SqlAlchemyAccountRepository(AccountRepository):
                 account_id=account_id,
                 group=group,
                 name=name,
+                currency_code=currency_code,
                 previous=previous,
                 current=current,
             )
-            for account_id, group, name, previous, current in moved.all()
+            for account_id, group, name, currency_code, previous, current in moved.all()
         ]

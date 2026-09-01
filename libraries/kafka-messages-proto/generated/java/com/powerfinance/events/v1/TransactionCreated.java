@@ -528,11 +528,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object currencyCode_ = "";
   /**
-   * <pre>
-   * The container's currency at the moment of creation. A transaction cannot
-   * change container, so this never changes for a given transaction id.
-   * </pre>
-   *
    * <code>string currency_code = 21;</code>
    * @return The currencyCode.
    */
@@ -550,11 +545,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * The container's currency at the moment of creation. A transaction cannot
-   * change container, so this never changes for a given transaction id.
-   * </pre>
-   *
    * <code>string currency_code = 21;</code>
    * @return The bytes for currencyCode.
    */
@@ -2264,11 +2254,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object currencyCode_ = "";
     /**
-     * <pre>
-     * The container's currency at the moment of creation. A transaction cannot
-     * change container, so this never changes for a given transaction id.
-     * </pre>
-     *
      * <code>string currency_code = 21;</code>
      * @return The currencyCode.
      */
@@ -2285,11 +2270,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The container's currency at the moment of creation. A transaction cannot
-     * change container, so this never changes for a given transaction id.
-     * </pre>
-     *
      * <code>string currency_code = 21;</code>
      * @return The bytes for currencyCode.
      */
@@ -2307,11 +2287,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The container's currency at the moment of creation. A transaction cannot
-     * change container, so this never changes for a given transaction id.
-     * </pre>
-     *
      * <code>string currency_code = 21;</code>
      * @param value The currencyCode to set.
      * @return This builder for chaining.
@@ -2325,11 +2300,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The container's currency at the moment of creation. A transaction cannot
-     * change container, so this never changes for a given transaction id.
-     * </pre>
-     *
      * <code>string currency_code = 21;</code>
      * @return This builder for chaining.
      */
@@ -2340,11 +2310,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The container's currency at the moment of creation. A transaction cannot
-     * change container, so this never changes for a given transaction id.
-     * </pre>
-     *
      * <code>string currency_code = 21;</code>
      * @param value The bytes for currencyCode to set.
      * @return This builder for chaining.

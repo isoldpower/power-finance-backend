@@ -1,6 +1,7 @@
 WALLET_CACHE_SCHEMA = "s2"
 TRANSACTION_CACHE_SCHEMA = "s2"
 GOAL_CACHE_SCHEMA = "s1"
+ACCOUNT_CACHE_SCHEMA = "s1"
 
 
 def get_single_wallet_key(wallet_id: str) -> str:
@@ -39,8 +40,8 @@ def get_account_list_version_key(user_id: int) -> str:
     return f"ver:accounts:{user_id}"
 
 
-def get_account_postings_version_key(account_id: str) -> str:
-    return f"ver:account_postings:{account_id}"
+def get_single_account_key(account_id: str) -> str:
+    return f"read:account:{ACCOUNT_CACHE_SCHEMA}:{account_id}"
 
 
 def get_single_webhook_key(webhook_id: str) -> str:

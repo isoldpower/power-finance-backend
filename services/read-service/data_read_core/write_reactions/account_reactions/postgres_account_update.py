@@ -7,7 +7,7 @@ from data_read_core.shared.postgres_orm import AccountReadModel
 
 from .._logger_shortcuts import log_account_postgres_updated
 from .._utilities import decode_payload, handle_database_errors
-from ._utilities import group_name_of, money_of
+from ._utilities import book_currency_of, group_name_of, money_of
 
 
 class UpdateAccountReadModel(Effect):
@@ -22,6 +22,7 @@ class UpdateAccountReadModel(Effect):
     async def _restate_account(self, payload: AccountUpdated) -> None:
         updated_at = payload.updated_at.ToDatetime(tzinfo=UTC)
         new_balance = money_of(payload.new_balance)
+        currency_code = book_currency_of(payload.currency_code)
 
         await AccountReadModel.objects.aupdate_or_create(
             id=payload.account_id,
@@ -30,6 +31,7 @@ class UpdateAccountReadModel(Effect):
                 "group": group_name_of(payload.account_group),
                 "name": payload.name,
                 "balance": new_balance,
+                "currency_code": currency_code,
                 "updated_at": updated_at,
             },
             create_defaults={
@@ -37,6 +39,7 @@ class UpdateAccountReadModel(Effect):
                 "group": group_name_of(payload.account_group),
                 "name": payload.name,
                 "balance": new_balance,
+                "currency_code": currency_code,
                 "created_at": updated_at,
                 "updated_at": updated_at,
             },

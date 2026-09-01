@@ -1,7 +1,8 @@
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -14,12 +15,14 @@ from data_read_core.shared.postgres_orm import (
     WalletReadModel,
 )
 from data_read_core.shared.redis_cache import get_redis
+from data_read_core.shared.timestamps import Period, period_bounds
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
 EXTERNAL_USER_ID = "user_2wallets"
 AUTH_HEADERS = {"X-User-Id": EXTERNAL_USER_ID}
 
+UTC_ZONE = ZoneInfo("UTC")
 JULY = datetime(2026, 7, 15, 12, tzinfo=UTC)
 AUGUST = datetime(2026, 8, 15, 12, tzinfo=UTC)
 
@@ -165,13 +168,26 @@ async def test_a_closed_wallet_still_resolves_by_id():
 
 
 async def test_detail_reports_period_flows_as_positive_magnitudes():
+    """Dates are derived from the window rather than written down.
+
+    `last_month` is resolved against the wall clock, and the endpoint gives a
+    test no way to pin it — so fixed dates only sit inside the window during the
+    month they were written in, and the test starts failing on its own the
+    moment the calendar moves past it. `period_bounds` is unit-tested against a
+    pinned `now` elsewhere; what this test is for is that the ENDPOINT filters
+    to whatever that window is and reports both directions as positive.
+    """
+
+    since, until = period_bounds(Period.LAST_MONTH, UTC_ZONE)
     wallet = await _wallet(balance="30.00")
     user_id = await _user_id()
     for amount, occurred_at in (
-        (Decimal("50.00"), datetime(2026, 7, 10, tzinfo=UTC)),
-        (Decimal("-20.00"), datetime(2026, 7, 20, tzinfo=UTC)),
-        (Decimal("999.00"), datetime(2026, 8, 10, tzinfo=UTC)),
-        (Decimal("777.00"), datetime(2026, 6, 10, tzinfo=UTC)),
+        (Decimal("50.00"), since + timedelta(days=9)),
+        (Decimal("-20.00"), since + timedelta(days=19)),
+        # Decoys either side of the window. `until` is the first instant of the
+        # CURRENT period, so it is outside `last_month` by one instant.
+        (Decimal("999.00"), until),
+        (Decimal("777.00"), since - timedelta(days=1)),
     ):
         await TransactionReadModel.objects.acreate(
             id=uuid.uuid4(),

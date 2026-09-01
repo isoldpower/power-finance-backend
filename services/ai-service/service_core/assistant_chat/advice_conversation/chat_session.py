@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import suppress
+from typing import cast
 
 from .contracts import (
     ChatTransport,
@@ -39,25 +40,28 @@ class ChatSession:
             if self._signal.is_terminated():
                 return await self._signal.wait()
 
-            received = await self._receive_or_terminate()
-            if isinstance(received, Termination):
-                return received
+            received_signal, is_received = await self._receive_or_terminate()
+            if not is_received:
+                return cast(Termination, received_signal)
 
             try:
-                routed = await self._router.route(received, self._context)
+                routed_replies = await self._router.route(
+                    cast(dict, received_signal),
+                    self._context,
+                )
+
+                if not routed_replies.claimed:
+                    return Termination.unroutable_message()
             except ClientDisconnectedError:
                 return Termination.client_disconnected()
 
-            if not routed.claimed:
-                return Termination.unroutable_message()
-
             try:
-                for reply in routed.replies:
+                for reply in routed_replies.replies:
                     await self._transport.send(reply)
             except ClientDisconnectedError:
                 return Termination.client_disconnected()
 
-    async def _receive_or_terminate(self) -> dict | Termination:
+    async def _receive_or_terminate(self) -> tuple[dict | Termination, bool]:
         receiving = asyncio.ensure_future(self._transport.receive())
         terminating = asyncio.ensure_future(self._signal.wait())
 
@@ -68,14 +72,14 @@ class ChatSession:
             )
 
             if not receiving.done():
-                return terminating.result()
+                return terminating.result(), False
 
             try:
-                return receiving.result()
+                return receiving.result(), True
             except ClientDisconnectedError:
-                return Termination.client_disconnected()
+                return Termination.client_disconnected(), False
             except MalformedFrameError:
-                return Termination.malformed_message()
+                return Termination.malformed_message(), False
         finally:
             await _settle_task(terminating)
             await _settle_task(receiving)

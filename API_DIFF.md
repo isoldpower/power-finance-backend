@@ -5,22 +5,22 @@ exist, a field spelled differently, a status code the target does not mention, o
 a behaviour a client has to code around. Internal decisions that a caller cannot
 observe are deliberately not listed.
 
-Current as of Phase 1 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
+Current as of Phase 5 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
 conventions (envelope, cursors, money strings, timestamps, idempotency, filter
 grammar, rate limits, `Read-At-Least`) are implemented as documented — the
 differences below are on top of that.
 
 ## What exists today
 
-Only five slices are live. Every path below is under `/api/v1` and takes a bearer
-token like the target says.
+Every path below is under `/api/v1` and takes a bearer token like the target
+says.
 
 | implemented                                                                                                 | notes                          |
 |-------------------------------------------------------------------------------------------------------------|--------------------------------|
 | `GET /wallets`, `GET /wallets/{id}`                                                                         | detail takes `?period=`        |
 | `POST /wallets`, `PATCH /wallets/{id}`, `PUT /wallets/{id}`, `DELETE /wallets/{id}`                         | `PUT` is not in the target     |
 | `POST /wallets/search`                                                                                      | favourites lead the results    |
-| `GET /transactions`, `GET /transactions/{id}`                                                               | detail has no `postings` yet   |
+| `GET /transactions`, `GET /transactions/{id}`                                                               | detail carries `postings`      |
 | `POST /transactions`, `PATCH /transactions/{id}`, `DELETE /transactions/{id}`                               | `PATCH` is metadata-only       |
 | `POST /transactions/{id}/adjust`                                                                            | not in the target; see below   |
 | `POST /transactions/chains`, `DELETE /transactions/chains/{chain-id}`                                       | transfers; see below           |
@@ -35,12 +35,14 @@ token like the target says.
 | `GET /currencies`                                                                                           | as the target describes it     |
 | `GET /currencies/rates/{currency-code}`                                                                     | see below                      |
 | `GET /currencies/convert`                                                                                   | as the target describes it     |
+| `GET /goals`, `GET /goals/{id}`, `POST /goals`, `PATCH /goals/{id}`, `DELETE /goals/{id}`                   | detail embeds `history`        |
+| `GET /accounts`                                                                                             | `group`/`lowbar`/`currency`    |
+| `GET /accounts/{account-id}`                                                                                | detail embeds `history`        |
 
 Not built yet. A request to any of these gets a plain 404 with NO error envelope —
 nothing routes them, so no handler shapes the failure:
 
-- the whole **Accounts**, **Goals**, **Metrics**, **Actions**, **Automations**
-  and **Assistant** slices;
+- the whole **Metrics**, **Actions**, **Automations** and **Assistant** slices;
 - `GET /notifications/count` — the bell badge has to come from
   `GET /notifications?...` for now;
 - `GET /webhooks/event-types` — the event vocabulary is not served anywhere, so
@@ -74,8 +76,10 @@ what a "transaction" actually is underneath, and where amount adjustments went.
   alone, and so do we — `occurred_at` is additive;
 - `GET /transactions/{id}` returns `postings: []` and `analysis: null` rather
   than omitting them, so a client never has to branch on the keys existing. Both
-  are filled by the unbuilt Accounts slice. `evidence` is real and returns
-  `{"url": ...}` or null;
+  are filled by the Accounts slice, which dispatches AFTER the write returns —
+  so a transaction read immediately after creating it will legitimately show an
+  empty ledger for a moment. `evidence` is real and returns `{"url": ...}` or
+  null;
 - ordering is `created_at DESC, chain_id ASC NULLS LAST, id DESC` exactly as
   documented. Chain members share a commit timestamp, so a transfer's legs arrive
   contiguously — though they may still straddle a page boundary;
@@ -232,6 +236,52 @@ Wallets match the target shape. The one thing worth reading twice is what
   keyset-paginated collection needs a stable anchor;
 - there is **no `POST /goals/search`**, matching the target. That is a decision,
   not a gap.
+
+### Accounts
+- Accounts are **read-only**, as the target says. Nothing creates, edits or
+  deletes one: they are derived by the backend from your transactions;
+- **the balance is a `money` object, not a bare decimal.** Every account is
+  denominated in a single BOOK currency (`USD` today) — postings are converted
+  into it before they are summed — so `money.currency` is the book currency and
+  NOT the currency of the transactions behind it. A history entry, by contrast,
+  carries the currency of its own transaction, so the two legitimately differ
+  inside one response;
+- **the account shape carries `created_at` and `updated_at`.** The target's
+  example has no timestamps at all, yet sorts on `created_at`; exposing the sort
+  key is the additive half of that fix. There is no `deleted_at` — an account is
+  never deleted;
+- ordering is `created_at DESC, id DESC`. **`group` filters and does not order**
+  — assets do not lead liabilities;
+- **`lowbar` compares MAGNITUDES, not signed balances.** A liability's balance is
+  negative, so a signed comparison would empty that group the moment you set any
+  threshold. `?lowbar=1.00` hides everything smaller than 1.00 in either
+  direction;
+- `lowbar` is read in `currency` (default `USD`) and converted into each
+  account's book currency before it compares. An unknown `currency` is 422
+  `unsupported_currency`; a `lowbar` finer than that currency's scale is 422
+  `amount_precision`. `meta` echoes both back so you can confirm what was
+  applied. A `lowbar` of `0` — the default — excludes nothing and reaches no rate
+  feed, so it can never fail with `rate_unavailable`;
+- **`meta.groups` ignores `group` but honours `lowbar`.** The target only
+  specifies the first. Ignoring the threshold too would make a tab advertise a
+  count that selecting it does not produce. Every group is present, including
+  ones holding nothing;
+- an unknown `group` is 422 `validation_failed`. The accepted values are `all`
+  (default), `assets`, `liabilities`, `equity`;
+- `GET /accounts/{account-id}` embeds `history` — the postings dispatched into
+  the account, in the target's entry shape, paginated under `meta.history`.
+  `debit` is true when the leg debits the account. **Entries carry an `id`**, for
+  the same reason goal history does;
+- there is **no `GET /accounts/{account-id}/postings`.** An earlier build served
+  the postings as their own collection; the detail endpoint the target specifies
+  replaced it. Page the history through the detail's `limit` and `cursor`;
+- `analysis.balanced` on a transaction is a **diagnostic, never an error**. It is
+  most often `false` when the two legs landed in different currencies;
+- both endpoints honour `Read-At-Least`, but **the ledger is not reachable
+  through it.** That header tracks write-service's outbox; ai-service dispatches
+  from its own sequence, after your write has already returned. So a
+  `Read-At-Least` satisfied for the transaction says nothing about its postings
+  having landed — poll rather than expecting read-your-writes on the ledger;
 
 ### Notifications
 - The fields are **`short`, `message`, `is_read`** — not `title`, `body`,

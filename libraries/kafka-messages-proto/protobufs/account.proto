@@ -28,9 +28,10 @@ message AccountCreated {
   AccountGroup account_group = 104;
   string name = 105;
   string balance = 106;
+  string currency_code = 107;
 
   // Reserved for future expansion.
-  reserved 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119;
+  reserved 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119;
 
   google.protobuf.Timestamp created_at = 120;
 }
@@ -47,9 +48,10 @@ message AccountUpdated {
   string new_balance = 105;
   AccountGroup account_group = 106;
   string name = 107;
+  string currency_code = 108;
 
   // Reserved for future expansion.
-  reserved 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119;
+  reserved 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119;
 
   google.protobuf.Timestamp updated_at = 120;
 }

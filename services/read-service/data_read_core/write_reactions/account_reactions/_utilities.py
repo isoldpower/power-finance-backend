@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from kafka_messages import AccountGroup
 
+from data_read_core.shared.money import DEFAULT_CURRENCY
 from data_read_core.shared.postgres_orm import AccountGroups
 
 _GROUP_NAMES: dict[int, str] = {
@@ -17,3 +18,7 @@ def group_name_of(account_group: int) -> str:
 
 def money_of(raw: str) -> Decimal:
     return Decimal(raw or "0")
+
+
+def book_currency_of(raw_currency: str) -> str:
+    return raw_currency or DEFAULT_CURRENCY

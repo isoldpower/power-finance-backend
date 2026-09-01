@@ -12,4 +12,5 @@ class AccountRecord:
     group: str
     name: str
     balance: Decimal
+    currency_code: str
     created_at: datetime

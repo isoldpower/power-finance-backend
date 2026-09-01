@@ -24,6 +24,7 @@ def account_created(
         account_group=account_group_of(account.group),
         name=account.name,
         balance=money(account.balance),
+        currency_code=account.currency_code,
     )
     message.created_at.FromDatetime(account.created_at)
 

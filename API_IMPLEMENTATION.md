@@ -672,17 +672,43 @@ No `/search` endpoint. That is a decision in the target, not an omission — do 
 The first slice with a real AI dependency, and the one Metrics is built on. Everything before this
 point is deterministic.
 
-> **STATUS: rolled back to unimplemented, deliberately.** A full implementation existed — a
-> template `ai-service` producer plus the whole read-service consumer side — and was removed so the
-> slice can be built by hand. Reference copies: `.phase-5-backup/` for the consumer side and the
-> contract, `scratch/ai-service-template` (branch) for the producer. `TransactionCreated` fields 21
-> and 22 were reserved rather than reused, so a reimplementation picks fresh numbers.
->
-> Design conclusions worth keeping from that first pass, both reached after it was written:
-> **ai-service should OWN accounts and postings** rather than emitting into a projection it cannot
-> read — once the model picks an account rather than deriving one, decide-and-write has to be a
-> local transaction — and the producer needs a **transactional outbox**, because a publish failure
-> after commit otherwise loses a posting from the read side permanently.
+**STATUS: implemented, all four steps.** The slice was rolled back once and rebuilt by hand;
+`.phase-5-backup/` still holds the discarded first pass. Both conclusions that rollback was for
+survived into what shipped:
+
+- **ai-service OWNS accounts and postings.** `ai_accounts` and `ai_entries` live in its own
+  Postgres behind async SQLAlchemy and Alembic, so deciding an account and writing a posting is one
+  local transaction rather than a blind emit into a projection the producer cannot read;
+- **the producer has a transactional outbox**, so a publish failure after commit cannot lose a
+  posting from the read side.
+
+What the build settled beyond the steps as written:
+
+- **the dispatcher is deterministic, and that is the seam, not the slice.** `TemplateDispatcher`
+  emits one leg per template account behind a `PostingDispatcher` port with a
+  `DispatcherFactory` in front of it. The "real AI dependency" this phase was named for is the one
+  thing still to swap in, and swapping it changes no consumer, no event and no endpoint;
+- **accounts are denominated in a single BOOK currency** (`BOOK_CURRENCY`, `USD`). A posting is
+  converted into it before it is summed, which is why an entry carries both its own `amount` and a
+  `book_amount` + `conversion_rate`, and why the account's balance is one currency rather than a
+  mixture. `AccountCreated` (field 107) and `AccountUpdated` (field 108) carry `currency_code`, and
+  `AccountUpdated` RESTATES it so a consumer that missed the creation still learns it;
+- **`meta.groups` honours `lowbar` but not `group`.** The target only says it ignores the group
+  filter. Ignoring the threshold too would make a tab advertise a count that selecting it does not
+  produce;
+- **`lowbar` compares MAGNITUDES.** A liability's balance is negative, so a signed comparison would
+  empty that group the instant any client set a threshold. The parameter exists to hide trivial
+  accounts, and triviality has no sign;
+- **the threshold is converted, not the balances.** `lowbar` arrives in the caller's currency and
+  balances are held in the book currency; converting the threshold once per book currency in play
+  keeps the comparison something an index can serve, where converting every balance would not. A
+  `lowbar` of zero — the default — skips the rate lookup entirely;
+- **`GET /accounts/{account-id}` replaced `GET /accounts/{account-id}/postings`.** The postings
+  collection was a stand-in for the detail endpoint the target actually specifies, not an addition
+  to it, so it went when the detail arrived. History is read live and only the account ROW is
+  cached, exactly as goal detail does it;
+- both `DOC BUG` notes below were resolved the way they recommend: history entries carry an `id`,
+  and the account shape carries `created_at` / `updated_at`.
 
 ### Step 5.1 — Chart of accounts and entries
 Account model (`group` ∈ assets/liabilities/equity, `name`, derived balance) and an entry/posting
@@ -706,6 +732,9 @@ diagnostic, never an error.
 `GET /accounts` with `group`, `lowbar` + `currency`, both echoed in `meta`, plus `meta.groups` counts
 that ignore the `group` filter (a second, cheap aggregate query). `GET /accounts/{account-id}` with
 the `history` embedded collection.
+
+Ordered `created_at DESC, id DESC` like every other collection — `group` filters and does not order.
+`ACCOUNT_CHART`, the group-then-name sort the first cut used, was deleted rather than left unused.
 
 ### Step 5.4 — Transaction detail gains `postings` and `analysis`
 Closes out Step 3.1's deferred half of `GET /transactions/{id}`.
@@ -891,7 +920,6 @@ Collected from the notes above, in the order they matter.
 | 0.4  | keyset over enum-ranked `severity` — sentinel column (nullable `chain_id` answered in Phase 3) |
 | 0.8  | `details[].field` path syntax for a failure inside a filter tree                  |
 | 0.9  | cache keys must include reporting currency                                        |
-| 5.1  | entry `id` on postings/history; timestamps on the account shape                   |
 | 7.1  | explicit columns vs. JSON payload for notification `severity` / `subject`         |
 
 Also, in the target's Status Codes table, 403 is described as "authenticated but the resource belongs

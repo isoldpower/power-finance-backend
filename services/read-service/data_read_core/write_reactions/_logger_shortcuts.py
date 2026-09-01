@@ -466,6 +466,10 @@ def log_account_list_version_bumped(user_id: int, version: int) -> None:
     logger.info("Bumped account list version for user %s to %s.", user_id, version)
 
 
-def log_account_postings_version_bumped(account_id: str, version: int) -> None:
+def log_account_cache_evicted(key: str, removed: int) -> None:
     logger = get_workers_logger("write_message_consumer")
-    logger.info("Bumped posting list version for account %s to %s.", account_id, version)
+    logger.info(
+        "Evicted cache key %s (removed=%s).",
+        key,
+        removed,
+    )

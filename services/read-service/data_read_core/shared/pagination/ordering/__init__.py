@@ -1,5 +1,4 @@
 from .default_orders import (
-    ACCOUNT_CHART,
     CREATED_AT_DESC,
     FAVORITE_CREATED_AT_DESC,
     TRANSACTION_FEED,
@@ -24,7 +23,6 @@ from .value_codecs import (
 
 __all__ = [
     "BOOLEAN_CODEC",
-    "ACCOUNT_CHART",
     "CREATED_AT_DESC",
     "FAVORITE_CREATED_AT_DESC",
     "DATETIME_CODEC",

@@ -24,6 +24,7 @@ def account_updated(
         new_balance=money(change.current),
         account_group=account_group_of(change.group),
         name=change.name,
+        currency_code=change.currency_code,
     )
     message.updated_at.FromDatetime(updated_at)
 

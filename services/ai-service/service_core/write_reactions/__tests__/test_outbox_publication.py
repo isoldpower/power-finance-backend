@@ -25,6 +25,7 @@ from service_core.write_reactions import (
 )
 
 from ..transaction_created.__tests__.fakes import FixedRates
+from ..transaction_created.contracts import BOOK_CURRENCY
 from .fakes import (
     EXTERNAL_ID,
     TRANSACTION_ID,
@@ -125,6 +126,34 @@ async def test_the_account_group_travels_as_its_enum_name():
     groups = {row.payload["account_group"] for row in await _outbox()}
 
     assert groups == {"ACCOUNT_GROUP_LIABILITIES", "ACCOUNT_GROUP_ASSETS"}
+
+
+async def test_a_seeded_account_publishes_the_currency_it_is_booked_in():
+    """A consumer projecting the chart has to denominate the balance, and it
+    cannot ask this service — the currency has to ride the event."""
+
+    await _seed()
+
+    assert {row.payload["currency_code"] for row in await _outbox()} == {BOOK_CURRENCY}
+
+
+async def test_a_balance_change_restates_the_book_currency():
+    """Restated rather than sent once, so a consumer that missed the creation
+    still learns what the balance is denominated in."""
+
+    await _seed()
+    await _project()
+    await _clear_outbox()
+
+    await _dispatch()
+
+    currencies = {
+        row.payload["currency_code"]
+        for row in await _outbox()
+        if row.event_type == "AccountUpdated"
+    }
+
+    assert currencies == {BOOK_CURRENCY}
 
 
 async def test_a_balance_change_names_its_group_by_the_same_enum():

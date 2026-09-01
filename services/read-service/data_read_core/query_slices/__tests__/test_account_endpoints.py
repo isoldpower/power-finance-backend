@@ -1,5 +1,5 @@
-"""The ledger over HTTP: the chart, one account's postings, and the postings
-the transaction detail has always promised in its payload."""
+"""The ledger over HTTP: the chart and its filters, one account with its
+history, and the postings the transaction detail has always promised."""
 
 import json
 import uuid
@@ -22,6 +22,7 @@ from kafka_messages import (
     AccountUpdated,
 )
 
+from data_read_core.shared.exchange_rates import get_rate_service
 from data_read_core.shared.money import CURRENCY_CATALOG
 from data_read_core.shared.postgres_orm import (
     NO_CHAIN_SENTINEL,
@@ -43,10 +44,9 @@ WALLET_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
 CACHE_PREFIXES = (
     "read:accounts:*",
     "read:account:*",
-    "read:account_postings:*",
     "ver:accounts:*",
-    "ver:account_postings:*",
     "read:transaction:*",
+    "read:rates:*",
 )
 
 
@@ -67,6 +67,10 @@ def body_of(response) -> dict:
 @pytest.fixture(autouse=True)
 async def _empty_cache():
     async def clear() -> None:
+        # The rate service holds a Redis client of its own. Clearing only
+        # `get_redis` would leave it wired to the connection this fixture is
+        # about to close.
+        get_rate_service.cache_clear()
         get_redis.cache_clear()
         redis = get_redis()
         for pattern in CACHE_PREFIXES:
@@ -77,6 +81,7 @@ async def _empty_cache():
     yield
     await clear()
     await get_redis().aclose()
+    get_rate_service.cache_clear()
     get_redis.cache_clear()
 
 
@@ -114,7 +119,9 @@ async def _account(
     group: str = "assets",
     name: str = "temporary-assets",
     balance: str = "0.00",
+    currency: str = "USD",
     owner: str = EXTERNAL_USER_ID,
+    created_at: datetime = datetime(2026, 8, 25, 12, 0, tzinfo=UTC),
 ) -> AccountReadModel:
     return await AccountReadModel.objects.acreate(
         id=uuid.uuid4(),
@@ -122,7 +129,8 @@ async def _account(
         group=group,
         name=name,
         balance=Decimal(balance),
-        created_at=datetime(2026, 8, 25, 12, 0, tzinfo=UTC),
+        currency_code=currency,
+        created_at=created_at,
     )
 
 
@@ -174,24 +182,145 @@ async def test_the_chart_lists_the_user_s_accounts():
 
     payload = body_of(await as_user("/api/v1/accounts"))
 
-    assert [(row["group"], row["name"], row["balance"]) for row in payload["data"]] == [
+    assert {(row["group"], row["name"], row["money"]["amount"]) for row in payload["data"]} == {
         ("assets", "temporary-assets", "125.00"),
         ("liabilities", "temporary-liability", "-125.00"),
-    ]
+    }
 
 
-async def test_the_chart_is_ordered_by_group_then_name():
-    await _account(group="liabilities", name="owed")
-    await _account(group="assets", name="zeta")
-    await _account(group="assets", name="alpha")
+async def test_a_balance_is_money_in_the_book_currency():
+    """The balance is a sum of converted legs, so it carries the currency it
+    was summed in — a bare decimal string would leave a client guessing."""
+
+    await _account(balance="125.00", currency="USD")
 
     payload = body_of(await as_user("/api/v1/accounts"))
 
-    assert [(row["group"], row["name"]) for row in payload["data"]] == [
-        ("assets", "alpha"),
-        ("assets", "zeta"),
-        ("liabilities", "owed"),
-    ]
+    assert payload["data"][0]["money"] == {"amount": "125.00", "currency": "USD"}
+
+
+async def test_the_chart_is_ordered_newest_first_not_by_group():
+    """`group` filters; it does not order. Assets do not lead liabilities."""
+
+    await _account(
+        group="assets",
+        name="oldest",
+        created_at=datetime(2026, 8, 20, tzinfo=UTC),
+    )
+    await _account(
+        group="liabilities",
+        name="newest",
+        created_at=datetime(2026, 8, 26, tzinfo=UTC),
+    )
+    await _account(
+        group="assets",
+        name="middle",
+        created_at=datetime(2026, 8, 22, tzinfo=UTC),
+    )
+
+    payload = body_of(await as_user("/api/v1/accounts"))
+
+    assert [row["name"] for row in payload["data"]] == ["newest", "middle", "oldest"]
+
+
+async def test_the_group_filter_narrows_the_page():
+    await _account(group="assets", name="owned")
+    await _account(group="liabilities", name="owed")
+
+    payload = body_of(await as_user("/api/v1/accounts?group=liabilities"))
+
+    assert [row["name"] for row in payload["data"]] == ["owed"]
+    assert payload["meta"]["group"] == "liabilities"
+
+
+async def test_an_unknown_group_is_rejected():
+    response = await as_user("/api/v1/accounts?group=receivables")
+
+    assert response.status_code == 422
+    assert body_of(response)["error"]["code"] == "validation_failed"
+
+
+async def test_the_group_counts_ignore_the_group_filter():
+    """The tab labels have to hold still when a tab is selected, so `groups`
+    describes the whole chart no matter what `group` narrowed the page to."""
+
+    await _account(group="assets", name="one")
+    await _account(group="assets", name="two")
+    await _account(group="liabilities", name="owed")
+
+    payload = body_of(await as_user("/api/v1/accounts?group=liabilities"))
+
+    assert payload["meta"]["total"] == 1
+    assert payload["meta"]["groups"] == {"assets": 2, "liabilities": 1, "equity": 0}
+
+
+async def test_the_lowbar_hides_small_accounts():
+    await _account(name="material", balance="500.00")
+    await _account(name="rounding-dust", balance="0.40")
+
+    payload = body_of(await as_user("/api/v1/accounts?lowbar=1.00"))
+
+    assert [row["name"] for row in payload["data"]] == ["material"]
+
+
+async def test_the_lowbar_compares_magnitudes_so_it_keeps_liabilities():
+    """A liability's balance is negative. A signed comparison would drop the
+    whole group the moment a client set any threshold at all."""
+
+    await _account(group="liabilities", name="owed", balance="-500.00")
+    await _account(group="liabilities", name="trivial", balance="-0.40")
+
+    payload = body_of(await as_user("/api/v1/accounts?lowbar=1.00"))
+
+    assert [row["name"] for row in payload["data"]] == ["owed"]
+
+
+async def test_the_lowbar_and_its_currency_are_echoed_back():
+    await _account(balance="500.00")
+
+    payload = body_of(await as_user("/api/v1/accounts?lowbar=1&currency=USD"))
+
+    assert payload["meta"]["lowbar"] == "1.00"
+    assert payload["meta"]["currency"] == "USD"
+
+
+async def test_the_default_threshold_excludes_nothing():
+    await _account(name="empty", balance="0.00")
+
+    payload = body_of(await as_user("/api/v1/accounts"))
+
+    assert [row["name"] for row in payload["data"]] == ["empty"]
+    assert payload["meta"]["lowbar"] == "0.00"
+    assert payload["meta"]["group"] == "all"
+
+
+async def test_a_lowbar_past_its_currency_s_scale_is_rejected():
+    response = await as_user("/api/v1/accounts?lowbar=1.005&currency=USD")
+
+    assert response.status_code == 422
+    assert body_of(response)["error"]["details"][0]["code"] == "amount_precision"
+
+
+async def test_an_unsupported_lowbar_currency_is_rejected():
+    response = await as_user("/api/v1/accounts?lowbar=1&currency=XYZ")
+
+    assert response.status_code == 422
+    assert body_of(response)["error"]["code"] == "unsupported_currency"
+
+
+async def test_a_lowbar_in_another_currency_is_converted_before_it_compares():
+    """The threshold arrives in the caller's currency and the balances are in
+    the book currency, so one of the two has to move. Converting the threshold
+    once is the half that a single index can still serve."""
+
+    await _account(name="kept", balance="500.00", currency="USD")
+    await _account(name="dropped", balance="0.50", currency="USD")
+
+    response = await as_user("/api/v1/accounts?lowbar=100&currency=JPY")
+    payload = body_of(response)
+    assert response.status_code == 200, payload
+
+    assert [row["name"] for row in payload["data"]] == ["kept"]
 
 
 async def test_the_chart_does_not_show_someone_else_s_accounts():
@@ -203,44 +332,80 @@ async def test_the_chart_does_not_show_someone_else_s_accounts():
     assert [row["name"] for row in payload["data"]] == ["mine"]
 
 
-async def test_postings_list_the_legs_against_one_account():
+async def test_the_detail_embeds_the_legs_posted_into_the_account():
     account = await _account()
     transaction = await _transaction()
     await _posting(account=account, transaction=transaction)
 
-    payload = body_of(await as_user(f"/api/v1/accounts/{account.id}/postings"))
+    payload = body_of(await as_user(f"/api/v1/accounts/{account.id}"))
 
-    assert len(payload["data"]) == 1
-    assert payload["data"][0]["debit"] is True
-    assert payload["data"][0]["transaction_id"] == str(transaction.id)
+    history = payload["data"]["history"]
+    assert len(history) == 1
+    assert history[0]["debit"] is True
+    assert history[0]["source_transaction"] == str(transaction.id)
 
 
-async def test_postings_are_denominated_at_their_own_currency_s_scale():
-    """The account's balance has no currency, but each leg does — and JPY has
-    no minor unit, so rendering it at two decimals would invent one."""
+async def test_the_history_is_paginated_under_its_own_meta_namespace():
+    account = await _account()
+    transaction = await _transaction()
+    await _posting(
+        account=account,
+        transaction=transaction,
+        created_at=datetime(2026, 8, 25, 12, 0, tzinfo=UTC),
+    )
+    await _posting(
+        account=account,
+        transaction=transaction,
+        created_at=datetime(2026, 8, 26, 12, 0, tzinfo=UTC),
+    )
+
+    payload = body_of(await as_user(f"/api/v1/accounts/{account.id}?limit=1"))
+
+    assert len(payload["data"]["history"]) == 1
+    assert payload["meta"]["history"]["total"] == 2
+    assert payload["meta"]["history"]["next_cursor"] is not None
+
+
+async def test_a_history_entry_carries_an_id_the_cursor_can_anchor_on():
+    """The target's example omits it; a keyset-paginated collection cannot."""
 
     account = await _account()
     transaction = await _transaction()
+    posting = await _posting(account=account, transaction=transaction)
+
+    payload = body_of(await as_user(f"/api/v1/accounts/{account.id}"))
+
+    assert payload["data"]["history"][0]["id"] == str(posting.id)
+
+
+async def test_history_entries_are_denominated_at_their_own_currency_s_scale():
+    """The account's balance is in the book currency; each leg is in the
+    currency of the transaction behind it — and JPY has no minor unit, so
+    rendering it at two decimals would invent one."""
+
+    account = await _account(currency="USD")
+    transaction = await _transaction()
     await _posting(account=account, transaction=transaction, amount="125", currency="JPY")
 
-    payload = body_of(await as_user(f"/api/v1/accounts/{account.id}/postings"))
+    payload = body_of(await as_user(f"/api/v1/accounts/{account.id}"))
 
-    assert payload["data"][0]["money"] == {"amount": "125", "currency": "JPY"}
+    assert payload["data"]["money"]["currency"] == "USD"
+    assert payload["data"]["history"][0]["money"] == {"amount": "125", "currency": "JPY"}
 
 
-async def test_postings_of_someone_else_s_account_are_not_found():
-    """A 404 rather than an empty page: the posting cache is keyed by account
-    alone, so ownership has to be settled before anything is served."""
+async def test_someone_else_s_account_is_not_found():
+    """A 404 rather than a 403: 403 would make every UUID path an existence
+    oracle."""
 
     account = await _account(owner=OTHER_USER_ID)
 
-    response = await as_user(f"/api/v1/accounts/{account.id}/postings")
+    response = await as_user(f"/api/v1/accounts/{account.id}")
 
     assert response.status_code == 404
 
 
-async def test_postings_of_an_unknown_account_are_not_found():
-    response = await as_user(f"/api/v1/accounts/{uuid.uuid4()}/postings")
+async def test_an_unknown_account_is_not_found():
+    response = await as_user(f"/api/v1/accounts/{uuid.uuid4()}")
 
     assert response.status_code == 404
 
@@ -411,6 +576,7 @@ async def test_a_new_account_invalidates_the_cached_chart():
             account_group=AccountGroup.ACCOUNT_GROUP_ASSETS,
             name="temporary-assets",
             balance="0.00",
+            currency_code="USD",
             created_at=_timestamp(),
         ),
         seq=13,
@@ -425,7 +591,7 @@ async def test_a_balance_change_invalidates_the_cached_chart():
     account = await _account(balance="0.00")
 
     first = body_of(await as_user("/api/v1/accounts"))
-    assert first["data"][0]["balance"] == "0.00"
+    assert first["data"][0]["money"]["amount"] == "0.00"
 
     await _dispatch(
         AccountUpdated(
@@ -437,6 +603,7 @@ async def test_a_balance_change_invalidates_the_cached_chart():
             new_balance="125.00",
             account_group=AccountGroup.ACCOUNT_GROUP_ASSETS,
             name=account.name,
+            currency_code="USD",
             updated_at=_timestamp(),
         ),
         seq=14,
@@ -444,15 +611,19 @@ async def test_a_balance_change_invalidates_the_cached_chart():
 
     second = body_of(await as_user("/api/v1/accounts"))
 
-    assert second["data"][0]["balance"] == "125.00"
+    assert second["data"][0]["money"] == {"amount": "125.00", "currency": "USD"}
 
 
-async def test_a_new_posting_invalidates_the_cached_posting_page():
+async def test_a_new_posting_shows_up_in_the_detail_without_an_eviction():
+    """The embedded history is read live rather than cached — only the account
+    ROW is cached — so a leg that lands after a first read needs nothing
+    invalidated to become visible."""
+
     account = await _account()
     transaction = await _transaction()
 
-    first = body_of(await as_user(f"/api/v1/accounts/{account.id}/postings"))
-    assert first["data"] == []
+    first = body_of(await as_user(f"/api/v1/accounts/{account.id}"))
+    assert first["data"]["history"] == []
 
     await _dispatch(
         AccountPostingCreated(
@@ -473,6 +644,60 @@ async def test_a_new_posting_invalidates_the_cached_posting_page():
         seq=15,
     )
 
-    second = body_of(await as_user(f"/api/v1/accounts/{account.id}/postings"))
+    second = body_of(await as_user(f"/api/v1/accounts/{account.id}"))
 
-    assert len(second["data"]) == 1
+    assert len(second["data"]["history"]) == 1
+
+
+async def test_a_balance_change_invalidates_the_cached_detail():
+    """The account row IS cached, so a restated balance has to evict it — the
+    row is otherwise unreachable until the entry expires on its own."""
+
+    account = await _account(balance="0.00")
+
+    first = body_of(await as_user(f"/api/v1/accounts/{account.id}"))
+    assert first["data"]["money"]["amount"] == "0.00"
+
+    await _dispatch(
+        AccountUpdated(
+            event_id="evt-u2",
+            account_id=str(account.id),
+            user_external_id=EXTERNAL_USER_ID,
+            user_id=account.user_id,
+            previous_balance="0.00",
+            new_balance="125.00",
+            account_group=AccountGroup.ACCOUNT_GROUP_ASSETS,
+            name=account.name,
+            currency_code="USD",
+            updated_at=_timestamp(),
+        ),
+        seq=16,
+    )
+
+    second = body_of(await as_user(f"/api/v1/accounts/{account.id}"))
+
+    assert second["data"]["money"]["amount"] == "125.00"
+
+
+async def test_an_account_event_without_a_currency_reads_as_the_book_currency():
+    """A producer predating the field sends an empty string. Every account it
+    could describe was booked in the default, so storing a blank would only
+    make the presenter guess later."""
+
+    await _dispatch(
+        AccountCreated(
+            event_id="evt-legacy",
+            account_id=str(uuid.uuid4()),
+            user_external_id=EXTERNAL_USER_ID,
+            user_id=await _user_id(),
+            account_group=AccountGroup.ACCOUNT_GROUP_EQUITY,
+            name="opening-balance",
+            balance="10.00",
+            created_at=_timestamp(),
+        ),
+        seq=17,
+    )
+
+    payload = body_of(await as_user("/api/v1/accounts"))
+
+    assert payload["data"][0]["money"] == {"amount": "10.00", "currency": "USD"}

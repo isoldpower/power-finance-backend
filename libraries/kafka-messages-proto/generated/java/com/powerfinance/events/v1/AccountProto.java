@@ -46,34 +46,35 @@ public final class AccountProto extends com.google.protobuf.GeneratedFile {
   static {
     java.lang.String[] descriptorData = {
       "\n\raccount.proto\022\027power_finance.events.v1" +
-      "\032\037google/protobuf/timestamp.proto\"\205\003\n\016Ac" +
+      "\032\037google/protobuf/timestamp.proto\"\226\003\n\016Ac" +
       "countCreated\022\020\n\010event_id\030\001 \001(\t\022/\n\013occurr" +
       "ed_at\030\002 \001(\0132\032.google.protobuf.Timestamp\022" +
       "\026\n\016schema_version\030\003 \001(\005\022\022\n\naccount_id\030e " +
       "\001(\t\022\030\n\020user_external_id\030f \001(\t\022\017\n\007user_id" +
       "\030g \001(\005\022<\n\raccount_group\030h \001(\0162%.power_fi" +
       "nance.events.v1.AccountGroup\022\014\n\004name\030i \001" +
-      "(\t\022\017\n\007balance\030j \001(\t\022.\n\ncreated_at\030x \001(\0132" +
-      "\032.google.protobuf.TimestampJ\004\010k\020lJ\004\010l\020mJ" +
-      "\004\010m\020nJ\004\010n\020oJ\004\010o\020pJ\004\010p\020qJ\004\010q\020rJ\004\010r\020sJ\004\010s\020" +
-      "tJ\004\010t\020uJ\004\010u\020vJ\004\010v\020wJ\004\010w\020x\"\235\003\n\016AccountUpd" +
-      "ated\022\020\n\010event_id\030\001 \001(\t\022/\n\013occurred_at\030\002 " +
-      "\001(\0132\032.google.protobuf.Timestamp\022\026\n\016schem" +
-      "a_version\030\003 \001(\005\022\022\n\naccount_id\030e \001(\t\022\030\n\020u" +
-      "ser_external_id\030f \001(\t\022\017\n\007user_id\030g \001(\005\022\030" +
-      "\n\020previous_balance\030h \001(\t\022\023\n\013new_balance\030" +
-      "i \001(\t\022<\n\raccount_group\030j \001(\0162%.power_fin" +
-      "ance.events.v1.AccountGroup\022\014\n\004name\030k \001(" +
+      "(\t\022\017\n\007balance\030j \001(\t\022\025\n\rcurrency_code\030k \001" +
+      "(\t\022.\n\ncreated_at\030x \001(\0132\032.google.protobuf" +
+      ".TimestampJ\004\010l\020mJ\004\010m\020nJ\004\010n\020oJ\004\010o\020pJ\004\010p\020q" +
+      "J\004\010q\020rJ\004\010r\020sJ\004\010s\020tJ\004\010t\020uJ\004\010u\020vJ\004\010v\020wJ\004\010w" +
+      "\020x\"\256\003\n\016AccountUpdated\022\020\n\010event_id\030\001 \001(\t\022" +
+      "/\n\013occurred_at\030\002 \001(\0132\032.google.protobuf.T" +
+      "imestamp\022\026\n\016schema_version\030\003 \001(\005\022\022\n\nacco" +
+      "unt_id\030e \001(\t\022\030\n\020user_external_id\030f \001(\t\022\017" +
+      "\n\007user_id\030g \001(\005\022\030\n\020previous_balance\030h \001(" +
+      "\t\022\023\n\013new_balance\030i \001(\t\022<\n\raccount_group\030" +
+      "j \001(\0162%.power_finance.events.v1.AccountG" +
+      "roup\022\014\n\004name\030k \001(\t\022\025\n\rcurrency_code\030l \001(" +
       "\t\022.\n\nupdated_at\030x \001(\0132\032.google.protobuf." +
-      "TimestampJ\004\010l\020mJ\004\010m\020nJ\004\010n\020oJ\004\010o\020pJ\004\010p\020qJ" +
-      "\004\010q\020rJ\004\010r\020sJ\004\010s\020tJ\004\010t\020uJ\004\010u\020vJ\004\010v\020wJ\004\010w\020" +
-      "x*z\n\014AccountGroup\022\027\n\023ACCOUNT_GROUP_WRONG" +
-      "\020\000\022\030\n\024ACCOUNT_GROUP_ASSETS\020\001\022\035\n\031ACCOUNT_" +
-      "GROUP_LIABILITIES\020\002\022\030\n\024ACCOUNT_GROUP_EQU" +
-      "ITY\020\003B{\n\032com.powerfinance.events.v1B\014Acc" +
-      "ountProtoP\001ZMgithub.com/power-finance/ka" +
-      "fka-messages-proto/generated/go/events/v" +
-      "1;eventsv1b\006proto3"
+      "TimestampJ\004\010m\020nJ\004\010n\020oJ\004\010o\020pJ\004\010p\020qJ\004\010q\020rJ" +
+      "\004\010r\020sJ\004\010s\020tJ\004\010t\020uJ\004\010u\020vJ\004\010v\020wJ\004\010w\020x*z\n\014A" +
+      "ccountGroup\022\027\n\023ACCOUNT_GROUP_WRONG\020\000\022\030\n\024" +
+      "ACCOUNT_GROUP_ASSETS\020\001\022\035\n\031ACCOUNT_GROUP_" +
+      "LIABILITIES\020\002\022\030\n\024ACCOUNT_GROUP_EQUITY\020\003B" +
+      "{\n\032com.powerfinance.events.v1B\014AccountPr" +
+      "otoP\001ZMgithub.com/power-finance/kafka-me" +
+      "ssages-proto/generated/go/events/v1;even" +
+      "tsv1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -85,13 +86,13 @@ public final class AccountProto extends com.google.protobuf.GeneratedFile {
     internal_static_power_finance_events_v1_AccountCreated_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_power_finance_events_v1_AccountCreated_descriptor,
-        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "AccountId", "UserExternalId", "UserId", "AccountGroup", "Name", "Balance", "CreatedAt", });
+        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "AccountId", "UserExternalId", "UserId", "AccountGroup", "Name", "Balance", "CurrencyCode", "CreatedAt", });
     internal_static_power_finance_events_v1_AccountUpdated_descriptor =
       getDescriptor().getMessageType(1);
     internal_static_power_finance_events_v1_AccountUpdated_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_power_finance_events_v1_AccountUpdated_descriptor,
-        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "AccountId", "UserExternalId", "UserId", "PreviousBalance", "NewBalance", "AccountGroup", "Name", "UpdatedAt", });
+        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "AccountId", "UserExternalId", "UserId", "PreviousBalance", "NewBalance", "AccountGroup", "Name", "CurrencyCode", "UpdatedAt", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
   }
