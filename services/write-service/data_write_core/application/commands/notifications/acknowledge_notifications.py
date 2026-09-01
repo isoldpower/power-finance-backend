@@ -17,22 +17,20 @@ from data_write_core.infrastructure.outbox_saga import (
 )
 
 from ...bootstrap import get_repository_registry
+from ...dtos import NotificationDTO, notification_to_dto
 from ...interfaces import NotificationRepository, OutboxRepository
 from ..command_base import CommandHandlerBase
 
 
 @dataclass(frozen=True)
 class AcknowledgeNotificationsCommand:
-    """Marks notifications as read. `strict` 404s on a missing id; non-strict
-    silently skips unknown ids (a single ack is a one-element batch)."""
-
     user_id: int
     user_external_id: str
     notification_ids: tuple[UUID, ...]
     strict: bool = False
 
 
-class AcknowledgeNotificationsCommandHandler(CommandHandlerBase[list[UUID]]):
+class AcknowledgeNotificationsCommandHandler(CommandHandlerBase[list[NotificationDTO]]):
     _notification_repository: NotificationRepository
     _outbox_repository: OutboxRepository
 
@@ -49,7 +47,10 @@ class AcknowledgeNotificationsCommandHandler(CommandHandlerBase[list[UUID]]):
         self._notification_repository = notification_repository
         self._outbox_repository = outbox_repository
 
-    async def handle(self, command: AcknowledgeNotificationsCommand) -> tuple[list[UUID], int]:
+    async def handle(
+        self,
+        command: AcknowledgeNotificationsCommand,
+    ) -> tuple[list[NotificationDTO], int]:
         requested_ids = list(command.notification_ids)
         found = await self._notification_repository.get_user_notifications_by_ids(
             requested_ids,
@@ -61,28 +62,43 @@ class AcknowledgeNotificationsCommandHandler(CommandHandlerBase[list[UUID]]):
                 if str(requested_id) not in found_ids:
                     raise NotificationNotFoundError(requested_id)
 
-        ids_to_ack = [
-            UUID(notification.unique_id) for notification in found if not notification.is_read
+        pending_notifications = [
+            notification for notification in found if not notification.is_acknowledged
         ]
-        if not ids_to_ack:
-            return [], await self._outbox_repository.get_latest_sequence()
+        if not pending_notifications:
+            return (
+                [notification_to_dto(notification) for notification in found],
+                await self._outbox_repository.get_latest_sequence(),
+            )
+
+        acknowledged_at = datetime.now(UTC)
+        for notification in pending_notifications:
+            notification.acknowledge(acknowledged_at)
 
         write_version = await self._run_transactions_saga(
-            ids_to_ack,
+            [UUID(notification.unique_id) for notification in pending_notifications],
             user_id=command.user_id,
             partition_key=command.user_external_id,
+            acknowledged_at=acknowledged_at,
         )
 
-        return ids_to_ack, write_version
+        return (
+            [notification_to_dto(notification) for notification in found],
+            write_version,
+        )
 
     async def _run_transactions_saga(
         self,
         ids_to_ack: list[UUID],
         user_id: int,
         partition_key: str,
+        acknowledged_at: datetime,
     ) -> int:
-        mark_read, unmark_read = self._get_save_unsave_lambdas(ids_to_ack, user_id)
-        acknowledged_at = datetime.now(UTC)
+        mark_read, unmark_read = self._get_save_unsave_lambdas(
+            ids_to_ack,
+            user_id,
+            acknowledged_at,
+        )
 
         saga_coordinator = FinalizedSagaCoordinator(
             transaction_steps=[
@@ -114,11 +130,19 @@ class AcknowledgeNotificationsCommandHandler(CommandHandlerBase[list[UUID]]):
         self,
         ids_to_ack: list[UUID],
         user_id: int,
+        acknowledged_at: datetime,
     ) -> tuple[PostgresAction, PostgresAction]:
         async def mark_read() -> None:
-            await self._notification_repository.mark_notifications_read(ids_to_ack, user_id)
+            await self._notification_repository.acknowledge_notifications(
+                ids_to_ack,
+                user_id,
+                acknowledged_at,
+            )
 
         async def unmark_read() -> None:
-            await self._notification_repository.mark_notifications_unread(ids_to_ack, user_id)
+            await self._notification_repository.unacknowledge_notifications(
+                ids_to_ack,
+                user_id,
+            )
 
         return mark_read, unmark_read

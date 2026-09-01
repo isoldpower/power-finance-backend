@@ -9,8 +9,9 @@ from data_write_core.application.commands import (
 )
 
 from ...decorators import trace_handler_flow
+from ...presenters import NotificationHttpPresenter
 from ...serializers import (
-    AcknowledgedNotificationsResponseSerializer,
+    EnvelopedNotificationResponseSerializer,
     ErrorResponseSerializer,
 )
 from ..mixins import CommandResponseMixin
@@ -22,7 +23,12 @@ class NotificationAckView(NotificationView, CommandResponseMixin):
         operation_id="notifications_acknowledge",
         summary="Acknowledge a notification",
         description=(
-            "Mark a notification as read. Acknowledging an already-read " "notification is a no-op."
+            "Mark a notification as read and return it.\n\n"
+            "Idempotent by nature, so it needs no `Idempotency-Key`: "
+            "acknowledging an already-read notification succeeds and returns it "
+            "unchanged, keeping the original `acknowledged_at`. It is not a 409 "
+            "- the caller's intent is already satisfied. There is no "
+            "un-acknowledge."
         ),
         parameters=[
             OpenApiParameter(
@@ -34,14 +40,14 @@ class NotificationAckView(NotificationView, CommandResponseMixin):
         ],
         request=None,
         responses={
-            200: AcknowledgedNotificationsResponseSerializer,
+            200: EnvelopedNotificationResponseSerializer,
             404: ErrorResponseSerializer,
         },
     )
     @idempotent(required=False)
     @trace_handler_flow
     async def post(self, request, notification_id=None):
-        acknowledged_ids, write_version = await AcknowledgeNotificationsCommandHandler().handle(
+        acknowledged, write_version = await AcknowledgeNotificationsCommandHandler().handle(
             AcknowledgeNotificationsCommand(
                 user_id=int(request.user.unique_id),
                 user_external_id=request.user.external_id,
@@ -52,6 +58,6 @@ class NotificationAckView(NotificationView, CommandResponseMixin):
 
         return self.form_write_response(
             status_code=status.HTTP_200_OK,
-            response_body={"acknowledged_ids": [str(item) for item in acknowledged_ids]},
+            response_body=NotificationHttpPresenter.present_one(acknowledged[0]),
             write_version=write_version,
         )

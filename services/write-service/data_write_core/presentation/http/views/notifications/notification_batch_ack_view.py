@@ -8,10 +8,11 @@ from data_write_core.application.commands import (
 )
 
 from ...decorators import trace_handler_flow
+from ...presenters import NotificationHttpPresenter
 from ...serializers import (
-    AcknowledgedNotificationsResponseSerializer,
     BatchAcknowledgeRequestSerializer,
     ErrorResponseSerializer,
+    PaginatedNotificationResponseSerializer,
 )
 from ..mixins import CommandResponseMixin
 from .base import NotificationView
@@ -22,13 +23,16 @@ class NotificationBatchAckView(NotificationView, CommandResponseMixin):
         operation_id="notifications_batch_acknowledge",
         summary="Acknowledge notifications in batch",
         description=(
-            "Mark several notifications as read at once. Unknown or "
-            "already-read ids are skipped silently, so the response lists the "
-            "ids that actually changed."
+            "Mark several notifications as read at once. Not in the target "
+            "document; kept because a bell with twenty unread items needs it.\n\n"
+            "Unknown ids are skipped silently rather than failing the batch, "
+            "and an already-read one keeps its original `acknowledged_at`. The "
+            "response carries every notification named in the request, in the "
+            "same shape as `GET /notifications`."
         ),
         request=BatchAcknowledgeRequestSerializer,
         responses={
-            200: AcknowledgedNotificationsResponseSerializer,
+            200: PaginatedNotificationResponseSerializer,
             422: ErrorResponseSerializer,
         },
     )
@@ -38,7 +42,7 @@ class NotificationBatchAckView(NotificationView, CommandResponseMixin):
         serializer = BatchAcknowledgeRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        acknowledged_ids, write_version = await AcknowledgeNotificationsCommandHandler().handle(
+        acknowledged, write_version = await AcknowledgeNotificationsCommandHandler().handle(
             AcknowledgeNotificationsCommand(
                 user_id=int(request.user.unique_id),
                 user_external_id=request.user.external_id,
@@ -48,8 +52,6 @@ class NotificationBatchAckView(NotificationView, CommandResponseMixin):
 
         return self.form_write_response(
             status_code=status.HTTP_200_OK,
-            response_body={
-                "acknowledged_ids": [str(item) for item in acknowledged_ids],
-            },
+            response_body=NotificationHttpPresenter.present_many(acknowledged),
             write_version=write_version,
         )

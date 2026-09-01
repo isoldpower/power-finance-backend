@@ -18,6 +18,7 @@ from .notification_pb2 import (
     NotificationCreated,
     NotificationDeleted,
     NotificationRequested,
+    NotificationSeverity,
     NotificationsAcknowledged,
 )
 from .posting_pb2 import (
@@ -62,6 +63,7 @@ __all__ = [
     "NotificationCreated",
     "NotificationDeleted",
     "NotificationRequested",
+    "NotificationSeverity",
     "NotificationsAcknowledged",
     "TransactionCreated",
     "TransactionDeleted",

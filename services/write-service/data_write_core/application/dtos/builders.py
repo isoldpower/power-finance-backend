@@ -10,13 +10,20 @@ from data_write_core.domain.entities import (
     WebhookEntity,
     WebhookSubscriptionEntity,
 )
-from data_write_core.domain.value_objects import MoneyContainerKind, MoneyContainerRef
+from data_write_core.domain.value_objects import (
+    MoneyContainerKind,
+    MoneyContainerRef,
+)
 
 from .goal_dto import GoalDTO, MoneyContainerDTO
 from .notification_dto import NotificationDTO
 from .transaction_dto import TransactionDTO, TransactionPlainDTO
 from .wallet_dto import WalletDTO
-from .webhook_dto import WebhookDTO, WebhookSubscriptionDTO, WebhookWithSecretDTO
+from .webhook_dto import (
+    WebhookDTO,
+    WebhookSubscriptionDTO,
+    WebhookWithSecretDTO,
+)
 
 
 def webhook_to_dto(webhook: WebhookEntity) -> WebhookDTO:
@@ -60,11 +67,15 @@ def notification_to_dto(notification: NotificationEntity) -> NotificationDTO:
     return NotificationDTO(
         id=UUID(notification.unique_id),
         user_id=int(notification.user_id),
-        short=notification.short,
-        message=notification.message,
+        title=notification.title,
+        body=notification.body,
         payload=notification.payload,
-        is_read=notification.is_read,
+        severity=notification.severity,
+        subject_type=notification.subject_type,
+        subject_id=notification.subject_id,
+        acknowledged_at=notification.acknowledged_at,
         created_at=notification.created_at,
+        updated_at=notification.updated_at,
     )
 
 

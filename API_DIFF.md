@@ -5,7 +5,7 @@ exist, a field spelled differently, a status code the target does not mention, o
 a behaviour a client has to code around. Internal decisions that a caller cannot
 observe are deliberately not listed.
 
-Current as of Phase 6 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
+Current as of Phase 7 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
 conventions (envelope, cursors, money strings, timestamps, idempotency, filter
 grammar, rate limits, `Read-At-Least`) are implemented as documented — the
 differences below are on top of that.
@@ -25,7 +25,8 @@ says.
 | `POST /transactions/{id}/adjust`                                                                            | not in the target; see below   |
 | `POST /transactions/chains`, `DELETE /transactions/chains/{chain-id}`                                       | transfers; see below           |
 | `POST /transactions/search`                                                                                 | —                              |
-| `GET /notifications`, `GET /notifications/{id}`                                                             | shape differs, see below       |
+| `GET /notifications`, `GET /notifications/{id}`                                                             | `acknowledged`, `severity`     |
+| `GET /notifications/count`                                                                                  | the bell badge                 |
 | `POST /notifications/{id}/ack`, `POST /notifications/ack`, `DELETE /notifications/{id}`                     | last two are not in the target |
 | `GET /notifications/stream`                                                                                 | SSE, moved here from `/events` |
 | `GET /webhooks`, `GET /webhooks/{id}`, `POST /webhooks`, `PATCH /webhooks/{id}`, `DELETE /webhooks/{id}`    | —                              |
@@ -44,8 +45,6 @@ Not built yet. A request to any of these gets a plain 404 with NO error envelope
 nothing routes them, so no handler shapes the failure:
 
 - the whole **Actions**, **Automations** and **Assistant** slices;
-- `GET /notifications/count` — the bell badge has to come from
-  `GET /notifications?...` for now;
 - `GET /webhooks/event-types` — the event vocabulary is not served anywhere, so
   it has to be hardcoded client-side for the moment;
 - `GET /webhooks/{id}/deliveries`.
@@ -380,18 +379,60 @@ server: after changing it, refetch.
   nothing to save;
 
 ### Notifications
-- The fields are **`short`, `message`, `is_read`** — not `title`, `body`,
-  `acknowledged_at`. `is_read` is a boolean, so there is no timestamp for when
-  it was acknowledged;
-- `severity` and `subject` do not exist. Nothing to branch on for urgency and
-  nothing to deep-link to;
-- `payload` is an extra free-form JSON object we emit and the target does not
-  document;
-- `GET /notifications` takes **`only_unread=true`**, not the target's
-  `acknowledged` / `severity` params;
-- `POST /notifications/{id}/ack` returns `{"acknowledged_ids": [...]}`, not the
-  updated notification. Same for the batch endpoint. A client that needs the
-  updated resource has to re-read it.
+Notifications now match the target shape: `severity`, `title`, `body`,
+`subject`, `acknowledged_at` and the three structural timestamps. The old
+`short` / `message` / `is_read` fields and the free-form `payload` object are
+**gone from the wire** — `only_unread` is gone with them.
+
+- **`acknowledged_at` is a timestamp, not a boolean.** `null` means unread. It
+  records when the user saw it, so it never moves: acknowledging twice keeps the
+  first value, and so does a redelivered event;
+- **`acknowledged` is a TRISTATE.** Absent means both, which is not the same
+  request as `acknowledged=false`. `severity` filters to one of `info`,
+  `warning`, `critical`; an unknown value is 422 against that param's own name;
+- **`severity` does not reorder the feed.** Ordering is the global default,
+  `created_at DESC, id DESC`. This is a feed to be read, not a queue to be
+  worked through, so a `critical` from Tuesday does not outrank an `info` from
+  this morning;
+- **`subject` is `null` unless both halves are present.** A `{type, id}` with an
+  empty id is not a deep link, so it is not sent as one;
+- `payload` — the producer's own bag — is stored but never returned. What you
+  deep-link to is `subject`;
+- **both ack endpoints now return notification resources**, not
+  `{"acknowledged_ids": [...]}`. Single ack returns the one notification; the
+  batch returns every notification named in the request, in list shape;
+- `POST /notifications/{id}/ack` is idempotent by nature and needs no
+  `Idempotency-Key`. Re-acking is a **200 carrying the original
+  `acknowledged_at`**, never a 409. There is no un-acknowledge;
+- `POST /notifications/ack` (batch) and `DELETE /notifications/{id}` are not in
+  the target. The batch takes an explicit list of ids — "acknowledge
+  everything", filtered or not, is still an open item;
+
+**`GET /notifications/count`** returns `{"unacknowledged", "total"}` with an
+empty `meta`. It is deliberately uncached and reads both figures in one query.
+The value goes stale the moment the stream delivers something: increment locally
+on arrival rather than refetching per event.
+
+**`GET /notifications/stream`** now emits the documented events rather than raw
+internal frames:
+
+- `notification.created` carries the FULL resource, identical to one element of
+  `GET /notifications`, so you prepend it without a follow-up request;
+- `notification.acknowledged` carries `{id, acknowledged_at}` only, and one
+  frame is emitted **per notification** even when several were acknowledged
+  together — a second device's batching is not your concern;
+- the SSE `id:` is the **notification id**, not an internal event id;
+- **the stream carries only these two events.** It used to relay every outbox
+  frame for the user — wallet and transaction events included; those are gone.
+  Nothing documented consumed them;
+- **`Last-Event-ID` replays nothing.** The target allows resume to be best
+  effort "bounded by server-side retention", and ours is zero: push-service is a
+  stateless broadcast consumer that reads from the end of the topic and keeps no
+  backlog. Reconnect by refetching `GET /notifications`, which the target already
+  names as the recommended path in every case;
+- heartbeat comments arrive every 15 seconds, inside the documented 30, and
+  `X-Accel-Buffering: no` is set so no intermediary can buffer the stream into
+  looking hung;
 
 ### Currencies
 - `symbol` is `""` for any code we have no established symbol for. Fall back to

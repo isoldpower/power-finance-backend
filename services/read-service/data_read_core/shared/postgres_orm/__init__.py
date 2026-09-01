@@ -4,12 +4,19 @@ from .account import (
 )
 from .currency import CurrencyReadModel
 from .goal import GoalReadModel
-from .notification import NotificationReadModel
+from .notification import (
+    NotificationReadModel,
+    Severity,
+)
 from .posting import (
     AccountDispatchReadModel,
     AccountPostingReadModel,
 )
-from .transaction import NO_CHAIN_SENTINEL, MoneyContainers, TransactionReadModel
+from .transaction import (
+    NO_CHAIN_SENTINEL,
+    MoneyContainers,
+    TransactionReadModel,
+)
 from .utilities import aatomic
 from .wallet import WalletReadModel
 from .webhook import WebhookReadModel, WebhookSubscriptionReadModel
@@ -21,6 +28,7 @@ __all__ = [
     "AccountReadModel",
     "CurrencyReadModel",
     "GoalReadModel",
+    "Severity",
     "NotificationReadModel",
     "NO_CHAIN_SENTINEL",
     "TransactionReadModel",

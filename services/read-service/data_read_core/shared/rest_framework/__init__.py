@@ -1,4 +1,7 @@
-from .async_views import AsyncAPIView, async_api_view
+from .async_views import (
+    AsyncAPIView,
+    async_api_view,
+)
 from .envelope_serializers import (
     CollectionMetaSerializer,
     ErrorResponseSerializer,
@@ -7,7 +10,11 @@ from .envelope_serializers import (
     resource_response,
 )
 from .money_serializers import MoneySerializer
-from .schema_parameters import CURSOR_PARAMETER, LIMIT_PARAMETER
+from .notification_serializers import NotificationSubjectSerializer
+from .schema_parameters import (
+    CURSOR_PARAMETER,
+    LIMIT_PARAMETER,
+)
 from .transaction_serializers import (
     TransactionWalletSerializer,
     transaction_preview_fields,
@@ -20,6 +27,7 @@ __all__ = [
     "CollectionMetaSerializer",
     "ErrorResponseSerializer",
     "MoneySerializer",
+    "NotificationSubjectSerializer",
     "TransactionWalletSerializer",
     "transaction_preview_fields",
     "ResourceMetaSerializer",

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -14,14 +14,21 @@ NOTIFICATION_A = "11111111-1111-1111-1111-111111111111"
 NOTIFICATION_MISSING = "22222222-2222-2222-2222-222222222222"
 
 
-def make_notification(notification_id: str, *, is_read: bool = False) -> NotificationEntity:
+FIRST_SEEN_AT = datetime(2026, 1, 2, tzinfo=UTC)
+
+
+def make_notification(
+    notification_id: str,
+    *,
+    acknowledged_at: datetime | None = None,
+) -> NotificationEntity:
     return NotificationEntity(
         id=notification_id,
-        short="short",
-        message="message",
+        title="title",
+        body="body",
         user_id="7",
-        created_at=datetime(2026, 1, 1),
-        is_read=is_read,
+        created_at=datetime(2026, 1, 1, tzinfo=UTC),
+        acknowledged_at=acknowledged_at,
     )
 
 
@@ -43,10 +50,13 @@ class FakeOutboxRepository:
         return 42
 
 
-async def test_ack_skips_already_read_without_emitting():
+async def test_ack_of_an_already_read_notification_returns_it_unchanged():
+    """Idempotent by nature: the caller's intent is already satisfied, so this
+    is a 200 carrying the original `acknowledged_at`, never a conflict."""
+
     handler = AcknowledgeNotificationsCommandHandler(
         notification_repository=FakeNotificationRepository(
-            [make_notification(NOTIFICATION_A, is_read=True)],
+            [make_notification(NOTIFICATION_A, acknowledged_at=FIRST_SEEN_AT)],
         ),
         outbox_repository=FakeOutboxRepository(),
     )
@@ -59,7 +69,7 @@ async def test_ack_skips_already_read_without_emitting():
         )
     )
 
-    assert acknowledged == []
+    assert [notification.acknowledged_at for notification in acknowledged] == [FIRST_SEEN_AT]
     assert write_version == 42
 
 

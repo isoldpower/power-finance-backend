@@ -9,7 +9,11 @@ from data_write_core.application.dtos import (
 )
 from data_write_core.application.money_scales import money_at_scale
 from data_write_core.application.queries import FallbackWalletDetail
-from data_write_core.presentation.http.presenters import TransactionHttpPresenter
+
+from ...presenters import (
+    NotificationHttpPresenter,
+    TransactionHttpPresenter,
+)
 
 
 async def present_wallet(wallet: WalletDTO) -> dict:
@@ -21,8 +25,14 @@ async def present_wallet(wallet: WalletDTO) -> dict:
         "deleted_at": to_iso(wallet.deleted_at),
         "category": wallet.category,
         "currency": wallet.currency,
-        "money": await money_at_scale(wallet.balance_amount, wallet.currency),
-        "zero_balance": await money_at_scale(wallet.zero_balance, wallet.currency),
+        "money": await money_at_scale(
+            wallet.balance_amount,
+            wallet.currency,
+        ),
+        "zero_balance": await money_at_scale(
+            wallet.zero_balance,
+            wallet.currency,
+        ),
         "favorite": wallet.favorite,
         "color": wallet.color,
     }
@@ -38,8 +48,14 @@ async def present_wallet_detail(detail: FallbackWalletDetail) -> dict:
     return {
         **await present_wallet(detail.wallet),
         "period": {
-            "inflow": await money_at_scale(detail.inflow, currency),
-            "outflow": await money_at_scale(detail.outflow, currency),
+            "inflow": await money_at_scale(
+                detail.inflow,
+                currency,
+            ),
+            "outflow": await money_at_scale(
+                detail.outflow,
+                currency,
+            ),
         },
     }
 
@@ -87,16 +103,7 @@ def present_webhook_subscriptions(
 
 
 def present_notification(notification: NotificationDTO) -> dict:
-    return {
-        "id": str(notification.id),
-        "short": notification.short,
-        "message": notification.message,
-        "payload": notification.payload,
-        "is_read": notification.is_read,
-        "created_at": to_iso(notification.created_at),
-        "updated_at": None,
-        "deleted_at": None,
-    }
+    return NotificationHttpPresenter.present_one(notification)
 
 
 def present_notifications(notifications: list[NotificationDTO]) -> list[dict]:

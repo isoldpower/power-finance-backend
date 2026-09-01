@@ -5,26 +5,39 @@ from data_write_core.infrastructure.orm import NotificationModel
 
 class NotificationMapper:
     @staticmethod
-    def to_domain(model: NotificationModel) -> NotificationEntity:
+    def to_domain(
+        model: NotificationModel,
+    ) -> NotificationEntity:
         return NotificationEntity(
             id=str(model.id),
-            short=model.short,
-            message=model.message,
+            title=model.title,
+            body=model.body,
             payload=model.payload,
-            is_read=model.is_read,
+            severity=model.severity,
+            subject_type=model.subject_type or None,
+            subject_id=model.subject_id or None,
+            acknowledged_at=model.acknowledged_at,
             user_id=str(model.user_id),
             created_at=model.created_at,
+            updated_at=model.updated_at,
             event_collector=EventCollector(),
         )
 
     @staticmethod
-    def apply_to_model(model: NotificationModel, entity: NotificationEntity) -> NotificationModel:
+    def apply_to_model(
+        model: NotificationModel,
+        entity: NotificationEntity,
+    ) -> NotificationModel:
         model.id = entity.unique_id
-        model.short = entity.short
-        model.message = entity.message
+        model.title = entity.title
+        model.body = entity.body
         model.payload = entity.payload
-        model.is_read = entity.is_read
+        model.severity = entity.severity
+        model.subject_type = entity.subject_type or ""
+        model.subject_id = entity.subject_id or ""
+        model.acknowledged_at = entity.acknowledged_at
         model.user_id = int(entity.user_id)
         model.created_at = entity.created_at
+        model.updated_at = entity.updated_at
 
         return model

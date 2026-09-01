@@ -121,21 +121,11 @@ public interface AccountUpdatedOrBuilder extends
       getNameBytes();
 
   /**
-   * <pre>
-   * Restated on every update so a consumer that missed AccountCreated still
-   * learns what the balance is denominated in.
-   * </pre>
-   *
    * <code>string currency_code = 108;</code>
    * @return The currencyCode.
    */
   java.lang.String getCurrencyCode();
   /**
-   * <pre>
-   * Restated on every update so a consumer that missed AccountCreated still
-   * learns what the balance is denominated in.
-   * </pre>
-   *
    * <code>string currency_code = 108;</code>
    * @return The bytes for currencyCode.
    */

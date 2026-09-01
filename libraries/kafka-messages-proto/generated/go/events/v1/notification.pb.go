@@ -23,6 +23,60 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Shared with the action severity vocabulary on purpose: two adjacent slices
+// with two near-identical urgency scales would be a permanent mapping bug.
+type NotificationSeverity int32
+
+const (
+	NotificationSeverity_NOTIFICATION_SEVERITY_UNSPECIFIED NotificationSeverity = 0
+	NotificationSeverity_NOTIFICATION_SEVERITY_INFO        NotificationSeverity = 1
+	NotificationSeverity_NOTIFICATION_SEVERITY_WARNING     NotificationSeverity = 2
+	NotificationSeverity_NOTIFICATION_SEVERITY_CRITICAL    NotificationSeverity = 3
+)
+
+// Enum value maps for NotificationSeverity.
+var (
+	NotificationSeverity_name = map[int32]string{
+		0: "NOTIFICATION_SEVERITY_UNSPECIFIED",
+		1: "NOTIFICATION_SEVERITY_INFO",
+		2: "NOTIFICATION_SEVERITY_WARNING",
+		3: "NOTIFICATION_SEVERITY_CRITICAL",
+	}
+	NotificationSeverity_value = map[string]int32{
+		"NOTIFICATION_SEVERITY_UNSPECIFIED": 0,
+		"NOTIFICATION_SEVERITY_INFO":        1,
+		"NOTIFICATION_SEVERITY_WARNING":     2,
+		"NOTIFICATION_SEVERITY_CRITICAL":    3,
+	}
+)
+
+func (x NotificationSeverity) Enum() *NotificationSeverity {
+	p := new(NotificationSeverity)
+	*p = x
+	return p
+}
+
+func (x NotificationSeverity) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (NotificationSeverity) Descriptor() protoreflect.EnumDescriptor {
+	return file_notification_proto_enumTypes[0].Descriptor()
+}
+
+func (NotificationSeverity) Type() protoreflect.EnumType {
+	return &file_notification_proto_enumTypes[0]
+}
+
+func (x NotificationSeverity) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use NotificationSeverity.Descriptor instead.
+func (NotificationSeverity) EnumDescriptor() ([]byte, []int) {
+	return file_notification_proto_rawDescGZIP(), []int{0}
+}
+
 type NotificationRequested struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	EventId        string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -30,11 +84,16 @@ type NotificationRequested struct {
 	SchemaVersion  int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
 	UserId         int32                  `protobuf:"varint,10,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	UserExternalId string                 `protobuf:"bytes,11,opt,name=user_external_id,json=userExternalId,proto3" json:"user_external_id,omitempty"`
-	Short          string                 `protobuf:"bytes,12,opt,name=short,proto3" json:"short,omitempty"`
-	Message        string                 `protobuf:"bytes,13,opt,name=message,proto3" json:"message,omitempty"`
+	Title          string                 `protobuf:"bytes,12,opt,name=title,proto3" json:"title,omitempty"`
+	Body           string                 `protobuf:"bytes,13,opt,name=body,proto3" json:"body,omitempty"`
 	Payload        *structpb.Struct       `protobuf:"bytes,14,opt,name=payload,proto3" json:"payload,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	Severity       NotificationSeverity   `protobuf:"varint,16,opt,name=severity,proto3,enum=power_finance.events.v1.NotificationSeverity" json:"severity,omitempty"`
+	// A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
+	// the target enumerates severity and deliberately does not enumerate this.
+	SubjectType   string `protobuf:"bytes,17,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
+	SubjectId     string `protobuf:"bytes,18,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *NotificationRequested) Reset() {
@@ -102,16 +161,16 @@ func (x *NotificationRequested) GetUserExternalId() string {
 	return ""
 }
 
-func (x *NotificationRequested) GetShort() string {
+func (x *NotificationRequested) GetTitle() string {
 	if x != nil {
-		return x.Short
+		return x.Title
 	}
 	return ""
 }
 
-func (x *NotificationRequested) GetMessage() string {
+func (x *NotificationRequested) GetBody() string {
 	if x != nil {
-		return x.Message
+		return x.Body
 	}
 	return ""
 }
@@ -123,6 +182,27 @@ func (x *NotificationRequested) GetPayload() *structpb.Struct {
 	return nil
 }
 
+func (x *NotificationRequested) GetSeverity() NotificationSeverity {
+	if x != nil {
+		return x.Severity
+	}
+	return NotificationSeverity_NOTIFICATION_SEVERITY_UNSPECIFIED
+}
+
+func (x *NotificationRequested) GetSubjectType() string {
+	if x != nil {
+		return x.SubjectType
+	}
+	return ""
+}
+
+func (x *NotificationRequested) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
 type NotificationCreated struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	EventId        string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -130,10 +210,14 @@ type NotificationCreated struct {
 	SchemaVersion  int32                  `protobuf:"varint,3,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
 	NotificationId string                 `protobuf:"bytes,10,opt,name=notification_id,json=notificationId,proto3" json:"notification_id,omitempty"`
 	UserId         int32                  `protobuf:"varint,11,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Short          string                 `protobuf:"bytes,12,opt,name=short,proto3" json:"short,omitempty"`
-	Message        string                 `protobuf:"bytes,13,opt,name=message,proto3" json:"message,omitempty"`
+	Title          string                 `protobuf:"bytes,12,opt,name=title,proto3" json:"title,omitempty"`
+	Body           string                 `protobuf:"bytes,13,opt,name=body,proto3" json:"body,omitempty"`
 	Payload        *structpb.Struct       `protobuf:"bytes,14,opt,name=payload,proto3" json:"payload,omitempty"`
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Severity       NotificationSeverity   `protobuf:"varint,16,opt,name=severity,proto3,enum=power_finance.events.v1.NotificationSeverity" json:"severity,omitempty"`
+	SubjectType    string                 `protobuf:"bytes,17,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
+	SubjectId      string                 `protobuf:"bytes,18,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	UserExternalId string                 `protobuf:"bytes,19,opt,name=user_external_id,json=userExternalId,proto3" json:"user_external_id,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -203,16 +287,16 @@ func (x *NotificationCreated) GetUserId() int32 {
 	return 0
 }
 
-func (x *NotificationCreated) GetShort() string {
+func (x *NotificationCreated) GetTitle() string {
 	if x != nil {
-		return x.Short
+		return x.Title
 	}
 	return ""
 }
 
-func (x *NotificationCreated) GetMessage() string {
+func (x *NotificationCreated) GetBody() string {
 	if x != nil {
-		return x.Message
+		return x.Body
 	}
 	return ""
 }
@@ -229,6 +313,34 @@ func (x *NotificationCreated) GetCreatedAt() *timestamppb.Timestamp {
 		return x.CreatedAt
 	}
 	return nil
+}
+
+func (x *NotificationCreated) GetSeverity() NotificationSeverity {
+	if x != nil {
+		return x.Severity
+	}
+	return NotificationSeverity_NOTIFICATION_SEVERITY_UNSPECIFIED
+}
+
+func (x *NotificationCreated) GetSubjectType() string {
+	if x != nil {
+		return x.SubjectType
+	}
+	return ""
+}
+
+func (x *NotificationCreated) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *NotificationCreated) GetUserExternalId() string {
+	if x != nil {
+		return x.UserExternalId
+	}
+	return ""
 }
 
 type NotificationsAcknowledged struct {
@@ -403,7 +515,7 @@ var File_notification_proto protoreflect.FileDescriptor
 
 const file_notification_proto_rawDesc = "" +
 	"\n" +
-	"\x12notification.proto\x12\x17power_finance.events.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbc\x02\n" +
+	"\x12notification.proto\x12\x17power_finance.events.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc3\x03\n" +
 	"\x15NotificationRequested\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -412,9 +524,13 @@ const file_notification_proto_rawDesc = "" +
 	"\auser_id\x18\n" +
 	" \x01(\x05R\x06userId\x12(\n" +
 	"\x10user_external_id\x18\v \x01(\tR\x0euserExternalId\x12\x14\n" +
-	"\x05short\x18\f \x01(\tR\x05short\x12\x18\n" +
-	"\amessage\x18\r \x01(\tR\amessage\x121\n" +
-	"\apayload\x18\x0e \x01(\v2\x17.google.protobuf.StructR\apayload\"\xf4\x02\n" +
+	"\x05title\x18\f \x01(\tR\x05title\x12\x12\n" +
+	"\x04body\x18\r \x01(\tR\x04body\x121\n" +
+	"\apayload\x18\x0e \x01(\v2\x17.google.protobuf.StructR\apayload\x12I\n" +
+	"\bseverity\x18\x10 \x01(\x0e2-.power_finance.events.v1.NotificationSeverityR\bseverity\x12!\n" +
+	"\fsubject_type\x18\x11 \x01(\tR\vsubjectType\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x12 \x01(\tR\tsubjectId\"\xa5\x04\n" +
 	"\x13NotificationCreated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -423,11 +539,16 @@ const file_notification_proto_rawDesc = "" +
 	"\x0fnotification_id\x18\n" +
 	" \x01(\tR\x0enotificationId\x12\x17\n" +
 	"\auser_id\x18\v \x01(\x05R\x06userId\x12\x14\n" +
-	"\x05short\x18\f \x01(\tR\x05short\x12\x18\n" +
-	"\amessage\x18\r \x01(\tR\amessage\x121\n" +
+	"\x05title\x18\f \x01(\tR\x05title\x12\x12\n" +
+	"\x04body\x18\r \x01(\tR\x04body\x121\n" +
 	"\apayload\x18\x0e \x01(\v2\x17.google.protobuf.StructR\apayload\x129\n" +
 	"\n" +
-	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xa3\x02\n" +
+	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12I\n" +
+	"\bseverity\x18\x10 \x01(\x0e2-.power_finance.events.v1.NotificationSeverityR\bseverity\x12!\n" +
+	"\fsubject_type\x18\x11 \x01(\tR\vsubjectType\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x12 \x01(\tR\tsubjectId\x12(\n" +
+	"\x10user_external_id\x18\x13 \x01(\tR\x0euserExternalId\"\xa3\x02\n" +
 	"\x19NotificationsAcknowledged\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -446,7 +567,12 @@ const file_notification_proto_rawDesc = "" +
 	" \x01(\tR\x0enotificationId\x12\x17\n" +
 	"\auser_id\x18\v \x01(\x05R\x06userId\x129\n" +
 	"\n" +
-	"deleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAtB\x80\x01\n" +
+	"deleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAt*\xa4\x01\n" +
+	"\x14NotificationSeverity\x12%\n" +
+	"!NOTIFICATION_SEVERITY_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aNOTIFICATION_SEVERITY_INFO\x10\x01\x12!\n" +
+	"\x1dNOTIFICATION_SEVERITY_WARNING\x10\x02\x12\"\n" +
+	"\x1eNOTIFICATION_SEVERITY_CRITICAL\x10\x03B\x80\x01\n" +
 	"\x1acom.powerfinance.events.v1B\x11NotificationProtoP\x01ZMgithub.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1b\x06proto3"
 
 var (
@@ -461,30 +587,34 @@ func file_notification_proto_rawDescGZIP() []byte {
 	return file_notification_proto_rawDescData
 }
 
+var file_notification_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_notification_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_notification_proto_goTypes = []any{
-	(*NotificationRequested)(nil),     // 0: power_finance.events.v1.NotificationRequested
-	(*NotificationCreated)(nil),       // 1: power_finance.events.v1.NotificationCreated
-	(*NotificationsAcknowledged)(nil), // 2: power_finance.events.v1.NotificationsAcknowledged
-	(*NotificationDeleted)(nil),       // 3: power_finance.events.v1.NotificationDeleted
-	(*timestamppb.Timestamp)(nil),     // 4: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),           // 5: google.protobuf.Struct
+	(NotificationSeverity)(0),         // 0: power_finance.events.v1.NotificationSeverity
+	(*NotificationRequested)(nil),     // 1: power_finance.events.v1.NotificationRequested
+	(*NotificationCreated)(nil),       // 2: power_finance.events.v1.NotificationCreated
+	(*NotificationsAcknowledged)(nil), // 3: power_finance.events.v1.NotificationsAcknowledged
+	(*NotificationDeleted)(nil),       // 4: power_finance.events.v1.NotificationDeleted
+	(*timestamppb.Timestamp)(nil),     // 5: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),           // 6: google.protobuf.Struct
 }
 var file_notification_proto_depIdxs = []int32{
-	4, // 0: power_finance.events.v1.NotificationRequested.occurred_at:type_name -> google.protobuf.Timestamp
-	5, // 1: power_finance.events.v1.NotificationRequested.payload:type_name -> google.protobuf.Struct
-	4, // 2: power_finance.events.v1.NotificationCreated.occurred_at:type_name -> google.protobuf.Timestamp
-	5, // 3: power_finance.events.v1.NotificationCreated.payload:type_name -> google.protobuf.Struct
-	4, // 4: power_finance.events.v1.NotificationCreated.created_at:type_name -> google.protobuf.Timestamp
-	4, // 5: power_finance.events.v1.NotificationsAcknowledged.occurred_at:type_name -> google.protobuf.Timestamp
-	4, // 6: power_finance.events.v1.NotificationsAcknowledged.acknowledged_at:type_name -> google.protobuf.Timestamp
-	4, // 7: power_finance.events.v1.NotificationDeleted.occurred_at:type_name -> google.protobuf.Timestamp
-	4, // 8: power_finance.events.v1.NotificationDeleted.deleted_at:type_name -> google.protobuf.Timestamp
-	9, // [9:9] is the sub-list for method output_type
-	9, // [9:9] is the sub-list for method input_type
-	9, // [9:9] is the sub-list for extension type_name
-	9, // [9:9] is the sub-list for extension extendee
-	0, // [0:9] is the sub-list for field type_name
+	5,  // 0: power_finance.events.v1.NotificationRequested.occurred_at:type_name -> google.protobuf.Timestamp
+	6,  // 1: power_finance.events.v1.NotificationRequested.payload:type_name -> google.protobuf.Struct
+	0,  // 2: power_finance.events.v1.NotificationRequested.severity:type_name -> power_finance.events.v1.NotificationSeverity
+	5,  // 3: power_finance.events.v1.NotificationCreated.occurred_at:type_name -> google.protobuf.Timestamp
+	6,  // 4: power_finance.events.v1.NotificationCreated.payload:type_name -> google.protobuf.Struct
+	5,  // 5: power_finance.events.v1.NotificationCreated.created_at:type_name -> google.protobuf.Timestamp
+	0,  // 6: power_finance.events.v1.NotificationCreated.severity:type_name -> power_finance.events.v1.NotificationSeverity
+	5,  // 7: power_finance.events.v1.NotificationsAcknowledged.occurred_at:type_name -> google.protobuf.Timestamp
+	5,  // 8: power_finance.events.v1.NotificationsAcknowledged.acknowledged_at:type_name -> google.protobuf.Timestamp
+	5,  // 9: power_finance.events.v1.NotificationDeleted.occurred_at:type_name -> google.protobuf.Timestamp
+	5,  // 10: power_finance.events.v1.NotificationDeleted.deleted_at:type_name -> google.protobuf.Timestamp
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_notification_proto_init() }
@@ -497,13 +627,14 @@ func file_notification_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_notification_proto_rawDesc), len(file_notification_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_notification_proto_goTypes,
 		DependencyIndexes: file_notification_proto_depIdxs,
+		EnumInfos:         file_notification_proto_enumTypes,
 		MessageInfos:      file_notification_proto_msgTypes,
 	}.Build()
 	File_notification_proto = out.File

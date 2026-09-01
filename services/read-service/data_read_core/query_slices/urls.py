@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .convert_currency import convert_currency
+from .count_notifications import count_notifications
 from .get_account import get_account
 from .get_currency_rates import get_currency_rates
 from .get_goal import get_goal
@@ -37,6 +38,7 @@ urlpatterns = [
     path("transactions/search", search_transactions),
     path("transactions/<uuid:transaction_id>", get_transaction),
     path("notifications", list_notifications),
+    path("notifications/count", count_notifications),
     path("notifications/<uuid:notification_id>", get_notification),
     path("webhooks", list_webhooks),
     path("webhooks/search", search_webhooks),

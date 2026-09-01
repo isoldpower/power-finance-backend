@@ -85,12 +85,10 @@ type AccountCreated struct {
 	AccountGroup   AccountGroup           `protobuf:"varint,104,opt,name=account_group,json=accountGroup,proto3,enum=power_finance.events.v1.AccountGroup" json:"account_group,omitempty"`
 	Name           string                 `protobuf:"bytes,105,opt,name=name,proto3" json:"name,omitempty"`
 	Balance        string                 `protobuf:"bytes,106,opt,name=balance,proto3" json:"balance,omitempty"`
-	// The book currency the balance is denominated in. Every account of a user
-	// shares it: postings are converted into it before they are summed.
-	CurrencyCode  string                 `protobuf:"bytes,107,opt,name=currency_code,json=currencyCode,proto3" json:"currency_code,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	CurrencyCode   string                 `protobuf:"bytes,107,opt,name=currency_code,json=currencyCode,proto3" json:"currency_code,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *AccountCreated) Reset() {
@@ -212,12 +210,10 @@ type AccountUpdated struct {
 	NewBalance      string                 `protobuf:"bytes,105,opt,name=new_balance,json=newBalance,proto3" json:"new_balance,omitempty"`
 	AccountGroup    AccountGroup           `protobuf:"varint,106,opt,name=account_group,json=accountGroup,proto3,enum=power_finance.events.v1.AccountGroup" json:"account_group,omitempty"`
 	Name            string                 `protobuf:"bytes,107,opt,name=name,proto3" json:"name,omitempty"`
-	// Restated on every update so a consumer that missed AccountCreated still
-	// learns what the balance is denominated in.
-	CurrencyCode  string                 `protobuf:"bytes,108,opt,name=currency_code,json=currencyCode,proto3" json:"currency_code,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	CurrencyCode    string                 `protobuf:"bytes,108,opt,name=currency_code,json=currencyCode,proto3" json:"currency_code,omitempty"`
+	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *AccountUpdated) Reset() {

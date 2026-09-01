@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"services/push-service/push_service/services/projections"
 
 	"services/push-service/internal/metrics"
 	"services/push-service/push_service/types"
@@ -90,5 +91,5 @@ func (eps *EventsProjectionService) translateKafkaMessage(
 		return nil, errors.New("outbox event carries an empty payload")
 	}
 
-	return []types.OutboxEvent{kafkaMessage}, nil
+	return projections.ProjectNotificationEvents(kafkaMessage)
 }

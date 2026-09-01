@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from write_service.common.pagination import PageRequest, apply_keyset
@@ -10,13 +11,16 @@ from .mappers import NotificationMapper
 
 
 class DjangoNotificationRepository(NotificationRepository):
-    async def create_notification(self, notification: NotificationEntity) -> NotificationEntity:
+    async def create_notification(
+        self,
+        notification: NotificationEntity,
+    ) -> NotificationEntity:
         created_notification = NotificationModel()
         NotificationMapper.apply_to_model(created_notification, notification)
         await created_notification.asave()
 
-        refreshed = await NotificationModel.objects.aget(id=created_notification.id)
-        return NotificationMapper.to_domain(refreshed)
+        refreshed_notifications = await NotificationModel.objects.aget(id=created_notification.id)
+        return NotificationMapper.to_domain(refreshed_notifications)
 
     async def get_user_notification_by_id(
         self,
@@ -24,8 +28,7 @@ class DjangoNotificationRepository(NotificationRepository):
         user_id: int,
     ) -> NotificationEntity:
         requested_notification: NotificationModel = await NotificationModel.objects.aget(
-            id=notification_id,
-            user_id=user_id,
+            id=notification_id, user_id=user_id
         )
 
         return NotificationMapper.to_domain(requested_notification)
@@ -48,14 +51,36 @@ class DjangoNotificationRepository(NotificationRepository):
         page: PageRequest | None = None,
     ) -> list[NotificationEntity]:
         queryset = NotificationModel.objects.filter(user_id=user_id)
-        rows = apply_keyset(queryset, page) if page else queryset.order_by("-created_at", "-id")
+        notification_rows = (
+            apply_keyset(queryset, page) if page else queryset.order_by("-created_at", "-id")
+        )
 
-        return [NotificationMapper.to_domain(notification) async for notification in rows]
+        return [
+            NotificationMapper.to_domain(notification) async for notification in notification_rows
+        ]
 
-    async def count_user_notifications(self, user_id: int) -> int:
+    async def count_user_notifications(
+        self,
+        user_id: int,
+    ) -> int:
         return await NotificationModel.objects.filter(user_id=user_id).acount()
 
-    async def mark_notifications_read(
+    async def acknowledge_notifications(
+        self,
+        notification_ids: list[UUID],
+        user_id: int,
+        acknowledged_at: datetime,
+    ) -> None:
+        await NotificationModel.objects.filter(
+            id__in=notification_ids,
+            user_id=user_id,
+            acknowledged_at__isnull=True,
+        ).aupdate(
+            acknowledged_at=acknowledged_at,
+            updated_at=acknowledged_at,
+        )
+
+    async def unacknowledge_notifications(
         self,
         notification_ids: list[UUID],
         user_id: int,
@@ -63,17 +88,13 @@ class DjangoNotificationRepository(NotificationRepository):
         await NotificationModel.objects.filter(
             id__in=notification_ids,
             user_id=user_id,
-        ).aupdate(is_read=True)
+        ).aupdate(
+            acknowledged_at=None,
+            updated_at=None,
+        )
 
-    async def mark_notifications_unread(
+    async def hard_delete_notification(
         self,
-        notification_ids: list[UUID],
-        user_id: int,
+        notification_id: UUID,
     ) -> None:
-        await NotificationModel.objects.filter(
-            id__in=notification_ids,
-            user_id=user_id,
-        ).aupdate(is_read=False)
-
-    async def hard_delete_notification(self, notification_id: UUID) -> None:
         await NotificationModel.objects.filter(id=notification_id).adelete()

@@ -7,8 +7,13 @@ from uuid import UUID
 class NotificationDTO:
     id: UUID
     user_id: int
-    short: str
-    message: str
+    title: str
+    body: str
     payload: dict | None
-    is_read: bool
+    severity: str
+    subject_type: str | None
+    subject_id: str | None
+    acknowledged_at: datetime | None
     created_at: datetime
+    updated_at: datetime | None
+    deleted_at: datetime | None = None

@@ -109,21 +109,11 @@ public interface AccountCreatedOrBuilder extends
       getBalanceBytes();
 
   /**
-   * <pre>
-   * The book currency the balance is denominated in. Every account of a user
-   * shares it: postings are converted into it before they are summed.
-   * </pre>
-   *
    * <code>string currency_code = 107;</code>
    * @return The currencyCode.
    */
   java.lang.String getCurrencyCode();
   /**
-   * <pre>
-   * The book currency the balance is denominated in. Every account of a user
-   * shares it: postings are converted into it before they are summed.
-   * </pre>
-   *
    * <code>string currency_code = 107;</code>
    * @return The bytes for currencyCode.
    */

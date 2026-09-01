@@ -5,16 +5,25 @@ import (
 	"testing"
 	"time"
 
+	"services/push-service/push_service/services/projections"
 	"services/push-service/push_service/types"
 )
 
 func validOutboxEvent() types.OutboxEvent {
 	return types.OutboxEvent{
 		EventID:       "evt-1",
-		EventType:     "WalletCreated",
-		AggregateType: "wallet",
+		EventType:     "NotificationCreated",
+		AggregateType: "notification",
 		UserID:        "user_2abc",
-		Payload:       []byte(`{"wallet_id":"wallet-1"}`),
+		Payload: []byte(`{
+			"notification_id": "notif-1",
+			"title": "Visa Credit near limit",
+			"body": "You are at 82% of your limit.",
+			"severity": "NOTIFICATION_SEVERITY_CRITICAL",
+			"subject_type": "wallet",
+			"subject_id": "wallet-1",
+			"created_at": "2026-08-12T11:51:00Z"
+		}`),
 	}
 }
 
@@ -27,14 +36,33 @@ func TestProjectionForwardsValidEvents(t *testing.T) {
 
 	select {
 	case projected := <-projection.Events():
-		if projected.EventType != "WalletCreated" || string(projected.Payload) == "" {
-			t.Fatalf("expected event passthrough, got %+v", projected)
+		if projected.EventType != projections.NotificationCreatedEvent || string(projected.Payload) == "" {
+			t.Fatalf("expected a projected notification, got %+v", projected)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("expected event to be projected")
 	}
 
 	close(kafkaChannel)
+}
+
+// The route is /notifications/stream. Forwarding wallet or transaction frames
+// down it would make the endpoint mean something other than its name, so
+// anything this stream does not document is dropped rather than passed through.
+func TestProjectionDropsEventsItDoesNotDocument(t *testing.T) {
+	projection := NewEventsProjectionService()
+	kafkaChannel := make(chan types.OutboxEvent)
+	go projection.RunKafkaReceiver(context.Background(), kafkaChannel)
+
+	walletEvent := validOutboxEvent()
+	walletEvent.EventType = "WalletCreated"
+	walletEvent.Payload = []byte(`{"wallet_id":"wallet-1"}`)
+	kafkaChannel <- walletEvent
+	close(kafkaChannel)
+
+	if _, isOpen := <-projection.Events(); isOpen {
+		t.Fatal("expected an undocumented event to be dropped and the channel closed")
+	}
 }
 
 func TestProjectionDropsEventsWithoutEventType(t *testing.T) {

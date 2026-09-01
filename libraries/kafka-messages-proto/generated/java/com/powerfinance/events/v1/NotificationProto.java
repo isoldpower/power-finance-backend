@@ -57,34 +57,44 @@ public final class NotificationProto extends com.google.protobuf.GeneratedFile {
     java.lang.String[] descriptorData = {
       "\n\022notification.proto\022\027power_finance.even" +
       "ts.v1\032\034google/protobuf/struct.proto\032\037goo" +
-      "gle/protobuf/timestamp.proto\"\347\001\n\025Notific" +
+      "gle/protobuf/timestamp.proto\"\317\002\n\025Notific" +
       "ationRequested\022\020\n\010event_id\030\001 \001(\t\022/\n\013occu" +
       "rred_at\030\002 \001(\0132\032.google.protobuf.Timestam" +
       "p\022\026\n\016schema_version\030\003 \001(\005\022\017\n\007user_id\030\n \001" +
-      "(\005\022\030\n\020user_external_id\030\013 \001(\t\022\r\n\005short\030\014 " +
-      "\001(\t\022\017\n\007message\030\r \001(\t\022(\n\007payload\030\016 \001(\0132\027." +
-      "google.protobuf.Struct\"\224\002\n\023NotificationC" +
-      "reated\022\020\n\010event_id\030\001 \001(\t\022/\n\013occurred_at\030" +
-      "\002 \001(\0132\032.google.protobuf.Timestamp\022\026\n\016sch" +
-      "ema_version\030\003 \001(\005\022\027\n\017notification_id\030\n \001" +
-      "(\t\022\017\n\007user_id\030\013 \001(\005\022\r\n\005short\030\014 \001(\t\022\017\n\007me" +
-      "ssage\030\r \001(\t\022(\n\007payload\030\016 \001(\0132\027.google.pr" +
-      "otobuf.Struct\022.\n\ncreated_at\030\017 \001(\0132\032.goog" +
-      "le.protobuf.Timestamp\"\326\001\n\031NotificationsA" +
-      "cknowledged\022\020\n\010event_id\030\001 \001(\t\022/\n\013occurre" +
-      "d_at\030\002 \001(\0132\032.google.protobuf.Timestamp\022\026" +
-      "\n\016schema_version\030\003 \001(\005\022\030\n\020notification_i" +
-      "ds\030\n \003(\t\022\017\n\007user_id\030\013 \001(\005\0223\n\017acknowledge" +
-      "d_at\030\014 \001(\0132\032.google.protobuf.Timestamp\"\312" +
-      "\001\n\023NotificationDeleted\022\020\n\010event_id\030\001 \001(\t" +
-      "\022/\n\013occurred_at\030\002 \001(\0132\032.google.protobuf." +
-      "Timestamp\022\026\n\016schema_version\030\003 \001(\005\022\027\n\017not" +
-      "ification_id\030\n \001(\t\022\017\n\007user_id\030\013 \001(\005\022.\n\nd" +
-      "eleted_at\030\014 \001(\0132\032.google.protobuf.Timest" +
-      "ampB\200\001\n\032com.powerfinance.events.v1B\021Noti" +
-      "ficationProtoP\001ZMgithub.com/power-financ" +
-      "e/kafka-messages-proto/generated/go/even" +
-      "ts/v1;eventsv1b\006proto3"
+      "(\005\022\030\n\020user_external_id\030\013 \001(\t\022\r\n\005title\030\014 " +
+      "\001(\t\022\014\n\004body\030\r \001(\t\022(\n\007payload\030\016 \001(\0132\027.goo" +
+      "gle.protobuf.Struct\022?\n\010severity\030\020 \001(\0162-." +
+      "power_finance.events.v1.NotificationSeve" +
+      "rity\022\024\n\014subject_type\030\021 \001(\t\022\022\n\nsubject_id" +
+      "\030\022 \001(\t\"\226\003\n\023NotificationCreated\022\020\n\010event_" +
+      "id\030\001 \001(\t\022/\n\013occurred_at\030\002 \001(\0132\032.google.p" +
+      "rotobuf.Timestamp\022\026\n\016schema_version\030\003 \001(" +
+      "\005\022\027\n\017notification_id\030\n \001(\t\022\017\n\007user_id\030\013 " +
+      "\001(\005\022\r\n\005title\030\014 \001(\t\022\014\n\004body\030\r \001(\t\022(\n\007payl" +
+      "oad\030\016 \001(\0132\027.google.protobuf.Struct\022.\n\ncr" +
+      "eated_at\030\017 \001(\0132\032.google.protobuf.Timesta" +
+      "mp\022?\n\010severity\030\020 \001(\0162-.power_finance.eve" +
+      "nts.v1.NotificationSeverity\022\024\n\014subject_t" +
+      "ype\030\021 \001(\t\022\022\n\nsubject_id\030\022 \001(\t\022\030\n\020user_ex" +
+      "ternal_id\030\023 \001(\t\"\326\001\n\031NotificationsAcknowl" +
+      "edged\022\020\n\010event_id\030\001 \001(\t\022/\n\013occurred_at\030\002" +
+      " \001(\0132\032.google.protobuf.Timestamp\022\026\n\016sche" +
+      "ma_version\030\003 \001(\005\022\030\n\020notification_ids\030\n \003" +
+      "(\t\022\017\n\007user_id\030\013 \001(\005\0223\n\017acknowledged_at\030\014" +
+      " \001(\0132\032.google.protobuf.Timestamp\"\312\001\n\023Not" +
+      "ificationDeleted\022\020\n\010event_id\030\001 \001(\t\022/\n\013oc" +
+      "curred_at\030\002 \001(\0132\032.google.protobuf.Timest" +
+      "amp\022\026\n\016schema_version\030\003 \001(\005\022\027\n\017notificat" +
+      "ion_id\030\n \001(\t\022\017\n\007user_id\030\013 \001(\005\022.\n\ndeleted" +
+      "_at\030\014 \001(\0132\032.google.protobuf.Timestamp*\244\001" +
+      "\n\024NotificationSeverity\022%\n!NOTIFICATION_S" +
+      "EVERITY_UNSPECIFIED\020\000\022\036\n\032NOTIFICATION_SE" +
+      "VERITY_INFO\020\001\022!\n\035NOTIFICATION_SEVERITY_W" +
+      "ARNING\020\002\022\"\n\036NOTIFICATION_SEVERITY_CRITIC" +
+      "AL\020\003B\200\001\n\032com.powerfinance.events.v1B\021Not" +
+      "ificationProtoP\001ZMgithub.com/power-finan" +
+      "ce/kafka-messages-proto/generated/go/eve" +
+      "nts/v1;eventsv1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -97,13 +107,13 @@ public final class NotificationProto extends com.google.protobuf.GeneratedFile {
     internal_static_power_finance_events_v1_NotificationRequested_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_power_finance_events_v1_NotificationRequested_descriptor,
-        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "UserId", "UserExternalId", "Short", "Message", "Payload", });
+        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "UserId", "UserExternalId", "Title", "Body", "Payload", "Severity", "SubjectType", "SubjectId", });
     internal_static_power_finance_events_v1_NotificationCreated_descriptor =
       getDescriptor().getMessageType(1);
     internal_static_power_finance_events_v1_NotificationCreated_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_power_finance_events_v1_NotificationCreated_descriptor,
-        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "NotificationId", "UserId", "Short", "Message", "Payload", "CreatedAt", });
+        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "NotificationId", "UserId", "Title", "Body", "Payload", "CreatedAt", "Severity", "SubjectType", "SubjectId", "UserExternalId", });
     internal_static_power_finance_events_v1_NotificationsAcknowledged_descriptor =
       getDescriptor().getMessageType(2);
     internal_static_power_finance_events_v1_NotificationsAcknowledged_fieldAccessorTable = new

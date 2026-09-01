@@ -11,6 +11,13 @@ import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
 
+enum NotificationSeverity {
+  NOTIFICATION_SEVERITY_UNSPECIFIED = 0;
+  NOTIFICATION_SEVERITY_INFO = 1;
+  NOTIFICATION_SEVERITY_WARNING = 2;
+  NOTIFICATION_SEVERITY_CRITICAL = 3;
+}
+
 message NotificationRequested {
   string event_id = 1;
   google.protobuf.Timestamp occurred_at = 2;
@@ -18,9 +25,12 @@ message NotificationRequested {
 
   int32 user_id = 10;
   string user_external_id = 11;
-  string short = 12;
-  string message = 13;
+  string title = 12;
+  string body = 13;
   google.protobuf.Struct payload = 14;
+  NotificationSeverity severity = 16;
+  string subject_type = 17;
+  string subject_id = 18;
 }
 
 message NotificationCreated {
@@ -30,10 +40,14 @@ message NotificationCreated {
 
   string notification_id = 10;
   int32 user_id = 11;
-  string short = 12;
-  string message = 13;
+  string title = 12;
+  string body = 13;
   google.protobuf.Struct payload = 14;
   google.protobuf.Timestamp created_at = 15;
+  NotificationSeverity severity = 16;
+  string subject_type = 17;
+  string subject_id = 18;
+  string user_external_id = 19;
 }
 
 message NotificationsAcknowledged {

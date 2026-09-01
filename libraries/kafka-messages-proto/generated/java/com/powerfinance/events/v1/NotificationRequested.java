@@ -30,8 +30,11 @@ private static final long serialVersionUID = 0L;
   private NotificationRequested() {
     eventId_ = "";
     userExternalId_ = "";
-    short_ = "";
-    message_ = "";
+    title_ = "";
+    body_ = "";
+    severity_ = 0;
+    subjectType_ = "";
+    subjectId_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -179,78 +182,78 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int SHORT_FIELD_NUMBER = 12;
+  public static final int TITLE_FIELD_NUMBER = 12;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object short_ = "";
+  private volatile java.lang.Object title_ = "";
   /**
-   * <code>string short = 12;</code>
-   * @return The short.
+   * <code>string title = 12;</code>
+   * @return The title.
    */
   @java.lang.Override
-  public java.lang.String getShort() {
-    java.lang.Object ref = short_;
+  public java.lang.String getTitle() {
+    java.lang.Object ref = title_;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
-      short_ = s;
+      title_ = s;
       return s;
     }
   }
   /**
-   * <code>string short = 12;</code>
-   * @return The bytes for short.
+   * <code>string title = 12;</code>
+   * @return The bytes for title.
    */
   @java.lang.Override
   public com.google.protobuf.ByteString
-      getShortBytes() {
-    java.lang.Object ref = short_;
+      getTitleBytes() {
+    java.lang.Object ref = title_;
     if (ref instanceof java.lang.String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
-      short_ = b;
+      title_ = b;
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
     }
   }
 
-  public static final int MESSAGE_FIELD_NUMBER = 13;
+  public static final int BODY_FIELD_NUMBER = 13;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object message_ = "";
+  private volatile java.lang.Object body_ = "";
   /**
-   * <code>string message = 13;</code>
-   * @return The message.
+   * <code>string body = 13;</code>
+   * @return The body.
    */
   @java.lang.Override
-  public java.lang.String getMessage() {
-    java.lang.Object ref = message_;
+  public java.lang.String getBody() {
+    java.lang.Object ref = body_;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
-      message_ = s;
+      body_ = s;
       return s;
     }
   }
   /**
-   * <code>string message = 13;</code>
-   * @return The bytes for message.
+   * <code>string body = 13;</code>
+   * @return The bytes for body.
    */
   @java.lang.Override
   public com.google.protobuf.ByteString
-      getMessageBytes() {
-    java.lang.Object ref = message_;
+      getBodyBytes() {
+    java.lang.Object ref = body_;
     if (ref instanceof java.lang.String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
-      message_ = b;
+      body_ = b;
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
@@ -283,6 +286,112 @@ private static final long serialVersionUID = 0L;
     return payload_ == null ? com.google.protobuf.Struct.getDefaultInstance() : payload_;
   }
 
+  public static final int SEVERITY_FIELD_NUMBER = 16;
+  private int severity_ = 0;
+  /**
+   * <code>.power_finance.events.v1.NotificationSeverity severity = 16;</code>
+   * @return The enum numeric value on the wire for severity.
+   */
+  @java.lang.Override public int getSeverityValue() {
+    return severity_;
+  }
+  /**
+   * <code>.power_finance.events.v1.NotificationSeverity severity = 16;</code>
+   * @return The severity.
+   */
+  @java.lang.Override public com.powerfinance.events.v1.NotificationSeverity getSeverity() {
+    com.powerfinance.events.v1.NotificationSeverity result = com.powerfinance.events.v1.NotificationSeverity.forNumber(severity_);
+    return result == null ? com.powerfinance.events.v1.NotificationSeverity.UNRECOGNIZED : result;
+  }
+
+  public static final int SUBJECT_TYPE_FIELD_NUMBER = 17;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object subjectType_ = "";
+  /**
+   * <pre>
+   * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
+   * the target enumerates severity and deliberately does not enumerate this.
+   * </pre>
+   *
+   * <code>string subject_type = 17;</code>
+   * @return The subjectType.
+   */
+  @java.lang.Override
+  public java.lang.String getSubjectType() {
+    java.lang.Object ref = subjectType_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      subjectType_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
+   * the target enumerates severity and deliberately does not enumerate this.
+   * </pre>
+   *
+   * <code>string subject_type = 17;</code>
+   * @return The bytes for subjectType.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getSubjectTypeBytes() {
+    java.lang.Object ref = subjectType_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      subjectType_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int SUBJECT_ID_FIELD_NUMBER = 18;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object subjectId_ = "";
+  /**
+   * <code>string subject_id = 18;</code>
+   * @return The subjectId.
+   */
+  @java.lang.Override
+  public java.lang.String getSubjectId() {
+    java.lang.Object ref = subjectId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      subjectId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string subject_id = 18;</code>
+   * @return The bytes for subjectId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getSubjectIdBytes() {
+    java.lang.Object ref = subjectId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      subjectId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -312,14 +421,23 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userExternalId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 11, userExternalId_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(short_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 12, short_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(title_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 12, title_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(message_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 13, message_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(body_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 13, body_);
     }
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(14, getPayload());
+    }
+    if (severity_ != com.powerfinance.events.v1.NotificationSeverity.NOTIFICATION_SEVERITY_UNSPECIFIED.getNumber()) {
+      output.writeEnum(16, severity_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(subjectType_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 17, subjectType_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(subjectId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 18, subjectId_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -348,15 +466,25 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userExternalId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(11, userExternalId_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(short_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(12, short_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(title_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(12, title_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(message_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(13, message_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(body_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(13, body_);
     }
     if (((bitField0_ & 0x00000002) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(14, getPayload());
+    }
+    if (severity_ != com.powerfinance.events.v1.NotificationSeverity.NOTIFICATION_SEVERITY_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(16, severity_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(subjectType_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(17, subjectType_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(subjectId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(18, subjectId_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -386,15 +514,20 @@ private static final long serialVersionUID = 0L;
         != other.getUserId()) return false;
     if (!getUserExternalId()
         .equals(other.getUserExternalId())) return false;
-    if (!getShort()
-        .equals(other.getShort())) return false;
-    if (!getMessage()
-        .equals(other.getMessage())) return false;
+    if (!getTitle()
+        .equals(other.getTitle())) return false;
+    if (!getBody()
+        .equals(other.getBody())) return false;
     if (hasPayload() != other.hasPayload()) return false;
     if (hasPayload()) {
       if (!getPayload()
           .equals(other.getPayload())) return false;
     }
+    if (severity_ != other.severity_) return false;
+    if (!getSubjectType()
+        .equals(other.getSubjectType())) return false;
+    if (!getSubjectId()
+        .equals(other.getSubjectId())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -418,14 +551,20 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getUserId();
     hash = (37 * hash) + USER_EXTERNAL_ID_FIELD_NUMBER;
     hash = (53 * hash) + getUserExternalId().hashCode();
-    hash = (37 * hash) + SHORT_FIELD_NUMBER;
-    hash = (53 * hash) + getShort().hashCode();
-    hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
-    hash = (53 * hash) + getMessage().hashCode();
+    hash = (37 * hash) + TITLE_FIELD_NUMBER;
+    hash = (53 * hash) + getTitle().hashCode();
+    hash = (37 * hash) + BODY_FIELD_NUMBER;
+    hash = (53 * hash) + getBody().hashCode();
     if (hasPayload()) {
       hash = (37 * hash) + PAYLOAD_FIELD_NUMBER;
       hash = (53 * hash) + getPayload().hashCode();
     }
+    hash = (37 * hash) + SEVERITY_FIELD_NUMBER;
+    hash = (53 * hash) + severity_;
+    hash = (37 * hash) + SUBJECT_TYPE_FIELD_NUMBER;
+    hash = (53 * hash) + getSubjectType().hashCode();
+    hash = (37 * hash) + SUBJECT_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getSubjectId().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -573,13 +712,16 @@ private static final long serialVersionUID = 0L;
       schemaVersion_ = 0;
       userId_ = 0;
       userExternalId_ = "";
-      short_ = "";
-      message_ = "";
+      title_ = "";
+      body_ = "";
       payload_ = null;
       if (payloadBuilder_ != null) {
         payloadBuilder_.dispose();
         payloadBuilder_ = null;
       }
+      severity_ = 0;
+      subjectType_ = "";
+      subjectId_ = "";
       return this;
     }
 
@@ -633,16 +775,25 @@ private static final long serialVersionUID = 0L;
         result.userExternalId_ = userExternalId_;
       }
       if (((from_bitField0_ & 0x00000020) != 0)) {
-        result.short_ = short_;
+        result.title_ = title_;
       }
       if (((from_bitField0_ & 0x00000040) != 0)) {
-        result.message_ = message_;
+        result.body_ = body_;
       }
       if (((from_bitField0_ & 0x00000080) != 0)) {
         result.payload_ = payloadBuilder_ == null
             ? payload_
             : payloadBuilder_.build();
         to_bitField0_ |= 0x00000002;
+      }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.severity_ = severity_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.subjectType_ = subjectType_;
+      }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.subjectId_ = subjectId_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -678,18 +829,31 @@ private static final long serialVersionUID = 0L;
         bitField0_ |= 0x00000010;
         onChanged();
       }
-      if (!other.getShort().isEmpty()) {
-        short_ = other.short_;
+      if (!other.getTitle().isEmpty()) {
+        title_ = other.title_;
         bitField0_ |= 0x00000020;
         onChanged();
       }
-      if (!other.getMessage().isEmpty()) {
-        message_ = other.message_;
+      if (!other.getBody().isEmpty()) {
+        body_ = other.body_;
         bitField0_ |= 0x00000040;
         onChanged();
       }
       if (other.hasPayload()) {
         mergePayload(other.getPayload());
+      }
+      if (other.severity_ != 0) {
+        setSeverityValue(other.getSeverityValue());
+      }
+      if (!other.getSubjectType().isEmpty()) {
+        subjectType_ = other.subjectType_;
+        bitField0_ |= 0x00000200;
+        onChanged();
+      }
+      if (!other.getSubjectId().isEmpty()) {
+        subjectId_ = other.subjectId_;
+        bitField0_ |= 0x00000400;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -745,12 +909,12 @@ private static final long serialVersionUID = 0L;
               break;
             } // case 90
             case 98: {
-              short_ = input.readStringRequireUtf8();
+              title_ = input.readStringRequireUtf8();
               bitField0_ |= 0x00000020;
               break;
             } // case 98
             case 106: {
-              message_ = input.readStringRequireUtf8();
+              body_ = input.readStringRequireUtf8();
               bitField0_ |= 0x00000040;
               break;
             } // case 106
@@ -761,6 +925,21 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 114
+            case 128: {
+              severity_ = input.readEnum();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 128
+            case 138: {
+              subjectType_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 138
+            case 146: {
+              subjectId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 146
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1107,145 +1286,145 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object short_ = "";
+    private java.lang.Object title_ = "";
     /**
-     * <code>string short = 12;</code>
-     * @return The short.
+     * <code>string title = 12;</code>
+     * @return The title.
      */
-    public java.lang.String getShort() {
-      java.lang.Object ref = short_;
+    public java.lang.String getTitle() {
+      java.lang.Object ref = title_;
       if (!(ref instanceof java.lang.String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
-        short_ = s;
+        title_ = s;
         return s;
       } else {
         return (java.lang.String) ref;
       }
     }
     /**
-     * <code>string short = 12;</code>
-     * @return The bytes for short.
+     * <code>string title = 12;</code>
+     * @return The bytes for title.
      */
     public com.google.protobuf.ByteString
-        getShortBytes() {
-      java.lang.Object ref = short_;
+        getTitleBytes() {
+      java.lang.Object ref = title_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
-        short_ = b;
+        title_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
     /**
-     * <code>string short = 12;</code>
-     * @param value The short to set.
+     * <code>string title = 12;</code>
+     * @param value The title to set.
      * @return This builder for chaining.
      */
-    public Builder setShort(
+    public Builder setTitle(
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
-      short_ = value;
+      title_ = value;
       bitField0_ |= 0x00000020;
       onChanged();
       return this;
     }
     /**
-     * <code>string short = 12;</code>
+     * <code>string title = 12;</code>
      * @return This builder for chaining.
      */
-    public Builder clearShort() {
-      short_ = getDefaultInstance().getShort();
+    public Builder clearTitle() {
+      title_ = getDefaultInstance().getTitle();
       bitField0_ = (bitField0_ & ~0x00000020);
       onChanged();
       return this;
     }
     /**
-     * <code>string short = 12;</code>
-     * @param value The bytes for short to set.
+     * <code>string title = 12;</code>
+     * @param value The bytes for title to set.
      * @return This builder for chaining.
      */
-    public Builder setShortBytes(
+    public Builder setTitleBytes(
         com.google.protobuf.ByteString value) {
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
-      short_ = value;
+      title_ = value;
       bitField0_ |= 0x00000020;
       onChanged();
       return this;
     }
 
-    private java.lang.Object message_ = "";
+    private java.lang.Object body_ = "";
     /**
-     * <code>string message = 13;</code>
-     * @return The message.
+     * <code>string body = 13;</code>
+     * @return The body.
      */
-    public java.lang.String getMessage() {
-      java.lang.Object ref = message_;
+    public java.lang.String getBody() {
+      java.lang.Object ref = body_;
       if (!(ref instanceof java.lang.String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
-        message_ = s;
+        body_ = s;
         return s;
       } else {
         return (java.lang.String) ref;
       }
     }
     /**
-     * <code>string message = 13;</code>
-     * @return The bytes for message.
+     * <code>string body = 13;</code>
+     * @return The bytes for body.
      */
     public com.google.protobuf.ByteString
-        getMessageBytes() {
-      java.lang.Object ref = message_;
+        getBodyBytes() {
+      java.lang.Object ref = body_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
-        message_ = b;
+        body_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
     /**
-     * <code>string message = 13;</code>
-     * @param value The message to set.
+     * <code>string body = 13;</code>
+     * @param value The body to set.
      * @return This builder for chaining.
      */
-    public Builder setMessage(
+    public Builder setBody(
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
-      message_ = value;
+      body_ = value;
       bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }
     /**
-     * <code>string message = 13;</code>
+     * <code>string body = 13;</code>
      * @return This builder for chaining.
      */
-    public Builder clearMessage() {
-      message_ = getDefaultInstance().getMessage();
+    public Builder clearBody() {
+      body_ = getDefaultInstance().getBody();
       bitField0_ = (bitField0_ & ~0x00000040);
       onChanged();
       return this;
     }
     /**
-     * <code>string message = 13;</code>
-     * @param value The bytes for message to set.
+     * <code>string body = 13;</code>
+     * @param value The bytes for body to set.
      * @return This builder for chaining.
      */
-    public Builder setMessageBytes(
+    public Builder setBodyBytes(
         com.google.protobuf.ByteString value) {
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
-      message_ = value;
+      body_ = value;
       bitField0_ |= 0x00000040;
       onChanged();
       return this;
@@ -1370,6 +1549,227 @@ private static final long serialVersionUID = 0L;
         payload_ = null;
       }
       return payloadBuilder_;
+    }
+
+    private int severity_ = 0;
+    /**
+     * <code>.power_finance.events.v1.NotificationSeverity severity = 16;</code>
+     * @return The enum numeric value on the wire for severity.
+     */
+    @java.lang.Override public int getSeverityValue() {
+      return severity_;
+    }
+    /**
+     * <code>.power_finance.events.v1.NotificationSeverity severity = 16;</code>
+     * @param value The enum numeric value on the wire for severity to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setSeverityValue(int value) {
+      severity_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.power_finance.events.v1.NotificationSeverity severity = 16;</code>
+     * @return The severity.
+     */
+    @java.lang.Override
+    public com.powerfinance.events.v1.NotificationSeverity getSeverity() {
+      com.powerfinance.events.v1.NotificationSeverity result = com.powerfinance.events.v1.NotificationSeverity.forNumber(severity_);
+      return result == null ? com.powerfinance.events.v1.NotificationSeverity.UNRECOGNIZED : result;
+    }
+    /**
+     * <code>.power_finance.events.v1.NotificationSeverity severity = 16;</code>
+     * @param value The severity to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSeverity(com.powerfinance.events.v1.NotificationSeverity value) {
+      if (value == null) { throw new NullPointerException(); }
+      bitField0_ |= 0x00000100;
+      severity_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.power_finance.events.v1.NotificationSeverity severity = 16;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSeverity() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      severity_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object subjectType_ = "";
+    /**
+     * <pre>
+     * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
+     * the target enumerates severity and deliberately does not enumerate this.
+     * </pre>
+     *
+     * <code>string subject_type = 17;</code>
+     * @return The subjectType.
+     */
+    public java.lang.String getSubjectType() {
+      java.lang.Object ref = subjectType_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        subjectType_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
+     * the target enumerates severity and deliberately does not enumerate this.
+     * </pre>
+     *
+     * <code>string subject_type = 17;</code>
+     * @return The bytes for subjectType.
+     */
+    public com.google.protobuf.ByteString
+        getSubjectTypeBytes() {
+      java.lang.Object ref = subjectType_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        subjectType_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
+     * the target enumerates severity and deliberately does not enumerate this.
+     * </pre>
+     *
+     * <code>string subject_type = 17;</code>
+     * @param value The subjectType to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSubjectType(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      subjectType_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
+     * the target enumerates severity and deliberately does not enumerate this.
+     * </pre>
+     *
+     * <code>string subject_type = 17;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSubjectType() {
+      subjectType_ = getDefaultInstance().getSubjectType();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
+     * the target enumerates severity and deliberately does not enumerate this.
+     * </pre>
+     *
+     * <code>string subject_type = 17;</code>
+     * @param value The bytes for subjectType to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSubjectTypeBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      subjectType_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object subjectId_ = "";
+    /**
+     * <code>string subject_id = 18;</code>
+     * @return The subjectId.
+     */
+    public java.lang.String getSubjectId() {
+      java.lang.Object ref = subjectId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        subjectId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string subject_id = 18;</code>
+     * @return The bytes for subjectId.
+     */
+    public com.google.protobuf.ByteString
+        getSubjectIdBytes() {
+      java.lang.Object ref = subjectId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        subjectId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string subject_id = 18;</code>
+     * @param value The subjectId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSubjectId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      subjectId_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string subject_id = 18;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSubjectId() {
+      subjectId_ = getDefaultInstance().getSubjectId();
+      bitField0_ = (bitField0_ & ~0x00000400);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string subject_id = 18;</code>
+     * @param value The bytes for subjectId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSubjectIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      subjectId_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:power_finance.events.v1.NotificationRequested)

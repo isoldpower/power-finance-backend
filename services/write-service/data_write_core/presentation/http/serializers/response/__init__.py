@@ -11,7 +11,6 @@ from .goal_serializer import (
     PaginatedGoalResponseSerializer,
 )
 from .notification_serializer import (
-    AcknowledgedNotificationsResponseSerializer,
     EnvelopedNotificationResponseSerializer,
     NotificationResponseSerializer,
     PaginatedNotificationResponseSerializer,
@@ -45,7 +44,6 @@ __all__ = [
     "EnvelopedGoalResponseSerializer",
     "GoalResponseSerializer",
     "PaginatedGoalResponseSerializer",
-    "AcknowledgedNotificationsResponseSerializer",
     "CollectionMetaSerializer",
     "EnvelopedNotificationResponseSerializer",
     "EnvelopedTransactionChainResponseSerializer",

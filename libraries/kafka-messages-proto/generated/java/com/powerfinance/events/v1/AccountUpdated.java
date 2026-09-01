@@ -361,11 +361,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object currencyCode_ = "";
   /**
-   * <pre>
-   * Restated on every update so a consumer that missed AccountCreated still
-   * learns what the balance is denominated in.
-   * </pre>
-   *
    * <code>string currency_code = 108;</code>
    * @return The currencyCode.
    */
@@ -383,11 +378,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * Restated on every update so a consumer that missed AccountCreated still
-   * learns what the balance is denominated in.
-   * </pre>
-   *
    * <code>string currency_code = 108;</code>
    * @return The bytes for currencyCode.
    */
@@ -1692,11 +1682,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object currencyCode_ = "";
     /**
-     * <pre>
-     * Restated on every update so a consumer that missed AccountCreated still
-     * learns what the balance is denominated in.
-     * </pre>
-     *
      * <code>string currency_code = 108;</code>
      * @return The currencyCode.
      */
@@ -1713,11 +1698,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Restated on every update so a consumer that missed AccountCreated still
-     * learns what the balance is denominated in.
-     * </pre>
-     *
      * <code>string currency_code = 108;</code>
      * @return The bytes for currencyCode.
      */
@@ -1735,11 +1715,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Restated on every update so a consumer that missed AccountCreated still
-     * learns what the balance is denominated in.
-     * </pre>
-     *
      * <code>string currency_code = 108;</code>
      * @param value The currencyCode to set.
      * @return This builder for chaining.
@@ -1753,11 +1728,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Restated on every update so a consumer that missed AccountCreated still
-     * learns what the balance is denominated in.
-     * </pre>
-     *
      * <code>string currency_code = 108;</code>
      * @return This builder for chaining.
      */
@@ -1768,11 +1738,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Restated on every update so a consumer that missed AccountCreated still
-     * learns what the balance is denominated in.
-     * </pre>
-     *
      * <code>string currency_code = 108;</code>
      * @param value The bytes for currencyCode to set.
      * @return This builder for chaining.

@@ -321,11 +321,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object currencyCode_ = "";
   /**
-   * <pre>
-   * The book currency the balance is denominated in. Every account of a user
-   * shares it: postings are converted into it before they are summed.
-   * </pre>
-   *
    * <code>string currency_code = 107;</code>
    * @return The currencyCode.
    */
@@ -343,11 +338,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * The book currency the balance is denominated in. Every account of a user
-   * shares it: postings are converted into it before they are summed.
-   * </pre>
-   *
    * <code>string currency_code = 107;</code>
    * @return The bytes for currencyCode.
    */
@@ -1556,11 +1546,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object currencyCode_ = "";
     /**
-     * <pre>
-     * The book currency the balance is denominated in. Every account of a user
-     * shares it: postings are converted into it before they are summed.
-     * </pre>
-     *
      * <code>string currency_code = 107;</code>
      * @return The currencyCode.
      */
@@ -1577,11 +1562,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The book currency the balance is denominated in. Every account of a user
-     * shares it: postings are converted into it before they are summed.
-     * </pre>
-     *
      * <code>string currency_code = 107;</code>
      * @return The bytes for currencyCode.
      */
@@ -1599,11 +1579,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The book currency the balance is denominated in. Every account of a user
-     * shares it: postings are converted into it before they are summed.
-     * </pre>
-     *
      * <code>string currency_code = 107;</code>
      * @param value The currencyCode to set.
      * @return This builder for chaining.
@@ -1617,11 +1592,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The book currency the balance is denominated in. Every account of a user
-     * shares it: postings are converted into it before they are summed.
-     * </pre>
-     *
      * <code>string currency_code = 107;</code>
      * @return This builder for chaining.
      */
@@ -1632,11 +1602,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The book currency the balance is denominated in. Every account of a user
-     * shares it: postings are converted into it before they are summed.
-     * </pre>
-     *
      * <code>string currency_code = 107;</code>
      * @param value The bytes for currencyCode to set.
      * @return This builder for chaining.

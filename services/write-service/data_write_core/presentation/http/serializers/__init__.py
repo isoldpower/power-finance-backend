@@ -14,7 +14,6 @@ from .request import (
     UpdateWebhookRequestSerializer,
 )
 from .response import (
-    AcknowledgedNotificationsResponseSerializer,
     EnvelopedGoalResponseSerializer,
     EnvelopedNotificationResponseSerializer,
     EnvelopedTransactionChainResponseSerializer,
@@ -48,7 +47,6 @@ __all__ = [
     "GoalResponseSerializer",
     "PaginatedGoalResponseSerializer",
     "UpdateGoalRequestSerializer",
-    "AcknowledgedNotificationsResponseSerializer",
     "BatchAcknowledgeRequestSerializer",
     "AdjustTransactionRequestSerializer",
     "CreateTransactionChainRequestSerializer",

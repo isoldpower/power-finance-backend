@@ -59,12 +59,14 @@ class ListNotificationsQueryHandler:
     async def _make_store_request(
         self, query: ListNotificationsQuery
     ) -> tuple[list[NotificationDTO], int]:
-        only_unread = bool(query.filters.get("only_unread", False))
-        total = await count_owned_notifications(query.user_id, only_unread)
+        total = await count_owned_notifications(
+            query.user_id,
+            query.filters,
+        )
         database_entry = await fetch_owned_notifications(
             query.user_id,
             query.page,
-            only_unread,
+            query.filters,
         )
 
         notifications = [NotificationDTO.from_read_model(entry) for entry in database_entry]
@@ -73,7 +75,7 @@ class ListNotificationsQueryHandler:
     def _build_cache_operation(self, query: ListNotificationsQuery) -> CacheOperationData:
         return CacheOperationData(
             user_id=query.user_id,
-            filters=query.filters,
+            filters=query.filters.as_cache_material(),
             limit=query.page.limit,
             cursor=query.page.cache_token,
         )

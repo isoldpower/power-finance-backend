@@ -24,9 +24,11 @@ def test_parse_valid_notification_request():
                 "event_id": "e-1",
                 "user_id": 7,
                 "user_external_id": "user_abc",
-                "short": "Webhook delivered",
-                "message": "Delivery to https://example.com succeeded",
+                "title": "Webhook delivered",
+                "body": "Delivery to https://example.com succeeded",
                 "payload": {"delivery_id": "d-1"},
+                "severity": "warning",
+                "subject": {"type": "webhook", "id": "wh-1"},
             }
         ).encode()
     )
@@ -35,8 +37,46 @@ def test_parse_valid_notification_request():
 
     assert command.user_id == 7
     assert command.user_external_id == "user_abc"
-    assert command.short == "Webhook delivered"
+    assert command.title == "Webhook delivered"
     assert command.payload == {"delivery_id": "d-1"}
+    assert command.severity == "warning"
+    assert (command.subject_type, command.subject_id) == ("webhook", "wh-1")
+
+
+def test_an_unrecognised_severity_degrades_rather_than_poisoning():
+    """The producer got the urgency wrong, not the request. Dropping the whole
+    notification would cost the user the message itself."""
+
+    record = FakeRecord(
+        value=json.dumps(
+            {
+                "user_id": 7,
+                "user_external_id": "user_abc",
+                "title": "Something happened",
+                "body": "...",
+                "severity": "apocalyptic",
+            }
+        ).encode()
+    )
+
+    assert _parse_notification_request(record).severity == "info"
+
+
+def test_a_notification_without_a_subject_carries_none():
+    record = FakeRecord(
+        value=json.dumps(
+            {
+                "user_id": 7,
+                "user_external_id": "user_abc",
+                "title": "Something happened",
+                "body": "...",
+            }
+        ).encode()
+    )
+
+    command = _parse_notification_request(record)
+
+    assert (command.subject_type, command.subject_id) == (None, None)
 
 
 def test_parse_missing_fields_is_poison():

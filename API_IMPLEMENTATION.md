@@ -816,6 +816,51 @@ All three convert to the user's preferred currency before aggregating, are cache
 ## Phase 7 — Notifications to target shape
 Model and stream exist; the shape does not.
 
+**STATUS: implemented, all three steps.** The `DECIDE` below was answered as it recommends —
+explicit columns. What the build settled beyond the steps as written:
+
+- **the proto renames rather than adds.** `short` -> `title` and `message` -> `body` keep their
+  field NUMBERS but change their JSON keys, and the outbox publishes proto JSON — so this is a
+  breaking wire change for anything in flight. Taken deliberately: the alternative is carrying two
+  spellings of the same field forever in a system with no deployed consumers to protect;
+- **`severity` crosses the wire as a proto ENUM, not a string.** A bare string has no way to reject
+  a typo at the schema boundary. It is stored and presented as the lower-case name; UNSPECIFIED
+  reads as `info`, because a producer that never set the field is saying "ordinary", not "unknown
+  urgency the client must handle";
+- **`subject_type` stays an OPEN vocabulary.** The target's Enumerations table lists `severity` and
+  deliberately omits this, so it is a plain string column rather than a choice field;
+- **a half-filled subject presents as `null`.** A reference needs both halves to be followable, and
+  `{"type": "wallet", "id": ""}` is not a deep link;
+- **`payload` survives as a column and disappears from the wire.** It is the producer's own bag; the
+  target's shape has no room for it and `subject` is what a client actually follows;
+- **acknowledgement is idempotent in three places, not one.** The entity keeps the first timestamp,
+  the repository's UPDATE is filtered to rows that carry none, and the read projection filters the
+  same way — so neither a double-tapped bell nor a redelivered event can move the moment the user
+  saw it. Ack answers 200 with the notification, never 409;
+- **`GET /notifications/count` is deliberately uncached** and reads both figures in one aggregate.
+  The badge goes stale the instant the stream delivers anything, so a cache would trade a cheap
+  indexed count for a number wrong in a way the client cannot detect;
+- **push-service now PROJECTS rather than forwards.** It used to relay raw outbox frames — proto
+  message name as the `event:`, outbox event id as the `id:`, proto JSON as the body. It now emits
+  `notification.created` / `notification.acknowledged` with the documented payloads, uses the
+  NOTIFICATION id as the `id:` (which is the resume token), and fans one `NotificationsAcknowledged`
+  batch into one event per id, because a client tracks notifications individually;
+- **the stream drops what it does not document.** The route is `/notifications/stream`; forwarding
+  wallet and transaction frames down it made the endpoint mean something other than its name. This
+  is a behaviour change for anything that was reading those, and there is nothing else on the SSE
+  route today;
+- **`Last-Event-ID` is accepted and replays nothing.** push-service is a groupless broadcast
+  consumer reading `AtEnd` with no retention, so "best effort bounded by server-side retention" is
+  honestly zero here. Building a backlog store would make a deliberately stateless service
+  stateful; the target already names refetching the list as the recommended reconnect path in every
+  case. Recorded in API_DIFF.md;
+- **heartbeat is 15s**, inside the documented "at least every 30 seconds". `X-Accel-Buffering: no`
+  is now set on the response: Kong does not buffer by default, but nothing in the service can prove
+  that about every intermediary, and a buffered stream is indistinguishable from a hung one;
+- the batch ack **keeps taking an explicit list of ids**. "Acknowledge everything, filtered or not"
+  is still open — see the KEEP note below. Both ack endpoints now answer with notification
+  resources rather than a list of ids.
+
 ### Step 7.1 — Model
 `short` → `title`, `message` → `body`, `is_read` (Bool) → `acknowledged_at` (nullable timestamp), and
 new `severity` plus a polymorphic `subject {type, id}`. Migration on both sides plus the event
@@ -978,7 +1023,6 @@ Collected from the notes above, in the order they matter.
 | 0.4  | keyset over enum-ranked `severity` — sentinel column (nullable `chain_id` answered in Phase 3) |
 | 0.8  | `details[].field` path syntax for a failure inside a filter tree                  |
 | 0.9  | cache keys must include reporting currency                                        |
-| 7.1  | explicit columns vs. JSON payload for notification `severity` / `subject`         |
 
 Also, in the target's Status Codes table, 403 is described as "authenticated but the resource belongs
 to another user", which contradicts the Authentication section's rule that another user's resource

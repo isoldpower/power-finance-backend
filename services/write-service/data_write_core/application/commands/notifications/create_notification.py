@@ -5,9 +5,11 @@ from uuid import UUID, uuid4
 from kafka_messages import NotificationCreated
 
 from data_write_core.domain.entities import NotificationEntity
+from data_write_core.domain.entities.notification import DEFAULT_SEVERITY
 from data_write_core.infrastructure.messaging import (
     build_outbox_entry,
     datetime_to_timestamp,
+    severity_to_proto,
 )
 from data_write_core.infrastructure.outbox_saga import (
     FinalizedSagaCoordinator,
@@ -29,9 +31,12 @@ class CreateNotificationCommand:
 
     user_id: int
     user_external_id: str
-    short: str
-    message: str
+    title: str
+    body: str
     payload: dict | None = None
+    severity: str = DEFAULT_SEVERITY
+    subject_type: str | None = None
+    subject_id: str | None = None
 
 
 class CreateNotificationCommandHandler(CommandHandlerBase[NotificationDTO]):
@@ -54,9 +59,12 @@ class CreateNotificationCommandHandler(CommandHandlerBase[NotificationDTO]):
     async def handle(self, command: CreateNotificationCommand) -> tuple[NotificationDTO, int]:
         new_notification = NotificationEntity(
             id=str(uuid4()),
-            short=command.short,
-            message=command.message,
+            title=command.title,
+            body=command.body,
             payload=command.payload,
+            severity=command.severity,
+            subject_type=command.subject_type,
+            subject_id=command.subject_id,
             user_id=str(command.user_id),
             created_at=datetime.now(),
         )
@@ -82,8 +90,12 @@ class CreateNotificationCommandHandler(CommandHandlerBase[NotificationDTO]):
         outbox_message = NotificationCreated(
             notification_id=new_notification.unique_id,
             user_id=int(new_notification.user_id),
-            short=new_notification.short,
-            message=new_notification.message,
+            user_external_id=partition_key,
+            title=new_notification.title,
+            body=new_notification.body,
+            severity=severity_to_proto(new_notification.severity),
+            subject_type=new_notification.subject_type or "",
+            subject_id=new_notification.subject_id or "",
             created_at=datetime_to_timestamp(new_notification.created_at),
         )
         if new_notification.payload is not None:
