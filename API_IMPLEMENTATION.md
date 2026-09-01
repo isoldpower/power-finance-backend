@@ -745,10 +745,68 @@ Closes out Step 3.1's deferred half of `GET /transactions/{id}`.
 Depends on Accounts (5) for the balance sheet, Currencies (1) for conversion, and preferences (0.9)
 for the reporting currency.
 
-- **6.1 `GET /metrics/balance`** — assets/liabilities/equity plus `balanced` and `comments`;
-- **6.2 `GET /metrics/net-worth`** — `since` and `points`, `net_diff.percentage` and `direction`
+**STATUS: implemented, all three steps — on ONE endpoint.** What the build settled beyond the
+steps as written:
+
+- **the target's three paths are one `GET /metrics` with boolean selectors** (`balance`,
+  `net-worth`, `cash-flow`, each defaulting to true). The sections read the same rows and differ
+  only in the fold, so three paths meant three round trips, three authentications, three cache
+  entries and three scans of `read_transactions` to fill one screen. Merged, net worth's opening
+  balance, its all-time total and cash flow's two directional figures are conditional aggregates in
+  a SINGLE grouped query, one `MoneyFolder` resolves each rate once for the whole response, and one
+  cache entry covers it. A section not asked for costs none of its queries; a section not returned
+  is `null` rather than absent, so the three keys are always there. The trade is that fetching one
+  section alone now costs two explicit `false` params — the uncommon call paying for the common
+  one. Recorded in API_DIFF.md;
+- **net worth is read off TRANSACTIONS, not off the ledger.** It is the running total of every
+  non-cancelled transaction against one of the user's containers. A transfer nets to zero across
+  its two legs on its own and an opening balance is a real transaction, so nothing has to be
+  special-cased — and the figure is correct before ai-service has dispatched anything, which it
+  would not be if net worth were derived from accounts;
+- **cash flow EXCLUDES chained transactions.** A chain is how this API models a transfer, and a
+  transfer moves money between two containers the same user owns. Counting it reports the same
+  money as income on one side and spending on the other: it nets out of `total_net`, but it
+  inflates `inflow` and `outflow` and makes `savings_rate` describe nothing. The target is silent
+  on this; excluding is the only reading under which the numbers mean what they are named;
+- **`savings_rate` is `total_net / inflow * 100`**, and `null` when nothing came in. The target's
+  own example (inflow 15, outflow 10, rate 15) matches no formula — 15 is just `inflow` repeated —
+  and its notes already admit that section was copy-pasted. Recorded as a `DOC BUG` below;
+- **`net_diff.percentage` is `null` when the window opened at zero.** Every gain from nothing is
+  infinite growth; `direction` still carries the sign, so a client is not left guessing;
+- **`comments` is a nullable STRING, not a list.** The target names it plurally but shows `null`
+  rather than `[]`, and the neighbouring `analysis.comment` is a string. Reasons are joined rather
+  than making every client branch on an array;
+- **`balanced` asks two questions.** The identity `assets == liabilities + equity` may hold over a
+  chart built on a posting whose own legs did not agree, so unbalanced dispatches are counted
+  separately and either one unbalances the sheet. Both are DIAGNOSTICS — an unbalanced sheet is a
+  state the system can be in, never a failed request;
+- **the series is bucketed in the database.** `points` equal-width slices are computed with one
+  grouped query and accumulated in Python, rather than one query per point or fetching every row;
+- **one fold, one rate per currency.** `MoneyFolder` resolves a rate once per SOURCE currency and
+  reuses it for every bucket, and it never rounds — rounding happens once, in the presenter, at the
+  reporting currency's scale, so the error cannot compound across a hundred points;
+- **a blank `currency_code` counts at face value.** The projection can leave one empty; dropping
+  those rows would silently understate every figure they appear in;
+- **no new cache counter.** The keys compose the `ver:transactions:` and `ver:accounts:` counters
+  the write reactions already bump, so either changing invalidates every metric. A test asserts the
+  two spellings still match the reaction side;
+- `LimitPolicy` gained a `parameter` field so `points` rejects under its own name instead of
+  blaming `limit`;
+- `since` bounds `net_worth` and `cash_flow` only. `balance` is a snapshot of the chart as it
+  stands and has nothing to bound.
+
+> **DOC BUG.** `GET /metrics/cash-flow`'s example gives inflow 15.00, outflow 10.00, total_net 5.00
+> and `savings_rate: 15` — which is `inflow`, not a rate. Either state the formula or fix the
+> example; implemented as `total_net / inflow * 100` (75 for those numbers).
+
+> **DOC BUG.** The target specifies no behaviour for transfers in cash flow, and the answer changes
+> every figure on the endpoint. Implemented as "chained transactions are excluded"; if that is
+> wrong the fix is one filter, but the contract should say which.
+
+- **6.1 the `balance` section** — assets/liabilities/equity plus `balanced` and `comments`;
+- **6.2 the `net_worth` section** — `since` and `points`, `net_diff.percentage` and `direction`
   (`flat` is a real value), a fixed-size `series` that is NOT a paginated collection;
-- **6.3 `GET /metrics/cash-flow`** — inflow/outflow/total_net plus `savings_rate` as a bare number;
+- **6.3 the `cash_flow` section** — inflow/outflow/total_net plus `savings_rate` as a bare number;
 
 All three convert to the user's preferred currency before aggregating, are cacheable, and carry
 `meta.cached`. Cache keys include the reporting currency (Step 0.9 note).

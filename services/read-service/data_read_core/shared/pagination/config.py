@@ -1,4 +1,4 @@
-NON_INTEGER_LIMIT_MESSAGE = "limit must be an integer"
+NON_INTEGER_MESSAGE = "{parameter} must be an integer"
 
 LIMITS = {
     "DEFAULT": 25,

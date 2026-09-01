@@ -4,6 +4,7 @@ from .convert_currency import convert_currency
 from .get_account import get_account
 from .get_currency_rates import get_currency_rates
 from .get_goal import get_goal
+from .get_metrics import get_metrics
 from .get_notification import get_notification
 from .get_transaction import get_transaction
 from .get_wallet import get_wallet
@@ -26,6 +27,7 @@ urlpatterns = [
     path("currencies", list_currencies),
     path("currencies/convert", convert_currency),
     path("currencies/rates/<str:code>", get_currency_rates),
+    path("metrics", get_metrics),
     path("goals", list_goals),
     path("goals/<uuid:goal_id>", get_goal),
     path("wallets", list_wallets),

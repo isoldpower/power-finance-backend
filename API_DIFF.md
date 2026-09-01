@@ -5,7 +5,7 @@ exist, a field spelled differently, a status code the target does not mention, o
 a behaviour a client has to code around. Internal decisions that a caller cannot
 observe are deliberately not listed.
 
-Current as of Phase 5 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
+Current as of Phase 6 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
 conventions (envelope, cursors, money strings, timestamps, idempotency, filter
 grammar, rate limits, `Read-At-Least`) are implemented as documented — the
 differences below are on top of that.
@@ -38,11 +38,12 @@ says.
 | `GET /goals`, `GET /goals/{id}`, `POST /goals`, `PATCH /goals/{id}`, `DELETE /goals/{id}`                   | detail embeds `history`        |
 | `GET /accounts`                                                                                             | `group`/`lowbar`/`currency`    |
 | `GET /accounts/{account-id}`                                                                                | detail embeds `history`        |
+| `GET /metrics`                                                                                              | **replaces three paths**       |
 
 Not built yet. A request to any of these gets a plain 404 with NO error envelope —
 nothing routes them, so no handler shapes the failure:
 
-- the whole **Metrics**, **Actions**, **Automations** and **Assistant** slices;
+- the whole **Actions**, **Automations** and **Assistant** slices;
 - `GET /notifications/count` — the bell badge has to come from
   `GET /notifications?...` for now;
 - `GET /webhooks/event-types` — the event vocabulary is not served anywhere, so
@@ -282,6 +283,101 @@ Wallets match the target shape. The one thing worth reading twice is what
   from its own sequence, after your write has already returned. So a
   `Read-At-Least` satisfied for the transaction says nothing about its postings
   having landed — poll rather than expecting read-your-writes on the ledger;
+
+### Metrics
+**The target's three endpoints are one endpoint here.** `GET /metrics/balance`,
+`GET /metrics/net-worth` and `GET /metrics/cash-flow` do not exist. Everything
+they described is on:
+
+```
+GET /api/v1/metrics?balance=true&net-worth=true&cash-flow=true
+```
+
+The three sections read the same rows and differ only in how those rows are
+folded, so splitting them across three paths bought three round trips, three
+authentications, three cache entries and three scans of `read_transactions` for
+one screen's worth of numbers. Merged, net worth's opening balance, its all-time
+total and cash flow's two directional figures come out of a **single grouped
+query**, and one rate lookup per currency serves the whole response instead of
+one per section.
+
+- each selector is an independent **boolean defaulting to `true`**, so a bare
+  `GET /metrics` returns all three — the call this endpoint exists for. Accepted
+  spellings are `true/false`, `1/0`, `yes/no`, `on/off`; anything else is 422
+  against that selector's own name;
+- **an excluded section comes back as `null`, not missing.** The three keys are
+  always present, so you never branch on whether one exists;
+- the JSON keys are `balance`, **`net_worth`** and **`cash_flow`** — snake_case
+  like every other key in this API. The query params keep the target's
+  hyphenated spelling (`net-worth`, `cash-flow`) because that is what its paths
+  were called;
+- dropping a section really does skip its work: `?balance=false` issues no query
+  against the chart of accounts, and `?net-worth=false` buckets no series;
+- `meta.sections` echoes which sections the response actually carries;
+- selecting only one section costs two explicit `false` params. That is the
+  deliberate trade — the common call is all three, and it is now free;
+- asking for nothing (`?balance=false&net-worth=false&cash-flow=false`) is a
+  200 with three nulls, not an error;
+
+`meta` carries `since`, `points`, `sections` and `cached` on every response,
+including when the section a param applies to was not requested.
+
+Every figure is in your PREFERRED currency (Clerk
+`unsafeMetadata.currency`, defaulting to `USD`). There is deliberately **no
+`currency` query param** — a per-request override would be a second way to
+choose the reporting currency and the two would disagree the moment one was
+cached. A preference change is not an API write, so nothing invalidates on the
+server: after changing it, refetch.
+
+- the response carries `meta.cached`, and a cached response may still be
+  denominated in the currency you preferred a minute ago;
+- an amount whose denomination the backend never learned is counted at face
+  value rather than dropped, so a figure is never silently understated;
+
+**The `balance` section**
+- amounts are **normal-balance positive**: a liability owing 20 is `"20.00"`,
+  not `"-20.00"`. The identity to check is `assets == liabilities + equity`;
+- `balanced` is false if that identity fails **or** if any transaction was
+  posted with legs that disagreed — most often a cross-currency posting. Both
+  are diagnostics; an unbalanced sheet is still a 200;
+- **`comments` is a string or null**, not an array. The target names it plurally
+  but shows `null` rather than `[]`; reasons are joined into one string so you
+  never branch on an array;
+
+**The `net_worth` section**
+- net worth is the running total of every non-cancelled transaction against your
+  containers. **A transfer does not change it** — both legs are yours and they
+  cancel. It is computed from transactions, not from the ledger, so it is
+  correct before the accounts slice has dispatched anything;
+- `since` bounds `net_worth`'s series and `cash_flow`. It does NOT bound
+  `balance`, which is a snapshot of the chart as it stands;
+- `since` selects the WINDOW, not the balance: money held before it still counts
+  toward `money`. What `since` bounds is `net_diff` and the `series`;
+- with no `since`, the window opens at your **first transaction** rather than
+  padding the front of the series with zeroes;
+- `series` has exactly `points` entries and is **not paginated** — no cursors in
+  `meta`. Each point is the running total at the **end** of its slice, so the
+  last point equals `money`;
+- `points` defaults to 10 and is **clamped** to 1..100, not rejected;
+  `meta.points` reports what was applied. A non-integer is 422 against the field
+  `points`;
+- **`net_diff.percentage` is null when the window opened at zero.** Any gain from
+  nothing is infinite growth. `direction` still tells you which way it went, and
+  `flat` is a real value;
+
+**The `cash_flow` section**
+- **transfers are excluded from both halves.** A chain moves money between two
+  containers you already own; counting it would report the same money as income
+  and as spending. It nets out of `total_net` either way, but it would inflate
+  `inflow` and `outflow` and make `savings_rate` meaningless. The target does not
+  specify this;
+- `inflow` and `outflow` are both **positive magnitudes**;
+- **`savings_rate` is `total_net / inflow * 100`** — a bare number, not money.
+  The target's example shows `15` for inflow 15 / outflow 10, which is `inflow`
+  repeated rather than any rate; the same figures return `75.0` here;
+- `savings_rate` is **null when nothing came in**, not zero — a rate against no
+  income is undefined, and zero would claim you saved nothing when there was
+  nothing to save;
 
 ### Notifications
 - The fields are **`short`, `message`, `is_read`** — not `title`, `body`,

@@ -26,7 +26,7 @@ async def _reference_currencies():
 
 
 def request_with(**headers) -> Request:
-    return Request(FACTORY.get("/metrics/balance", **headers))
+    return Request(FACTORY.get("/metrics", **headers))
 
 
 async def test_gateway_supplied_preferences_are_used():
