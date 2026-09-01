@@ -1,3 +1,12 @@
+from .actions import (
+    ExpireLapsedActionsCommand,
+    ExpireLapsedActionsCommandHandler,
+    RaiseActionCommand,
+    RaiseActionCommandHandler,
+    ResolveActionCommand,
+    ResolveActionCommandHandler,
+    ResolvedAction,
+)
 from .goals.create_new_goal import CreateNewGoalCommand, CreateNewGoalCommandHandler
 from .goals.soft_delete_goal import SoftDeleteGoalCommand, SoftDeleteGoalCommandHandler
 from .goals.update_existing_goal import (
@@ -83,6 +92,13 @@ from .webhooks.update_webhook import (
 )
 
 __all__ = [
+    "ExpireLapsedActionsCommand",
+    "ExpireLapsedActionsCommandHandler",
+    "RaiseActionCommand",
+    "RaiseActionCommandHandler",
+    "ResolveActionCommand",
+    "ResolveActionCommandHandler",
+    "ResolvedAction",
     "CreateNewGoalCommand",
     "CreateNewGoalCommandHandler",
     "SoftDeleteGoalCommand",

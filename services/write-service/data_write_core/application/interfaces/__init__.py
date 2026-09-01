@@ -1,5 +1,6 @@
 from .event_bus import AsyncEventHandler, EventBus, EventHandler
 from .repository import (
+    ActionRepository,
     CurrencyRepository,
     GoalRepository,
     MoneyContainerRepository,
@@ -13,6 +14,7 @@ from .repository import (
 )
 
 __all__ = [
+    "ActionRepository",
     "AsyncEventHandler",
     "CurrencyRepository",
     "GoalRepository",

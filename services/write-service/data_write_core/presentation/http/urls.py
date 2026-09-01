@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .views.actions import ActionResolveView
 from .views.fallback_read import (
     FallbackGoalListView,
     FallbackGoalResourceView,
@@ -38,6 +39,11 @@ from .views.webhooks import (
 )
 
 urlpatterns = [
+    path(
+        "actions/<uuid:action_id>/resolve",
+        ActionResolveView.as_view(),
+        name="actions-resolve",
+    ),
     path(
         "webhooks",
         WebhookListView.as_view(),

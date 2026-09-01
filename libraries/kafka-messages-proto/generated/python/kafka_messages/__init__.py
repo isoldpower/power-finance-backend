@@ -8,6 +8,15 @@ from .account_pb2 import (
     AccountGroup,
     AccountUpdated,
 )
+from .action_pb2 import (
+    ActionRaised,
+    ActionResolution,
+    ActionResolved,
+    ActionSeverity,
+    ActionSource,
+    ActionStatus,
+    ResolutionIntent,
+)
 from .envelope_pb2 import EventEnvelope
 from .goal_pb2 import (
     GoalCreated,
@@ -56,6 +65,12 @@ __all__ = [
     "AccountPostingDeleted",
     "AccountPostingsDispatched",
     "AccountUpdated",
+    "ActionRaised",
+    "ActionResolution",
+    "ActionResolved",
+    "ActionSeverity",
+    "ActionSource",
+    "ActionStatus",
     "EventEnvelope",
     "GoalCreated",
     "GoalDeleted",
@@ -65,6 +80,7 @@ __all__ = [
     "NotificationRequested",
     "NotificationSeverity",
     "NotificationsAcknowledged",
+    "ResolutionIntent",
     "TransactionCreated",
     "TransactionDeleted",
     "TransactionMetadataUpdated",

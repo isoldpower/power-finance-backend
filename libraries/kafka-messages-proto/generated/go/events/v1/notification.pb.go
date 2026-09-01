@@ -23,8 +23,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Shared with the action severity vocabulary on purpose: two adjacent slices
-// with two near-identical urgency scales would be a permanent mapping bug.
 type NotificationSeverity int32
 
 const (
@@ -88,12 +86,10 @@ type NotificationRequested struct {
 	Body           string                 `protobuf:"bytes,13,opt,name=body,proto3" json:"body,omitempty"`
 	Payload        *structpb.Struct       `protobuf:"bytes,14,opt,name=payload,proto3" json:"payload,omitempty"`
 	Severity       NotificationSeverity   `protobuf:"varint,16,opt,name=severity,proto3,enum=power_finance.events.v1.NotificationSeverity" json:"severity,omitempty"`
-	// A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
-	// the target enumerates severity and deliberately does not enumerate this.
-	SubjectType   string `protobuf:"bytes,17,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
-	SubjectId     string `protobuf:"bytes,18,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	SubjectType    string                 `protobuf:"bytes,17,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
+	SubjectId      string                 `protobuf:"bytes,18,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *NotificationRequested) Reset() {

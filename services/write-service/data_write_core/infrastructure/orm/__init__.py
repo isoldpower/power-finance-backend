@@ -1,3 +1,4 @@
+from .action import ActionModel
 from .currency import CurrencyModel
 from .goal import GoalModel
 from .money_container import MoneyContainerModel
@@ -8,6 +9,7 @@ from .wallet import WalletModel
 from .webhook import WebhookModel, WebhookSubscriptionModel
 
 __all__ = [
+    "ActionModel",
     "CurrencyModel",
     "GoalModel",
     "MoneyContainerModel",

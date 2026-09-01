@@ -894,6 +894,42 @@ No dependency beyond Phase 0, but its producers (the scheduler, and later Automa
 effect) make it worth doing after Notifications so the two share their `severity` vocabulary in code
 and not just on paper.
 
+**STATUS: 8.1–8.3 implemented; 8.4 partially — see the gap at the end.** What the build settled:
+
+- **`severity_rank` is the sentinel column Step 0.4 left open.** The queue leads with urgency, and a
+  keyset cursor cannot carry an enum whose alphabetical order is not its urgency order (`critical`
+  sorts below `info`). The rank is stored, indexed and cursored on; `ACTION_QUEUE` is
+  `severity_rank DESC, created_at DESC, id DESC`. That answers the last row of the open-decisions
+  table;
+- **the collapse is enforced by a partial unique index**, not only by the read-then-write in the
+  command: `(user, group_key) WHERE status = 'pending' AND group_key <> ''`. Two schedulers firing
+  the same check concurrently cannot both insert;
+- **`dismissal` is a flag on the stored resolution, never presented.** The target says the server
+  "designates" one resolution as dismissal but gives the client shape no room for it, and hardcoding
+  the id `"dismiss"` would make the vocabulary a magic string. It decides the resulting status and
+  stops at the presenter;
+- **`X-Write-Version` is omitted, not zeroed, when `applies` was false.** `CommandResponseMixin`
+  gained an optional version for this: a header carrying a number the client cannot use would invite
+  a `Read-At-Least` on a read that was never going to move;
+- **the read projection answers only PENDING rows.** A redelivered `ActionResolved` therefore cannot
+  restate a dismissal as a resolution or move `resolved_at`;
+- **`user_external_id` is denormalised onto the action row.** `events.async` is keyed by it and the
+  expiry sweep runs with no request to read it from; storing it beats a user lookup per swept row;
+- **the sweep runs one saga per action, not one per batch.** A single transaction over the batch
+  would roll back every expiry because of one unpublishable event, and the sweep would never make
+  progress past that row;
+- `ExpireLapsedActionsCommandHandler` is deliberately NOT a `CommandHandlerBase`: that contract
+  answers one request with one write version, and a sweep answers none.
+
+> **GAP (8.4).** The expiry sweep and the `group_key` collapse are built and running
+> (`run_action_expiry_sweeper`, a plain interval loop as a management command — the same shape this
+> service already uses for its consumers, rather than a new scheduler component). The **scheduled
+> job that RAISES time-triggered actions is not**, and cannot be: the target's own example is "a
+> subscription charging tomorrow against a wallet that cannot cover it", and neither subscriptions
+> nor recurring charges are modelled anywhere in this system. `RaiseActionCommand` is the seam that
+> job would call; what is missing is a data source to check, which is a slice of its own rather than
+> a piece of Actions.
+
 - **8.1** Action model: open `kind`, closed `source`/`severity`/`status`, `group_key` +
   `occurrences` + `last_seen_at`, `subject`, `money`, `expires_at`, `resolved_at`, and `resolutions`
   as a server-authored list;
@@ -1020,7 +1056,6 @@ Collected from the notes above, in the order they matter.
 
 | step | decision needed                                                                 |
 |------|----------------------------------------------------------------------------------|
-| 0.4  | keyset over enum-ranked `severity` — sentinel column (nullable `chain_id` answered in Phase 3) |
 | 0.8  | `details[].field` path syntax for a failure inside a filter tree                  |
 | 0.9  | cache keys must include reporting currency                                        |
 

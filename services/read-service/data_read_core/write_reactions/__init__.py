@@ -9,6 +9,11 @@ from .account_reactions import (
     RemoveAccountPostingReadModel,
     UpdateAccountReadModel,
 )
+from .action_reactions import (
+    BumpActionListVersion,
+    RaiseActionReadModel,
+    ResolveActionReadModel,
+)
 from .goal_reactions import (
     BumpGoalListVersion,
     CreateGoalReadModel,
@@ -61,6 +66,9 @@ from .webhook_reactions import (
 )
 
 __all__ = [
+    "BumpActionListVersion",
+    "RaiseActionReadModel",
+    "ResolveActionReadModel",
     "BumpAccountListVersion",
     "CreateAccountPostingReadModel",
     "CreateAccountReadModel",

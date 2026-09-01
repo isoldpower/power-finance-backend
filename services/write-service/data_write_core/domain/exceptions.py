@@ -236,3 +236,24 @@ class MoneyContainerNotFoundError(DomainError):
         self.container_id = container_id
 
         super().__init__(f"No wallet or goal with ID {container_id}.")
+
+
+class ActionNotFoundError(DomainError):
+    def __init__(self, action_id: UUID) -> None:
+        self.action_id = action_id
+
+        super().__init__(f"Action with ID {action_id} not found.")
+
+
+class ActionAlreadyResolvedError(DomainError):
+    def __init__(self, action_id: UUID) -> None:
+        self.action_id = action_id
+
+        super().__init__(f"Action with ID {action_id} has already been answered.")
+
+
+class UnknownResolutionError(DomainError):
+    def __init__(self, resolution_id: str) -> None:
+        self.resolution_id = resolution_id
+
+        super().__init__(f"Resolution {resolution_id!r} is not offered by this action.")

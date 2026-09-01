@@ -37,17 +37,45 @@ def translate(exception: Exception) -> Exception:
     except MISSING_RESOURCES:
         return NotFound()
     except domain.TransactionAlreadyCancelledError:
-        return NotFound(MESSAGES.ALREADY_CANCELLED, code=ErrorCode.ALREADY_DELETED)
+        return NotFound(
+            MESSAGES.ALREADY_CANCELLED,
+            code=ErrorCode.ALREADY_DELETED,
+        )
     except domain.DuplicateWebhookSubscriptionError:
-        return Conflict(MESSAGES.DUPLICATE_SUBSCRIPTION, code=ErrorCode.SUBSCRIPTION_EXISTS)
+        return Conflict(
+            MESSAGES.DUPLICATE_SUBSCRIPTION,
+            code=ErrorCode.SUBSCRIPTION_EXISTS,
+        )
     except domain.InsufficientFundsError:
-        return Conflict(MESSAGES.INSUFFICIENT_FUNDS, code=ErrorCode.INSUFFICIENT_FUNDS)
+        return Conflict(
+            MESSAGES.INSUFFICIENT_FUNDS,
+            code=ErrorCode.INSUFFICIENT_FUNDS,
+        )
     except domain.WalletNotEmptyError:
-        return Conflict(MESSAGES.WALLET_NOT_EMPTY, code=ErrorCode.WALLET_NOT_EMPTY)
+        return Conflict(
+            MESSAGES.WALLET_NOT_EMPTY,
+            code=ErrorCode.WALLET_NOT_EMPTY,
+        )
     except domain.WalletClosedError:
-        return Conflict(MESSAGES.WALLET_CLOSED, code=ErrorCode.WALLET_CLOSED)
+        return Conflict(
+            MESSAGES.WALLET_CLOSED,
+            code=ErrorCode.WALLET_CLOSED,
+        )
+    except domain.ActionAlreadyResolvedError:
+        return Conflict(
+            MESSAGES.ACTION_ALREADY_RESOLVED,
+            code=ErrorCode.ACTION_ALREADY_RESOLVED,
+        )
+    except domain.UnknownResolutionError:
+        return ValidationFailed(
+            MESSAGES.UNKNOWN_RESOLUTION,
+            code=ErrorCode.UNKNOWN_RESOLUTION,
+        )
     except domain.GoalNotEmptyError:
-        return Conflict(MESSAGES.GOAL_NOT_EMPTY, code=ErrorCode.GOAL_NOT_EMPTY)
+        return Conflict(
+            MESSAGES.GOAL_NOT_EMPTY,
+            code=ErrorCode.GOAL_NOT_EMPTY,
+        )
     except domain.GoalClosedError:
         return Conflict(
             MESSAGES.GOAL_CLOSED,
@@ -59,7 +87,10 @@ def translate(exception: Exception) -> Exception:
             code=ErrorCode.CHAIN_CYCLE,
         )
     except domain.TransactionChainTooLongError as error:
-        return ValidationFailed(str(error), code=ErrorCode.CHAIN_TOO_LONG)
+        return ValidationFailed(
+            str(error),
+            code=ErrorCode.CHAIN_TOO_LONG,
+        )
     except domain.TransactionChainUnknownReferenceError as error:
         return ValidationFailed(
             str(error),

@@ -3,6 +3,7 @@ from uuid import UUID
 
 from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import (
+    ActionEntity,
     GoalEntity,
     MoneyFlowEntity,
     NotificationEntity,
@@ -15,6 +16,7 @@ from data_write_core.domain.value_objects import (
     MoneyContainerRef,
 )
 
+from .action_dto import ActionDTO, ActionResolutionDTO
 from .goal_dto import GoalDTO, MoneyContainerDTO
 from .notification_dto import NotificationDTO
 from .transaction_dto import TransactionDTO, TransactionPlainDTO
@@ -165,4 +167,37 @@ def transaction_to_plain_dto(
         transaction_id=transaction.transaction_id,
         cancels_other=transaction.cancels_other,
         adjusts_other=transaction.adjusts_other,
+    )
+
+
+def action_to_dto(action: ActionEntity) -> ActionDTO:
+    return ActionDTO(
+        id=UUID(action.unique_id),
+        user_id=int(action.user_id),
+        source=action.source,
+        kind=action.kind,
+        severity=action.severity,
+        status=action.status,
+        title=action.title,
+        body=action.body,
+        subject_type=action.subject_type,
+        subject_id=action.subject_id,
+        money_amount=action.money_amount,
+        money_currency=action.money_currency,
+        group_key=action.group_key,
+        occurrences=action.occurrences,
+        last_seen_at=action.last_seen_at,
+        expires_at=action.expires_at,
+        resolved_at=action.resolved_at,
+        resolutions=tuple(
+            ActionResolutionDTO(
+                resolution_id=resolution.resolution_id,
+                label=resolution.label,
+                intent=str(resolution.intent),
+                applies=resolution.applies,
+            )
+            for resolution in action.resolutions
+        ),
+        created_at=action.created_at,
+        updated_at=action.updated_at,
     )

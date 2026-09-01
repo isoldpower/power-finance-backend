@@ -31,7 +31,7 @@ func decode(t *testing.T, raw []byte) map[string]any {
 // The client prepends the notification without a follow-up request, so the
 // frame has to carry the same shape one element of GET /notifications does.
 func TestCreatedCarriesTheWholeResource(t *testing.T) {
-	projected, err := projectNotificationEvents(createdMessage(`{
+	projected, err := ProjectNotificationEvents(createdMessage(`{
 		"notification_id": "notif-1",
 		"title": "Visa Credit near limit",
 		"body": "You are at 82% of your limit.",
@@ -64,7 +64,7 @@ func TestCreatedCarriesTheWholeResource(t *testing.T) {
 // The SSE id doubles as the resume token, so it is the NOTIFICATION id rather
 // than the outbox event id the message arrived under.
 func TestCreatedUsesTheNotificationIdAsTheResumeToken(t *testing.T) {
-	projected, _ := projectNotificationEvents(createdMessage(
+	projected, _ := ProjectNotificationEvents(createdMessage(
 		`{"notification_id":"notif-1","created_at":"2026-08-12T11:51:00Z"}`,
 	))
 
@@ -75,7 +75,7 @@ func TestCreatedUsesTheNotificationIdAsTheResumeToken(t *testing.T) {
 
 // A reference needs both halves to be followable, so half of one is null.
 func TestCreatedWithoutASubjectSendsNull(t *testing.T) {
-	projected, _ := projectNotificationEvents(createdMessage(
+	projected, _ := ProjectNotificationEvents(createdMessage(
 		`{"notification_id":"notif-1","subject_type":"wallet","subject_id":""}`,
 	))
 
@@ -87,7 +87,7 @@ func TestCreatedWithoutASubjectSendsNull(t *testing.T) {
 // An unknown or unspecified severity renders as `info` rather than dropping the
 // notification the client is waiting for.
 func TestAnUnknownSeverityDegradesToInfo(t *testing.T) {
-	projected, _ := projectNotificationEvents(createdMessage(
+	projected, _ := ProjectNotificationEvents(createdMessage(
 		`{"notification_id":"notif-1","severity":"NOTIFICATION_SEVERITY_UNSPECIFIED"}`,
 	))
 
@@ -97,7 +97,7 @@ func TestAnUnknownSeverityDegradesToInfo(t *testing.T) {
 }
 
 func TestCreatedWithoutAnIdIsRejected(t *testing.T) {
-	if _, err := projectNotificationEvents(createdMessage(`{"title":"orphan"}`)); err == nil {
+	if _, err := ProjectNotificationEvents(createdMessage(`{"title":"orphan"}`)); err == nil {
 		t.Fatal("an event with no notification id has no resume token and cannot be sent")
 	}
 }
@@ -105,7 +105,7 @@ func TestCreatedWithoutAnIdIsRejected(t *testing.T) {
 // A client tracks notifications individually and has no use for the batch a
 // second device happened to acknowledge them in.
 func TestAcknowledgedFansOutOnePerId(t *testing.T) {
-	projected, err := projectNotificationEvents(types.OutboxEvent{
+	projected, err := ProjectNotificationEvents(types.OutboxEvent{
 		EventID:   "evt-2",
 		EventType: "NotificationsAcknowledged",
 		UserID:    "user_2abc",
@@ -131,7 +131,7 @@ func TestAcknowledgedFansOutOnePerId(t *testing.T) {
 // Deliberately thin: the id and the new timestamp are the only things that
 // changed, so the frame carries nothing else.
 func TestAcknowledgedIsThin(t *testing.T) {
-	projected, _ := projectNotificationEvents(types.OutboxEvent{
+	projected, _ := ProjectNotificationEvents(types.OutboxEvent{
 		EventType: "NotificationsAcknowledged",
 		Payload: []byte(
 			`{"notification_ids":["notif-1"],"acknowledged_at":"2026-08-12T12:02:00Z"}`,
@@ -148,7 +148,7 @@ func TestAcknowledgedIsThin(t *testing.T) {
 }
 
 func TestMalformedPayloadIsReportedRatherThanForwarded(t *testing.T) {
-	if _, err := projectNotificationEvents(createdMessage(`not json`)); err == nil {
+	if _, err := ProjectNotificationEvents(createdMessage(`not json`)); err == nil {
 		t.Fatal("expected a decode error")
 	}
 }

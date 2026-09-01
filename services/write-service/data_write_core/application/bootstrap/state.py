@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..interfaces import (
+    ActionRepository,
     CurrencyRepository,
     EventBus,
     GoalRepository,
@@ -32,6 +33,7 @@ class RepositoryRegistry:
     currency_repository: "CurrencyRepository"
     outbox_repository: "OutboxRepository"
     user_repository: "UserRepository"
+    action_repository: "ActionRepository"
     notification_repository: "NotificationRepository"
     webhook_repository: "WebhookRepository"
 

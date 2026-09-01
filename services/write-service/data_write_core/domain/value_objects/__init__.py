@@ -1,3 +1,4 @@
+from .action_resolution import ActionResolution, ResolutionIntent
 from .currency import Currency
 from .goal_data import GoalData
 from .money import Money, NonNegativeMoney
@@ -13,11 +14,13 @@ from .wallet_data import WalletData
 from .webhook_type import WebhookType
 
 __all__ = [
+    "ActionResolution",
     "Currency",
     "GoalData",
     "Money",
     "NonNegativeMoney",
     "OutboxEntry",
+    "ResolutionIntent",
     "WalletData",
     "MoneyContainerKind",
     "MoneyContainerRef",

@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package power_finance.events.v1;
+
+option go_package = "github.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1";
+option java_package = "com.powerfinance.events.v1";
+option java_multiple_files = true;
+option java_outer_classname = "ActionProto";
+
+import "google/protobuf/timestamp.proto";
+
+
+enum ActionSource {
+  ACTION_SOURCE_UNSPECIFIED = 0;
+  ACTION_SOURCE_ASSISTANT = 1;
+  ACTION_SOURCE_SCHEDULER = 2;
+}
+
+enum ActionSeverity {
+  ACTION_SEVERITY_UNSPECIFIED = 0;
+  ACTION_SEVERITY_INFO = 1;
+  ACTION_SEVERITY_WARNING = 2;
+  ACTION_SEVERITY_CRITICAL = 3;
+}
+
+enum ActionStatus {
+  ACTION_STATUS_UNSPECIFIED = 0;
+  ACTION_STATUS_PENDING = 1;
+  ACTION_STATUS_RESOLVED = 2;
+  ACTION_STATUS_DISMISSED = 3;
+  ACTION_STATUS_EXPIRED = 4;
+}
+
+enum ResolutionIntent {
+  RESOLUTION_INTENT_UNSPECIFIED = 0;
+  RESOLUTION_INTENT_PRIMARY = 1;
+  RESOLUTION_INTENT_SECONDARY = 2;
+  RESOLUTION_INTENT_DANGER = 3;
+}
+
+message ActionResolution {
+  string resolution_id = 101;
+  string label = 102;
+  ResolutionIntent intent = 103;
+  bool applies = 104;
+  bool dismissal = 105;
+}
+
+message ActionRaised {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string action_id = 101;
+  string user_external_id = 102;
+  int32 user_id = 103;
+  ActionSource source = 104;
+  string kind = 105;
+  ActionSeverity severity = 106;
+  string title = 107;
+  string body = 108;
+  string subject_type = 109;
+  string subject_id = 110;
+  string money_amount = 111;
+  string money_currency = 112;
+  string group_key = 113;
+  int32 occurrences = 114;
+  google.protobuf.Timestamp last_seen_at = 115;
+  google.protobuf.Timestamp expires_at = 116;
+  repeated ActionResolution resolutions = 117;
+
+  // Reserved for future expansion.
+  reserved 118, 119;
+
+  google.protobuf.Timestamp created_at = 120;
+}
+
+message ActionResolved {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string action_id = 101;
+  string user_external_id = 102;
+  int32 user_id = 103;
+  ActionStatus status = 104;
+  string resolution_id = 105;
+  google.protobuf.Timestamp resolved_at = 106;
+
+  // Reserved for future expansion.
+  reserved 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119;
+
+  google.protobuf.Timestamp updated_at = 120;
+}

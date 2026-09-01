@@ -6,11 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * Shared with the action severity vocabulary on purpose: two adjacent slices
- * with two near-identical urgency scales would be a permanent mapping bug.
- * </pre>
- *
  * Protobuf enum {@code power_finance.events.v1.NotificationSeverity}
  */
 @com.google.protobuf.Generated

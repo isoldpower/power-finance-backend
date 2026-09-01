@@ -44,6 +44,10 @@ def get_single_account_key(account_id: str) -> str:
     return f"read:account:{ACCOUNT_CACHE_SCHEMA}:{account_id}"
 
 
+def get_action_list_version_key(user_id: int) -> str:
+    return f"ver:actions:{user_id}"
+
+
 def get_single_webhook_key(webhook_id: str) -> str:
     return f"read:webhook:{webhook_id}"
 

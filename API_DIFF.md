@@ -5,7 +5,7 @@ exist, a field spelled differently, a status code the target does not mention, o
 a behaviour a client has to code around. Internal decisions that a caller cannot
 observe are deliberately not listed.
 
-Current as of Phase 7 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
+Current as of Phase 8 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
 conventions (envelope, cursors, money strings, timestamps, idempotency, filter
 grammar, rate limits, `Read-At-Least`) are implemented as documented — the
 differences below are on top of that.
@@ -40,11 +40,13 @@ says.
 | `GET /accounts`                                                                                             | `group`/`lowbar`/`currency`    |
 | `GET /accounts/{account-id}`                                                                                | detail embeds `history`        |
 | `GET /metrics`                                                                                              | **replaces three paths**       |
+| `GET /actions`                                                                                              | `status`, `source`, `severity` |
+| `POST /actions/{action-id}/resolve`                                                                         | returns the answered action    |
 
 Not built yet. A request to any of these gets a plain 404 with NO error envelope —
 nothing routes them, so no handler shapes the failure:
 
-- the whole **Actions**, **Automations** and **Assistant** slices;
+- the whole **Automations** and **Assistant** slices;
 - `GET /webhooks/event-types` — the event vocabulary is not served anywhere, so
   it has to be hardcoded client-side for the moment;
 - `GET /webhooks/{id}/deliveries`.
@@ -377,6 +379,58 @@ server: after changing it, refetch.
 - `savings_rate` is **null when nothing came in**, not zero — a rate against no
   income is undefined, and zero would claim you saved nothing when there was
   nothing to save;
+
+### Actions
+The queue matches the target shape. Two things are worth reading twice: what
+orders it, and what happens when you answer.
+
+- **the queue leads with urgency**: `severity DESC, created_at DESC, id DESC`.
+  This is the one collection in the API that does not order purely by recency —
+  it is a list to be worked through, not a feed to be read;
+- **`status` defaults to `pending`.** Passing `resolved`, `dismissed` or
+  `expired` shows those slices instead. `source` and `severity` are absent by
+  default, meaning all. An unknown value for any of the three is 422 against
+  that param's own name — the server will not quietly answer about a different
+  slice than you asked for;
+- **render one button per entry in `resolutions` and never switch on `kind`.**
+  `kind` is an open vocabulary; use it to pick an icon and fall back to a
+  generic one. Deriving labels or button counts from it reintroduces exactly the
+  coupling this shape removes;
+- `resolutions[].intent` is a rendering hint, not behaviour. You may style them
+  all identically;
+- **`money` is in the currency the action concerns**, not your reporting
+  currency. This is not Metrics — nothing is converted. `null` when the action is
+  not about an amount;
+- `group_key` collapses recurring conditions onto one row: a daily check bumps
+  `occurrences` and `last_seen_at` rather than appending an action per run.
+  `null` means it does not recur, and `occurrences` is 1 for those, never 0;
+- there is **no `/search` and no detail endpoint**, matching the target. The list
+  row carries the entire resource;
+
+**`POST /actions/{action-id}/resolve`**
+- returns the answered action with **`resolutions` emptied**. A resolved action
+  offers no further choices, and an empty array rather than a stale list is what
+  stops you re-rendering buttons that no longer work;
+- **`X-Write-Version` is present only when the chosen resolution had
+  `applies: true`.** When it was false nothing outside the action changed, so
+  there is nothing to send `Read-At-Least` against and the header is omitted
+  entirely rather than sent with a value you cannot use;
+- choosing the resolution the server designates as dismissal produces
+  `status: "dismissed"`; every other choice produces `"resolved"`. Which one that
+  is is not exposed — it is a server decision, and you render buttons either way;
+- `resolution_id` must be one offered on THAT action; anything else is 422
+  `unknown_resolution`, including an id valid on a different action;
+- answering an already-answered, dismissed or **expired** action is 409
+  `action_already_resolved`;
+- a resolved action is **not** soft-deleted: `deleted_at` stays null and
+  `status` carries the queue state;
+
+**What produces actions.** Nothing does yet, in practice. The write path
+(`RaiseActionCommand`), the recurring collapse and the expiry sweep are all
+built and running, but no scheduled CHECK exists to raise time-triggered actions
+— the target's example condition depends on subscriptions, which this system
+does not model. The assistant does not raise them yet either. Expect an empty
+queue until something starts filling it.
 
 ### Notifications
 Notifications now match the target shape: `severity`, `title`, `body`,

@@ -308,11 +308,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object subjectType_ = "";
   /**
-   * <pre>
-   * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
-   * the target enumerates severity and deliberately does not enumerate this.
-   * </pre>
-   *
    * <code>string subject_type = 17;</code>
    * @return The subjectType.
    */
@@ -330,11 +325,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
-   * the target enumerates severity and deliberately does not enumerate this.
-   * </pre>
-   *
    * <code>string subject_type = 17;</code>
    * @return The bytes for subjectType.
    */
@@ -1605,11 +1595,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object subjectType_ = "";
     /**
-     * <pre>
-     * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
-     * the target enumerates severity and deliberately does not enumerate this.
-     * </pre>
-     *
      * <code>string subject_type = 17;</code>
      * @return The subjectType.
      */
@@ -1626,11 +1611,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
-     * the target enumerates severity and deliberately does not enumerate this.
-     * </pre>
-     *
      * <code>string subject_type = 17;</code>
      * @return The bytes for subjectType.
      */
@@ -1648,11 +1628,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
-     * the target enumerates severity and deliberately does not enumerate this.
-     * </pre>
-     *
      * <code>string subject_type = 17;</code>
      * @param value The subjectType to set.
      * @return This builder for chaining.
@@ -1666,11 +1641,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
-     * the target enumerates severity and deliberately does not enumerate this.
-     * </pre>
-     *
      * <code>string subject_type = 17;</code>
      * @return This builder for chaining.
      */
@@ -1681,11 +1651,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
-     * the target enumerates severity and deliberately does not enumerate this.
-     * </pre>
-     *
      * <code>string subject_type = 17;</code>
      * @param value The bytes for subjectType to set.
      * @return This builder for chaining.

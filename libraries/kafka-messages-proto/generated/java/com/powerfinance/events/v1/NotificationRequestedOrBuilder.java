@@ -112,21 +112,11 @@ public interface NotificationRequestedOrBuilder extends
   com.powerfinance.events.v1.NotificationSeverity getSeverity();
 
   /**
-   * <pre>
-   * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
-   * the target enumerates severity and deliberately does not enumerate this.
-   * </pre>
-   *
    * <code>string subject_type = 17;</code>
    * @return The subjectType.
    */
   java.lang.String getSubjectType();
   /**
-   * <pre>
-   * A polymorphic deep link, or absent. `subject_type` is an OPEN vocabulary —
-   * the target enumerates severity and deliberately does not enumerate this.
-   * </pre>
-   *
    * <code>string subject_type = 17;</code>
    * @return The bytes for subjectType.
    */

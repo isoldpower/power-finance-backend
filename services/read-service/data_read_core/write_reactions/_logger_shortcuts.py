@@ -473,3 +473,26 @@ def log_account_cache_evicted(key: str, removed: int) -> None:
         key,
         removed,
     )
+
+
+def log_action_postgres_raised(action_id: str, occurrences: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Projected action %s (occurrence %s).",
+        action_id,
+        occurrences,
+    )
+
+
+def log_action_postgres_resolved(action_id: str, rows: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Answered action %s (rows=%s).",
+        action_id,
+        rows,
+    )
+
+
+def log_action_list_version_bumped(user_id: int, version: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Bumped action list version for user %s to %s.", user_id, version)

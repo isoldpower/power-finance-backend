@@ -14,6 +14,7 @@ MISSING_RESOURCES = (
     domain.NotificationNotFoundError,
     domain.TransactionDoesNotBelongToWalletError,
     domain.MoneyContainerNotFoundError,
+    domain.ActionNotFoundError,
 )
 
 
@@ -43,6 +44,8 @@ class MESSAGES(StrEnum):
     WALLET_CLOSED = "Wallet is closed and cannot take new transactions"
     GOAL_NOT_EMPTY = "Goal still holds money — move it out with a transfer chain before closing"
     GOAL_CLOSED = "Goal is closed and cannot take new transactions"
+    ACTION_ALREADY_RESOLVED = "Action has already been answered and offers no further choices"
+    UNKNOWN_RESOLUTION = "Resolution is not one this action offers"
     CHAIN_CYCLE = "Chain entries reference each other in a cycle"
     IMMUTABLE_CURRENCY = "Wallet currency is fixed at creation and cannot be replaced"
     IMMUTABLE_GOAL_CURRENCY = "Goal currency is fixed at creation and cannot be replaced"
