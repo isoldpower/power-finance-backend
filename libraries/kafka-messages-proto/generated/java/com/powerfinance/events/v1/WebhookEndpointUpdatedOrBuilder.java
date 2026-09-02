@@ -99,4 +99,10 @@ public interface WebhookEndpointUpdatedOrBuilder extends
    * <code>.google.protobuf.Timestamp updated_at = 14;</code>
    */
   com.google.protobuf.TimestampOrBuilder getUpdatedAtOrBuilder();
+
+  /**
+   * <code>bool enabled = 15;</code>
+   * @return The enabled.
+   */
+  boolean getEnabled();
 }

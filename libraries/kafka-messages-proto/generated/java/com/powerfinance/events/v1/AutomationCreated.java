@@ -263,11 +263,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object icon_ = "";
   /**
-   * <pre>
-   * Free-form with a client-side registry, exactly like action `kind`. The
-   * server never validates it against a list of known icons.
-   * </pre>
-   *
    * <code>string icon = 105;</code>
    * @return The icon.
    */
@@ -285,11 +280,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * Free-form with a client-side registry, exactly like action `kind`. The
-   * server never validates it against a list of known icons.
-   * </pre>
-   *
    * <code>string icon = 105;</code>
    * @return The bytes for icon.
    */
@@ -1546,11 +1536,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object icon_ = "";
     /**
-     * <pre>
-     * Free-form with a client-side registry, exactly like action `kind`. The
-     * server never validates it against a list of known icons.
-     * </pre>
-     *
      * <code>string icon = 105;</code>
      * @return The icon.
      */
@@ -1567,11 +1552,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Free-form with a client-side registry, exactly like action `kind`. The
-     * server never validates it against a list of known icons.
-     * </pre>
-     *
      * <code>string icon = 105;</code>
      * @return The bytes for icon.
      */
@@ -1589,11 +1569,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Free-form with a client-side registry, exactly like action `kind`. The
-     * server never validates it against a list of known icons.
-     * </pre>
-     *
      * <code>string icon = 105;</code>
      * @param value The icon to set.
      * @return This builder for chaining.
@@ -1607,11 +1582,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Free-form with a client-side registry, exactly like action `kind`. The
-     * server never validates it against a list of known icons.
-     * </pre>
-     *
      * <code>string icon = 105;</code>
      * @return This builder for chaining.
      */
@@ -1622,11 +1592,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Free-form with a client-side registry, exactly like action `kind`. The
-     * server never validates it against a list of known icons.
-     * </pre>
-     *
      * <code>string icon = 105;</code>
      * @param value The bytes for icon to set.
      * @return This builder for chaining.

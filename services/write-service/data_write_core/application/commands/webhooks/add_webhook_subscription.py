@@ -11,7 +11,7 @@ from data_write_core.domain.exceptions import (
     UnsupportedWebhookEventTypeError,
     WebhookNotFoundError,
 )
-from data_write_core.domain.value_objects import WebhookType
+from data_write_core.domain.value_objects import is_subscribable_event
 from data_write_core.infrastructure.messaging import (
     build_outbox_entry,
     datetime_to_timestamp,
@@ -57,7 +57,7 @@ class AddWebhookSubscriptionCommandHandler(CommandHandlerBase[WebhookSubscriptio
     async def handle(
         self, command: AddWebhookSubscriptionCommand
     ) -> tuple[WebhookSubscriptionDTO, int]:
-        if not WebhookType.is_supported(command.event_type):
+        if not is_subscribable_event(command.event_type):
             raise UnsupportedWebhookEventTypeError(command.event_type)
 
         try:

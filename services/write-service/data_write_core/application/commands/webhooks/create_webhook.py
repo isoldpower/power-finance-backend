@@ -29,6 +29,7 @@ class CreateWebhookCommand:
     user_external_id: str
     title: str
     url: str
+    enabled: bool = True
 
 
 class CreateWebhookCommandHandler(CommandHandlerBase[WebhookWithSecretDTO]):
@@ -58,6 +59,7 @@ class CreateWebhookCommandHandler(CommandHandlerBase[WebhookWithSecretDTO]):
             user_id=str(command.user_id),
             created_at=timestamp_now,
             updated_at=timestamp_now,
+            enabled=command.enabled,
         )
         persisted_webhook, write_version = await self._run_transactions_saga(
             new_webhook,
@@ -95,6 +97,8 @@ class CreateWebhookCommandHandler(CommandHandlerBase[WebhookWithSecretDTO]):
                             title=new_webhook.title,
                             url=new_webhook.url,
                             secret=new_webhook.secret,
+                            secret_version=new_webhook.secret_version,
+                            enabled=new_webhook.enabled,
                             created_at=datetime_to_timestamp(new_webhook.created_at),
                         ),
                         aggregate_type="webhook",

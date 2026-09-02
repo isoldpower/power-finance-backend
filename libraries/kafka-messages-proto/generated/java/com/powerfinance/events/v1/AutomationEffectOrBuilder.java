@@ -23,23 +23,11 @@ public interface AutomationEffectOrBuilder extends
       getEffectTypeBytes();
 
   /**
-   * <pre>
-   * The effect's own params, already validated against its documented shape.
-   * Carried as JSON text rather than a Struct: the params are opaque to every
-   * consumer except the engine, and a Struct would invite reading into them.
-   * </pre>
-   *
    * <code>string params_json = 102;</code>
    * @return The paramsJson.
    */
   java.lang.String getParamsJson();
   /**
-   * <pre>
-   * The effect's own params, already validated against its documented shape.
-   * Carried as JSON text rather than a Struct: the params are opaque to every
-   * consumer except the engine, and a Struct would invite reading into them.
-   * </pre>
-   *
    * <code>string params_json = 102;</code>
    * @return The bytes for paramsJson.
    */

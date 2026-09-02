@@ -19,6 +19,7 @@ members = [
     "libraries/kafka-messages-proto",
     "libraries/observability-py",
     "libraries/read-at-least-py",
+    "libraries/webhook-catalog-py",
     "libraries/saga-pattern-py",
     "services/ai-service",
 ]

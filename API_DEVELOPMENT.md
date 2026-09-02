@@ -136,10 +136,12 @@ Specified in the target doc, including the delivery contract. What was left out:
 - **Auto-disable.** A permanently dead endpoint is retried 5 times per event forever. Standard
   behaviour is to disable it after N consecutive failed deliveries and raise a notification. Needs a
   threshold and a re-enable path;
-- **Delivery log retention.** The table grows without bound and nothing prunes it;
-- **Exponential backoff.** Retries are fixed at 30 seconds. Fine at this volume; a receiver that is
-  down for an hour is retried 5 times in 2 minutes and then abandoned, which is the wrong shape for a
-  long outage. Exponential with jitter, and more attempts over a longer window, is the usual fix;
+- **Delivery log retention.** The table grows without bound and nothing prunes it, and the log
+  deliberately outlives the endpoints it belongs to, so deleting webhooks does not bound it either;
+- **Exponential backoff.** Retries back off LINEARLY — attempt *n* waits `n × 30s`, so five attempts
+  span about 7.5 minutes rather than the flat 2 the target's Retries section describes. Still the
+  wrong shape for a receiver that is down for an hour. Exponential with jitter, and more attempts
+  over a longer window, is the usual fix;
 - **Payload in the delivery log.** Stored but not exposed. Useful for debugging, at the cost of page
   size and of restating superseded money;
 

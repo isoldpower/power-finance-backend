@@ -80,7 +80,7 @@ func TestHandleIgnoresUnrelatedEvent(t *testing.T) {
 	dispatcher := &fakeDispatcher{}
 	handler := NewWebhookHandler(projection, dispatcher, &fakeScheduler{})
 
-	event := types.OutboxEvent{EventType: "WalletCreated"}
+	event := types.OutboxEvent{EventType: "GoalCreated"}
 	if err := handler.Handle(context.Background(), event); err != nil {
 		t.Fatalf("Handle returned error: %v", err)
 	}

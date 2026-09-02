@@ -40,7 +40,7 @@ def webhook_to_dto(webhook: WebhookEntity) -> WebhookDTO:
         user_id=int(webhook.user_id),
         title=webhook.title,
         url=webhook.url,
-        is_active=webhook.is_active,
+        enabled=webhook.enabled,
         created_at=webhook.created_at,
         updated_at=webhook.updated_at,
     )
@@ -52,7 +52,7 @@ def webhook_to_secret_dto(webhook: WebhookEntity) -> WebhookWithSecretDTO:
         user_id=int(webhook.user_id),
         title=webhook.title,
         url=webhook.url,
-        is_active=webhook.is_active,
+        enabled=webhook.enabled,
         created_at=webhook.created_at,
         updated_at=webhook.updated_at,
         secret=webhook.secret,
@@ -66,7 +66,6 @@ def webhook_subscription_to_dto(
         id=UUID(subscription.unique_id),
         webhook_id=UUID(subscription.webhook_id),
         event_type=subscription.event_type,
-        is_active=subscription.is_active,
         created_at=subscription.created_at,
     )
 

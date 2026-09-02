@@ -28,9 +28,6 @@ message WebhookDeliveryStatusChanged {
   WebhookDeliveryStatus status = 13;
 }
 
-// Webhook endpoint configuration events. Consumed by the read-service
-// (projection for reads — MUST NOT project the secret) and by the
-// webhook-service (local delivery config, including the signing secret).
 message WebhookEndpointCreated {
   string event_id = 1;
   google.protobuf.Timestamp occurred_at = 2;
@@ -40,11 +37,10 @@ message WebhookEndpointCreated {
   int32 user_id = 11;
   string title = 12;
   string url = 13;
-  // HMAC-SHA256 signing secret. Travels only on creation/rotation so the
-  // webhook-service can sign deliveries; the owning user already saw it in
-  // the HTTP response.
   string secret = 14;
   google.protobuf.Timestamp created_at = 15;
+  int32 secret_version = 16;
+  bool enabled = 17;
 }
 
 message WebhookEndpointUpdated {
@@ -57,6 +53,7 @@ message WebhookEndpointUpdated {
   string title = 12;
   string url = 13;
   google.protobuf.Timestamp updated_at = 14;
+  bool enabled = 15;
 }
 
 message WebhookEndpointDeleted {
@@ -78,6 +75,10 @@ message WebhookSecretRotated {
   int32 user_id = 11;
   string secret = 12;
   google.protobuf.Timestamp rotated_at = 13;
+  string previous_secret = 14;
+  int32 secret_version = 15;
+  int32 previous_secret_version = 16;
+  google.protobuf.Timestamp previous_secret_expires_at = 17;
 }
 
 message WebhookSubscriptionAdded {
@@ -88,7 +89,6 @@ message WebhookSubscriptionAdded {
   string subscription_id = 10;
   string webhook_id = 11;
   int32 user_id = 12;
-  // One of the WebhookType values (e.g. "transaction.created").
   string event_type = 13;
   google.protobuf.Timestamp created_at = 14;
 }

@@ -24,10 +24,12 @@ from ...serializers import (
     PaginatedWebhookSubscriptionResponseSerializer,
 )
 from ._presenters import present_webhook, present_webhook_subscriptions, present_webhooks
-from ._schema import CURSOR_PARAMETER, LIMIT_PARAMETER, resource_id_parameter
+from ._query_params import resolve_tristate_flag
+from ._schema import CURSOR_PARAMETER, ENABLED_PARAMETER, LIMIT_PARAMETER, resource_id_parameter
 from .base import FallbackReadView
 
 WEBHOOK_ID_PARAMETER = resource_id_parameter("id", "Webhook ID")
+ENABLED_PARAM = "enabled"
 
 
 class FallbackWebhookListView(FallbackReadView):
@@ -38,7 +40,7 @@ class FallbackWebhookListView(FallbackReadView):
             "Always-consistent webhook list served from the write side. The "
             "gateway routes here when the Read Service is not caught up."
         ),
-        parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER],
+        parameters=[LIMIT_PARAMETER, CURSOR_PARAMETER, ENABLED_PARAMETER],
         responses={
             200: PaginatedWebhookResponseSerializer,
             422: ErrorResponseSerializer,
@@ -51,6 +53,7 @@ class FallbackWebhookListView(FallbackReadView):
             ListFallbackWebhooksQuery(
                 user_id=int(request.user.unique_id),
                 page=page_request,
+                enabled=resolve_tristate_flag(request, ENABLED_PARAM),
             )
         )
 

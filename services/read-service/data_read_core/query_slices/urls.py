@@ -19,6 +19,7 @@ from .list_goals import list_goals
 from .list_notifications import list_notifications
 from .list_transactions import list_transactions
 from .list_wallets import list_wallets
+from .list_webhook_event_types import list_webhook_event_types
 from .list_webhook_events import list_webhook_events
 from .list_webhooks import list_webhooks
 from .search_transactions import search_transactions
@@ -48,6 +49,7 @@ urlpatterns = [
     path("notifications/<uuid:notification_id>", get_notification),
     path("webhooks", list_webhooks),
     path("webhooks/search", search_webhooks),
+    path("webhooks/event-types", list_webhook_event_types),
     path("webhooks/<uuid:webhook_id>", get_webhook),
     path("webhooks/<uuid:webhook_id>/events", list_webhook_events),
 ]

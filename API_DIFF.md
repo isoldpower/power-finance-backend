@@ -5,7 +5,7 @@ exist, a field spelled differently, a status code the target does not mention, o
 a behaviour a client has to code around. Internal decisions that a caller cannot
 observe are deliberately not listed.
 
-Current as of Phase 9 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
+Current as of Phase 10 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
 conventions (envelope, cursors, money strings, timestamps, idempotency, filter
 grammar, rate limits, `Read-At-Least`) are implemented as documented — the
 differences below are on top of that.
@@ -31,7 +31,9 @@ says.
 | `GET /notifications/stream`                                                                                 | SSE, moved here from `/events` |
 | `GET /webhooks`, `GET /webhooks/{id}`, `POST /webhooks`, `PATCH /webhooks/{id}`, `DELETE /webhooks/{id}`    | —                              |
 | `POST /webhooks/{id}/secret`                                                                                | —                              |
-| `GET /webhooks/{id}/events`, `POST /webhooks/{id}/events`, `DELETE /webhooks/{id}/events/{subscription-id}` | shape differs                  |
+| `GET /webhooks/{id}/events`, `POST /webhooks/{id}/events`, `DELETE /webhooks/{id}/events/{subscription-id}` | not paginated                  |
+| `GET /webhooks/event-types`                                                                                 | the subscription vocabulary    |
+| `GET /webhooks/{id}/deliveries`                                                                             | `status`, `event`; see below   |
 | `POST /webhooks/search`                                                                                     | not in the target              |
 | `GET /currencies`                                                                                           | as the target describes it     |
 | `GET /currencies/rates/{currency-code}`                                                                     | see below                      |
@@ -48,10 +50,7 @@ says.
 Not built yet. A request to any of these gets a plain 404 with NO error envelope —
 nothing routes them, so no handler shapes the failure:
 
-- the whole **Assistant** slice;
-- `GET /webhooks/event-types` — the event vocabulary is not served anywhere, so
-  it has to be hardcoded client-side for the moment;
-- `GET /webhooks/{id}/deliveries`.
+- the whole **Assistant** slice.
 
 ## Resource shapes
 
@@ -590,15 +589,34 @@ internal frames:
   serve here is not automatically a code the rate FEED quotes — see below.
 
 ### Webhooks
-- The enable switch is **`is_active`**, not `enabled`, on both the resource and
-  the create/update bodies;
-- Webhook resources carry `deleted_at: null`. The target says webhooks have no
-  `deleted_at` at all because they are hard-deleted — the key is present here
-  purely for uniformity and is always null;
-- Subscriptions spell the event type **`event_type`**, not `event`, and add
-  `is_active`;
+Endpoints and subscriptions now match the target's field names — this is a
+BREAKING change from the previous release and every point below is new:
+
+- **`is_active` is now `enabled`**, on the resource and on the create/update
+  bodies. `POST /webhooks` and `PATCH /webhooks/{id}` accept it, so an endpoint
+  can finally be paused without deleting it. `GET /webhooks?enabled=` filters on
+  it, and like every other flag filter here it is a TRISTATE: absent means both;
+- **`deleted_at` is gone from webhook resources.** Webhooks are hard-deleted and
+  the key was always null; it is no longer sent at all;
+- **Subscriptions spell the event type `event`**, not `event_type` — in the
+  `POST /webhooks/{id}/events` body as well as in responses. `is_active`,
+  `updated_at` and `deleted_at` are gone from the subscription shape; it is now
+  exactly `{id, webhook_id, event, created_at}`;
 - `GET /webhooks/{id}/events` is NOT paginated: it returns everything with
-  `meta.limit: null` and both cursors null. The target paginates it.
+  `meta.limit: null` and both cursors null. The target paginates it;
+- **`GET /webhooks/event-types` serves five event types, not the target's six.**
+  `goal.reached` is absent: nothing publishes it yet, and advertising a
+  subscription that would never fire is worse than a short catalog. The others —
+  `transaction.created`, `transaction.updated`, `transaction.deleted`,
+  `wallet.created`, `wallet.updated` — are all live. Adding one later is
+  additive, which is exactly why this list is served rather than documented;
+- **`POST /webhooks/search` filters on `enabled` too**, not `is_active`;
+- **`GET /webhooks/{id}/deliveries` is answered by a different service**, so its
+  `meta` has no `cached` key. Everything else matches: `status` and `event`
+  filters, keyset `cursor`, `limit` capped at 100, the payload deliberately
+  absent, and the log surviving its endpoint's deletion. `status` accepts the
+  five documented values and a sixth is a 422; `next_attempt_at` and
+  `last_error` are `null` on a finished delivery rather than blank.
 
 ## Currencies and rates
 
@@ -722,4 +740,25 @@ internal frames:
   declared as one `clerkBearer` HTTP bearer scheme, which is what you already
   send;
 - **`: heartbeat` comment lines are sent as documented**, so an idle stream is
-  still distinguishable from a dead one.
+  still distinguishable from a dead one;
+- **Webhook deliveries are signed over `"{timestamp}.{body}"`, as the target's
+  Signature section specifies**, and now carry `X-Webhook-Timestamp`. A receiver
+  written against the previous release — which signed the bare body and sent no
+  timestamp — MUST be updated, and should start rejecting requests whose
+  timestamp is more than five minutes off its own clock;
+- **`X-Webhook-Delivery` now carries the `event_id`**, not the delivery row's
+  id, so it repeats across retries of one event and is the value to deduplicate
+  on, exactly as the target says;
+- **The delivery body is now the documented envelope**
+  `{id, event, created_at, data}` rather than the raw internal event. One
+  caveat: `data` carries the domain event's own fields, which are close to but
+  not identical to the resource this API returns — a transaction arrives with
+  `transaction_id`, `amount` and `currency_code` rather than `id` and a `money`
+  object. Treat `data` as the event, not as a resource you can hand to code
+  written against `GET /transactions/{id}`;
+- **Rotating a secret keeps the previous one valid for 24 hours.** New
+  deliveries are signed with the new secret; a delivery already queued when you
+  rotated is still signed with the secret it was queued under until that window
+  closes. Hold both secrets during the changeover and accept a match against
+  either. Rotating a second time inside the window invalidates the older secret
+  immediately — only two are ever live.

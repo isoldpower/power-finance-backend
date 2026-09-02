@@ -1,0 +1,34 @@
+{
+  "event_types": [
+    {
+      "event": "transaction.created",
+      "subject": "transaction",
+      "description": "A transaction was recorded.",
+      "outbox_types": ["TransactionCreated"]
+    },
+    {
+      "event": "transaction.updated",
+      "subject": "transaction",
+      "description": "An existing transaction changed.",
+      "outbox_types": ["TransactionUpdated", "TransactionMetadataUpdated"]
+    },
+    {
+      "event": "transaction.deleted",
+      "subject": "transaction",
+      "description": "A transaction was cancelled.",
+      "outbox_types": ["TransactionDeleted"]
+    },
+    {
+      "event": "wallet.created",
+      "subject": "wallet",
+      "description": "A wallet was opened.",
+      "outbox_types": ["WalletCreated"]
+    },
+    {
+      "event": "wallet.updated",
+      "subject": "wallet",
+      "description": "A wallet's details or balance changed.",
+      "outbox_types": ["WalletUpdated"]
+    }
+  ]
+}

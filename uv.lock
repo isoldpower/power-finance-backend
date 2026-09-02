@@ -20,6 +20,7 @@ members = [
     "read-at-least-py",
     "read-service",
     "saga-pattern-py",
+    "webhook-catalog-py",
     "write-service",
 ]
 
@@ -2494,6 +2495,7 @@ dependencies = [
     { name = "redis" },
     { name = "saga-pattern-py" },
     { name = "uvicorn", extra = ["standard"] },
+    { name = "webhook-catalog-py" },
 ]
 
 [package.dev-dependencies]
@@ -2524,6 +2526,7 @@ requires-dist = [
     { name = "redis", specifier = ">=7.0,<8.0" },
     { name = "saga-pattern-py", editable = "libraries/saga-pattern-py" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.43,<0.44" },
+    { name = "webhook-catalog-py", editable = "libraries/webhook-catalog-py" },
 ]
 
 [package.metadata.requires-dev]
@@ -3189,6 +3192,21 @@ wheels = [
 ]
 
 [[package]]
+name = "webhook-catalog-py"
+version = "0.0.0"
+source = { editable = "libraries/webhook-catalog-py" }
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.3,<9.0" }]
+
+[[package]]
 name = "websockets"
 version = "16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3258,6 +3276,7 @@ dependencies = [
     { name = "saga-pattern-py" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "uvicorn-worker" },
+    { name = "webhook-catalog-py" },
 ]
 
 [package.dev-dependencies]
@@ -3289,6 +3308,7 @@ requires-dist = [
     { name = "saga-pattern-py", editable = "libraries/saga-pattern-py" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.43,<0.44" },
     { name = "uvicorn-worker", specifier = ">=0.4,<0.5" },
+    { name = "webhook-catalog-py", editable = "libraries/webhook-catalog-py" },
 ]
 
 [package.metadata.requires-dev]

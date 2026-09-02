@@ -31,6 +31,7 @@ class UpdateWebhookCommand:
     webhook_id: UUID
     title: str | None = None
     url: str | None = None
+    enabled: bool | None = None
 
 
 class UpdateWebhookCommandHandler(CommandHandlerBase[WebhookDTO]):
@@ -55,12 +56,19 @@ class UpdateWebhookCommandHandler(CommandHandlerBase[WebhookDTO]):
 
         timestamp_now = datetime.now()
         previous_title, previous_url = webhook.title, webhook.url
-        webhook.update(now=timestamp_now, title=command.title, url=command.url)
+        previous_enabled = webhook.enabled
+        webhook.update(
+            now=timestamp_now,
+            title=command.title,
+            url=command.url,
+            enabled=command.enabled,
+        )
 
         write_version = await self._run_transactions_saga(
             webhook,
             previous_title=previous_title,
             previous_url=previous_url,
+            previous_enabled=previous_enabled,
             timestamp=timestamp_now,
             partition_key=command.user_external_id,
         )
@@ -82,6 +90,7 @@ class UpdateWebhookCommandHandler(CommandHandlerBase[WebhookDTO]):
         webhook: WebhookEntity,
         previous_title: str,
         previous_url: str,
+        previous_enabled: bool,
         timestamp: datetime,
         partition_key: str,
     ) -> int:
@@ -89,6 +98,7 @@ class UpdateWebhookCommandHandler(CommandHandlerBase[WebhookDTO]):
             webhook,
             previous_title=previous_title,
             previous_url=previous_url,
+            previous_enabled=previous_enabled,
         )
 
         saga_coordinator = FinalizedSagaCoordinator(
@@ -107,6 +117,7 @@ class UpdateWebhookCommandHandler(CommandHandlerBase[WebhookDTO]):
                             user_id=int(webhook.user_id),
                             title=webhook.title,
                             url=webhook.url,
+                            enabled=webhook.enabled,
                             updated_at=datetime_to_timestamp(timestamp),
                         ),
                         aggregate_type="webhook",
@@ -124,12 +135,18 @@ class UpdateWebhookCommandHandler(CommandHandlerBase[WebhookDTO]):
         webhook: WebhookEntity,
         previous_title: str,
         previous_url: str,
+        previous_enabled: bool,
     ) -> tuple[PostgresAction, PostgresAction]:
         async def persist_update() -> None:
             await self._webhook_repository.save_webhook(webhook)
 
         async def undo_update() -> None:
-            webhook.update(now=datetime.now(), title=previous_title, url=previous_url)
+            webhook.update(
+                now=datetime.now(),
+                title=previous_title,
+                url=previous_url,
+                enabled=previous_enabled,
+            )
             await self._webhook_repository.save_webhook(webhook)
 
         return persist_update, undo_update

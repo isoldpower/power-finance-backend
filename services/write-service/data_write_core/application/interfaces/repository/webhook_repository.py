@@ -20,12 +20,12 @@ class WebhookRepository(ABC):
         self,
         user_id: int,
         page: PageRequest | None = None,
+        enabled: bool | None = None,
     ) -> list[WebhookEntity]:
-        """One page of rows — including the lookahead row — newest first."""
         raise NotImplementedError()
 
     @abstractmethod
-    async def count_user_webhooks(self, user_id: int) -> int:
+    async def count_user_webhooks(self, user_id: int, enabled: bool | None = None) -> int:
         raise NotImplementedError()
 
     @abstractmethod

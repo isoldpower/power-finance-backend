@@ -13,7 +13,7 @@ from .transaction_metadata import (
     TransactionType,
 )
 from .wallet_data import WalletData
-from .webhook_type import WebhookType
+from .webhook_type import WEBHOOK_EVENT_TYPES, is_subscribable_event
 
 __all__ = [
     "CLIENT_ORIGINS",
@@ -32,5 +32,6 @@ __all__ = [
     "TransactionMetadata",
     "TransactionOrigin",
     "TransactionType",
-    "WebhookType",
+    "WEBHOOK_EVENT_TYPES",
+    "is_subscribable_event",
 ]

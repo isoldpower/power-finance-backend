@@ -19,11 +19,11 @@ type deliveryStore interface {
 }
 
 type secretResolver interface {
-	EndpointSecret(ctx context.Context, webhookID string) (string, error)
+	EndpointSecrets(ctx context.Context, webhookID string) (types.EndpointSecrets, error)
 }
 
 type sender interface {
-	Send(ctx context.Context, delivery types.Delivery, secret string) error
+	Send(ctx context.Context, delivery types.Delivery, secret string, at time.Time) error
 }
 
 type notifier interface {
@@ -64,16 +64,16 @@ func (a *DeliveryAttempter) Attempt(ctx context.Context, delivery types.Delivery
 	attemptNumber := delivery.Attempts + 1
 
 	if secret == "" {
-		resolved, secretErr := a.secrets.EndpointSecret(ctx, delivery.WebhookID)
+		resolved, secretErr := a.secrets.EndpointSecrets(ctx, delivery.WebhookID)
 		if secretErr != nil {
 			return secretErr
 		}
-		secret = resolved
+		secret = resolved.For(delivery.SecretVersion, now)
 	}
 
 	metrics.DeliveryAttempted()
 	sendStart := time.Now()
-	sendErr := a.sender.Send(ctx, delivery, secret)
+	sendErr := a.sender.Send(ctx, delivery, secret, now)
 	metrics.ObserveAttemptDuration(time.Since(sendStart).Seconds())
 	if sendErr == nil {
 		return a.recordSuccess(ctx, delivery, attemptNumber, now)

@@ -45,6 +45,7 @@ class WebhookListView(WebhookView, CommandResponseMixin):
                 user_external_id=request.user.external_id,
                 title=validated["title"],
                 url=validated["url"],
+                enabled=validated["enabled"],
             )
         )
 

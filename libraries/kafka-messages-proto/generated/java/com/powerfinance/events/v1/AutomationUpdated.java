@@ -6,12 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * `trigger` and `effects` are replaced WHOLE, never merged: deep-merging a
- * condition tree has no sane definition, so the event carries the complete new
- * rule rather than a patch.
- * </pre>
- *
  * Protobuf type {@code power_finance.events.v1.AutomationUpdated}
  */
 @com.google.protobuf.Generated
@@ -705,12 +699,6 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * <pre>
-   * `trigger` and `effects` are replaced WHOLE, never merged: deep-merging a
-   * condition tree has no sane definition, so the event carries the complete new
-   * rule rather than a patch.
-   * </pre>
-   *
    * Protobuf type {@code power_finance.events.v1.AutomationUpdated}
    */
   public static final class Builder extends

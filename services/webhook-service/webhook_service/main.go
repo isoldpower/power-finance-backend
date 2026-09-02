@@ -54,7 +54,9 @@ func StartWebhookService(serviceConfig Config) error {
 		consumer.Run(rootContext)
 	}()
 
-	httpserver.NewServer(serviceConfig.Server, readinessProbe).
+	deliveryLog := services.NewDeliveryLogService(stores.DeliveryLogStore, stores.ConfigStore)
+	httpserver.
+		NewServer(serviceConfig.Server, readinessProbe, deliveryLog).
 		Run(rootContext)
 
 	awaitBackgroundDrainBeforeCleanup(consumerDone, schedulerDone)

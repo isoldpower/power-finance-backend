@@ -15,9 +15,14 @@ import (
 type Server struct {
 	server         *http.Server
 	readinessProbe *health.Probe
+	deliveryLog    deliveryLogReader
 }
 
-func NewServer(serverConfig Config, readinessProbe *health.Probe) *Server {
+func NewServer(
+	serverConfig Config,
+	readinessProbe *health.Probe,
+	deliveryLog deliveryLogReader,
+) *Server {
 	router := http.NewServeMux()
 	httpServer := &Server{
 		server: &http.Server{
@@ -26,11 +31,16 @@ func NewServer(serverConfig Config, readinessProbe *health.Probe) *Server {
 			ReadHeaderTimeout: 5 * time.Second,
 		},
 		readinessProbe: readinessProbe,
+		deliveryLog:    deliveryLog,
 	}
 
 	router.HandleFunc("GET /healthz", httpServer.handleHealthCheck)
 	router.HandleFunc("GET /readyz", httpServer.handleReadinessCheck)
 	router.Handle("GET /metrics", metrics.Handler())
+	router.HandleFunc(
+		"GET /api/v1/webhooks/{webhookID}/deliveries",
+		httpServer.handleDeliveryLog,
+	)
 
 	return httpServer
 }

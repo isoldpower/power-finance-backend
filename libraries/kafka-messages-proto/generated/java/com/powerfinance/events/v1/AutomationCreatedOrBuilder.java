@@ -86,21 +86,11 @@ public interface AutomationCreatedOrBuilder extends
       getNameBytes();
 
   /**
-   * <pre>
-   * Free-form with a client-side registry, exactly like action `kind`. The
-   * server never validates it against a list of known icons.
-   * </pre>
-   *
    * <code>string icon = 105;</code>
    * @return The icon.
    */
   java.lang.String getIcon();
   /**
-   * <pre>
-   * Free-form with a client-side registry, exactly like action `kind`. The
-   * server never validates it against a list of known icons.
-   * </pre>
-   *
    * <code>string icon = 105;</code>
    * @return The bytes for icon.
    */

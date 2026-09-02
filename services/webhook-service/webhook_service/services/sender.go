@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -22,6 +23,7 @@ const (
 	signatureHeader = "X-Webhook-Signature"
 	eventTypeHeader = "X-Webhook-Event"
 	deliveryHeader  = "X-Webhook-Delivery"
+	timestampHeader = "X-Webhook-Timestamp"
 
 	dialTimeout = 10 * time.Second
 )
@@ -80,7 +82,12 @@ func NewHTTPSender(timeout time.Duration, opts ...SenderOption) *HTTPSender {
 
 // Send signs the payload with the endpoint secret and POSTs it, returning an
 // error on transport failure or a non-2xx response.
-func (s *HTTPSender) Send(ctx context.Context, delivery types.Delivery, secret string) error {
+func (s *HTTPSender) Send(
+	ctx context.Context,
+	delivery types.Delivery,
+	secret string,
+	at time.Time,
+) error {
 	if schemeErr := validateTargetScheme(delivery.TargetURL); schemeErr != nil {
 		return schemeErr
 	}
@@ -95,10 +102,12 @@ func (s *HTTPSender) Send(ctx context.Context, delivery types.Delivery, secret s
 		return fmt.Errorf("sender: build request: %w", requestErr)
 	}
 
+	timestamp := strconv.FormatInt(at.Unix(), 10)
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set(signatureHeader, signPayload(secret, delivery.Payload))
+	request.Header.Set(timestampHeader, timestamp)
+	request.Header.Set(signatureHeader, signPayload(secret, timestamp, delivery.Payload))
 	request.Header.Set(eventTypeHeader, delivery.EventType)
-	request.Header.Set(deliveryHeader, delivery.ID)
+	request.Header.Set(deliveryHeader, delivery.EventID)
 
 	response, sendErr := s.client.Do(request)
 	if sendErr != nil {
@@ -129,9 +138,7 @@ func validateTargetScheme(targetURL string) error {
 }
 
 // guardDialAddress rejects connections to loopback, private, link-local and
-// unspecified addresses. It runs on every dial (including redirects, which are
-// blocked anyway) against the already-resolved IP, so it also defeats
-// DNS-rebinding to an internal target.
+// unspecified addresses.
 func guardDialAddress(_ string, address string, _ syscall.RawConn) error {
 	host, _, splitErr := net.SplitHostPort(address)
 	if splitErr != nil {
@@ -158,8 +165,10 @@ func isBlockedAddress(ip net.IP) bool {
 		ip.IsUnspecified()
 }
 
-func signPayload(secret string, payload []byte) string {
+func signPayload(secret string, timestamp string, payload []byte) string {
 	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(timestamp))
+	mac.Write([]byte("."))
 	mac.Write(payload)
 
 	return "v1=" + hex.EncodeToString(mac.Sum(nil))

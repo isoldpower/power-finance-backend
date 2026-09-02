@@ -17,6 +17,17 @@ CURSOR_PARAMETER = OpenApiParameter(
 )
 
 
+ENABLED_PARAMETER = OpenApiParameter(
+    "enabled",
+    type=OpenApiTypes.BOOL,
+    location=OpenApiParameter.QUERY,
+    description=(
+        "Restrict to enabled or disabled endpoints. ABSENT means both — it is "
+        "a tristate, not a boolean defaulting to either value."
+    ),
+)
+
+
 PERIOD_PARAMETER = OpenApiParameter(
     "period",
     type=OpenApiTypes.STR,

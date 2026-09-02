@@ -22,16 +22,10 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// One thing a rule does when it matches. NOT free-form: the API accepts no
-// expression, script or template string anywhere, so an effect can only select
-// from what the backend already knows how to do.
 type AutomationEffect struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	EffectType string                 `protobuf:"bytes,101,opt,name=effect_type,json=effectType,proto3" json:"effect_type,omitempty"`
-	// The effect's own params, already validated against its documented shape.
-	// Carried as JSON text rather than a Struct: the params are opaque to every
-	// consumer except the engine, and a Struct would invite reading into them.
-	ParamsJson    string `protobuf:"bytes,102,opt,name=params_json,json=paramsJson,proto3" json:"params_json,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EffectType    string                 `protobuf:"bytes,101,opt,name=effect_type,json=effectType,proto3" json:"effect_type,omitempty"`
+	ParamsJson    string                 `protobuf:"bytes,102,opt,name=params_json,json=paramsJson,proto3" json:"params_json,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -81,14 +75,11 @@ func (x *AutomationEffect) GetParamsJson() string {
 }
 
 type AutomationTrigger struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	TriggerType string                 `protobuf:"bytes,101,opt,name=trigger_type,json=triggerType,proto3" json:"trigger_type,omitempty"`
-	// Exactly one of these is set, selected by `trigger_type`.
-	Event    string `protobuf:"bytes,102,opt,name=event,proto3" json:"event,omitempty"`
-	Schedule string `protobuf:"bytes,103,opt,name=schedule,proto3" json:"schedule,omitempty"`
-	// The same filter_body grammar the /search endpoints take. Empty means the
-	// rule is unconditional — "always" — which is why an empty group is refused.
-	FilterBodyJson string `protobuf:"bytes,104,opt,name=filter_body_json,json=filterBodyJson,proto3" json:"filter_body_json,omitempty"`
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	TriggerType    string                 `protobuf:"bytes,101,opt,name=trigger_type,json=triggerType,proto3" json:"trigger_type,omitempty"`
+	Event          string                 `protobuf:"bytes,102,opt,name=event,proto3" json:"event,omitempty"`
+	Schedule       string                 `protobuf:"bytes,103,opt,name=schedule,proto3" json:"schedule,omitempty"`
+	FilterBodyJson string                 `protobuf:"bytes,104,opt,name=filter_body_json,json=filterBodyJson,proto3" json:"filter_body_json,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -160,15 +151,13 @@ type AutomationCreated struct {
 	UserExternalId string                 `protobuf:"bytes,102,opt,name=user_external_id,json=userExternalId,proto3" json:"user_external_id,omitempty"`
 	UserId         int32                  `protobuf:"varint,103,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Name           string                 `protobuf:"bytes,104,opt,name=name,proto3" json:"name,omitempty"`
-	// Free-form with a client-side registry, exactly like action `kind`. The
-	// server never validates it against a list of known icons.
-	Icon          string                 `protobuf:"bytes,105,opt,name=icon,proto3" json:"icon,omitempty"`
-	Enabled       bool                   `protobuf:"varint,106,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Trigger       *AutomationTrigger     `protobuf:"bytes,107,opt,name=trigger,proto3" json:"trigger,omitempty"`
-	Effects       []*AutomationEffect    `protobuf:"bytes,108,rep,name=effects,proto3" json:"effects,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Icon           string                 `protobuf:"bytes,105,opt,name=icon,proto3" json:"icon,omitempty"`
+	Enabled        bool                   `protobuf:"varint,106,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Trigger        *AutomationTrigger     `protobuf:"bytes,107,opt,name=trigger,proto3" json:"trigger,omitempty"`
+	Effects        []*AutomationEffect    `protobuf:"bytes,108,rep,name=effects,proto3" json:"effects,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *AutomationCreated) Reset() {
@@ -285,9 +274,6 @@ func (x *AutomationCreated) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// `trigger` and `effects` are replaced WHOLE, never merged: deep-merging a
-// condition tree has no sane definition, so the event carries the complete new
-// rule rather than a patch.
 type AutomationUpdated struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	EventId        string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -512,9 +498,6 @@ func (x *AutomationDeleted) GetDeletedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// The engine's counters. `runs` counts MATCHES that applied effects, not
-// evaluations: a rule checked a thousand times that never matched reports 0,
-// which is what makes a silently-stopped rule distinguishable from a working one.
 type AutomationRan struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	EventId        string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`

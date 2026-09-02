@@ -6,6 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from kafka_messages import WebhookSecretRotated
 
 from data_write_core.domain.entities import WebhookEntity
+from data_write_core.domain.entities.webhook import SecretRotation, SecretState
 from data_write_core.domain.exceptions import WebhookNotFoundError
 from data_write_core.infrastructure.messaging import (
     build_outbox_entry,
@@ -58,12 +59,13 @@ class RotateWebhookSecretCommandHandler(CommandHandlerBase[WebhookWithSecretDTO]
             raise WebhookNotFoundError(command.webhook_id) from exc
 
         timestamp_now = datetime.now()
-        previous_secret = webhook.secret
-        webhook.rotate_secret(now=timestamp_now)
+        secret_before_rotation = webhook.secret_snapshot()
+        rotation = webhook.rotate_secret(now=timestamp_now)
 
         write_version = await self._run_transactions_saga(
             webhook,
-            previous_secret=previous_secret,
+            rotation=rotation,
+            secret_before_rotation=secret_before_rotation,
             timestamp=timestamp_now,
             partition_key=command.user_external_id,
         )
@@ -74,13 +76,14 @@ class RotateWebhookSecretCommandHandler(CommandHandlerBase[WebhookWithSecretDTO]
     async def _run_transactions_saga(
         self,
         webhook: WebhookEntity,
-        previous_secret: str,
+        rotation: SecretRotation,
+        secret_before_rotation: SecretState,
         timestamp: datetime,
         partition_key: str,
     ) -> int:
         persist_rotation, undo_rotation = self._get_save_unsave_lambdas(
             webhook,
-            previous_secret=previous_secret,
+            secret_before_rotation=secret_before_rotation,
         )
 
         saga_coordinator = FinalizedSagaCoordinator(
@@ -97,7 +100,13 @@ class RotateWebhookSecretCommandHandler(CommandHandlerBase[WebhookWithSecretDTO]
                         WebhookSecretRotated(
                             webhook_id=webhook.unique_id,
                             user_id=int(webhook.user_id),
-                            secret=webhook.secret,
+                            secret=rotation.secret,
+                            secret_version=rotation.secret_version,
+                            previous_secret=rotation.previous_secret,
+                            previous_secret_version=rotation.previous_secret_version,
+                            previous_secret_expires_at=datetime_to_timestamp(
+                                rotation.previous_secret_expires_at
+                            ),
                             rotated_at=datetime_to_timestamp(timestamp),
                         ),
                         aggregate_type="webhook",
@@ -113,13 +122,13 @@ class RotateWebhookSecretCommandHandler(CommandHandlerBase[WebhookWithSecretDTO]
     def _get_save_unsave_lambdas(
         self,
         webhook: WebhookEntity,
-        previous_secret: str,
+        secret_before_rotation: SecretState,
     ) -> tuple[PostgresAction, PostgresAction]:
         async def persist_rotation() -> None:
             await self._webhook_repository.save_webhook(webhook)
 
         async def undo_rotation() -> None:
-            webhook.restore_secret(previous_secret, datetime.now())
+            webhook.restore_secret(secret_before_rotation, datetime.now())
             await self._webhook_repository.save_webhook(webhook)
 
         return persist_rotation, undo_rotation

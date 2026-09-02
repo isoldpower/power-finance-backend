@@ -51,7 +51,7 @@ class WebhookEventListView(WebhookView, CommandResponseMixin):
                 user_id=int(request.user.unique_id),
                 user_external_id=request.user.external_id,
                 webhook_id=webhook_id,
-                event_type=serializer.validated_data["event_type"],
+                event_type=serializer.validated_data["event"],
             )
         )
 

@@ -7,14 +7,14 @@ import (
 )
 
 type Stores struct {
-	ConfigStore   *ConfigStore
-	DeliveryStore *DeliveryStore
-	DedupeStore   *dedupe.PostgresStore
+	ConfigStore      *ConfigStore
+	DeliveryStore    *DeliveryStore
+	DeliveryLogStore *DeliveryLogStore
+	DedupeStore      *dedupe.PostgresStore
 }
 
 // Bootstrap opens the pool and builds the stores; the returned cleanup closes
-// the pool and must be called on shutdown. The schema is owned by the Goose
-// migrations (run via `webhook-service migrate`), not applied at boot.
+// the pool and must be called on shutdown.
 func Bootstrap(
 	rootContext context.Context,
 	config Config,
@@ -26,8 +26,9 @@ func Bootstrap(
 	}
 
 	return &Stores{
-		ConfigStore:   NewConfigStore(postgresPool),
-		DeliveryStore: NewDeliveryStore(postgresPool),
-		DedupeStore:   dedupe.NewPostgresStore(postgresPool, dedupeGroup),
+		ConfigStore:      NewConfigStore(postgresPool),
+		DeliveryStore:    NewDeliveryStore(postgresPool),
+		DeliveryLogStore: NewDeliveryLogStore(postgresPool),
+		DedupeStore:      dedupe.NewPostgresStore(postgresPool, dedupeGroup),
 	}, postgresPool.Close, nil
 }

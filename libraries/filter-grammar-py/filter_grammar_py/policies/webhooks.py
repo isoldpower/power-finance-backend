@@ -13,8 +13,8 @@ WEBHOOK_FILTER_POLICY: FilterPolicy = {
         value_type=TypeVariant.STRING,
         model_lookup="url",
     ),
-    "is_active": FilterFieldPolicy(
-        request_name="is_active",
+    "enabled": FilterFieldPolicy(
+        request_name="enabled",
         allowed_operators={"eq", "neq"},
         value_type=TypeVariant.BOOLEAN,
         model_lookup="is_active",

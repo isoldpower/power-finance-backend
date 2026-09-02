@@ -24,6 +24,7 @@ dependencies = [
     "kafka-client-py",
     "kafka-consumer-py",
     "filter-grammar-py",
+    "webhook-catalog-py",
 ]
 
 [dependency-groups]
@@ -35,6 +36,7 @@ dev = [
 
 [tool.uv.sources]
 filter-grammar-py = { workspace = true }
+webhook-catalog-py = { workspace = true }
 correlation-py = { workspace = true }
 saga-pattern-py = { workspace = true }
 kafka-messages-proto = { workspace = true }

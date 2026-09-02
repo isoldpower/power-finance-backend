@@ -11,14 +11,5 @@ type OutboxEvent struct {
 // WebhookEventTypeFor maps a domain outbox event type to the webhook
 // subscription type, or blank when the event is not webhook-deliverable.
 func WebhookEventTypeFor(outboxEventType string) string {
-	switch outboxEventType {
-	case "TransactionCreated":
-		return "transaction.created"
-	case "TransactionUpdated":
-		return "transaction.updated"
-	case "TransactionDeleted":
-		return "transaction.deleted"
-	default:
-		return ""
-	}
+	return eventByOutboxType[outboxEventType]
 }

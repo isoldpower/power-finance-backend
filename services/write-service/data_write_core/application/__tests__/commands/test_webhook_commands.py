@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 import pytest
+from webhook_catalog_py import event_values
 
 from data_write_core.application.commands import (
     AddWebhookSubscriptionCommand,
@@ -79,3 +80,29 @@ async def test_subscribe_rejects_duplicate_subscription():
                 event_type="transaction.created",
             )
         )
+
+
+async def test_subscribe_accepts_every_event_in_the_shared_catalog():
+    """The catalog GET /webhooks/event-types serves and the one the validator
+    checks against are the same table, so nothing can be advertised as
+    subscribable and then refused here."""
+
+    for event in event_values():
+        handler = AddWebhookSubscriptionCommandHandler(
+            webhook_repository=FakeWebhookRepository(
+                [make_webhook(WEBHOOK_A)],
+                existing_subscriptions={(WEBHOOK_A, event)},
+            ),
+            outbox_repository=object(),
+        )
+
+        # Reaching the duplicate check means the event type was accepted.
+        with pytest.raises(DuplicateWebhookSubscriptionError):
+            await handler.handle(
+                AddWebhookSubscriptionCommand(
+                    user_id=7,
+                    user_external_id="user_abc",
+                    webhook_id=UUID(WEBHOOK_A),
+                    event_type=event,
+                )
+            )

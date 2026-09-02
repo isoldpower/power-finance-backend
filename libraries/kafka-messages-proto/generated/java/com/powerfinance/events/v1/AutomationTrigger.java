@@ -95,10 +95,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object event_ = "";
   /**
-   * <pre>
-   * Exactly one of these is set, selected by `trigger_type`.
-   * </pre>
-   *
    * <code>string event = 102;</code>
    * @return The event.
    */
@@ -116,10 +112,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * Exactly one of these is set, selected by `trigger_type`.
-   * </pre>
-   *
    * <code>string event = 102;</code>
    * @return The bytes for event.
    */
@@ -181,11 +173,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object filterBodyJson_ = "";
   /**
-   * <pre>
-   * The same filter_body grammar the /search endpoints take. Empty means the
-   * rule is unconditional — "always" — which is why an empty group is refused.
-   * </pre>
-   *
    * <code>string filter_body_json = 104;</code>
    * @return The filterBodyJson.
    */
@@ -203,11 +190,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * The same filter_body grammar the /search endpoints take. Empty means the
-   * rule is unconditional — "always" — which is why an empty group is refused.
-   * </pre>
-   *
    * <code>string filter_body_json = 104;</code>
    * @return The bytes for filterBodyJson.
    */
@@ -666,10 +648,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object event_ = "";
     /**
-     * <pre>
-     * Exactly one of these is set, selected by `trigger_type`.
-     * </pre>
-     *
      * <code>string event = 102;</code>
      * @return The event.
      */
@@ -686,10 +664,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Exactly one of these is set, selected by `trigger_type`.
-     * </pre>
-     *
      * <code>string event = 102;</code>
      * @return The bytes for event.
      */
@@ -707,10 +681,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Exactly one of these is set, selected by `trigger_type`.
-     * </pre>
-     *
      * <code>string event = 102;</code>
      * @param value The event to set.
      * @return This builder for chaining.
@@ -724,10 +694,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Exactly one of these is set, selected by `trigger_type`.
-     * </pre>
-     *
      * <code>string event = 102;</code>
      * @return This builder for chaining.
      */
@@ -738,10 +704,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Exactly one of these is set, selected by `trigger_type`.
-     * </pre>
-     *
      * <code>string event = 102;</code>
      * @param value The bytes for event to set.
      * @return This builder for chaining.
@@ -830,11 +792,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object filterBodyJson_ = "";
     /**
-     * <pre>
-     * The same filter_body grammar the /search endpoints take. Empty means the
-     * rule is unconditional — "always" — which is why an empty group is refused.
-     * </pre>
-     *
      * <code>string filter_body_json = 104;</code>
      * @return The filterBodyJson.
      */
@@ -851,11 +808,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The same filter_body grammar the /search endpoints take. Empty means the
-     * rule is unconditional — "always" — which is why an empty group is refused.
-     * </pre>
-     *
      * <code>string filter_body_json = 104;</code>
      * @return The bytes for filterBodyJson.
      */
@@ -873,11 +825,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The same filter_body grammar the /search endpoints take. Empty means the
-     * rule is unconditional — "always" — which is why an empty group is refused.
-     * </pre>
-     *
      * <code>string filter_body_json = 104;</code>
      * @param value The filterBodyJson to set.
      * @return This builder for chaining.
@@ -891,11 +838,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The same filter_body grammar the /search endpoints take. Empty means the
-     * rule is unconditional — "always" — which is why an empty group is refused.
-     * </pre>
-     *
      * <code>string filter_body_json = 104;</code>
      * @return This builder for chaining.
      */
@@ -906,11 +848,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The same filter_body grammar the /search endpoints take. Empty means the
-     * rule is unconditional — "always" — which is why an empty group is refused.
-     * </pre>
-     *
      * <code>string filter_body_json = 104;</code>
      * @param value The bytes for filterBodyJson to set.
      * @return This builder for chaining.

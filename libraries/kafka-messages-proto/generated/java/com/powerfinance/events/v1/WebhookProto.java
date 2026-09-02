@@ -78,50 +78,55 @@ public final class WebhookProto extends com.google.protobuf.GeneratedFile {
       "\013delivery_id\030\n \001(\t\022\023\n\013endpoint_id\030\013 \001(\t\022" +
       "\017\n\007user_id\030\014 \001(\005\022>\n\006status\030\r \001(\0162..power" +
       "_finance.events.v1.WebhookDeliveryStatus" +
-      "\"\364\001\n\026WebhookEndpointCreated\022\020\n\010event_id\030" +
+      "\"\235\002\n\026WebhookEndpointCreated\022\020\n\010event_id\030" +
       "\001 \001(\t\022/\n\013occurred_at\030\002 \001(\0132\032.google.prot" +
       "obuf.Timestamp\022\026\n\016schema_version\030\003 \001(\005\022\022" +
       "\n\nwebhook_id\030\n \001(\t\022\017\n\007user_id\030\013 \001(\005\022\r\n\005t" +
       "itle\030\014 \001(\t\022\013\n\003url\030\r \001(\t\022\016\n\006secret\030\016 \001(\t\022" +
       ".\n\ncreated_at\030\017 \001(\0132\032.google.protobuf.Ti" +
-      "mestamp\"\344\001\n\026WebhookEndpointUpdated\022\020\n\010ev" +
-      "ent_id\030\001 \001(\t\022/\n\013occurred_at\030\002 \001(\0132\032.goog" +
-      "le.protobuf.Timestamp\022\026\n\016schema_version\030" +
-      "\003 \001(\005\022\022\n\nwebhook_id\030\n \001(\t\022\017\n\007user_id\030\013 \001" +
-      "(\005\022\r\n\005title\030\014 \001(\t\022\013\n\003url\030\r \001(\t\022.\n\nupdate" +
-      "d_at\030\016 \001(\0132\032.google.protobuf.Timestamp\"\310" +
-      "\001\n\026WebhookEndpointDeleted\022\020\n\010event_id\030\001 " +
-      "\001(\t\022/\n\013occurred_at\030\002 \001(\0132\032.google.protob" +
-      "uf.Timestamp\022\026\n\016schema_version\030\003 \001(\005\022\022\n\n" +
-      "webhook_id\030\n \001(\t\022\017\n\007user_id\030\013 \001(\005\022.\n\ndel" +
-      "eted_at\030\014 \001(\0132\032.google.protobuf.Timestam" +
-      "p\"\326\001\n\024WebhookSecretRotated\022\020\n\010event_id\030\001" +
-      " \001(\t\022/\n\013occurred_at\030\002 \001(\0132\032.google.proto" +
-      "buf.Timestamp\022\026\n\016schema_version\030\003 \001(\005\022\022\n" +
-      "\nwebhook_id\030\n \001(\t\022\017\n\007user_id\030\013 \001(\005\022\016\n\006se" +
-      "cret\030\014 \001(\t\022.\n\nrotated_at\030\r \001(\0132\032.google." +
-      "protobuf.Timestamp\"\367\001\n\030WebhookSubscripti" +
-      "onAdded\022\020\n\010event_id\030\001 \001(\t\022/\n\013occurred_at" +
-      "\030\002 \001(\0132\032.google.protobuf.Timestamp\022\026\n\016sc" +
-      "hema_version\030\003 \001(\005\022\027\n\017subscription_id\030\n " +
-      "\001(\t\022\022\n\nwebhook_id\030\013 \001(\t\022\017\n\007user_id\030\014 \001(\005" +
-      "\022\022\n\nevent_type\030\r \001(\t\022.\n\ncreated_at\030\016 \001(\013" +
-      "2\032.google.protobuf.Timestamp\"\345\001\n\032Webhook" +
-      "SubscriptionRemoved\022\020\n\010event_id\030\001 \001(\t\022/\n" +
-      "\013occurred_at\030\002 \001(\0132\032.google.protobuf.Tim" +
-      "estamp\022\026\n\016schema_version\030\003 \001(\005\022\027\n\017subscr" +
-      "iption_id\030\n \001(\t\022\022\n\nwebhook_id\030\013 \001(\t\022\017\n\007u" +
-      "ser_id\030\014 \001(\005\022.\n\nremoved_at\030\r \001(\0132\032.googl" +
-      "e.protobuf.Timestamp*\337\001\n\025WebhookDelivery" +
-      "Status\022\'\n#WEBHOOK_DELIVERY_STATUS_UNSPEC" +
-      "IFIED\020\000\022\'\n#WEBHOOK_DELIVERY_STATUS_IN_PR" +
-      "OGRESS\020\001\022#\n\037WEBHOOK_DELIVERY_STATUS_SUCC" +
-      "ESS\020\002\022\"\n\036WEBHOOK_DELIVERY_STATUS_FAILED\020" +
-      "\003\022+\n\'WEBHOOK_DELIVERY_STATUS_RETRY_SCHED" +
-      "ULED\020\004B{\n\032com.powerfinance.events.v1B\014We" +
-      "bhookProtoP\001ZMgithub.com/power-finance/k" +
-      "afka-messages-proto/generated/go/events/" +
-      "v1;eventsv1b\006proto3"
+      "mestamp\022\026\n\016secret_version\030\020 \001(\005\022\017\n\007enabl" +
+      "ed\030\021 \001(\010\"\365\001\n\026WebhookEndpointUpdated\022\020\n\010e" +
+      "vent_id\030\001 \001(\t\022/\n\013occurred_at\030\002 \001(\0132\032.goo" +
+      "gle.protobuf.Timestamp\022\026\n\016schema_version" +
+      "\030\003 \001(\005\022\022\n\nwebhook_id\030\n \001(\t\022\017\n\007user_id\030\013 " +
+      "\001(\005\022\r\n\005title\030\014 \001(\t\022\013\n\003url\030\r \001(\t\022.\n\nupdat" +
+      "ed_at\030\016 \001(\0132\032.google.protobuf.Timestamp\022" +
+      "\017\n\007enabled\030\017 \001(\010\"\310\001\n\026WebhookEndpointDele" +
+      "ted\022\020\n\010event_id\030\001 \001(\t\022/\n\013occurred_at\030\002 \001" +
+      "(\0132\032.google.protobuf.Timestamp\022\026\n\016schema" +
+      "_version\030\003 \001(\005\022\022\n\nwebhook_id\030\n \001(\t\022\017\n\007us" +
+      "er_id\030\013 \001(\005\022.\n\ndeleted_at\030\014 \001(\0132\032.google" +
+      ".protobuf.Timestamp\"\350\002\n\024WebhookSecretRot" +
+      "ated\022\020\n\010event_id\030\001 \001(\t\022/\n\013occurred_at\030\002 " +
+      "\001(\0132\032.google.protobuf.Timestamp\022\026\n\016schem" +
+      "a_version\030\003 \001(\005\022\022\n\nwebhook_id\030\n \001(\t\022\017\n\007u" +
+      "ser_id\030\013 \001(\005\022\016\n\006secret\030\014 \001(\t\022.\n\nrotated_" +
+      "at\030\r \001(\0132\032.google.protobuf.Timestamp\022\027\n\017" +
+      "previous_secret\030\016 \001(\t\022\026\n\016secret_version\030" +
+      "\017 \001(\005\022\037\n\027previous_secret_version\030\020 \001(\005\022>" +
+      "\n\032previous_secret_expires_at\030\021 \001(\0132\032.goo" +
+      "gle.protobuf.Timestamp\"\367\001\n\030WebhookSubscr" +
+      "iptionAdded\022\020\n\010event_id\030\001 \001(\t\022/\n\013occurre" +
+      "d_at\030\002 \001(\0132\032.google.protobuf.Timestamp\022\026" +
+      "\n\016schema_version\030\003 \001(\005\022\027\n\017subscription_i" +
+      "d\030\n \001(\t\022\022\n\nwebhook_id\030\013 \001(\t\022\017\n\007user_id\030\014" +
+      " \001(\005\022\022\n\nevent_type\030\r \001(\t\022.\n\ncreated_at\030\016" +
+      " \001(\0132\032.google.protobuf.Timestamp\"\345\001\n\032Web" +
+      "hookSubscriptionRemoved\022\020\n\010event_id\030\001 \001(" +
+      "\t\022/\n\013occurred_at\030\002 \001(\0132\032.google.protobuf" +
+      ".Timestamp\022\026\n\016schema_version\030\003 \001(\005\022\027\n\017su" +
+      "bscription_id\030\n \001(\t\022\022\n\nwebhook_id\030\013 \001(\t\022" +
+      "\017\n\007user_id\030\014 \001(\005\022.\n\nremoved_at\030\r \001(\0132\032.g" +
+      "oogle.protobuf.Timestamp*\337\001\n\025WebhookDeli" +
+      "veryStatus\022\'\n#WEBHOOK_DELIVERY_STATUS_UN" +
+      "SPECIFIED\020\000\022\'\n#WEBHOOK_DELIVERY_STATUS_I" +
+      "N_PROGRESS\020\001\022#\n\037WEBHOOK_DELIVERY_STATUS_" +
+      "SUCCESS\020\002\022\"\n\036WEBHOOK_DELIVERY_STATUS_FAI" +
+      "LED\020\003\022+\n\'WEBHOOK_DELIVERY_STATUS_RETRY_S" +
+      "CHEDULED\020\004B{\n\032com.powerfinance.events.v1" +
+      "B\014WebhookProtoP\001ZMgithub.com/power-finan" +
+      "ce/kafka-messages-proto/generated/go/eve" +
+      "nts/v1;eventsv1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -139,13 +144,13 @@ public final class WebhookProto extends com.google.protobuf.GeneratedFile {
     internal_static_power_finance_events_v1_WebhookEndpointCreated_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_power_finance_events_v1_WebhookEndpointCreated_descriptor,
-        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "WebhookId", "UserId", "Title", "Url", "Secret", "CreatedAt", });
+        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "WebhookId", "UserId", "Title", "Url", "Secret", "CreatedAt", "SecretVersion", "Enabled", });
     internal_static_power_finance_events_v1_WebhookEndpointUpdated_descriptor =
       getDescriptor().getMessageType(2);
     internal_static_power_finance_events_v1_WebhookEndpointUpdated_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_power_finance_events_v1_WebhookEndpointUpdated_descriptor,
-        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "WebhookId", "UserId", "Title", "Url", "UpdatedAt", });
+        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "WebhookId", "UserId", "Title", "Url", "UpdatedAt", "Enabled", });
     internal_static_power_finance_events_v1_WebhookEndpointDeleted_descriptor =
       getDescriptor().getMessageType(3);
     internal_static_power_finance_events_v1_WebhookEndpointDeleted_fieldAccessorTable = new
@@ -157,7 +162,7 @@ public final class WebhookProto extends com.google.protobuf.GeneratedFile {
     internal_static_power_finance_events_v1_WebhookSecretRotated_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_power_finance_events_v1_WebhookSecretRotated_descriptor,
-        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "WebhookId", "UserId", "Secret", "RotatedAt", });
+        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "WebhookId", "UserId", "Secret", "RotatedAt", "PreviousSecret", "SecretVersion", "PreviousSecretVersion", "PreviousSecretExpiresAt", });
     internal_static_power_finance_events_v1_WebhookSubscriptionAdded_descriptor =
       getDescriptor().getMessageType(5);
     internal_static_power_finance_events_v1_WebhookSubscriptionAdded_fieldAccessorTable = new

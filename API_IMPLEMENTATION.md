@@ -1049,6 +1049,74 @@ Phase 9.3 — the engine — decided the following, all of which the target left
 ## Phase 10 — Webhooks completion
 Most of this slice is built, including the parts that are hardest to retrofit.
 
+**STATUS: implemented.** The catalog is served, the delivery log is queryable, rotation has a grace
+window, and the endpoint and subscription shapes match the target's field names.
+
+- **the "one registry" became a shared LIBRARY**, `libraries/webhook-catalog-py`, holding one
+  `catalog.json` and the accessors over it. It is not just a list of names: each row also carries
+  the OUTBOX event types that publish as it, so `GET /webhooks/event-types`, the subscription
+  validator and the publisher's routing table are three readings of one file. That closes the
+  failure the step was written to prevent — an event that is subscribable but undeliverable, or
+  deliverable but unsubscribable, both of which fail SILENTLY;
+- **the Go publisher mirrors the catalog and a test enforces it.** Go cannot import a Python library
+  and `go:embed` cannot reach outside its module, so `types/catalog.go` restates the table and
+  `catalog_test.go` reads the shared JSON and fails on any difference. A generator was rejected for
+  five rows: the drift is what matters, and a failing test catches it without a codegen toolchain in
+  the build;
+- **`goal.reached` is NOT in the catalog.** The target lists it, but no `GoalReached` event exists,
+  so a subscription to it would be accepted and never fire — worse than a short list, and the target
+  itself says the catalog grows independently of the document. `wallet.created` and `wallet.updated`
+  ARE there and are newly deliverable; `TransactionMetadataUpdated` publishes as
+  `transaction.updated` alongside `TransactionUpdated`, the same reading Phase 9 took;
+- **the delivery lifecycle gained the two statuses the log reports.** `in_progress` and
+  `retry_scheduled` were in the target's `status` filter but not in the sender, which only had
+  pending/success/failed. The claim now moves a row to `in_progress` under a `lease_expires_at`, and
+  a retryable failure parks it as `retry_scheduled`. The lease is a SEPARATE column from
+  `next_attempt_at` because the log reports `next_attempt_at` to users and a lease deadline is not
+  something a user asked about;
+- **ownership of a delivery log is not ownership of an endpoint.** The log outlives its endpoint per
+  the target, and a hard delete removes the endpoint row — so the check accepts either an endpoint
+  the caller owns or a log they already have rows in. Both misses answer 404, so the endpoint is not
+  an existence oracle;
+- **the cursor format is the Python services' format, reimplemented in Go.** Same base64url
+  `{v,d,k,f}` payload, same fingerprint binding the cursor to its query, so a client stores one kind
+  of opaque token whichever service answered. Only this service mints and reads these, but a second
+  cursor dialect on the same API is a cost with no benefit;
+- **a delivery pins the secret VERSION that signed it**, rather than a copy of the secret. The
+  grace period is only observable if a delivery queued before a rotation is still signed with the
+  secret its receiver was verifying against — otherwise "two live secrets" changes nothing anyone
+  can see. Storing the version rather than the plaintext keeps one copy of each secret;
+- **`is_active` stayed in storage.** The rename is at the presentation and domain boundary as the
+  step says; renaming the column would mean a migration in three services' databases for a field no
+  client reads by that name. The mapper is the single bridge;
+- **the fallback read learned the `enabled` filter too.** The gateway can reroute mid-session, and a
+  filtered page that silently widens into an unfiltered one on the write side is a correctness bug,
+  not a formatting one. `GET /notifications`'s `acknowledged` and `severity` filters have the same
+  gap and it is NOT fixed here — it is Phase 7's, and noted so it is not mistaken for absent;
+- **the delivery body became the target's envelope**, `{id, event, created_at, data}`, where it was
+  previously the raw outbox payload — a shape matching nothing in the document. `data` carries the
+  domain event's fields rather than the read model's resource: the sender has no access to the read
+  model, and reshaping in Go would duplicate every presenter and still not be faithful. Recorded in
+  API_DIFF as the one place `data` is not what the target promises;
+
+> **KEEP.** `attempter.go` retries with `retryBackoff * attemptNumber` — linear backoff, not the flat
+> 30 seconds the target describes and closer to the exponential backoff API_DEVELOPMENT.md asks for.
+> Do not downgrade it to match the document; update the document's Retries section to describe what
+> the sender actually does. **Done** — API_DEVELOPMENT.md now describes the linear backoff.
+
+> ~~**KEEP.** `sender.go` already signs `v1=` + HMAC-SHA256 over the raw body, which is the documented
+> scheme. Nothing to build there.~~ **This note was wrong.** The target's Signature section signs
+> `"{X-Webhook-Timestamp}.{raw body}"`, and `X-Webhook-Timestamp` is in its request example and is
+> what its replay rule ("reject a timestamp more than 5 minutes out") operates on. The sender signed
+> the bare body and sent no timestamp, so a captured request replayed forever. Now fixed to the
+> documented scheme. `X-Webhook-Delivery` was also carrying the delivery row's id where the target
+> says it carries `event_id` — the value that repeats across retries and that a receiver
+> deduplicates on. Both are breaking changes for receivers and are in API_DIFF.
+
+> **KEEP.** `POST /webhooks/search` exists and the target does not mention it. A new endpoint is an
+> additive change under the versioning rules, so it can stay inside v1. Keep it unless it costs
+> something to maintain.
+
 - **10.1** `GET /webhooks/event-types` — non-paginated catalog served from one registry that the
   publisher also reads, so the two cannot drift;
 - **10.2** `GET /webhooks/{id}/deliveries` with `status` and `event` filters. The delivery log lives
@@ -1057,22 +1125,13 @@ Most of this slice is built, including the parts that are hardest to retrofit.
 - **10.3** Secret rotation grace period: two live secrets for 24 hours, a third rotation invalidating
   the oldest immediately;
 - **10.4** Address guard in the sender: no redirect following, and the RESOLVED IP checked at
-  connection time against loopback/private/link-local/unspecified ranges;
+  connection time against loopback/private/link-local/unspecified ranges. Already built and left
+  alone — `guardDialAddress` runs on `net.Dialer.Control`, which fires after DNS with the resolved
+  address, and `CheckRedirect` refuses every 3xx;
 - **10.5** Contract details: 409 `subscription_exists`, detail code `unknown_event_type`, hard delete
-  cascading to subscriptions while the log survives;
+  cascading to subscriptions while the log survives. The codes were already wired; only the detail's
+  `field` moved from `event_type` to `event` to match the request body;
 - **10.6** Field renames at the presentation layer: `is_active` → `enabled`;
-
-> **KEEP.** `attempter.go` retries with `retryBackoff * attemptNumber` — linear backoff, not the flat
-> 30 seconds the target describes and closer to the exponential backoff API_DEVELOPMENT.md asks for.
-> Do not downgrade it to match the document; update the document's Retries section to describe what
-> the sender actually does.
-
-> **KEEP.** `sender.go` already signs `v1=` + HMAC-SHA256 over the raw body, which is the documented
-> scheme. Nothing to build there.
-
-> **KEEP.** `POST /webhooks/search` exists and the target does not mention it. A new endpoint is an
-> additive change under the versioning rules, so it can stay inside v1. Keep it unless it costs
-> something to maintain.
 
 ---
 
@@ -1130,7 +1189,10 @@ Collected from the notes above, in the order they matter.
    the Step 3.1 split (immutable flow / mutable metadata) the right shape rather than a workaround.
 7. **`occurred_at`** already distinguishes when a transaction happened from when it was recorded.
    The target only has `created_at`. Keep the column.
-8. **Webhook delivery** already signs correctly and backs off linearly — ahead of both documents.
+8. **Webhook delivery backs off linearly** — ahead of both documents, which describe a flat 30
+   seconds. Its SIGNING was not ahead: it covered the body but not the timestamp, and sent no
+   `X-Webhook-Timestamp` at all, so the target's replay rule had nothing to operate on. Fixed in
+   Phase 10.
 9. **Batch notification ack** already exists; API_DEVELOPMENT.md still lists it as open.
 10. **The vertical slice layout** in read-service (`query_slices/<slice>/{dtos,query_handler,infra,http}`)
     and the command/query split in write-service are worth preserving as new slices are added. Every

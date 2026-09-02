@@ -22,6 +22,7 @@ class UpdateWebhookReadModel(Effect):
         updated = await WebhookReadModel.objects.filter(id=payload.webhook_id).aupdate(
             title=payload.title,
             url=payload.url,
+            is_active=payload.enabled,
             updated_at=payload.updated_at.ToDatetime(tzinfo=UTC),
         )
         log_webhook_postgres_updated(payload.webhook_id, updated)

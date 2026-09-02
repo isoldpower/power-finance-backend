@@ -12,6 +12,7 @@ from ..interfaces import WebhookRepository
 class ListFallbackWebhooksQuery:
     user_id: int
     page: PageRequest
+    enabled: bool | None = None
 
 
 class ListFallbackWebhooksQueryHandler:
@@ -25,8 +26,9 @@ class ListFallbackWebhooksQueryHandler:
             self._webhook_repository.get_user_webhooks(
                 user_id=query.user_id,
                 page=query.page,
+                enabled=query.enabled,
             ),
-            self._webhook_repository.count_user_webhooks(query.user_id),
+            self._webhook_repository.count_user_webhooks(query.user_id, query.enabled),
         )
 
         return [webhook_to_dto(webhook) for webhook in webhooks], total

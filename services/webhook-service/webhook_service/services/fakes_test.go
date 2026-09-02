@@ -58,14 +58,20 @@ func (f *fakeDeliveryStore) Reschedule(_ context.Context, deliveryID string, att
 }
 
 type fakeSecretResolver struct {
-	secret string
-	err    error
-	calls  int
+	secret   string
+	secrets  types.EndpointSecrets
+	err      error
+	calls    int
+	versions []int
 }
 
-func (f *fakeSecretResolver) EndpointSecret(_ context.Context, _ string) (string, error) {
+func (f *fakeSecretResolver) EndpointSecrets(_ context.Context, _ string) (types.EndpointSecrets, error) {
 	f.calls++
-	return f.secret, f.err
+	if f.secrets.Secret != "" || f.secrets.PreviousSecret != "" {
+		return f.secrets, f.err
+	}
+
+	return types.EndpointSecrets{Secret: f.secret, SecretVersion: 1}, f.err
 }
 
 type fakeSender struct {
@@ -74,7 +80,7 @@ type fakeSender struct {
 	err        error
 }
 
-func (f *fakeSender) Send(_ context.Context, delivery types.Delivery, secret string) error {
+func (f *fakeSender) Send(_ context.Context, delivery types.Delivery, secret string, _ time.Time) error {
 	f.deliveries = append(f.deliveries, delivery)
 	f.secrets = append(f.secrets, secret)
 	return f.err
@@ -137,13 +143,15 @@ func (s *signalingAttempter) Attempt(_ context.Context, delivery types.Delivery,
 }
 
 type fakeConfigStore struct {
-	upserted    []types.WebhookEndpoint
-	updated     []string
-	rotated     []string
-	deleted     []string
-	addedSubs   []types.WebhookSubscription
-	removedSubs []string
-	err         error
+	upserted       []types.WebhookEndpoint
+	updated        []string
+	updatedEnabled []bool
+	rotated        []string
+	rotations      []types.SecretRotation
+	deleted        []string
+	addedSubs      []types.WebhookSubscription
+	removedSubs    []string
+	err            error
 }
 
 func (f *fakeConfigStore) UpsertEndpoint(_ context.Context, endpoint types.WebhookEndpoint, _ time.Time) error {
@@ -154,13 +162,15 @@ func (f *fakeConfigStore) UpsertEndpoint(_ context.Context, endpoint types.Webho
 	return nil
 }
 
-func (f *fakeConfigStore) UpdateEndpoint(_ context.Context, webhookID, _, _ string, _ time.Time) error {
+func (f *fakeConfigStore) UpdateEndpoint(_ context.Context, webhookID, _, _ string, enabled bool, _ time.Time) error {
 	f.updated = append(f.updated, webhookID)
+	f.updatedEnabled = append(f.updatedEnabled, enabled)
 	return nil
 }
 
-func (f *fakeConfigStore) RotateSecret(_ context.Context, webhookID, _ string, _ time.Time) error {
-	f.rotated = append(f.rotated, webhookID)
+func (f *fakeConfigStore) RotateSecret(_ context.Context, rotation types.SecretRotation, _ time.Time) error {
+	f.rotated = append(f.rotated, rotation.WebhookID)
+	f.rotations = append(f.rotations, rotation)
 	return nil
 }
 

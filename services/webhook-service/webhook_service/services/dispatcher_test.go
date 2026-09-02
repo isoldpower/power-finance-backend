@@ -1,8 +1,8 @@
 package services
 
 import (
-	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -15,7 +15,7 @@ func TestDispatchNonDeliverableEventIsNoOp(t *testing.T) {
 	waker := &fakeWaker{}
 	dispatcher := NewDeliveryDispatcher(endpoints, store, waker)
 
-	event := types.OutboxEvent{EventID: "e1", EventType: "WalletCreated", Payload: []byte(`{"user_id":1}`)}
+	event := types.OutboxEvent{EventID: "e1", EventType: "GoalCreated", Payload: []byte(`{"user_id":1}`)}
 	if err := dispatcher.Dispatch(context.Background(), event); err != nil {
 		t.Fatalf("Dispatch returned error: %v", err)
 	}
@@ -26,11 +26,11 @@ func TestDispatchNonDeliverableEventIsNoOp(t *testing.T) {
 }
 
 func TestDispatchEnqueuesAndWakesForEverySubscribedEndpoint(t *testing.T) {
-	payload := []byte(`{"user_id":7}`)
+	payload := []byte(`{"event_id":"evt-1","occurred_at":"2026-08-12T11:51:00Z","schema_version":1,"user_id":7,"name":"Coffee"}`)
 	endpoints := &fakeEndpointResolver{
 		endpoints: []types.WebhookEndpoint{
-			{ID: "wh-1", UserID: 7, UserExternalID: "clerk_7", URL: "https://a", Secret: "s1"},
-			{ID: "wh-2", UserID: 7, UserExternalID: "clerk_7", URL: "https://b", Secret: "s2"},
+			{ID: "wh-1", UserID: 7, UserExternalID: "clerk_7", URL: "https://a", Secret: "s1", SecretVersion: 3},
+			{ID: "wh-2", UserID: 7, UserExternalID: "clerk_7", URL: "https://b", Secret: "s2", SecretVersion: 1},
 		},
 	}
 	store := &fakeDeliveryStore{}
@@ -56,8 +56,32 @@ func TestDispatchEnqueuesAndWakesForEverySubscribedEndpoint(t *testing.T) {
 	if first.Status != types.DeliveryPending {
 		t.Fatalf("delivery should be enqueued pending: %+v", first)
 	}
-	if !bytes.Equal(first.Payload, payload) {
-		t.Fatalf("delivery payload should be the raw event payload")
+	if first.SecretVersion != 3 {
+		t.Fatalf("delivery should pin the endpoint's current secret version: %+v", first)
+	}
+
+	var body map[string]any
+	if err := json.Unmarshal(first.Payload, &body); err != nil {
+		t.Fatalf("delivery body is not JSON: %v", err)
+	}
+	if body["id"] != "evt-1" || body["event"] != "transaction.created" {
+		t.Fatalf("delivery body envelope not built: %+v", body)
+	}
+	if body["created_at"] != "2026-08-12T11:51:00Z" {
+		t.Fatalf("delivery body should carry the event's occurred_at: %+v", body)
+	}
+
+	data, isObject := body["data"].(map[string]any)
+	if !isObject {
+		t.Fatalf("delivery body should carry the subject under data: %+v", body)
+	}
+	if data["name"] != "Coffee" {
+		t.Fatalf("subject fields should survive into data: %+v", data)
+	}
+	for _, field := range envelopeFields {
+		if _, present := data[field]; present {
+			t.Fatalf("outbox bookkeeping %q must not leak into data: %+v", field, data)
+		}
 	}
 }
 

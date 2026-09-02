@@ -184,8 +184,12 @@ type WebhookEndpointCreated struct {
 	// HMAC-SHA256 signing secret. Travels only on creation/rotation so the
 	// webhook-service can sign deliveries; the owning user already saw it in
 	// the HTTP response.
-	Secret        string                 `protobuf:"bytes,14,opt,name=secret,proto3" json:"secret,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Secret    string                 `protobuf:"bytes,14,opt,name=secret,proto3" json:"secret,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// Which generation of the endpoint's secret `secret` is. Deliveries record
+	// the version that signed them so a rotation cannot orphan an in-flight one.
+	SecretVersion int32 `protobuf:"varint,16,opt,name=secret_version,json=secretVersion,proto3" json:"secret_version,omitempty"`
+	Enabled       bool  `protobuf:"varint,17,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -283,6 +287,20 @@ func (x *WebhookEndpointCreated) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *WebhookEndpointCreated) GetSecretVersion() int32 {
+	if x != nil {
+		return x.SecretVersion
+	}
+	return 0
+}
+
+func (x *WebhookEndpointCreated) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
 type WebhookEndpointUpdated struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -293,6 +311,7 @@ type WebhookEndpointUpdated struct {
 	Title         string                 `protobuf:"bytes,12,opt,name=title,proto3" json:"title,omitempty"`
 	Url           string                 `protobuf:"bytes,13,opt,name=url,proto3" json:"url,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Enabled       bool                   `protobuf:"varint,15,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -381,6 +400,13 @@ func (x *WebhookEndpointUpdated) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *WebhookEndpointUpdated) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
 }
 
 type WebhookEndpointDeleted struct {
@@ -476,8 +502,15 @@ type WebhookSecretRotated struct {
 	UserId        int32                  `protobuf:"varint,11,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Secret        string                 `protobuf:"bytes,12,opt,name=secret,proto3" json:"secret,omitempty"`
 	RotatedAt     *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=rotated_at,json=rotatedAt,proto3" json:"rotated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// The replaced secret stays valid until `previous_secret_expires_at` so a
+	// rotation does not break deliveries already signed with it. Only ever two
+	// are live: a second rotation inside the window drops the older one.
+	PreviousSecret          string                 `protobuf:"bytes,14,opt,name=previous_secret,json=previousSecret,proto3" json:"previous_secret,omitempty"`
+	SecretVersion           int32                  `protobuf:"varint,15,opt,name=secret_version,json=secretVersion,proto3" json:"secret_version,omitempty"`
+	PreviousSecretVersion   int32                  `protobuf:"varint,16,opt,name=previous_secret_version,json=previousSecretVersion,proto3" json:"previous_secret_version,omitempty"`
+	PreviousSecretExpiresAt *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=previous_secret_expires_at,json=previousSecretExpiresAt,proto3" json:"previous_secret_expires_at,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *WebhookSecretRotated) Reset() {
@@ -555,6 +588,34 @@ func (x *WebhookSecretRotated) GetSecret() string {
 func (x *WebhookSecretRotated) GetRotatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.RotatedAt
+	}
+	return nil
+}
+
+func (x *WebhookSecretRotated) GetPreviousSecret() string {
+	if x != nil {
+		return x.PreviousSecret
+	}
+	return ""
+}
+
+func (x *WebhookSecretRotated) GetSecretVersion() int32 {
+	if x != nil {
+		return x.SecretVersion
+	}
+	return 0
+}
+
+func (x *WebhookSecretRotated) GetPreviousSecretVersion() int32 {
+	if x != nil {
+		return x.PreviousSecretVersion
+	}
+	return 0
+}
+
+func (x *WebhookSecretRotated) GetPreviousSecretExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.PreviousSecretExpiresAt
 	}
 	return nil
 }
@@ -768,7 +829,7 @@ const file_webhook_proto_rawDesc = "" +
 	"\vendpoint_id\x18\v \x01(\tR\n" +
 	"endpointId\x12\x17\n" +
 	"\auser_id\x18\f \x01(\x05R\x06userId\x12F\n" +
-	"\x06status\x18\r \x01(\x0e2..power_finance.events.v1.WebhookDeliveryStatusR\x06status\"\xca\x02\n" +
+	"\x06status\x18\r \x01(\x0e2..power_finance.events.v1.WebhookDeliveryStatusR\x06status\"\x8b\x03\n" +
 	"\x16WebhookEndpointCreated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -782,7 +843,9 @@ const file_webhook_proto_rawDesc = "" +
 	"\x03url\x18\r \x01(\tR\x03url\x12\x16\n" +
 	"\x06secret\x18\x0e \x01(\tR\x06secret\x129\n" +
 	"\n" +
-	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xb2\x02\n" +
+	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12%\n" +
+	"\x0esecret_version\x18\x10 \x01(\x05R\rsecretVersion\x12\x18\n" +
+	"\aenabled\x18\x11 \x01(\bR\aenabled\"\xcc\x02\n" +
 	"\x16WebhookEndpointUpdated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -795,7 +858,8 @@ const file_webhook_proto_rawDesc = "" +
 	"\x05title\x18\f \x01(\tR\x05title\x12\x10\n" +
 	"\x03url\x18\r \x01(\tR\x03url\x129\n" +
 	"\n" +
-	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x8a\x02\n" +
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
+	"\aenabled\x18\x0f \x01(\bR\aenabled\"\x8a\x02\n" +
 	"\x16WebhookEndpointDeleted\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -806,7 +870,7 @@ const file_webhook_proto_rawDesc = "" +
 	" \x01(\tR\twebhookId\x12\x17\n" +
 	"\auser_id\x18\v \x01(\x05R\x06userId\x129\n" +
 	"\n" +
-	"deleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAt\"\xa0\x02\n" +
+	"deleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAt\"\x81\x04\n" +
 	"\x14WebhookSecretRotated\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -818,7 +882,11 @@ const file_webhook_proto_rawDesc = "" +
 	"\auser_id\x18\v \x01(\x05R\x06userId\x12\x16\n" +
 	"\x06secret\x18\f \x01(\tR\x06secret\x129\n" +
 	"\n" +
-	"rotated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\trotatedAt\"\xd4\x02\n" +
+	"rotated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\trotatedAt\x12'\n" +
+	"\x0fprevious_secret\x18\x0e \x01(\tR\x0epreviousSecret\x12%\n" +
+	"\x0esecret_version\x18\x0f \x01(\x05R\rsecretVersion\x126\n" +
+	"\x17previous_secret_version\x18\x10 \x01(\x05R\x15previousSecretVersion\x12W\n" +
+	"\x1aprevious_secret_expires_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\x17previousSecretExpiresAt\"\xd4\x02\n" +
 	"\x18WebhookSubscriptionAdded\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12;\n" +
 	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -889,15 +957,16 @@ var file_webhook_proto_depIdxs = []int32{
 	8,  // 7: power_finance.events.v1.WebhookEndpointDeleted.deleted_at:type_name -> google.protobuf.Timestamp
 	8,  // 8: power_finance.events.v1.WebhookSecretRotated.occurred_at:type_name -> google.protobuf.Timestamp
 	8,  // 9: power_finance.events.v1.WebhookSecretRotated.rotated_at:type_name -> google.protobuf.Timestamp
-	8,  // 10: power_finance.events.v1.WebhookSubscriptionAdded.occurred_at:type_name -> google.protobuf.Timestamp
-	8,  // 11: power_finance.events.v1.WebhookSubscriptionAdded.created_at:type_name -> google.protobuf.Timestamp
-	8,  // 12: power_finance.events.v1.WebhookSubscriptionRemoved.occurred_at:type_name -> google.protobuf.Timestamp
-	8,  // 13: power_finance.events.v1.WebhookSubscriptionRemoved.removed_at:type_name -> google.protobuf.Timestamp
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	8,  // 10: power_finance.events.v1.WebhookSecretRotated.previous_secret_expires_at:type_name -> google.protobuf.Timestamp
+	8,  // 11: power_finance.events.v1.WebhookSubscriptionAdded.occurred_at:type_name -> google.protobuf.Timestamp
+	8,  // 12: power_finance.events.v1.WebhookSubscriptionAdded.created_at:type_name -> google.protobuf.Timestamp
+	8,  // 13: power_finance.events.v1.WebhookSubscriptionRemoved.occurred_at:type_name -> google.protobuf.Timestamp
+	8,  // 14: power_finance.events.v1.WebhookSubscriptionRemoved.removed_at:type_name -> google.protobuf.Timestamp
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_webhook_proto_init() }

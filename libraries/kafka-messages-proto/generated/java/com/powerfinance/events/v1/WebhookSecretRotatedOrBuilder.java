@@ -87,4 +87,55 @@ public interface WebhookSecretRotatedOrBuilder extends
    * <code>.google.protobuf.Timestamp rotated_at = 13;</code>
    */
   com.google.protobuf.TimestampOrBuilder getRotatedAtOrBuilder();
+
+  /**
+   * <pre>
+   * The replaced secret stays valid until `previous_secret_expires_at` so a
+   * rotation does not break deliveries already signed with it. Only ever two
+   * are live: a second rotation inside the window drops the older one.
+   * </pre>
+   *
+   * <code>string previous_secret = 14;</code>
+   * @return The previousSecret.
+   */
+  java.lang.String getPreviousSecret();
+  /**
+   * <pre>
+   * The replaced secret stays valid until `previous_secret_expires_at` so a
+   * rotation does not break deliveries already signed with it. Only ever two
+   * are live: a second rotation inside the window drops the older one.
+   * </pre>
+   *
+   * <code>string previous_secret = 14;</code>
+   * @return The bytes for previousSecret.
+   */
+  com.google.protobuf.ByteString
+      getPreviousSecretBytes();
+
+  /**
+   * <code>int32 secret_version = 15;</code>
+   * @return The secretVersion.
+   */
+  int getSecretVersion();
+
+  /**
+   * <code>int32 previous_secret_version = 16;</code>
+   * @return The previousSecretVersion.
+   */
+  int getPreviousSecretVersion();
+
+  /**
+   * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+   * @return Whether the previousSecretExpiresAt field is set.
+   */
+  boolean hasPreviousSecretExpiresAt();
+  /**
+   * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+   * @return The previousSecretExpiresAt.
+   */
+  com.google.protobuf.Timestamp getPreviousSecretExpiresAt();
+  /**
+   * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+   */
+  com.google.protobuf.TimestampOrBuilder getPreviousSecretExpiresAtOrBuilder();
 }

@@ -23,19 +23,11 @@ public interface AutomationTriggerOrBuilder extends
       getTriggerTypeBytes();
 
   /**
-   * <pre>
-   * Exactly one of these is set, selected by `trigger_type`.
-   * </pre>
-   *
    * <code>string event = 102;</code>
    * @return The event.
    */
   java.lang.String getEvent();
   /**
-   * <pre>
-   * Exactly one of these is set, selected by `trigger_type`.
-   * </pre>
-   *
    * <code>string event = 102;</code>
    * @return The bytes for event.
    */
@@ -55,21 +47,11 @@ public interface AutomationTriggerOrBuilder extends
       getScheduleBytes();
 
   /**
-   * <pre>
-   * The same filter_body grammar the /search endpoints take. Empty means the
-   * rule is unconditional — "always" — which is why an empty group is refused.
-   * </pre>
-   *
    * <code>string filter_body_json = 104;</code>
    * @return The filterBodyJson.
    */
   java.lang.String getFilterBodyJson();
   /**
-   * <pre>
-   * The same filter_body grammar the /search endpoints take. Empty means the
-   * rule is unconditional — "always" — which is why an empty group is refused.
-   * </pre>
-   *
    * <code>string filter_body_json = 104;</code>
    * @return The bytes for filterBodyJson.
    */

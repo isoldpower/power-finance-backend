@@ -130,6 +130,50 @@ services:
           redis_timeout_ms: 1000
           redis_key_prefix: "rl:user:"
 
+  - name: webhook-service
+    host: webhook-service
+    port: 8002
+    protocol: http
+    connect_timeout: 5000
+    write_timeout: 10000
+    read_timeout: 10000
+    routes:
+      - name: webhook-deliveries
+        paths:
+          - ~/api/v1/webhooks/[^/]+/deliveries$
+        regex_priority: 100
+        strip_path: false
+        preserve_host: false
+        methods: [GET, OPTIONS]
+    plugins:
+      - name: clerk-jwt
+        config:
+          issuer_url: "{vault://env/clerk-issuer-url}"
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 100
+          redis_key_prefix: "clerk:jwks:"
+      - name: rate-limiting
+        config:
+          minute: 1200
+          hour: 30000
+          policy: redis
+          redis_host: gateway-redis
+          redis_port: 6379
+          limit_by: ip
+          fault_tolerant: true
+          hide_client_headers: true
+      - name: user-tier-rate-limit
+        config:
+          per_minute: 600
+          per_hour: 20000
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 1000
+          redis_key_prefix: "rl:user:"
+
   - name: push-service
     host: push-service
     port: 8001

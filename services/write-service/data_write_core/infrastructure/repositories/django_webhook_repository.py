@@ -30,14 +30,23 @@ class DjangoWebhookRepository(WebhookRepository):
         self,
         user_id: int,
         page: PageRequest | None = None,
+        enabled: bool | None = None,
     ) -> list[WebhookEntity]:
-        queryset = WebhookModel.objects.filter(user_id=user_id)
+        queryset = self._owned_queryset(user_id, enabled)
         rows = apply_keyset(queryset, page) if page else queryset.order_by("-created_at", "-id")
 
         return [WebhookMapper.to_domain(webhook) async for webhook in rows]
 
-    async def count_user_webhooks(self, user_id: int) -> int:
-        return await WebhookModel.objects.filter(user_id=user_id).acount()
+    async def count_user_webhooks(self, user_id: int, enabled: bool | None = None) -> int:
+        return await self._owned_queryset(user_id, enabled).acount()
+
+    @staticmethod
+    def _owned_queryset(user_id: int, enabled: bool | None):
+        queryset = WebhookModel.objects.filter(user_id=user_id)
+        if enabled is not None:
+            queryset = queryset.filter(is_active=enabled)
+
+        return queryset
 
     async def save_webhook(self, webhook: WebhookEntity) -> WebhookEntity:
         saved_webhook = await WebhookModel.objects.aget(id=webhook.unique_id)

@@ -6,12 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * One thing a rule does when it matches. NOT free-form: the API accepts no
- * expression, script or template string anywhere, so an effect can only select
- * from what the backend already knows how to do.
- * </pre>
- *
  * Protobuf type {@code power_finance.events.v1.AutomationEffect}
  */
 @com.google.protobuf.Generated
@@ -99,12 +93,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object paramsJson_ = "";
   /**
-   * <pre>
-   * The effect's own params, already validated against its documented shape.
-   * Carried as JSON text rather than a Struct: the params are opaque to every
-   * consumer except the engine, and a Struct would invite reading into them.
-   * </pre>
-   *
    * <code>string params_json = 102;</code>
    * @return The paramsJson.
    */
@@ -122,12 +110,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * The effect's own params, already validated against its documented shape.
-   * Carried as JSON text rather than a Struct: the params are opaque to every
-   * consumer except the engine, and a Struct would invite reading into them.
-   * </pre>
-   *
    * <code>string params_json = 102;</code>
    * @return The bytes for paramsJson.
    */
@@ -313,12 +295,6 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * <pre>
-   * One thing a rule does when it matches. NOT free-form: the API accepts no
-   * expression, script or template string anywhere, so an effect can only select
-   * from what the backend already knows how to do.
-   * </pre>
-   *
    * Protobuf type {@code power_finance.events.v1.AutomationEffect}
    */
   public static final class Builder extends
@@ -544,12 +520,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object paramsJson_ = "";
     /**
-     * <pre>
-     * The effect's own params, already validated against its documented shape.
-     * Carried as JSON text rather than a Struct: the params are opaque to every
-     * consumer except the engine, and a Struct would invite reading into them.
-     * </pre>
-     *
      * <code>string params_json = 102;</code>
      * @return The paramsJson.
      */
@@ -566,12 +536,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The effect's own params, already validated against its documented shape.
-     * Carried as JSON text rather than a Struct: the params are opaque to every
-     * consumer except the engine, and a Struct would invite reading into them.
-     * </pre>
-     *
      * <code>string params_json = 102;</code>
      * @return The bytes for paramsJson.
      */
@@ -589,12 +553,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The effect's own params, already validated against its documented shape.
-     * Carried as JSON text rather than a Struct: the params are opaque to every
-     * consumer except the engine, and a Struct would invite reading into them.
-     * </pre>
-     *
      * <code>string params_json = 102;</code>
      * @param value The paramsJson to set.
      * @return This builder for chaining.
@@ -608,12 +566,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The effect's own params, already validated against its documented shape.
-     * Carried as JSON text rather than a Struct: the params are opaque to every
-     * consumer except the engine, and a Struct would invite reading into them.
-     * </pre>
-     *
      * <code>string params_json = 102;</code>
      * @return This builder for chaining.
      */
@@ -624,12 +576,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The effect's own params, already validated against its documented shape.
-     * Carried as JSON text rather than a Struct: the params are opaque to every
-     * consumer except the engine, and a Struct would invite reading into them.
-     * </pre>
-     *
      * <code>string params_json = 102;</code>
      * @param value The bytes for paramsJson to set.
      * @return This builder for chaining.

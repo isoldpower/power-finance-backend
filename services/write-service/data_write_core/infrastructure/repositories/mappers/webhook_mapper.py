@@ -11,7 +11,11 @@ class WebhookMapper:
             title=model.title,
             url=model.url,
             secret=model.secret,
-            is_active=model.is_active,
+            secret_version=model.secret_version,
+            previous_secret=model.previous_secret,
+            previous_secret_version=model.previous_secret_version,
+            previous_secret_expires_at=model.previous_secret_expires_at,
+            enabled=model.is_active,
             user_id=str(model.user_id),
             created_at=model.created_at,
             updated_at=model.updated_at,
@@ -24,7 +28,11 @@ class WebhookMapper:
         model.title = entity.title
         model.url = entity.url
         model.secret = entity.secret
-        model.is_active = entity.is_active
+        model.secret_version = entity.secret_version
+        model.previous_secret = entity.previous_secret
+        model.previous_secret_version = entity.previous_secret_version
+        model.previous_secret_expires_at = entity.previous_secret_expires_at
+        model.is_active = entity.enabled
         model.user_id = int(entity.user_id)
         model.created_at = entity.created_at
 

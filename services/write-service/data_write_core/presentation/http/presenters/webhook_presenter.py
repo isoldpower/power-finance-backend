@@ -14,11 +14,9 @@ class WebhookHttpPresenter:
             "id": str(webhook.id),
             "title": webhook.title,
             "url": webhook.url,
-            "is_active": webhook.is_active,
+            "enabled": webhook.enabled,
             "created_at": to_iso(webhook.created_at),
             "updated_at": to_iso(webhook.updated_at),
-            # Always present, null when unset.
-            "deleted_at": None,
         }
 
     @staticmethod
@@ -37,11 +35,8 @@ class WebhookHttpPresenter:
         return {
             "id": str(subscription.id),
             "webhook_id": str(subscription.webhook_id),
-            "event_type": subscription.event_type,
-            "is_active": subscription.is_active,
+            "event": subscription.event_type,
             "created_at": to_iso(subscription.created_at),
-            "updated_at": None,
-            "deleted_at": None,
         }
 
     @staticmethod

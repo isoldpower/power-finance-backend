@@ -48,12 +48,12 @@
 | **write-service** | Python · Django | Commands → Postgres + outbox, ImmuDB mirror, idempotency, inbound-notifications consumer |
 | **read-service** | Python · Django | Projects `events.async` into Postgres + Elasticsearch read models; Redis caches; RAL |
 | **push-service** | Go | SSE fan-out of `events.async`, per-user gateway auth, Prometheus metrics |
-| **webhook-service** | Go | Signed webhook delivery with retry/DLQ; owns its Postgres; Goose migrations |
+| **webhook-service** | Go | Signed webhook delivery with retry/DLQ; serves its own delivery log; owns its Postgres; Goose migrations |
 | **ai-service** | Python · FastAPI | Derives the double-entry postings behind each transaction; owns its Postgres (SQLAlchemy + Alembic); assistant surface |
 
 Shared code lives in `libraries/` (Python: `correlation-py`, `kafka-client-py`,
-`read-at-least-py`, `saga-pattern-py`, `kafka-messages-proto`; Go:
-`kafka-client-go`). Infrastructure (Kafka, Kong, Postgres, Debezium) is in
+`read-at-least-py`, `saga-pattern-py`, `filter-grammar-py`, `webhook-catalog-py`,
+`kafka-messages-proto`; Go: `kafka-client-go`). Infrastructure (Kafka, Kong, Postgres, Debezium) is in
 `infrastructure/`.
 
 ## Quick start

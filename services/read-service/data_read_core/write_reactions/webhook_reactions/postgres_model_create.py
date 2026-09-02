@@ -27,7 +27,7 @@ class CreateWebhookReadModel(Effect):
             user_id=payload.user_id,
             title=payload.title,
             url=payload.url,
-            is_active=True,
+            is_active=payload.enabled,
             created_at=payload.created_at.ToDatetime(tzinfo=UTC),
             updated_at=None,
         )

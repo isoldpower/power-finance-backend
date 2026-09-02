@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from data_read_core.shared.pagination import PageRequest
 from data_read_core.shared.postgres_orm import WebhookReadModel
@@ -6,14 +6,24 @@ from data_read_core.shared.timestamps import to_iso
 
 
 @dataclass(frozen=True)
+class WebhookFilters:
+    enabled: bool | None = None
+
+    def as_cache_material(self) -> dict:
+        return {"enabled": self.enabled}
+
+
+@dataclass(frozen=True)
 class ListWebhooksQuery:
     user_id: int
     page: PageRequest
+    filters: WebhookFilters = field(default_factory=WebhookFilters)
 
 
 @dataclass(frozen=True)
 class CacheOperationData:
     user_id: int
+    filters: dict
     limit: int
     cursor: str
 

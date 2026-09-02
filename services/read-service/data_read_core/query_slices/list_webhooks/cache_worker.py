@@ -5,6 +5,7 @@ from redis.asyncio import Redis
 from .dtos import CacheOperationData, WebhookDTO
 from .infra import (
     CACHE_TTL_SECONDS,
+    get_filter_hash,
     get_list_cache_key,
     get_list_version_key,
 )
@@ -46,6 +47,7 @@ class CacheWorker:
         return get_list_cache_key(
             user_id=context.user_id,
             version=version,
+            filter_hash=get_filter_hash(context.filters),
             limit=context.limit,
             cursor=context.cursor,
         )

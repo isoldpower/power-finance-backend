@@ -7,10 +7,11 @@ class WebhookResponseSerializer(serializers.Serializer):
     id = serializers.UUIDField(help_text="Webhook ID")
     title = serializers.CharField()
     url = serializers.URLField()
-    is_active = serializers.BooleanField()
+    enabled = serializers.BooleanField(
+        help_text="The pause switch. A disabled endpoint keeps its subscriptions and receives nothing.",
+    )
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField(allow_null=True)
-    deleted_at = serializers.DateTimeField(allow_null=True)
 
 
 class WebhookWithSecretResponseSerializer(WebhookResponseSerializer):
@@ -22,11 +23,8 @@ class WebhookWithSecretResponseSerializer(WebhookResponseSerializer):
 class WebhookSubscriptionResponseSerializer(serializers.Serializer):
     id = serializers.UUIDField(help_text="Subscription ID")
     webhook_id = serializers.UUIDField()
-    event_type = serializers.CharField()
-    is_active = serializers.BooleanField()
+    event = serializers.CharField(help_text="An `event` from GET /webhooks/event-types.")
     created_at = serializers.DateTimeField()
-    updated_at = serializers.DateTimeField(allow_null=True)
-    deleted_at = serializers.DateTimeField(allow_null=True)
 
 
 EnvelopedWebhookResponseSerializer = resource_response(WebhookResponseSerializer)

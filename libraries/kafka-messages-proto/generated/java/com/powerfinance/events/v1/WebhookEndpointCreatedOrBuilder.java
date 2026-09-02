@@ -123,4 +123,21 @@ public interface WebhookEndpointCreatedOrBuilder extends
    * <code>.google.protobuf.Timestamp created_at = 15;</code>
    */
   com.google.protobuf.TimestampOrBuilder getCreatedAtOrBuilder();
+
+  /**
+   * <pre>
+   * Which generation of the endpoint's secret `secret` is. Deliveries record
+   * the version that signed them so a rotation cannot orphan an in-flight one.
+   * </pre>
+   *
+   * <code>int32 secret_version = 16;</code>
+   * @return The secretVersion.
+   */
+  int getSecretVersion();
+
+  /**
+   * <code>bool enabled = 17;</code>
+   * @return The enabled.
+   */
+  boolean getEnabled();
 }

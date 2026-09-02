@@ -18,6 +18,7 @@ class ListWebhooksQueryHandler:
     async def handle(self, query: ListWebhooksQuery) -> FetchedRows:
         cache_operation = CacheOperationData(
             user_id=query.user_id,
+            filters=query.filters.as_cache_material(),
             limit=query.page.limit,
             cursor=query.page.cache_token,
         )
@@ -31,8 +32,8 @@ class ListWebhooksQueryHandler:
                 cached=True,
             )
 
-        total = await count_owned_webhooks(query.user_id)
-        database_entry = await fetch_owned_webhooks(query.user_id, query.page)
+        total = await count_owned_webhooks(query.user_id, query.filters)
+        database_entry = await fetch_owned_webhooks(query.user_id, query.page, query.filters)
         webhooks = [WebhookDTO.from_read_model(entry) for entry in database_entry]
         await self._cache_worker.save_to_cache(
             context=cache_operation,

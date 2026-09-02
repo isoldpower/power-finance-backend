@@ -6,12 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * The engine's counters. `runs` counts MATCHES that applied effects, not
- * evaluations: a rule checked a thousand times that never matched reports 0,
- * which is what makes a silently-stopped rule distinguishable from a working one.
- * </pre>
- *
  * Protobuf type {@code power_finance.events.v1.AutomationRan}
  */
 @com.google.protobuf.Generated
@@ -502,12 +496,6 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * <pre>
-   * The engine's counters. `runs` counts MATCHES that applied effects, not
-   * evaluations: a rule checked a thousand times that never matched reports 0,
-   * which is what makes a silently-stopped rule distinguishable from a working one.
-   * </pre>
-   *
    * Protobuf type {@code power_finance.events.v1.AutomationRan}
    */
   public static final class Builder extends

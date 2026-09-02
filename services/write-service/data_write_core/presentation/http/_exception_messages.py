@@ -30,7 +30,7 @@ UNPROCESSABLE_STATES = (
 class FIELDS(StrEnum):
     AMOUNT = "amount"
     CURRENCY = "currency"
-    EVENT_TYPE = "event_type"
+    EVENT_TYPE = "event"
     CHAIN_ENTRY = "transactions[{index}].after"
 
 

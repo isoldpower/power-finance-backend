@@ -55,6 +55,7 @@ class WebhookResourceView(WebhookView, CommandResponseMixin):
                 webhook_id=webhook_id,
                 title=validated.get("title"),
                 url=validated.get("url"),
+                enabled=validated.get("enabled"),
             )
         )
 
