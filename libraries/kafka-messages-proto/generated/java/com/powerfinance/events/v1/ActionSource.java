@@ -6,10 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * Who produced the action. The API's own classification, not the assistant's.
- * </pre>
- *
  * Protobuf enum {@code power_finance.events.v1.ActionSource}
  */
 @com.google.protobuf.Generated

@@ -1,0 +1,2 @@
+class UncomparableValue(Exception):
+    pass

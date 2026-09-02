@@ -1,4 +1,6 @@
-from data_read_core.shared.filtering import WALLET_FILTER_POLICY, FilterTree
+from filter_grammar_py import WALLET_FILTER_POLICY
+
+from data_read_core.shared.filtering import FilterTree
 from data_read_core.shared.query_results import FetchedRows
 
 from .dtos import SearchWalletsQuery, WalletDTO
@@ -20,4 +22,8 @@ class SearchWalletsQueryHandler:
         wallets = [WalletDTO.from_es_hit(source) for source in sources]
         log_search_served(query.user_id, len(wallets), total)
 
-        return FetchedRows(rows=wallets, total=total, cached=False)
+        return FetchedRows(
+            rows=wallets,
+            total=total,
+            cached=False,
+        )

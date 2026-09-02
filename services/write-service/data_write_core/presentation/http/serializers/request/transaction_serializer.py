@@ -2,7 +2,11 @@ from rest_framework import serializers
 from write_service.common.money import MoneyAmountField
 
 from data_write_core.domain.services import MAX_CHAIN_LENGTH
-from data_write_core.domain.value_objects import TransactionOrigin, TransactionType
+from data_write_core.domain.value_objects import (
+    CLIENT_ORIGINS,
+    TransactionOrigin,
+    TransactionType,
+)
 
 AMOUNT_HELP = (
     'Decimal string, e.g. "50.00". Always a positive magnitude — direction is '
@@ -24,7 +28,8 @@ class TransactionFieldsMixin(serializers.Serializer):
         choices=[transaction_type.value for transaction_type in TransactionType]
     )
     origin = serializers.ChoiceField(
-        choices=[o.value for o in TransactionOrigin],
+        # Not every member of the enum: `automation` is server-authored.
+        choices=[origin.value for origin in CLIENT_ORIGINS],
         required=False,
         default=TransactionOrigin.MANUAL.value,
     )

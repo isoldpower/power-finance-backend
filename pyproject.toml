@@ -13,6 +13,7 @@ members = [
     "libraries/auth-py",
     "libraries/correlation-py",
     "libraries/events-py",
+    "libraries/filter-grammar-py",
     "libraries/kafka-client-py",
     "libraries/kafka-consumer-py",
     "libraries/kafka-messages-proto",

@@ -496,3 +496,27 @@ def log_action_postgres_resolved(action_id: str, rows: int) -> None:
 def log_action_list_version_bumped(user_id: int, version: int) -> None:
     logger = get_workers_logger("write_message_consumer")
     logger.info("Bumped action list version for user %s to %s.", user_id, version)
+
+
+def log_automation_postgres_projected(automation_id: str, created: bool) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Projected automation %s (%s).",
+        automation_id,
+        "created" if created else "updated",
+    )
+
+
+def log_automation_postgres_deleted(automation_id: str, rows: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Soft-deleted automation %s (rows=%s).", automation_id, rows)
+
+
+def log_automation_postgres_ran(automation_id: str, runs: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Automation %s has now applied effects %s time(s).", automation_id, runs)
+
+
+def log_automation_list_version_bumped(user_id: int, version: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Bumped automation list version for user %s to %s.", user_id, version)

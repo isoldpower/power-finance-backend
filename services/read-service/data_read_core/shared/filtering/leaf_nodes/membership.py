@@ -1,8 +1,8 @@
 from typing import Any
 
 from django.db.models import Q
+from filter_grammar_py import ComparisonOperator
 
-from ..entities import ComparisonOperator
 from .abstraction import LeafTreeNode
 
 

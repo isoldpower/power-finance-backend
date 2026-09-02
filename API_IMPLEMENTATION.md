@@ -949,16 +949,100 @@ No `/search`, no detail endpoint, no server-driven forms. All three are decision
 Depends on the shared filter registry (0.8), chains (3.7, for the `transfer` effect), notifications
 (7) and actions (8) for `notify` and `raise_action`.
 
+**STATUS: implemented.** Rules can be authored, read, edited and deleted, and the engine runs both
+trigger types.
+
+- **Step 0.8's "shared registry" became a shared LIBRARY**, `libraries/filter-grammar-py`. The
+  registry alone was not enough: automations are authored on write-service and the grammar lived in
+  read-service, whose tree nodes build Django `Q` objects. The library holds the operators, the
+  per-resource field policies and a store-agnostic validator; read-service keeps its `Q` and
+  Elasticsearch translation on top and imports the grammar. Duplicating the policy tables per
+  service — the house style for `http_contract` and `money` — was rejected here because the failure
+  it invites is silent: a rule would validate on save and never match on search. Decided with the
+  user;
+- **the library's errors are framework-free.** `FilterParseError` carries a `detail_code` STRING and
+  a JSON path rather than inheriting DRF's `ValidationFailed`, because two services with two error
+  contracts import it. Read-service renders them through a new `FilterParseErrorTranslator`; the
+  string values ARE the Detail Codes table, so both mappings are identity lookups;
+- **the condition is validated against the trigger's SUBJECT.** An `event` trigger checks against
+  the transactions policy, a `schedule` trigger against wallets — so `set_category` on a scheduled
+  rule fails with `effect_subject_mismatch` at CREATE time rather than silently at run time;
+- **`params` must be EXACTLY what the effect documents.** An unknown key is a typo the user should
+  hear about, not a silently ignored setting. `transfer` takes the same money grammar as the rest of
+  the API, so a JSON number where an amount belongs is refused;
+- **`AutomationRefusal` carries its own path and detail code**, so the exception handler renders it
+  without re-deriving either. It is one dataclass rather than a family of exception classes because
+  every refusal produces the same 422;
+- **the read model is written by an upsert.** `trigger` and `effects` are replaced whole rather than
+  merged — deep-merging a condition tree has no sane definition — so creation and update are the
+  same projection write;
+- **`runs` and `last_run_at` are projected, never derived.** `runs` counts matches that APPLIED
+  effects, which only the engine can know, and it arrives on its own `AutomationRan` event;
+- **a soft-deleted rule leaves the list but still resolves by id**, because DELETE answers with the
+  rule it removed;
+- `ENUM_NAME_OVERRIDES` had to be added to the write-service schema settings: three serializers now
+  carry a field literally called `type`, and the generator was falling back to `Type00fEnum`.
+
+Phase 9.3 — the engine — decided the following, all of which the target left open:
+
+- **the engine reads the transaction back from Postgres** rather than matching against the event
+  payload. `TransactionUpdated` carries only the amounts, so a condition on `category` would
+  silently never match; and a rule should be evaluated against the transaction as it now STANDS,
+  not as it was when the event was written;
+- **matching is the grammar library's third resolution.** read-service resolves a tree to `Q` or to
+  an Elasticsearch query — both ask a store. An automation asks about one transaction already in
+  hand, so `filter_grammar_py.matches` walks the same tree under the same policy. Keeping all three
+  together is what stops a rule from validating on save and matching differently at run time;
+- **an absent field satisfies NOTHING, `neq` included.** A transaction with no category is not "a
+  transaction whose category is not Dining" — it is one the rule has nothing to say about. An
+  uncomparable stored value likewise fails to match rather than raising: a corrupt row is not
+  something a user's rule should learn about;
+- **a run is CLAIMED before its effects are applied**, under a unique key in a new `automation_runs`
+  table. Kafka delivers at least once and the sweeper wakes far more often than `daily` means, so
+  without a claim a `transfer` repeats. Claiming first trades a lost run on a crash for never moving
+  money twice, which is the right way round for money;
+- **the key decides what "again" means.** An event rule fires once per transaction, ever — otherwise
+  fixing a typo would repeat a transfer, and two rules setting the same category would oscillate
+  forever. A scheduled rule fires once per wallet per PERIOD, so the period is in the key and the
+  sweeper can wake every minute, or catch up after an outage, without repeating or skipping one;
+- **`origin` gained a third value, `automation`**, written by the `transfer` effect and skipped by
+  the engine. This is the re-entrancy guard the run key cannot provide: a transfer creates NEW
+  transactions with new ids, so without a mark a rule would fire on the money it just moved, then on
+  that, forever. It is additive per the target's own rules, and the request serializer takes
+  `CLIENT_ORIGINS` rather than the enum — claiming it would be a way to hide a transaction from
+  every rule;
+- **the event consumer starts at the END of the topic** (`auto_offset_reset: latest`). Automations
+  are forward-only; a new consumer group reading from the beginning would apply every rule to every
+  transaction the user ever made, destructively where `transfer` is involved;
+- **`runs` counts only runs that applied EVERY effect.** A half-run keeps what it did, per the
+  target, but does not count: `runs` is what tells the user a rule still works;
+- **one failing rule does not stop the others**, and a condition its policy no longer accepts does
+  not match rather than raising. A tightened policy must not become an outage across a user's whole
+  rule set;
+- **the counter and its `AutomationRan` row go out in ONE transaction**, not a saga — unlike every
+  other write here. Both are Postgres, so `aatomic` already gives what a saga would have to
+  compensate for;
+- **`raise_action` groups by its rule** (`group_key: "automation:<id>"`), so a daily rule that keeps
+  matching bumps one action's `occurrences` instead of appending an action a day — the collapsing
+  behaviour `group_key` exists for. Its resolutions are the backend's, since a user-authored rule
+  cannot define the choices offered to a user;
+- **the scheduled runner is a sweeper, not a scheduler.** It asks every schedule on every pass and
+  lets the run key decide what already happened, which is why it needs no due-date column and no
+  leader election;
+
 - **9.1** Model and CRUD. `trigger.event` / `trigger.schedule` both always present in responses,
   exactly one non-null; sending the wrong one for the declared `type` fails with
   `trigger_field_conflict`. `trigger` and `effects` are replaced whole on PATCH, never merged. No
   `/toggle` endpoint;
 - **9.2** Effect validation against the closed vocabulary: `effect_unknown_type`,
   `effect_params_invalid`, `effect_subject_mismatch` at CREATE time, not at run time;
-- **9.3** The engine: an event-triggered path consuming `transaction.created` / `transaction.updated`
-  and a scheduled runner. Evaluation is `created_at ASC`, last-write-wins, forward-only. `runs`
-  counts matches that applied effects, not evaluations. A run that fails partway does not roll back
-  its earlier effects;
+- **9.3** The engine: `background_workers/services/automation_engine` consumes the outbox topic and
+  `automation_schedule` sweeps the scheduled rules, both running
+  `application/commands/automations/engine/`. Evaluation is `created_at ASC`, last-write-wins,
+  forward-only. `runs` counts matches that applied effects, not evaluations. A run that fails
+  partway does not roll back its earlier effects. `TransactionMetadataUpdated` counts as
+  `transaction.updated` alongside `TransactionUpdated`: the user wrote "when a transaction changes",
+  not "when a column changes";
 
 ---
 

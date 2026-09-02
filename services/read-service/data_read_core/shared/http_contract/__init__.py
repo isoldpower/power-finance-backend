@@ -22,7 +22,7 @@ from .translators import (
     RenderedError,
     translator_for,
 )
-from .validation_details import DetailPath, flatten_validation_error
+from .validation_details import DetailPath, filter_detail_code_for, flatten_validation_error
 
 __all__ = [
     "ERROR_CODE_BY_STATUS",
@@ -49,6 +49,7 @@ __all__ = [
     "error_meta",
     "error_payload",
     "fail",
+    "filter_detail_code_for",
     "flatten_validation_error",
     "ok",
     "ok_payload",

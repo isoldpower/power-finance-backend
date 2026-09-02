@@ -1,4 +1,5 @@
 from .django_action_repository import DjangoActionRepository
+from .django_automation_repository import DjangoAutomationRepository
 from .django_currency_repository import DjangoCurrencyRepository
 from .django_goal_repository import DjangoGoalRepository
 from .django_money_container_repository import DjangoMoneyContainerRepository
@@ -11,6 +12,7 @@ from .django_webhook_repository import DjangoWebhookRepository
 from .immudb_money_flow_repository import ImmudbMoneyFlowRepository
 
 __all__ = [
+    "DjangoAutomationRepository",
     "DjangoActionRepository",
     "DjangoCurrencyRepository",
     "DjangoGoalRepository",

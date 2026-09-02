@@ -1,8 +1,12 @@
 from typing import Any
 
+from filter_grammar_py import (
+    GroupOperator,
+    InvalidGroupChildrenError,
+    InvalidGroupingError,
+)
+
 from ..abstraction import TreeNode
-from ..entities import GroupOperator
-from ..exceptions import InvalidGroupChildrenError, InvalidGroupingError
 from .abstraction import GroupNodeBuilder, GroupTreeNode
 from .and_group import AndGroupTreeNode
 from .or_group import OrGroupTreeNode

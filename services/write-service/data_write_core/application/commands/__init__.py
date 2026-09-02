@@ -7,6 +7,14 @@ from .actions import (
     ResolveActionCommandHandler,
     ResolvedAction,
 )
+from .automations import (
+    CreateAutomationCommand,
+    CreateAutomationCommandHandler,
+    DeleteAutomationCommand,
+    DeleteAutomationCommandHandler,
+    UpdateAutomationCommand,
+    UpdateAutomationCommandHandler,
+)
 from .goals.create_new_goal import CreateNewGoalCommand, CreateNewGoalCommandHandler
 from .goals.soft_delete_goal import SoftDeleteGoalCommand, SoftDeleteGoalCommandHandler
 from .goals.update_existing_goal import (
@@ -92,6 +100,12 @@ from .webhooks.update_webhook import (
 )
 
 __all__ = [
+    "CreateAutomationCommand",
+    "CreateAutomationCommandHandler",
+    "DeleteAutomationCommand",
+    "DeleteAutomationCommandHandler",
+    "UpdateAutomationCommand",
+    "UpdateAutomationCommandHandler",
     "ExpireLapsedActionsCommand",
     "ExpireLapsedActionsCommandHandler",
     "RaiseActionCommand",

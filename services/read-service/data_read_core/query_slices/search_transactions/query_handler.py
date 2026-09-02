@@ -1,4 +1,6 @@
-from data_read_core.shared.filtering import TRANSACTION_FILTER_POLICY, FilterTree
+from filter_grammar_py import TRANSACTION_FILTER_POLICY
+
+from data_read_core.shared.filtering import FilterTree
 from data_read_core.shared.query_results import FetchedRows
 
 from .dtos import SearchTransactionsQuery, TransactionDTO
@@ -20,4 +22,8 @@ class SearchTransactionsQueryHandler:
         transactions = [TransactionDTO.from_es_hit(source) for source in sources]
         log_search_served(query.user_id, len(transactions), total)
 
-        return FetchedRows(rows=transactions, total=total, cached=False)
+        return FetchedRows(
+            rows=transactions,
+            total=total,
+            cached=False,
+        )

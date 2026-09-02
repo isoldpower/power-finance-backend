@@ -6,10 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * How the client renders a choice. A hint, never behaviour.
- * </pre>
- *
  * Protobuf enum {@code power_finance.events.v1.ResolutionIntent}
  */
 @com.google.protobuf.Generated

@@ -12,6 +12,7 @@ resolution-markers = [
 members = [
     "ai-service",
     "correlation-py",
+    "filter-grammar-py",
     "kafka-client-py",
     "kafka-consumer-py",
     "kafka-messages-proto",
@@ -945,6 +946,21 @@ sdist = { url = "https://files.pythonhosted.org/packages/b5/fe/997687a931ab51049
 wheels = [
     { url = "https://files.pythonhosted.org/packages/81/47/dd9a212ef6e343a6857485ffe25bba537304f1913bdbed446a23f7f592e1/filelock-3.29.0-py3-none-any.whl", hash = "sha256:96f5f6344709aa1572bbf631c640e4ebeeb519e08da902c39a001882f30ac258", size = 39812, upload-time = "2026-04-19T15:39:08.752Z" },
 ]
+
+[[package]]
+name = "filter-grammar-py"
+version = "0.0.0"
+source = { editable = "libraries/filter-grammar-py" }
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.3,<9.0" }]
 
 [[package]]
 name = "frozenlist"
@@ -2467,6 +2483,7 @@ dependencies = [
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
     { name = "elasticsearch", extra = ["async"] },
+    { name = "filter-grammar-py" },
     { name = "httpx" },
     { name = "kafka-client-py" },
     { name = "kafka-consumer-py" },
@@ -2496,6 +2513,7 @@ requires-dist = [
     { name = "djangorestframework", specifier = ">=3.16,<4.0" },
     { name = "drf-spectacular", specifier = ">=0.29,<0.30" },
     { name = "elasticsearch", extras = ["async"], specifier = ">=8.13,<9.0" },
+    { name = "filter-grammar-py", editable = "libraries/filter-grammar-py" },
     { name = "httpx", specifier = ">=0.28,<0.29" },
     { name = "kafka-client-py", editable = "libraries/kafka-client-py" },
     { name = "kafka-consumer-py", editable = "libraries/kafka-consumer-py" },
@@ -3228,6 +3246,7 @@ dependencies = [
     { name = "django-environ" },
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
+    { name = "filter-grammar-py" },
     { name = "gunicorn" },
     { name = "immudb-py" },
     { name = "kafka-client-py" },
@@ -3258,6 +3277,7 @@ requires-dist = [
     { name = "django-environ", specifier = ">=0.13,<0.14" },
     { name = "djangorestframework", specifier = ">=3.16,<4.0" },
     { name = "drf-spectacular", specifier = ">=0.29,<0.30" },
+    { name = "filter-grammar-py", editable = "libraries/filter-grammar-py" },
     { name = "gunicorn", specifier = ">=25.3,<26.0" },
     { name = "immudb-py", specifier = ">=1.5,<2.0" },
     { name = "kafka-client-py", editable = "libraries/kafka-client-py" },

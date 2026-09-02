@@ -8,6 +8,7 @@ from .action import (
     ActionSource,
     ActionStatus,
 )
+from .automation import AutomationReadModel
 from .currency import CurrencyReadModel
 from .goal import GoalReadModel
 from .notification import (
@@ -28,6 +29,7 @@ from .wallet import WalletReadModel
 from .webhook import WebhookReadModel, WebhookSubscriptionReadModel
 
 __all__ = [
+    "AutomationReadModel",
     "ActionReadModel",
     "ActionSeverity",
     "ActionSource",

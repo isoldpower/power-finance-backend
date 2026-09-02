@@ -6,10 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * Shares its vocabulary with notification severity on purpose.
- * </pre>
- *
  * Protobuf enum {@code power_finance.events.v1.ActionSeverity}
  */
 @com.google.protobuf.Generated

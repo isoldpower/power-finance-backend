@@ -1,4 +1,8 @@
 from .action_serializer import ResolveActionRequestSerializer
+from .automation_serializer import (
+    CreateAutomationRequestSerializer,
+    UpdateAutomationRequestSerializer,
+)
 from .goal_serializer import CreateGoalRequestSerializer, UpdateGoalRequestSerializer
 from .notification_serializer import BatchAcknowledgeRequestSerializer
 from .transaction_serializer import (
@@ -19,6 +23,8 @@ from .webhook_serializer import (
 )
 
 __all__ = [
+    "UpdateAutomationRequestSerializer",
+    "CreateAutomationRequestSerializer",
     "ResolveActionRequestSerializer",
     "CreateGoalRequestSerializer",
     "UpdateGoalRequestSerializer",

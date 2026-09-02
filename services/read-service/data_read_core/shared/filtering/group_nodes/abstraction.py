@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
+from filter_grammar_py import GroupOperator
+
 from ..abstraction import TreeNode
-from ..entities import GroupOperator
 
 
 class GroupTreeNode(TreeNode):
-    """A boolean combination (and/or) of child nodes."""
-
     operator: ClassVar[GroupOperator]
 
     def __init__(self, children: list[TreeNode]) -> None:

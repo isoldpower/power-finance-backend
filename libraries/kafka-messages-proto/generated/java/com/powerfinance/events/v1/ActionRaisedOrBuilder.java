@@ -85,21 +85,11 @@ public interface ActionRaisedOrBuilder extends
   com.powerfinance.events.v1.ActionSource getSource();
 
   /**
-   * <pre>
-   * An OPEN vocabulary that grows whenever the assistant learns to recognise
-   * something new. Never enumerated.
-   * </pre>
-   *
    * <code>string kind = 105;</code>
    * @return The kind.
    */
   java.lang.String getKind();
   /**
-   * <pre>
-   * An OPEN vocabulary that grows whenever the assistant learns to recognise
-   * something new. Never enumerated.
-   * </pre>
-   *
    * <code>string kind = 105;</code>
    * @return The bytes for kind.
    */
@@ -166,21 +156,11 @@ public interface ActionRaisedOrBuilder extends
       getSubjectIdBytes();
 
   /**
-   * <pre>
-   * The amount at stake, in the currency the action concerns. NOT converted to
-   * any reporting currency — this is not Metrics. Empty when not about money.
-   * </pre>
-   *
    * <code>string money_amount = 111;</code>
    * @return The moneyAmount.
    */
   java.lang.String getMoneyAmount();
   /**
-   * <pre>
-   * The amount at stake, in the currency the action concerns. NOT converted to
-   * any reporting currency — this is not Metrics. Empty when not about money.
-   * </pre>
-   *
    * <code>string money_amount = 111;</code>
    * @return The bytes for moneyAmount.
    */
@@ -200,19 +180,11 @@ public interface ActionRaisedOrBuilder extends
       getMoneyCurrencyBytes();
 
   /**
-   * <pre>
-   * Collapses recurring conditions onto one row. Empty when it does not recur.
-   * </pre>
-   *
    * <code>string group_key = 113;</code>
    * @return The groupKey.
    */
   java.lang.String getGroupKey();
   /**
-   * <pre>
-   * Collapses recurring conditions onto one row. Empty when it does not recur.
-   * </pre>
-   *
    * <code>string group_key = 113;</code>
    * @return The bytes for groupKey.
    */

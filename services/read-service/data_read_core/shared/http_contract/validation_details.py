@@ -22,6 +22,7 @@ DETAIL_CODE_BY_DRF_CODE: dict[str, DetailCode] = {
     "max_length": DetailCode.OUT_OF_BOUNDS,
     "min_length": DetailCode.OUT_OF_BOUNDS,
 }
+DETAIL_CODE_BY_NAME: dict[str, DetailCode] = {code.value: code for code in DetailCode}
 
 
 @dataclass(frozen=True)
@@ -48,14 +49,16 @@ class DetailPath:
 ROOT_PATH = DetailPath()
 
 
+def filter_detail_code_for(name: str) -> DetailCode:
+    return DETAIL_CODE_BY_NAME.get(name, DetailCode.INVALID)
+
+
 def detail_code_for(drf_code: Any) -> DetailCode:
     return DETAIL_CODE_BY_DRF_CODE.get(str(drf_code), DetailCode.INVALID)
 
 
 @singledispatch
 def flatten_validation_error(detail: Any, path: DetailPath = ROOT_PATH) -> list[ErrorDetail]:
-    """A leaf: the message itself, reported against the path that reached it."""
-
     return [
         ErrorDetail(
             field=path.field,
@@ -85,8 +88,6 @@ def _flatten_sequence(detail: list, path: DetailPath = ROOT_PATH) -> list[ErrorD
 
 @singledispatch
 def _element_path(value: Any, path: DetailPath, position: int) -> DetailPath:
-    """Scalar elements describe the field holding them, so they add no segment."""
-
     return path
 
 

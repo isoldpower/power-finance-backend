@@ -2,6 +2,11 @@ from .async_views import (
     AsyncAPIView,
     async_api_view,
 )
+from .automation_serializers import (
+    AutomationEffectSerializer,
+    AutomationTriggerSerializer,
+    automation_fields,
+)
 from .envelope_serializers import (
     CollectionMetaSerializer,
     ErrorResponseSerializer,
@@ -24,6 +29,8 @@ __all__ = [
     "CURSOR_PARAMETER",
     "LIMIT_PARAMETER",
     "AsyncAPIView",
+    "AutomationEffectSerializer",
+    "AutomationTriggerSerializer",
     "CollectionMetaSerializer",
     "ErrorResponseSerializer",
     "MoneySerializer",
@@ -32,6 +39,7 @@ __all__ = [
     "transaction_preview_fields",
     "ResourceMetaSerializer",
     "async_api_view",
+    "automation_fields",
     "collection_response",
     "resource_response",
 ]

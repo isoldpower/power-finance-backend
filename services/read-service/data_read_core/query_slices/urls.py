@@ -3,6 +3,7 @@ from django.urls import path
 from .convert_currency import convert_currency
 from .count_notifications import count_notifications
 from .get_account import get_account
+from .get_automation import get_automation
 from .get_currency_rates import get_currency_rates
 from .get_goal import get_goal
 from .get_metrics import get_metrics
@@ -12,6 +13,7 @@ from .get_wallet import get_wallet
 from .get_webhook import get_webhook
 from .list_accounts import list_accounts
 from .list_actions import list_actions
+from .list_automations import list_automations
 from .list_currencies import list_currencies
 from .list_goals import list_goals
 from .list_notifications import list_notifications
@@ -25,6 +27,8 @@ from .search_webhooks import search_webhooks
 
 urlpatterns = [
     path("actions", list_actions),
+    path("automations", list_automations),
+    path("automations/<uuid:automation_id>", get_automation),
     path("accounts", list_accounts),
     path("accounts/<uuid:account_id>", get_account),
     path("currencies", list_currencies),

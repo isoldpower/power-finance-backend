@@ -1,7 +1,13 @@
 from typing import Any
 
-from ..entities import FieldFilter, FilterPolicy
-from ..exceptions import ROOT_PATH, PolicyViolationError, UnknownNodeError
+from filter_grammar_py import (
+    ROOT_PATH,
+    FieldFilter,
+    FilterPolicy,
+    PolicyViolationError,
+    UnknownNodeError,
+)
+
 from .abstraction import LeafNodeBuilder, LeafTreeNode
 from .equality import EqualLeafTreeNode, NotEqualLeafTreeNode
 from .membership import InLeafTreeNode

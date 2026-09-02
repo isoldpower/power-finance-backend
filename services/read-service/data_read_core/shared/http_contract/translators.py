@@ -4,28 +4,27 @@ from dataclasses import dataclass
 from typing import Any
 
 from django.http import Http404
+from filter_grammar_py import FilterParseError
 from rest_framework import exceptions as drf_exceptions
 
 from .codes import ErrorCode
 from .exceptions import ApiError, ErrorDetail
-from .validation_details import flatten_validation_error
+from .validation_details import (
+    filter_detail_code_for,
+    flatten_validation_error,
+)
 
 logger = logging.getLogger(__name__)
-
 
 MISSING_RESOURCE_MESSAGE = "Resource does not exist"
 VALIDATION_FAILED_MESSAGE = "Request body failed validation"
 UNEXPECTED_FAILURE_MESSAGE = "Unexpected server failure"
-
 UNKNOWN_REQUEST_DESCRIPTION = "<unknown request>"
-
 DEFAULT_CODE_ATTRIBUTE = "default_code"
 
 
 @dataclass(frozen=True)
 class RenderedError:
-    """A failure expressed in contract terms, ready for the envelope."""
-
     code: ErrorCode
     message: str
     details: list[ErrorDetail] | None = None
@@ -38,8 +37,6 @@ class RenderedError:
 
 @dataclass(frozen=True)
 class FailureContext:
-    """What DRF knows about the request that failed."""
-
     context: dict[str, Any]
 
     @property
@@ -52,8 +49,6 @@ class FailureContext:
 
 
 class ExceptionTranslator(ABC):
-    """Translates one family of exceptions into the error envelope."""
-
     exception_type: type[Exception] = Exception
 
     def handles(self, exception: Exception) -> bool:
@@ -61,15 +56,10 @@ class ExceptionTranslator(ABC):
 
     @abstractmethod
     def translate(self, exception: Exception, failure: FailureContext) -> RenderedError:
-        """Only ever called with an exception this translator `handles`; anything
-        else re-raises rather than being mistranslated."""
-
         raise NotImplementedError()
 
 
 class ApiErrorTranslator(ExceptionTranslator):
-    """Our own exceptions already carry everything the envelope needs."""
-
     exception_type = ApiError
 
     def translate(self, exception: Exception, failure: FailureContext) -> RenderedError:
@@ -85,8 +75,6 @@ class ApiErrorTranslator(ExceptionTranslator):
 
 
 class MissingResourceTranslator(ExceptionTranslator):
-    """Django raises `Http404` from `get_object_or_404` and the URL resolver."""
-
     exception_type = Http404
 
     def translate(self, exception: Exception, failure: FailureContext) -> RenderedError:
@@ -94,8 +82,6 @@ class MissingResourceTranslator(ExceptionTranslator):
 
 
 class ValidationErrorTranslator(ExceptionTranslator):
-    """Serializer failures, flattened into per-field details."""
-
     exception_type = drf_exceptions.ValidationError
 
     def translate(self, exception: Exception, failure: FailureContext) -> RenderedError:
@@ -110,9 +96,6 @@ class ValidationErrorTranslator(ExceptionTranslator):
 
 
 class FrameworkExceptionTranslator(ExceptionTranslator):
-    """Authentication, permissions, throttling: DRF keeps its status, and a code
-    the contract names wins."""
-
     exception_type = drf_exceptions.APIException
 
     def translate(self, exception: Exception, failure: FailureContext) -> RenderedError:
@@ -135,9 +118,27 @@ class FrameworkExceptionTranslator(ExceptionTranslator):
         return str(exception.default_detail)
 
 
-class UnexpectedFailureTranslator(ExceptionTranslator):
-    """The catch-all: the exception text stays in the log, never in a response."""
+class FilterParseErrorTranslator(ExceptionTranslator):
+    exception_type = FilterParseError
 
+    def translate(self, exception: Exception, failure: FailureContext) -> RenderedError:
+        try:
+            raise exception
+        except FilterParseError as error:
+            return RenderedError(
+                code=ErrorCode.VALIDATION_FAILED,
+                message=VALIDATION_FAILED_MESSAGE,
+                details=[
+                    ErrorDetail(
+                        field=error.path,
+                        code=filter_detail_code_for(error.detail_code),
+                        message=error.reason,
+                    )
+                ],
+            )
+
+
+class UnexpectedFailureTranslator(ExceptionTranslator):
     def translate(self, exception: Exception, failure: FailureContext) -> RenderedError:
         logger.exception("Unhandled failure serving %s", failure.description)
 
@@ -149,6 +150,7 @@ TRANSLATORS: tuple[ExceptionTranslator, ...] = (
     ApiErrorTranslator(),
     MissingResourceTranslator(),
     ValidationErrorTranslator(),
+    FilterParseErrorTranslator(),
     FrameworkExceptionTranslator(),
     UnexpectedFailureTranslator(),
 )

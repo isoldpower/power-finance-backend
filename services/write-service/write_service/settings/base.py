@@ -33,6 +33,8 @@ env = environ.Env(
     KAFKA_FRAUD_ALERTS_GROUP_ID=(str, "write-service.fraud-alerts"),
     KAFKA_NOTIFICATIONS_INBOUND_TOPIC=(str, "notifications.inbound"),
     KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID=(str, "write-service.notifications-inbound"),
+    KAFKA_AUTOMATION_ENGINE_GROUP_ID=(str, "write-service.automation-engine"),
+    AUTOMATION_SCHEDULE_INTERVAL_SECONDS=(int, 300),
     CORRELATION_ID_HEADER=(str, "X-Correlation-ID"),
 )
 if ENV_FILE.exists():
@@ -135,6 +137,11 @@ KAFKA = {
     "FRAUD_ALERTS_GROUP_ID": env("KAFKA_FRAUD_ALERTS_GROUP_ID"),
     "NOTIFICATIONS_INBOUND_TOPIC": env("KAFKA_NOTIFICATIONS_INBOUND_TOPIC"),
     "NOTIFICATIONS_INBOUND_GROUP_ID": env("KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID"),
+    "AUTOMATION_ENGINE_GROUP_ID": env("KAFKA_AUTOMATION_ENGINE_GROUP_ID"),
+}
+
+AUTOMATION_SCHEDULE = {
+    "INTERVAL_SECONDS": env("AUTOMATION_SCHEDULE_INTERVAL_SECONDS"),
 }
 
 CORRELATION_ID_HEADER = env("CORRELATION_ID_HEADER")
@@ -158,6 +165,14 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "0.1.0",
     "SCHEMA_PATH_PREFIX": r"/api/v[0-9]+/",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Several resources carry a field literally called `type`, so the generator
+    # cannot name their enums from the field alone and falls back to something
+    # like `Type00fEnum`. Naming them here keeps the generated client readable.
+    "ENUM_NAME_OVERRIDES": {
+        "AutomationTriggerType": "data_write_core.domain.automations.TRIGGER_TYPE_CHOICES",
+        "AutomationEffectType": "data_write_core.domain.automations.EFFECT_TYPE_CHOICES",
+        "TransactionType": "data_write_core.domain.value_objects.TRANSACTION_TYPE_CHOICES",
+    },
 }
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")

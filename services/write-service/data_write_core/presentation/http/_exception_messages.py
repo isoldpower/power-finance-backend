@@ -46,6 +46,7 @@ class MESSAGES(StrEnum):
     GOAL_CLOSED = "Goal is closed and cannot take new transactions"
     ACTION_ALREADY_RESOLVED = "Action has already been answered and offers no further choices"
     UNKNOWN_RESOLUTION = "Resolution is not one this action offers"
+    AUTOMATION_REFUSED = "Automation rule failed validation"
     CHAIN_CYCLE = "Chain entries reference each other in a cycle"
     IMMUTABLE_CURRENCY = "Wallet currency is fixed at creation and cannot be replaced"
     IMMUTABLE_GOAL_CURRENCY = "Goal currency is fixed at creation and cannot be replaced"

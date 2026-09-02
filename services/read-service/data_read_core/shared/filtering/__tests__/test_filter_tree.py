@@ -1,16 +1,23 @@
 import pytest
 from django.db.models import Q
-
-from data_read_core.shared.http_contract import DetailCode, ErrorCode
-
-from ..entities import FilterFieldPolicy, TypeVariant
-from ..exceptions import (
+from filter_grammar_py import (
+    FilterFieldPolicy,
     FilterParseError,
     InvalidGroupingError,
     InvalidOperationError,
     InvalidStructureError,
     PolicyViolationError,
+    TypeVariant,
 )
+
+from data_read_core.shared.http_contract import (
+    DetailCode,
+    ErrorCode,
+    FailureContext,
+    RenderedError,
+    translator_for,
+)
+
 from ..filter_tree import FilterTree
 
 POLICY = {
@@ -177,16 +184,25 @@ def test_garbage_node_raises():
         make_tree().resolve_es({"unexpected": "shape"})
 
 
-def test_filter_failures_are_validation_failures_with_detail_codes():
+def _rendered(node) -> RenderedError:
+    """What the client would actually receive. The grammar is framework-free, so
+    the envelope is produced by the translator rather than by the error."""
+
+    with pytest.raises(FilterParseError) as failure:
+        make_tree().resolve_es(node)
+
+    return translator_for(failure.value).translate(failure.value, FailureContext(context={}))
+
+
+def test_filter_failures_render_as_validation_failures_with_detail_codes():
     """Every filter problem is a 422 `validation_failed`; what distinguishes
     them is `error.details[].code`."""
 
-    with pytest.raises(PolicyViolationError) as failure:
-        make_tree().resolve_es({"field_name": "secret", "operator": "eq", "value": "x"})
+    rendered = _rendered({"field_name": "secret", "operator": "eq", "value": "x"})
 
-    assert failure.value.status_code == 422
-    assert failure.value.code == ErrorCode.VALIDATION_FAILED
-    assert failure.value.details[0].code is DetailCode.FILTER_UNKNOWN_FIELD
+    assert rendered.response_status == 422
+    assert rendered.code == ErrorCode.VALIDATION_FAILED
+    assert rendered.details[0].code is DetailCode.FILTER_UNKNOWN_FIELD
 
 
 @pytest.mark.parametrize(
@@ -212,10 +228,7 @@ def test_filter_failures_are_validation_failures_with_detail_codes():
     ],
 )
 def test_each_kind_of_filter_failure_has_its_own_detail_code(node, expected):
-    with pytest.raises(FilterParseError) as failure:
-        make_tree().resolve_es(node)
-
-    assert failure.value.details[0].code is expected
+    assert _rendered(node).details[0].code is expected
 
 
 def test_failure_names_the_offending_node_by_json_path():
@@ -234,10 +247,7 @@ def test_failure_names_the_offending_node_by_json_path():
         ]
     }
 
-    with pytest.raises(FilterParseError) as failure:
-        make_tree().resolve_es(tree)
-
-    assert failure.value.details[0].field == "filter_body.and[1].or[1].operator"
+    assert _rendered(tree).details[0].field == "filter_body.and[1].or[1].operator"
 
 
 def test_decimal_fields_take_the_money_grammar():
@@ -268,4 +278,4 @@ def test_decimal_fields_reject_json_numbers_and_non_canonical_strings(value):
     with pytest.raises(FilterParseError) as failure:
         FilterTree(policy).resolve_es({"field_name": "amount", "operator": "gte", "value": value})
 
-    assert failure.value.details[0].code is DetailCode.FILTER_VALUE_TYPE
+    assert failure.value.detail_code == DetailCode.FILTER_VALUE_TYPE.value

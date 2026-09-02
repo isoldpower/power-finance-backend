@@ -14,6 +14,7 @@ KAFKA_CLIENT_LIB_DIR := libraries/kafka-client-py
 KAFKA_CONSUMER_LIB_DIR := libraries/kafka-consumer-py
 SAGA_LIB_DIR         := libraries/saga-pattern-py
 READ_AT_LEAST_LIB_DIR := libraries/read-at-least-py
+FILTER_GRAMMAR_LIB_DIR := libraries/filter-grammar-py
 
 UVICORN_HOST := 0.0.0.0
 UVICORN_PORT := 8000
@@ -91,11 +92,12 @@ test-correlation: | $(HOOK_SENTINEL) ## Run correlation-py library tests (unitte
 	uv run python -m unittest discover -s $(CORRELATION_LIB_DIR)/correlation/__tests__ -t $(CORRELATION_LIB_DIR)
 
 .PHONY: test-libraries
-test-libraries: | $(HOOK_SENTINEL) ## Run the pytest library suites (kafka-client, kafka-consumer, saga, read-at-least)
+test-libraries: | $(HOOK_SENTINEL) ## Run the pytest library suites (kafka-client, kafka-consumer, saga, read-at-least, filter-grammar)
 	cd $(KAFKA_CLIENT_LIB_DIR) && uv run pytest -q
 	cd $(KAFKA_CONSUMER_LIB_DIR) && uv run pytest -q
 	cd $(SAGA_LIB_DIR) && uv run pytest -q
 	cd $(READ_AT_LEAST_LIB_DIR) && uv run pytest -q
+	cd $(FILTER_GRAMMAR_LIB_DIR) && uv run pytest -q
 
 .PHONY: test-write
 test-write: | $(HOOK_SENTINEL) ## Run Write Service tests (pytest, postgres-write on host port 5433)

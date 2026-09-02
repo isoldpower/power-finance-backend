@@ -24,6 +24,12 @@ from .account_events import (
     subscribe_account_updated,
 )
 from .action_events import subscribe_action_raised, subscribe_action_resolved
+from .automation_events import (
+    subscribe_automation_created,
+    subscribe_automation_deleted,
+    subscribe_automation_ran,
+    subscribe_automation_updated,
+)
 from .goal_events import (
     subscribe_goal_created,
     subscribe_goal_deleted,
@@ -60,6 +66,10 @@ _KNOWN_HANDLERS: list[Callable[[EventRouter, ProbesDictionary], None]] = [
     subscribe_account_updated,
     subscribe_action_raised,
     subscribe_action_resolved,
+    subscribe_automation_created,
+    subscribe_automation_updated,
+    subscribe_automation_deleted,
+    subscribe_automation_ran,
     subscribe_account_posting_created,
     subscribe_account_posting_deleted,
     subscribe_account_postings_dispatched,

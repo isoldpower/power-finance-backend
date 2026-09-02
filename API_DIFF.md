@@ -5,7 +5,7 @@ exist, a field spelled differently, a status code the target does not mention, o
 a behaviour a client has to code around. Internal decisions that a caller cannot
 observe are deliberately not listed.
 
-Current as of Phase 8 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
+Current as of Phase 9 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
 conventions (envelope, cursors, money strings, timestamps, idempotency, filter
 grammar, rate limits, `Read-At-Least`) are implemented as documented — the
 differences below are on top of that.
@@ -42,11 +42,13 @@ says.
 | `GET /metrics`                                                                                              | **replaces three paths**       |
 | `GET /actions`                                                                                              | `status`, `source`, `severity` |
 | `POST /actions/{action-id}/resolve`                                                                         | returns the answered action    |
+| `GET /automations`, `GET /automations/{id}`                                                                 | `enabled` filter               |
+| `POST /automations`, `PATCH /automations/{id}`, `DELETE /automations/{id}`                                  | rules run; see below           |
 
 Not built yet. A request to any of these gets a plain 404 with NO error envelope —
 nothing routes them, so no handler shapes the failure:
 
-- the whole **Automations** and **Assistant** slices;
+- the whole **Assistant** slice;
 - `GET /webhooks/event-types` — the event vocabulary is not served anywhere, so
   it has to be hardcoded client-side for the moment;
 - `GET /webhooks/{id}/deliveries`.
@@ -380,6 +382,93 @@ server: after changing it, refetch.
   income is undefined, and zero would claim you saved nothing when there was
   nothing to save;
 
+### Automations
+Rules can be **authored, read, edited and deleted**, every validation the
+target describes happens at CREATE time, and the engine runs them. What running
+them actually means is at the end of this section — three of its rules are
+things the target left open.
+
+- `trigger.filter_body` is the SAME filter tree the `/search` endpoints take,
+  checked against the policy of the trigger's **subject**: an `event` trigger
+  against transactions, a `schedule` trigger against wallets. Failures carry the
+  same `filter_*` detail codes search does, with a JSON path INTO the tree
+  (`trigger.filter_body.and[1].or[0].operator`) so you can highlight the exact
+  condition;
+- **`filter_body: null` means "always".** An empty group (`{"and": []}`) is
+  refused rather than meaning the same thing — two spellings of one idea is one
+  too many;
+- **requests supply ONE of `trigger.event` / `trigger.schedule`; responses carry
+  both**, the inapplicable one `null`, so you read `trigger.schedule` without
+  guarding. Sending the one that does not match the declared `type` is 422
+  `trigger_field_conflict`;
+- **`effects` is a closed vocabulary and `params` must be exactly what each
+  effect documents.** An unknown key is 422 `effect_params_invalid` rather than
+  a silently ignored setting. `transfer` takes the ordinary money grammar, so
+  `{"amount": 200.0}` is refused — send `"200.00"`;
+- an effect that cannot apply to the trigger's subject is 422
+  `effect_subject_mismatch` **at create time**, not silently at run time —
+  `set_category` on a scheduled rule, for instance;
+- `effects` needs at least one entry: a rule that matches and does nothing is
+  never what was meant;
+- **there is no `/toggle`.** Enabling is `PATCH {"enabled": false}` — setting a
+  field, not flipping one, because a toggle is not idempotent;
+- **`trigger` and `effects` are replaced WHOLE** when supplied, never merged.
+  There is no way to say "change the third leaf" of a condition tree, so send
+  the complete new one;
+- `DELETE` is a **soft delete** returning the removed rule. It leaves
+  `GET /automations` but still resolves by id. Nothing it already did is
+  reverted;
+- ordering is `created_at DESC, id DESC` — the REVERSE of evaluation order. The
+  list shows newest first because that is how you think about your rules; the
+  engine is specified to run oldest first so later rules override earlier ones;
+- `enabled` is a TRISTATE filter: absent means both;
+- `icon` is free-form with a client-side registry, never validated server-side;
+
+#### What running a rule means
+The target specifies evaluation order and says a failed run does not roll back.
+It leaves three questions open that you can observe from the client, so they are
+answered here.
+
+- **an event rule fires ONCE per transaction, ever.** Editing a transaction a
+  rule already saw does not run that rule again — otherwise fixing a typo in a
+  name would repeat its `transfer`, and two rules setting the same category
+  would flip it back and forth forever. A rule created AFTER a transaction never
+  sees it either: rules are forward-only;
+- **a scheduled rule fires once per wallet per period**, where the period is the
+  calendar one — a date for `daily`, an **ISO week** (Monday-based) for
+  `weekly`, a month for `monthly`. So a user with three wallets sees three runs
+  a day from one daily rule, one per wallet, which is what "a scheduled rule
+  scans wallets" means;
+- **`runs` counts only runs that applied EVERY effect.** A run that failed
+  partway keeps what it already did, exactly as the target says, but does not
+  count — `runs` is what tells you a rule still works, so a half-run must not
+  report as one. A rule that matched a thousand times and always failed reports
+  `0`;
+
+Three things a rule produces are recognisable:
+
+- **`transfer` creates transactions with `origin: "automation"`.** This is a
+  NEW value in the `origin` vocabulary — treat it the way the Client
+  Obligations require, as an unknown-but-valid case if you switch on `origin`.
+  It is server-authored: `POST /transactions` rejects it, because claiming it
+  would be a way to make a transaction invisible to every rule. The engine
+  ignores transactions carrying it, which is what stops a rule from firing on
+  the money it just moved;
+- **`raise_action` produces an action with `kind: "automation"`** and
+  `source: "scheduler"`, grouped by the rule that raised it. A daily rule that
+  keeps matching therefore bumps ONE action's `occurrences` rather than
+  appending an action a day. Its `resolutions` are the backend's — an
+  acknowledgement and a dismissal, neither of which `applies` — because a
+  user-authored rule cannot define the choices offered to a user;
+- **`notify` writes its own `body`**, naming the rule that fired. The rule
+  supplies `severity` and `title` and nothing else; there is no template string
+  anywhere in the API;
+
+`runs` and `last_run_at` are projected from the engine, so they arrive on the
+read side a moment after the run — the same eventual-consistency window as every
+other counter here, and `X-Write-Version` does not cover them because no request
+of yours caused the run.
+
 ### Actions
 The queue matches the target shape. Two things are worth reading twice: what
 orders it, and what happens when you answer.
@@ -553,7 +642,9 @@ internal frames:
 
 - `POST /transactions` takes `{name, wallet_id, currency, amount, type,
   origin?, category?, evidence?}` as the target says. `amount` is a positive
-  magnitude — `type` states the direction. `Idempotency-Key` is required;
+  magnitude — `type` states the direction. `Idempotency-Key` is required.
+  `origin` accepts `manual` and `scanned` only: responses can also carry
+  `automation`, which is server-authored — see Automations;
 - `PATCH /transactions/{id}` takes `{name?, category?, evidence?}` and nothing
   else. `new_amount` is gone and sending it changes nothing — corrections go to
   `POST /transactions/{id}/adjust`, described above;

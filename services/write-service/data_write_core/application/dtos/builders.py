@@ -4,6 +4,7 @@ from uuid import UUID
 from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import (
     ActionEntity,
+    AutomationEntity,
     GoalEntity,
     MoneyFlowEntity,
     NotificationEntity,
@@ -17,6 +18,11 @@ from data_write_core.domain.value_objects import (
 )
 
 from .action_dto import ActionDTO, ActionResolutionDTO
+from .automation_dto import (
+    AutomationDTO,
+    AutomationEffectDTO,
+    AutomationTriggerDTO,
+)
 from .goal_dto import GoalDTO, MoneyContainerDTO
 from .notification_dto import NotificationDTO
 from .transaction_dto import TransactionDTO, TransactionPlainDTO
@@ -200,4 +206,29 @@ def action_to_dto(action: ActionEntity) -> ActionDTO:
         ),
         created_at=action.created_at,
         updated_at=action.updated_at,
+    )
+
+
+def automation_to_dto(automation: AutomationEntity) -> AutomationDTO:
+    return AutomationDTO(
+        id=UUID(automation.unique_id),
+        user_id=int(automation.user_id),
+        name=automation.name,
+        icon=automation.icon,
+        enabled=automation.enabled,
+        trigger=AutomationTriggerDTO(
+            type=automation.trigger.type,
+            event=automation.trigger.event,
+            schedule=automation.trigger.schedule,
+            filter_body=automation.trigger.filter_body,
+        ),
+        effects=tuple(
+            AutomationEffectDTO(type=effect.type, params=effect.params)
+            for effect in automation.effects
+        ),
+        last_run_at=automation.last_run_at,
+        runs=automation.runs,
+        created_at=automation.created_at,
+        updated_at=automation.updated_at,
+        deleted_at=automation.deleted_at,
     )

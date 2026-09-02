@@ -6,12 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * Where an action sits in the queue. `resolved` and `dismissed` are kept apart
- * deliberately: "how often is this recommendation ignored" is not answerable if
- * both collapse to one state.
- * </pre>
- *
  * Protobuf enum {@code power_finance.events.v1.ActionStatus}
  */
 @com.google.protobuf.Generated

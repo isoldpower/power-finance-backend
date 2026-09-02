@@ -3,6 +3,7 @@ from typing import Any
 
 from ..interfaces import (
     ActionRepository,
+    AutomationRepository,
     CurrencyRepository,
     EventBus,
     GoalRepository,
@@ -34,6 +35,7 @@ class RepositoryRegistry:
     outbox_repository: "OutboxRepository"
     user_repository: "UserRepository"
     action_repository: "ActionRepository"
+    automation_repository: "AutomationRepository"
     notification_repository: "NotificationRepository"
     webhook_repository: "WebhookRepository"
 

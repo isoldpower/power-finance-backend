@@ -23,6 +23,7 @@ dependencies = [
     "aiokafka>=0.11,<0.13",
     "kafka-client-py",
     "kafka-consumer-py",
+    "filter-grammar-py",
 ]
 
 [dependency-groups]
@@ -33,6 +34,7 @@ dev = [
 ]
 
 [tool.uv.sources]
+filter-grammar-py = { workspace = true }
 correlation-py = { workspace = true }
 saga-pattern-py = { workspace = true }
 kafka-messages-proto = { workspace = true }

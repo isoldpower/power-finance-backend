@@ -1,16 +1,21 @@
 from typing import Any
 
+from filter_grammar_py import (
+    ROOT_PATH,
+    ComparisonOperator,
+    FieldFilter,
+    FilterPolicy,
+    InvalidOperationError,
+    InvalidStructureError,
+    UnknownNodeError,
+)
+
 from .abstraction import TreeNode
-from .entities import ComparisonOperator, FieldFilter, FilterPolicy
-from .exceptions import ROOT_PATH, InvalidOperationError, InvalidStructureError, UnknownNodeError
 from .group_nodes import FilterGroupNodeBuilder
 from .leaf_nodes import FilterLeafNodeBuilder
 
 
 class TreeBuilder:
-    """Parses a raw filter dict into a tree of TreeNodes, delegating leaf and
-    group recognition to their respective builders."""
-
     def __init__(self, policy: FilterPolicy) -> None:
         self._leaf_builder = FilterLeafNodeBuilder(policy)
         self._group_builder = FilterGroupNodeBuilder()

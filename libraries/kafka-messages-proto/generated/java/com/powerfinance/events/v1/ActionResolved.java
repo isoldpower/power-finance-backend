@@ -222,10 +222,6 @@ private static final long serialVersionUID = 0L;
   public static final int STATUS_FIELD_NUMBER = 104;
   private int status_ = 0;
   /**
-   * <pre>
-   * `resolved`, `dismissed` or `expired` — never `pending`.
-   * </pre>
-   *
    * <code>.power_finance.events.v1.ActionStatus status = 104;</code>
    * @return The enum numeric value on the wire for status.
    */
@@ -233,10 +229,6 @@ private static final long serialVersionUID = 0L;
     return status_;
   }
   /**
-   * <pre>
-   * `resolved`, `dismissed` or `expired` — never `pending`.
-   * </pre>
-   *
    * <code>.power_finance.events.v1.ActionStatus status = 104;</code>
    * @return The status.
    */
@@ -1294,10 +1286,6 @@ private static final long serialVersionUID = 0L;
 
     private int status_ = 0;
     /**
-     * <pre>
-     * `resolved`, `dismissed` or `expired` — never `pending`.
-     * </pre>
-     *
      * <code>.power_finance.events.v1.ActionStatus status = 104;</code>
      * @return The enum numeric value on the wire for status.
      */
@@ -1305,10 +1293,6 @@ private static final long serialVersionUID = 0L;
       return status_;
     }
     /**
-     * <pre>
-     * `resolved`, `dismissed` or `expired` — never `pending`.
-     * </pre>
-     *
      * <code>.power_finance.events.v1.ActionStatus status = 104;</code>
      * @param value The enum numeric value on the wire for status to set.
      * @throws IllegalArgumentException if UNRECOGNIZED is provided.
@@ -1321,10 +1305,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * `resolved`, `dismissed` or `expired` — never `pending`.
-     * </pre>
-     *
      * <code>.power_finance.events.v1.ActionStatus status = 104;</code>
      * @return The status.
      */
@@ -1334,10 +1314,6 @@ private static final long serialVersionUID = 0L;
       return result == null ? com.powerfinance.events.v1.ActionStatus.UNRECOGNIZED : result;
     }
     /**
-     * <pre>
-     * `resolved`, `dismissed` or `expired` — never `pending`.
-     * </pre>
-     *
      * <code>.power_finance.events.v1.ActionStatus status = 104;</code>
      * @param value The status to set.
      * @return This builder for chaining.
@@ -1350,10 +1326,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * `resolved`, `dismissed` or `expired` — never `pending`.
-     * </pre>
-     *
      * <code>.power_finance.events.v1.ActionStatus status = 104;</code>
      * @return This builder for chaining.
      */

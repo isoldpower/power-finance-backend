@@ -14,6 +14,12 @@ from .action_reactions import (
     RaiseActionReadModel,
     ResolveActionReadModel,
 )
+from .automation_reactions import (
+    BumpAutomationListVersion,
+    ProjectAutomationReadModel,
+    RecordAutomationRun,
+    RemoveAutomationReadModel,
+)
 from .goal_reactions import (
     BumpGoalListVersion,
     CreateGoalReadModel,
@@ -66,6 +72,10 @@ from .webhook_reactions import (
 )
 
 __all__ = [
+    "BumpAutomationListVersion",
+    "ProjectAutomationReadModel",
+    "RecordAutomationRun",
+    "RemoveAutomationReadModel",
     "BumpActionListVersion",
     "RaiseActionReadModel",
     "ResolveActionReadModel",

@@ -6,6 +6,12 @@ from .action import (
     ActionStatus,
     rank_of,
 )
+from .automation import (
+    AutomationEffect,
+    AutomationEntity,
+    AutomationState,
+    AutomationTrigger,
+)
 from .balance_checkpoint import BalanceCheckpointEntity
 from .currency import CurrencyEntity
 from .goal import UNCHANGED as GOAL_UNCHANGED
@@ -21,6 +27,10 @@ from .webhook import WebhookEntity
 from .webhook_subscription import WebhookSubscriptionEntity
 
 __all__ = [
+    "AutomationEffect",
+    "AutomationEntity",
+    "AutomationState",
+    "AutomationTrigger",
     "ActionEntity",
     "ActionSeverity",
     "ActionSource",

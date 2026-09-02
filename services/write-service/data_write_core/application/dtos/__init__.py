@@ -1,6 +1,8 @@
 from .action_dto import ActionDTO, ActionResolutionDTO
+from .automation_dto import AutomationDTO, AutomationEffectDTO, AutomationTriggerDTO
 from .builders import (
     action_to_dto,
+    automation_to_dto,
     container_to_dto,
     goal_to_dto,
     notification_to_dto,
@@ -19,6 +21,9 @@ from .wallet_dto import WalletDTO
 from .webhook_dto import WebhookDTO, WebhookSubscriptionDTO, WebhookWithSecretDTO
 
 __all__ = [
+    "AutomationTriggerDTO",
+    "AutomationEffectDTO",
+    "AutomationDTO",
     "ActionDTO",
     "ActionResolutionDTO",
     "GoalDTO",
@@ -34,6 +39,7 @@ __all__ = [
     "container_to_dto",
     "goal_to_dto",
     "action_to_dto",
+    "automation_to_dto",
     "notification_to_dto",
     "transaction_to_dto",
     "transaction_to_plain_dto",

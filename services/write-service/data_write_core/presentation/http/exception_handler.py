@@ -13,6 +13,7 @@ from write_service.common.http_contract import (
 )
 
 from data_write_core.domain import exceptions as domain
+from data_write_core.domain.automations import AutomationRefusal
 
 from ._exception_messages import (
     FIELDS,
@@ -20,6 +21,8 @@ from ._exception_messages import (
     MISSING_RESOURCES,
     UNPROCESSABLE_STATES,
 )
+
+DETAIL_CODES: dict[str, DetailCode] = {code.value: code for code in DetailCode}
 
 
 def write_exception_handler(exception: Exception, context: dict[str, Any]) -> Response:
@@ -60,6 +63,17 @@ def translate(exception: Exception) -> Exception:
         return Conflict(
             MESSAGES.WALLET_CLOSED,
             code=ErrorCode.WALLET_CLOSED,
+        )
+    except AutomationRefusal as refusal:
+        return ValidationFailed(
+            MESSAGES.AUTOMATION_REFUSED,
+            details=[
+                ErrorDetail(
+                    field=refusal.path,
+                    code=DETAIL_CODES.get(refusal.detail_code, DetailCode.INVALID),
+                    message=refusal.reason,
+                )
+            ],
         )
     except domain.ActionAlreadyResolvedError:
         return Conflict(

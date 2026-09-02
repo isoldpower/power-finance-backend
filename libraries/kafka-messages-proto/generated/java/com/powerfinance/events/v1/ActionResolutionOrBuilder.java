@@ -46,21 +46,12 @@ public interface ActionResolutionOrBuilder extends
   com.powerfinance.events.v1.ResolutionIntent getIntent();
 
   /**
-   * <pre>
-   * Whether choosing it changes OTHER resources.
-   * </pre>
-   *
    * <code>bool applies = 104;</code>
    * @return The applies.
    */
   boolean getApplies();
 
   /**
-   * <pre>
-   * Whether the server designates THIS choice as dismissal. Internal: it
-   * decides the resulting status and is never presented to a client.
-   * </pre>
-   *
    * <code>bool dismissal = 105;</code>
    * @return The dismissal.
    */

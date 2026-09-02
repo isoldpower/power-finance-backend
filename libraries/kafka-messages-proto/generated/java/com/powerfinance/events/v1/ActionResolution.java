@@ -6,11 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * One offered choice. The whole point of the Actions shape: a client renders one
- * button per resolution and never switches on `kind` to decide what they say.
- * </pre>
- *
  * Protobuf type {@code power_finance.events.v1.ActionResolution}
  */
 @com.google.protobuf.Generated
@@ -155,10 +150,6 @@ private static final long serialVersionUID = 0L;
   public static final int APPLIES_FIELD_NUMBER = 104;
   private boolean applies_ = false;
   /**
-   * <pre>
-   * Whether choosing it changes OTHER resources.
-   * </pre>
-   *
    * <code>bool applies = 104;</code>
    * @return The applies.
    */
@@ -170,11 +161,6 @@ private static final long serialVersionUID = 0L;
   public static final int DISMISSAL_FIELD_NUMBER = 105;
   private boolean dismissal_ = false;
   /**
-   * <pre>
-   * Whether the server designates THIS choice as dismissal. Internal: it
-   * decides the resulting status and is never presented to a client.
-   * </pre>
-   *
    * <code>bool dismissal = 105;</code>
    * @return The dismissal.
    */
@@ -384,11 +370,6 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * <pre>
-   * One offered choice. The whole point of the Actions shape: a client renders one
-   * button per resolution and never switches on `kind` to decide what they say.
-   * </pre>
-   *
    * Protobuf type {@code power_finance.events.v1.ActionResolution}
    */
   public static final class Builder extends
@@ -774,10 +755,6 @@ private static final long serialVersionUID = 0L;
 
     private boolean applies_ ;
     /**
-     * <pre>
-     * Whether choosing it changes OTHER resources.
-     * </pre>
-     *
      * <code>bool applies = 104;</code>
      * @return The applies.
      */
@@ -786,10 +763,6 @@ private static final long serialVersionUID = 0L;
       return applies_;
     }
     /**
-     * <pre>
-     * Whether choosing it changes OTHER resources.
-     * </pre>
-     *
      * <code>bool applies = 104;</code>
      * @param value The applies to set.
      * @return This builder for chaining.
@@ -802,10 +775,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Whether choosing it changes OTHER resources.
-     * </pre>
-     *
      * <code>bool applies = 104;</code>
      * @return This builder for chaining.
      */
@@ -818,11 +787,6 @@ private static final long serialVersionUID = 0L;
 
     private boolean dismissal_ ;
     /**
-     * <pre>
-     * Whether the server designates THIS choice as dismissal. Internal: it
-     * decides the resulting status and is never presented to a client.
-     * </pre>
-     *
      * <code>bool dismissal = 105;</code>
      * @return The dismissal.
      */
@@ -831,11 +795,6 @@ private static final long serialVersionUID = 0L;
       return dismissal_;
     }
     /**
-     * <pre>
-     * Whether the server designates THIS choice as dismissal. Internal: it
-     * decides the resulting status and is never presented to a client.
-     * </pre>
-     *
      * <code>bool dismissal = 105;</code>
      * @param value The dismissal to set.
      * @return This builder for chaining.
@@ -848,11 +807,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Whether the server designates THIS choice as dismissal. Internal: it
-     * decides the resulting status and is never presented to a client.
-     * </pre>
-     *
      * <code>bool dismissal = 105;</code>
      * @return This builder for chaining.
      */

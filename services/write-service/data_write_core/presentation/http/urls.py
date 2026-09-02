@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views.actions import ActionResolveView
+from .views.automations import AutomationListView, AutomationResourceView
 from .views.fallback_read import (
     FallbackGoalListView,
     FallbackGoalResourceView,
@@ -39,6 +40,16 @@ from .views.webhooks import (
 )
 
 urlpatterns = [
+    path(
+        "automations",
+        AutomationListView.as_view(),
+        name="automations-list",
+    ),
+    path(
+        "automations/<uuid:automation_id>",
+        AutomationResourceView.as_view(),
+        name="automations-resource",
+    ),
     path(
         "actions/<uuid:action_id>/resolve",
         ActionResolveView.as_view(),

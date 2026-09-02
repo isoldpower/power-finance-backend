@@ -2,15 +2,12 @@ from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
 from django.db.models import Q
+from filter_grammar_py import ComparisonOperator, FieldFilter, FilterFieldPolicy
 
 from ..abstraction import TreeNode
-from ..entities import ComparisonOperator, FieldFilter, FilterFieldPolicy
 
 
 class LeafTreeNode(TreeNode):
-    """A single field comparison. Each concrete subclass binds one
-    ComparisonOperator and knows how to render it for the ORM and for ES."""
-
     operator: ClassVar[ComparisonOperator]
 
     def __init__(self, field_filter: FieldFilter, policy: FilterFieldPolicy) -> None:
@@ -35,8 +32,6 @@ class LeafTreeNode(TreeNode):
 
 
 class RangeLeafTreeNode(LeafTreeNode):
-    """Shared rendering for the ordering operators (gt/gte/lt/lte)."""
-
     query_suffix: ClassVar[str]
     es_operator: ClassVar[str]
 
@@ -48,8 +43,6 @@ class RangeLeafTreeNode(LeafTreeNode):
 
 
 class WildcardLeafTreeNode(LeafTreeNode):
-    """Shared rendering for substring operators (contains/icontains)."""
-
     query_suffix: ClassVar[str]
     case_insensitive: ClassVar[bool]
 

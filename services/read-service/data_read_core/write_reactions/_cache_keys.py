@@ -48,6 +48,10 @@ def get_action_list_version_key(user_id: int) -> str:
     return f"ver:actions:{user_id}"
 
 
+def get_automation_list_version_key(user_id: int) -> str:
+    return f"ver:automations:{user_id}"
+
+
 def get_single_webhook_key(webhook_id: str) -> str:
     return f"read:webhook:{webhook_id}"
 

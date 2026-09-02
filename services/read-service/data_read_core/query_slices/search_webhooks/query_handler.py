@@ -1,4 +1,6 @@
-from data_read_core.shared.filtering import WEBHOOK_FILTER_POLICY, FilterTree
+from filter_grammar_py import WEBHOOK_FILTER_POLICY
+
+from data_read_core.shared.filtering import FilterTree
 from data_read_core.shared.query_results import FetchedRows
 
 from .dtos import SearchWebhooksQuery, WebhookDTO

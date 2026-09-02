@@ -10,6 +10,13 @@ class TransactionType(StrEnum):
 class TransactionOrigin(StrEnum):
     MANUAL = "manual"
     SCANNED = "scanned"
+    AUTOMATION = "automation"
+
+
+CLIENT_ORIGINS: tuple[TransactionOrigin, ...] = (
+    TransactionOrigin.MANUAL,
+    TransactionOrigin.SCANNED,
+)
 
 
 class TransactionMetadata:
@@ -32,3 +39,6 @@ class TransactionMetadata:
         self.evidence_url = evidence_url
         self.origin = origin
         self.chain_id = chain_id
+
+
+TRANSACTION_TYPE_CHOICES: list[str] = [member.value for member in TransactionType]

@@ -189,6 +189,91 @@ services:
       write-redis:
         condition: service_healthy
 
+  write-automation-engine:
+    build:
+      context: ../..
+      dockerfile: services/write-service/Dockerfile
+    image: power-finance/write-service:dev
+    restart: unless-stopped
+    command: ["python", "manage.py", "run_automation_engine"]
+    healthcheck:
+      disable: true
+    environment:
+      DJANGO_SETTINGS_MODULE: write_service.settings.local
+      SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+      DEBUG: "true"
+      ALLOWED_HOSTS: "*"
+
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_OUTBOX_TOPIC: ${KAFKA_OUTBOX_TOPIC:-events.async}
+      KAFKA_AUTOMATION_ENGINE_GROUP_ID: ${KAFKA_AUTOMATION_ENGINE_GROUP_ID:-write-service.automation-engine}
+
+      DATABASE_HOST: postgres-write
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+
+      IMMUDB_HOST: immudb
+      IMMUDB_PORT: 3322
+      IMMUDB_USER: ${IMMUDB_USER:-immudb}
+      IMMUDB_PASSWORD: ${IMMUDB_PASSWORD:-immudb}
+
+      REDIS_HOST: write-redis
+      REDIS_PORT: 6379
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres-write:
+        condition: service_healthy
+      write-migrate:
+        condition: service_completed_successfully
+      immudb:
+        condition: service_started
+      write-redis:
+        condition: service_healthy
+
+  write-automation-scheduler:
+    build:
+      context: ../..
+      dockerfile: services/write-service/Dockerfile
+    image: power-finance/write-service:dev
+    restart: unless-stopped
+    command: ["python", "manage.py", "run_automation_scheduler"]
+    healthcheck:
+      disable: true
+    environment:
+      DJANGO_SETTINGS_MODULE: write_service.settings.local
+      SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+      DEBUG: "true"
+      ALLOWED_HOSTS: "*"
+
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      AUTOMATION_SCHEDULE_INTERVAL_SECONDS: ${AUTOMATION_SCHEDULE_INTERVAL_SECONDS:-300}
+
+      DATABASE_HOST: postgres-write
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+
+      IMMUDB_HOST: immudb
+      IMMUDB_PORT: 3322
+      IMMUDB_USER: ${IMMUDB_USER:-immudb}
+      IMMUDB_PASSWORD: ${IMMUDB_PASSWORD:-immudb}
+
+      REDIS_HOST: write-redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres-write:
+        condition: service_healthy
+      write-migrate:
+        condition: service_completed_successfully
+      immudb:
+        condition: service_started
+      write-redis:
+        condition: service_healthy
+
   write-redis:
     image: redis:7-alpine
     restart: unless-stopped

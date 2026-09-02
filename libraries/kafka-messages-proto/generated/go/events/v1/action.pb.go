@@ -22,7 +22,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Who produced the action. The API's own classification, not the assistant's.
 type ActionSource int32
 
 const (
@@ -72,7 +71,6 @@ func (ActionSource) EnumDescriptor() ([]byte, []int) {
 	return file_action_proto_rawDescGZIP(), []int{0}
 }
 
-// Shares its vocabulary with notification severity on purpose.
 type ActionSeverity int32
 
 const (
@@ -125,9 +123,6 @@ func (ActionSeverity) EnumDescriptor() ([]byte, []int) {
 	return file_action_proto_rawDescGZIP(), []int{1}
 }
 
-// Where an action sits in the queue. `resolved` and `dismissed` are kept apart
-// deliberately: "how often is this recommendation ignored" is not answerable if
-// both collapse to one state.
 type ActionStatus int32
 
 const (
@@ -183,7 +178,6 @@ func (ActionStatus) EnumDescriptor() ([]byte, []int) {
 	return file_action_proto_rawDescGZIP(), []int{2}
 }
 
-// How the client renders a choice. A hint, never behaviour.
 type ResolutionIntent int32
 
 const (
@@ -236,18 +230,13 @@ func (ResolutionIntent) EnumDescriptor() ([]byte, []int) {
 	return file_action_proto_rawDescGZIP(), []int{3}
 }
 
-// One offered choice. The whole point of the Actions shape: a client renders one
-// button per resolution and never switches on `kind` to decide what they say.
 type ActionResolution struct {
-	state        protoimpl.MessageState `protogen:"open.v1"`
-	ResolutionId string                 `protobuf:"bytes,101,opt,name=resolution_id,json=resolutionId,proto3" json:"resolution_id,omitempty"`
-	Label        string                 `protobuf:"bytes,102,opt,name=label,proto3" json:"label,omitempty"`
-	Intent       ResolutionIntent       `protobuf:"varint,103,opt,name=intent,proto3,enum=power_finance.events.v1.ResolutionIntent" json:"intent,omitempty"`
-	// Whether choosing it changes OTHER resources.
-	Applies bool `protobuf:"varint,104,opt,name=applies,proto3" json:"applies,omitempty"`
-	// Whether the server designates THIS choice as dismissal. Internal: it
-	// decides the resulting status and is never presented to a client.
-	Dismissal     bool `protobuf:"varint,105,opt,name=dismissal,proto3" json:"dismissal,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ResolutionId  string                 `protobuf:"bytes,101,opt,name=resolution_id,json=resolutionId,proto3" json:"resolution_id,omitempty"`
+	Label         string                 `protobuf:"bytes,102,opt,name=label,proto3" json:"label,omitempty"`
+	Intent        ResolutionIntent       `protobuf:"varint,103,opt,name=intent,proto3,enum=power_finance.events.v1.ResolutionIntent" json:"intent,omitempty"`
+	Applies       bool                   `protobuf:"varint,104,opt,name=applies,proto3" json:"applies,omitempty"`
+	Dismissal     bool                   `protobuf:"varint,105,opt,name=dismissal,proto3" json:"dismissal,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -326,27 +315,22 @@ type ActionRaised struct {
 	UserExternalId string                 `protobuf:"bytes,102,opt,name=user_external_id,json=userExternalId,proto3" json:"user_external_id,omitempty"`
 	UserId         int32                  `protobuf:"varint,103,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Source         ActionSource           `protobuf:"varint,104,opt,name=source,proto3,enum=power_finance.events.v1.ActionSource" json:"source,omitempty"`
-	// An OPEN vocabulary that grows whenever the assistant learns to recognise
-	// something new. Never enumerated.
-	Kind        string         `protobuf:"bytes,105,opt,name=kind,proto3" json:"kind,omitempty"`
-	Severity    ActionSeverity `protobuf:"varint,106,opt,name=severity,proto3,enum=power_finance.events.v1.ActionSeverity" json:"severity,omitempty"`
-	Title       string         `protobuf:"bytes,107,opt,name=title,proto3" json:"title,omitempty"`
-	Body        string         `protobuf:"bytes,108,opt,name=body,proto3" json:"body,omitempty"`
-	SubjectType string         `protobuf:"bytes,109,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
-	SubjectId   string         `protobuf:"bytes,110,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
-	// The amount at stake, in the currency the action concerns. NOT converted to
-	// any reporting currency — this is not Metrics. Empty when not about money.
-	MoneyAmount   string `protobuf:"bytes,111,opt,name=money_amount,json=moneyAmount,proto3" json:"money_amount,omitempty"`
-	MoneyCurrency string `protobuf:"bytes,112,opt,name=money_currency,json=moneyCurrency,proto3" json:"money_currency,omitempty"`
-	// Collapses recurring conditions onto one row. Empty when it does not recur.
-	GroupKey      string                 `protobuf:"bytes,113,opt,name=group_key,json=groupKey,proto3" json:"group_key,omitempty"`
-	Occurrences   int32                  `protobuf:"varint,114,opt,name=occurrences,proto3" json:"occurrences,omitempty"`
-	LastSeenAt    *timestamppb.Timestamp `protobuf:"bytes,115,opt,name=last_seen_at,json=lastSeenAt,proto3" json:"last_seen_at,omitempty"`
-	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,116,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	Resolutions   []*ActionResolution    `protobuf:"bytes,117,rep,name=resolutions,proto3" json:"resolutions,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Kind           string                 `protobuf:"bytes,105,opt,name=kind,proto3" json:"kind,omitempty"`
+	Severity       ActionSeverity         `protobuf:"varint,106,opt,name=severity,proto3,enum=power_finance.events.v1.ActionSeverity" json:"severity,omitempty"`
+	Title          string                 `protobuf:"bytes,107,opt,name=title,proto3" json:"title,omitempty"`
+	Body           string                 `protobuf:"bytes,108,opt,name=body,proto3" json:"body,omitempty"`
+	SubjectType    string                 `protobuf:"bytes,109,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
+	SubjectId      string                 `protobuf:"bytes,110,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	MoneyAmount    string                 `protobuf:"bytes,111,opt,name=money_amount,json=moneyAmount,proto3" json:"money_amount,omitempty"`
+	MoneyCurrency  string                 `protobuf:"bytes,112,opt,name=money_currency,json=moneyCurrency,proto3" json:"money_currency,omitempty"`
+	GroupKey       string                 `protobuf:"bytes,113,opt,name=group_key,json=groupKey,proto3" json:"group_key,omitempty"`
+	Occurrences    int32                  `protobuf:"varint,114,opt,name=occurrences,proto3" json:"occurrences,omitempty"`
+	LastSeenAt     *timestamppb.Timestamp `protobuf:"bytes,115,opt,name=last_seen_at,json=lastSeenAt,proto3" json:"last_seen_at,omitempty"`
+	ExpiresAt      *timestamppb.Timestamp `protobuf:"bytes,116,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	Resolutions    []*ActionResolution    `protobuf:"bytes,117,rep,name=resolutions,proto3" json:"resolutions,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ActionRaised) Reset() {
@@ -534,13 +518,12 @@ type ActionResolved struct {
 	ActionId       string                 `protobuf:"bytes,101,opt,name=action_id,json=actionId,proto3" json:"action_id,omitempty"`
 	UserExternalId string                 `protobuf:"bytes,102,opt,name=user_external_id,json=userExternalId,proto3" json:"user_external_id,omitempty"`
 	UserId         int32                  `protobuf:"varint,103,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// `resolved`, `dismissed` or `expired` — never `pending`.
-	Status        ActionStatus           `protobuf:"varint,104,opt,name=status,proto3,enum=power_finance.events.v1.ActionStatus" json:"status,omitempty"`
-	ResolutionId  string                 `protobuf:"bytes,105,opt,name=resolution_id,json=resolutionId,proto3" json:"resolution_id,omitempty"`
-	ResolvedAt    *timestamppb.Timestamp `protobuf:"bytes,106,opt,name=resolved_at,json=resolvedAt,proto3" json:"resolved_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Status         ActionStatus           `protobuf:"varint,104,opt,name=status,proto3,enum=power_finance.events.v1.ActionStatus" json:"status,omitempty"`
+	ResolutionId   string                 `protobuf:"bytes,105,opt,name=resolution_id,json=resolutionId,proto3" json:"resolution_id,omitempty"`
+	ResolvedAt     *timestamppb.Timestamp `protobuf:"bytes,106,opt,name=resolved_at,json=resolvedAt,proto3" json:"resolved_at,omitempty"`
+	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,120,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ActionResolved) Reset() {

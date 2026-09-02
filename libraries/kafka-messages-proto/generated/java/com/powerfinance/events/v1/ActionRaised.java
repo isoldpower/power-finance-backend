@@ -250,11 +250,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object kind_ = "";
   /**
-   * <pre>
-   * An OPEN vocabulary that grows whenever the assistant learns to recognise
-   * something new. Never enumerated.
-   * </pre>
-   *
    * <code>string kind = 105;</code>
    * @return The kind.
    */
@@ -272,11 +267,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * An OPEN vocabulary that grows whenever the assistant learns to recognise
-   * something new. Never enumerated.
-   * </pre>
-   *
    * <code>string kind = 105;</code>
    * @return The bytes for kind.
    */
@@ -473,11 +463,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object moneyAmount_ = "";
   /**
-   * <pre>
-   * The amount at stake, in the currency the action concerns. NOT converted to
-   * any reporting currency — this is not Metrics. Empty when not about money.
-   * </pre>
-   *
    * <code>string money_amount = 111;</code>
    * @return The moneyAmount.
    */
@@ -495,11 +480,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * The amount at stake, in the currency the action concerns. NOT converted to
-   * any reporting currency — this is not Metrics. Empty when not about money.
-   * </pre>
-   *
    * <code>string money_amount = 111;</code>
    * @return The bytes for moneyAmount.
    */
@@ -561,10 +541,6 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object groupKey_ = "";
   /**
-   * <pre>
-   * Collapses recurring conditions onto one row. Empty when it does not recur.
-   * </pre>
-   *
    * <code>string group_key = 113;</code>
    * @return The groupKey.
    */
@@ -582,10 +558,6 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <pre>
-   * Collapses recurring conditions onto one row. Empty when it does not recur.
-   * </pre>
-   *
    * <code>string group_key = 113;</code>
    * @return The bytes for groupKey.
    */
@@ -2073,11 +2045,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object kind_ = "";
     /**
-     * <pre>
-     * An OPEN vocabulary that grows whenever the assistant learns to recognise
-     * something new. Never enumerated.
-     * </pre>
-     *
      * <code>string kind = 105;</code>
      * @return The kind.
      */
@@ -2094,11 +2061,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * An OPEN vocabulary that grows whenever the assistant learns to recognise
-     * something new. Never enumerated.
-     * </pre>
-     *
      * <code>string kind = 105;</code>
      * @return The bytes for kind.
      */
@@ -2116,11 +2078,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * An OPEN vocabulary that grows whenever the assistant learns to recognise
-     * something new. Never enumerated.
-     * </pre>
-     *
      * <code>string kind = 105;</code>
      * @param value The kind to set.
      * @return This builder for chaining.
@@ -2134,11 +2091,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * An OPEN vocabulary that grows whenever the assistant learns to recognise
-     * something new. Never enumerated.
-     * </pre>
-     *
      * <code>string kind = 105;</code>
      * @return This builder for chaining.
      */
@@ -2149,11 +2101,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * An OPEN vocabulary that grows whenever the assistant learns to recognise
-     * something new. Never enumerated.
-     * </pre>
-     *
      * <code>string kind = 105;</code>
      * @param value The bytes for kind to set.
      * @return This builder for chaining.
@@ -2510,11 +2457,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object moneyAmount_ = "";
     /**
-     * <pre>
-     * The amount at stake, in the currency the action concerns. NOT converted to
-     * any reporting currency — this is not Metrics. Empty when not about money.
-     * </pre>
-     *
      * <code>string money_amount = 111;</code>
      * @return The moneyAmount.
      */
@@ -2531,11 +2473,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The amount at stake, in the currency the action concerns. NOT converted to
-     * any reporting currency — this is not Metrics. Empty when not about money.
-     * </pre>
-     *
      * <code>string money_amount = 111;</code>
      * @return The bytes for moneyAmount.
      */
@@ -2553,11 +2490,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * The amount at stake, in the currency the action concerns. NOT converted to
-     * any reporting currency — this is not Metrics. Empty when not about money.
-     * </pre>
-     *
      * <code>string money_amount = 111;</code>
      * @param value The moneyAmount to set.
      * @return This builder for chaining.
@@ -2571,11 +2503,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The amount at stake, in the currency the action concerns. NOT converted to
-     * any reporting currency — this is not Metrics. Empty when not about money.
-     * </pre>
-     *
      * <code>string money_amount = 111;</code>
      * @return This builder for chaining.
      */
@@ -2586,11 +2513,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * The amount at stake, in the currency the action concerns. NOT converted to
-     * any reporting currency — this is not Metrics. Empty when not about money.
-     * </pre>
-     *
      * <code>string money_amount = 111;</code>
      * @param value The bytes for moneyAmount to set.
      * @return This builder for chaining.
@@ -2679,10 +2601,6 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object groupKey_ = "";
     /**
-     * <pre>
-     * Collapses recurring conditions onto one row. Empty when it does not recur.
-     * </pre>
-     *
      * <code>string group_key = 113;</code>
      * @return The groupKey.
      */
@@ -2699,10 +2617,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Collapses recurring conditions onto one row. Empty when it does not recur.
-     * </pre>
-     *
      * <code>string group_key = 113;</code>
      * @return The bytes for groupKey.
      */
@@ -2720,10 +2634,6 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <pre>
-     * Collapses recurring conditions onto one row. Empty when it does not recur.
-     * </pre>
-     *
      * <code>string group_key = 113;</code>
      * @param value The groupKey to set.
      * @return This builder for chaining.
@@ -2737,10 +2647,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Collapses recurring conditions onto one row. Empty when it does not recur.
-     * </pre>
-     *
      * <code>string group_key = 113;</code>
      * @return This builder for chaining.
      */
@@ -2751,10 +2657,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Collapses recurring conditions onto one row. Empty when it does not recur.
-     * </pre>
-     *
      * <code>string group_key = 113;</code>
      * @param value The bytes for groupKey to set.
      * @return This builder for chaining.

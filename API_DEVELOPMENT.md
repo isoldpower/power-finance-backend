@@ -56,6 +56,12 @@ user-created labels later.
 ## Actions
 Specified in the target doc. What was left out:
 
+- **Nothing raises a time-triggered action yet.** The producer plumbing is built and running — the
+  `group_key` collapse, the expiry sweep, and `RaiseActionCommand` as the seam a scheduled job would
+  call. What is missing is a CONDITION to check. The target's own example is "a subscription
+  charging tomorrow against a wallet that cannot cover it", and this system models neither
+  subscriptions nor recurring charges, so there is nothing to schedule a check against. Modelling
+  recurring charges is the prerequisite and is a slice of its own, not a piece of Actions;
 - **Bulk resolve.** Answering the whole queue in one request. Straightforward, but wants a decision
   about partial failure — all-or-nothing, or per-item results in the response;
 - **Undo.** Resolving with `applies: true` moves real data and there is no way back except doing the
@@ -86,7 +92,11 @@ Specified in the target doc. What was left out:
   producer floods the feed. Worth revisiting once real producers exist rather than guessing at it;
 
 ## Automations
-Specified in the target doc. What was left out:
+Specified in the target doc, and built. The run ledger that makes a run happen
+once — `automation_runs` — grows a row per rule per subject and has **no
+retention policy**; that is the one piece of this slice that will need attention
+before it is long-lived, and it is the same table a run-history endpoint would
+be served from. What was left out:
 
 - **Dry run.** "How many transactions would this match?" before saving. The single most useful thing
   missing — a rule the user cannot test is a rule they are guessing at. Cheap to build, since the
@@ -96,9 +106,10 @@ Specified in the target doc. What was left out:
 - **Backfill.** Applying a new rule to existing data. Deliberately excluded — it is a bulk mutation
   driven by a rule the user has never seen run, and it needs an undo story before it needs an
   endpoint;
-- **Run history.** `last_run_at` and `runs` are counters with no detail behind them. A
-  `GET /automations/{id}/runs` listing what matched and what each effect did is what makes a
-  misbehaving rule debuggable. Wants a retention policy;
+- **Run history.** `last_run_at` and `runs` are counters, and the ledger behind them records only
+  THAT a rule ran on a subject, not what each effect did. A `GET /automations/{id}/runs` is most of
+  the way there — it wants the per-effect outcome stored alongside the claim, and the retention
+  policy that table needs anyway;
 - **Explicit priority.** Evaluation order is `created_at ASC` and last-write-wins, which is
   predictable but not controllable. A `priority` field would let the user order rules directly;
 - **Richer effects.** `set_category` is the only field-setting effect. Setting a wallet, adding a

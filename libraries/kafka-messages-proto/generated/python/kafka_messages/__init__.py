@@ -17,6 +17,14 @@ from .action_pb2 import (
     ActionStatus,
     ResolutionIntent,
 )
+from .automation_pb2 import (
+    AutomationCreated,
+    AutomationDeleted,
+    AutomationEffect,
+    AutomationRan,
+    AutomationTrigger,
+    AutomationUpdated,
+)
 from .envelope_pb2 import EventEnvelope
 from .goal_pb2 import (
     GoalCreated,
@@ -71,6 +79,12 @@ __all__ = [
     "ActionSeverity",
     "ActionSource",
     "ActionStatus",
+    "AutomationCreated",
+    "AutomationDeleted",
+    "AutomationEffect",
+    "AutomationRan",
+    "AutomationTrigger",
+    "AutomationUpdated",
     "EventEnvelope",
     "GoalCreated",
     "GoalDeleted",

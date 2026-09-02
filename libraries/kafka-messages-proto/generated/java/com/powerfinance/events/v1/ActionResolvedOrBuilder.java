@@ -74,19 +74,11 @@ public interface ActionResolvedOrBuilder extends
   int getUserId();
 
   /**
-   * <pre>
-   * `resolved`, `dismissed` or `expired` — never `pending`.
-   * </pre>
-   *
    * <code>.power_finance.events.v1.ActionStatus status = 104;</code>
    * @return The enum numeric value on the wire for status.
    */
   int getStatusValue();
   /**
-   * <pre>
-   * `resolved`, `dismissed` or `expired` — never `pending`.
-   * </pre>
-   *
    * <code>.power_finance.events.v1.ActionStatus status = 104;</code>
    * @return The status.
    */
