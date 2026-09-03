@@ -212,6 +212,15 @@ services:
         strip_path: false
         preserve_host: false
         methods: [GET, OPTIONS]
+      # The conversation's REST edge. A longer path than read-service's bare
+      # /api/v1, which is what stops the history being served by a projection
+      # that does not have it — the messages live in this service's Postgres.
+      - name: assistant-rest
+        paths:
+          - /api/v1/assistant
+        strip_path: false
+        preserve_host: false
+        methods: [GET, DELETE, OPTIONS]
     plugins:
       - name: clerk-jwt
         config:

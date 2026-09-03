@@ -12,6 +12,7 @@ from .envelope_serializers import (
     ErrorResponseSerializer,
     ResourceMetaSerializer,
     collection_response,
+    empty_meta_field,
     resource_response,
 )
 from .money_serializers import MoneySerializer
@@ -26,6 +27,7 @@ from .transaction_serializers import (
 )
 
 __all__ = [
+    "empty_meta_field",
     "CURSOR_PARAMETER",
     "LIMIT_PARAMETER",
     "AsyncAPIView",

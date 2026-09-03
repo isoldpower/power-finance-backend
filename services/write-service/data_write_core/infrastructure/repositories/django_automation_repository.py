@@ -3,6 +3,7 @@ from uuid import UUID
 
 from django.db import IntegrityError
 from django.db.models import F
+from write_service.common.pagination import PageRequest, apply_keyset
 
 from data_write_core.application.interfaces import AutomationRepository
 from data_write_core.domain.entities import AutomationEntity
@@ -25,6 +26,32 @@ class DjangoAutomationRepository(AutomationRepository):
         await stored.asave()
 
         return AutomationMapper.to_domain(stored)
+
+    def _owned_queryset(self, user_id: int, enabled: bool | None):
+        """Soft-deleted rules are gone from the read projection, so they must be
+        gone here too — otherwise the fallback would resurrect them."""
+
+        queryset = AutomationModel.objects.filter(
+            user_id=user_id,
+            deleted_at__isnull=True,
+        )
+        if enabled is not None:
+            queryset = queryset.filter(enabled=enabled)
+
+        return queryset
+
+    async def list_user_automations(
+        self,
+        user_id: int,
+        page: PageRequest,
+        enabled: bool | None,
+    ) -> list[AutomationEntity]:
+        queryset = apply_keyset(self._owned_queryset(user_id, enabled), page)
+
+        return [AutomationMapper.to_domain(row) async for row in queryset]
+
+    async def count_user_automations(self, user_id: int, enabled: bool | None) -> int:
+        return await self._owned_queryset(user_id, enabled).acount()
 
     async def get_user_automation_by_id(
         self,

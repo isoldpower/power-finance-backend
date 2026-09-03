@@ -5,7 +5,7 @@ exist, a field spelled differently, a status code the target does not mention, o
 a behaviour a client has to code around. Internal decisions that a caller cannot
 observe are deliberately not listed.
 
-Current as of Phase 10 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
+Current as of Phase 11 of [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md). The
 conventions (envelope, cursors, money strings, timestamps, idempotency, filter
 grammar, rate limits, `Read-At-Least`) are implemented as documented — the
 differences below are on top of that.
@@ -47,10 +47,8 @@ says.
 | `GET /automations`, `GET /automations/{id}`                                                                 | `enabled` filter               |
 | `POST /automations`, `PATCH /automations/{id}`, `DELETE /automations/{id}`                                  | rules run; see below           |
 
-Not built yet. A request to any of these gets a plain 404 with NO error envelope —
-nothing routes them, so no handler shapes the failure:
-
-- the whole **Assistant** slice.
+Everything in API_TARGET.md is now routed. The one path that does NOT exist is
+`POST /assistant/messages` — see Assistant below for what replaces it.
 
 ## Resource shapes
 
@@ -618,6 +616,59 @@ BREAKING change from the previous release and every point below is new:
   five documented values and a sixth is a 422; `next_attempt_at` and
   `last_error` are `null` on a finished delivery rather than blank.
 
+### Assistant
+**Sending a message is a WebSocket, not `POST /assistant/messages`.** That path
+does not exist and never will in v1; a request to it gets a plain 404 with no
+error envelope. Open `GET /api/v1/chat/advice` instead — the same socket that
+was already there — and send `{"text": "..."}`.
+
+The reply comes back as frames shaped `{"event": ..., "data": {...}}`, carrying
+the target's own event names and in the target's order:
+
+| event      | `data`                                                        |
+|------------|----------------------------------------------------------------|
+| `accepted` | `{user_message_id, message_id}` — both messages are persisted  |
+| `delta`    | `{text}` — an increment. Concatenate in arrival order          |
+| `message`  | the finished message, with `refs`. Replaces the accumulated text |
+| `error`    | `{code, message, message_id}`. Terminal for the turn           |
+
+Everything the target promises about that exchange holds: `accepted` arrives
+before any generation so a client that drops immediately still knows both ids;
+`delta` carries text only; the terminal `message` repeats the full text because
+`refs` are not known until the end; and the reply is persisted whether or not
+you are still listening, so a dropped connection means refetching
+`GET /assistant/messages`, never re-sending.
+
+What differs beyond the transport:
+
+- **the socket stays open after a turn.** `error` is terminal for that reply,
+  not for the connection — send another `{"text": ...}` and the conversation
+  carries on. A frame no handler understands closes the socket with 1003;
+- **`Idempotency-Key` is not supported here.** A WebSocket frame carries no
+  headers. Send a message twice and you get two turns;
+- **there is no stricter rate-limit tier on sending.** The gateway limits the
+  handshake, not the frames;
+- **`assistant_unavailable` is an `error` frame code, not a 503.** There is no
+  HTTP response to put a status on;
+- **the reply is canned.** No model is wired: the assistant answers
+  `"Received message: {your text}"`, streamed as several deltas. `refs` are
+  still real — any transaction or account id that appears in the reply and
+  belongs to you comes back as a chip, so the citation path is live even though
+  the wording is not;
+- **`GET /assistant/messages` has no `meta.cached`.** It is not cached;
+- **`GET /assistant/overview` carries `meta.cached`, but the cache is per
+  server process**, not shared. Two requests seconds apart can both report
+  `cached: false` if they land on different replicas;
+- **`signals` are three fixed labels** — `Spend vs last month`, `Uncategorised`,
+  `Recorded this month` — not the target's examples. `value` is preformatted
+  display text exactly as documented and must not be parsed: it can read
+  `+38%`, `no baseline yet`, `nothing yet` or `3 transactions`. The spend
+  comparison is computed within a single currency and the months are calendar
+  months in UTC, not in your timezone preference;
+- **`prompts` adapt slightly** — you get a "still need a category" suggestion
+  when you have uncategorised transactions, and a "record your first
+  transaction" one when the ledger is empty.
+
 ## Currencies and rates
 
 - **`GET /currencies/rates/{currency-code}` takes `target` in either spelling.**
@@ -691,6 +742,15 @@ BREAKING change from the previous release and every point below is new:
 
 ## Behaviour
 
+- **A stale read can return a spurious 404 on three endpoints.** The gateway
+  re-routes a stale read to the write side, and that now works for wallets,
+  transactions, goals, notifications (list, detail AND count), webhooks,
+  actions and automations. It does NOT work for `GET /accounts`,
+  `GET /accounts/{account-id}` and `GET /metrics` — there is no write-side copy
+  of those, so the reroute lands on a path that does not exist and you get a
+  **404 with no error envelope** for a resource that is really there. It is
+  transient: the projection catches up within moments of a write. Retry rather
+  than treating it as a missing resource, and do not cache the 404;
 - **A stale `/search` can return 507.** `POST /{resource}/search` is the one read
   the gateway cannot transparently re-route when the read side is behind the
   caller's write version, because the write side has no search. The target says

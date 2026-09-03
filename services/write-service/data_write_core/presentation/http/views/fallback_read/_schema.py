@@ -2,6 +2,8 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter
 from write_service.common.timestamps import DEFAULT_PERIOD, Period
 
+from data_write_core.domain.entities import ActionSeverity, ActionSource, ActionStatus
+
 LIMIT_PARAMETER = OpenApiParameter(
     "limit",
     type=OpenApiTypes.INT,
@@ -25,6 +27,33 @@ ENABLED_PARAMETER = OpenApiParameter(
         "Restrict to enabled or disabled endpoints. ABSENT means both — it is "
         "a tristate, not a boolean defaulting to either value."
     ),
+)
+
+
+STATUS_PARAMETER = OpenApiParameter(
+    "status",
+    type=OpenApiTypes.STR,
+    location=OpenApiParameter.QUERY,
+    enum=[member.value for member in ActionStatus],
+    description="Which queue state to list. Defaults to `pending`.",
+)
+
+
+SOURCE_PARAMETER = OpenApiParameter(
+    "source",
+    type=OpenApiTypes.STR,
+    location=OpenApiParameter.QUERY,
+    enum=[member.value for member in ActionSource],
+    description="Restrict to one producer. Absent means both.",
+)
+
+
+SEVERITY_PARAMETER = OpenApiParameter(
+    "severity",
+    type=OpenApiTypes.STR,
+    location=OpenApiParameter.QUERY,
+    enum=[member.value for member in ActionSeverity],
+    description="Restrict to one severity. Absent means all of them.",
 )
 
 

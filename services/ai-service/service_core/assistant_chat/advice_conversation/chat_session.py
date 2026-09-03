@@ -2,6 +2,8 @@ import asyncio
 from contextlib import suppress
 from typing import cast
 
+from service_core.shared.logging import get_service_logger
+
 from .contracts import (
     ChatTransport,
     ConnectionContext,
@@ -13,6 +15,8 @@ from .exceptions import (
     MalformedFrameError,
 )
 from .message_router import MessageRouter
+
+logger = get_service_logger("assistant_chat")
 
 
 class ChatSession:
@@ -52,14 +56,14 @@ class ChatSession:
 
                 if not routed_replies.claimed:
                     return Termination.unroutable_message()
-            except ClientDisconnectedError:
-                return Termination.client_disconnected()
 
-            try:
-                for reply in routed_replies.replies:
-                    await self._transport.send(reply)
+                async for frame in routed_replies.frames:
+                    await self._transport.send(frame)
             except ClientDisconnectedError:
                 return Termination.client_disconnected()
+            except Exception:
+                logger.exception("chat handler failed while answering")
+                return Termination.handler_failed()
 
     async def _receive_or_terminate(self) -> tuple[dict | Termination, bool]:
         receiving = asyncio.ensure_future(self._transport.receive())

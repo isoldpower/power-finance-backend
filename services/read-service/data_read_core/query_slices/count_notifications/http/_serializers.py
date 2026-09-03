@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from data_read_core.shared.rest_framework import empty_meta_field
+
 
 class NotificationCountsSerializer(serializers.Serializer):
     unacknowledged = serializers.IntegerField(help_text="The badge.")
@@ -8,12 +10,7 @@ class NotificationCountsSerializer(serializers.Serializer):
     )
 
 
-class EmptyMetaSerializer(serializers.Serializer):
-    """The target shows `"meta": {}` here — not paginated, not cached."""
-
-    pass
-
-
 class EnvelopedNotificationCountsSerializer(serializers.Serializer):
     data = NotificationCountsSerializer()
-    meta = EmptyMetaSerializer()
+    # The target shows `"meta": {}` here — not paginated, not cached.
+    meta = empty_meta_field()

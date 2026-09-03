@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from data_write_core.infrastructure.messaging import SEVERITIES
 
-from .envelope import collection_response, resource_response
+from .envelope import collection_response, empty_meta_field, resource_response
 
 
 class NotificationSubjectSerializer(serializers.Serializer):
@@ -40,3 +40,15 @@ class NotificationResponseSerializer(serializers.Serializer):
 
 EnvelopedNotificationResponseSerializer = resource_response(NotificationResponseSerializer)
 PaginatedNotificationResponseSerializer = collection_response(NotificationResponseSerializer)
+
+
+class NotificationCountsResponseSerializer(serializers.Serializer):
+    unacknowledged = serializers.IntegerField(help_text="The badge.")
+    total = serializers.IntegerField(
+        help_text="Every notification the user has, acknowledged or not.",
+    )
+
+
+class EnvelopedNotificationCountsResponseSerializer(serializers.Serializer):
+    data = NotificationCountsResponseSerializer()
+    meta = empty_meta_field()

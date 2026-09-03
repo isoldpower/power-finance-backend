@@ -1,18 +1,17 @@
 package http
 
 import (
+	"services/webhook-service/webhook_service/presentation/http/contract"
 	"time"
 
 	"services/webhook-service/webhook_service/types"
 )
 
-// presentDelivery renders one log row. The stored PAYLOAD is deliberately
-// absent: a delivery record answers "was it sent and what came back", not
-// "what did it say", and echoing it would double the size of every page.
+// presentDelivery renders one log row.
 func presentDelivery(delivery types.Delivery) map[string]any {
 	return map[string]any{
 		"id":              delivery.ID,
-		"created_at":      delivery.CreatedAt.Format(isoLayout),
+		"created_at":      delivery.CreatedAt.Format(contract.IsoLayout),
 		"updated_at":      optionalTime(&delivery.UpdatedAt),
 		"webhook_id":      delivery.WebhookID,
 		"event_id":        delivery.EventID,
@@ -39,7 +38,7 @@ func optionalTime(moment *time.Time) any {
 		return nil
 	}
 
-	return moment.Format(isoLayout)
+	return moment.Format(contract.IsoLayout)
 }
 
 func optionalText(value string) any {

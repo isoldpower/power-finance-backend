@@ -1,4 +1,4 @@
-package http
+package contract
 
 import (
 	"encoding/json"
@@ -7,21 +7,19 @@ import (
 	"time"
 )
 
-// The response envelope every service in this API shares: a success carries
-// `data` + `meta`, a failure carries `error` + `meta`.
-type envelope struct {
+type Envelope struct {
 	Data  any            `json:"data,omitempty"`
-	Error *errorBody     `json:"error,omitempty"`
+	Error *ErrorBody     `json:"error,omitempty"`
 	Meta  map[string]any `json:"meta"`
 }
 
-type errorBody struct {
+type ErrorBody struct {
 	Code    string        `json:"code"`
 	Message string        `json:"message"`
-	Details []errorDetail `json:"details,omitempty"`
+	Details []ErrorDetail `json:"details,omitempty"`
 }
 
-type errorDetail struct {
+type ErrorDetail struct {
 	Field   string `json:"field"`
 	Code    string `json:"code"`
 	Message string `json:"message"`
@@ -29,32 +27,32 @@ type errorDetail struct {
 
 const correlationHeader = "X-Correlation-ID"
 
-func writeOK(writer http.ResponseWriter, data any, meta map[string]any) {
+func WriteOK(writer http.ResponseWriter, data any, meta map[string]any) {
 	if meta == nil {
 		meta = map[string]any{}
 	}
 
-	writeJSON(writer, http.StatusOK, envelope{Data: data, Meta: meta})
+	writeJSON(writer, http.StatusOK, Envelope{Data: data, Meta: meta})
 }
 
-func writeError(
+func WriteError(
 	writer http.ResponseWriter,
 	request *http.Request,
 	status int,
 	code string,
 	message string,
-	details ...errorDetail,
+	details ...ErrorDetail,
 ) {
-	writeJSON(writer, status, envelope{
-		Error: &errorBody{Code: code, Message: message, Details: details},
+	writeJSON(writer, status, Envelope{
+		Error: &ErrorBody{Code: code, Message: message, Details: details},
 		Meta: map[string]any{
 			"request_id": request.Header.Get(correlationHeader),
-			"timestamp":  time.Now().UTC().Format(isoLayout),
+			"timestamp":  time.Now().UTC().Format(IsoLayout),
 		},
 	})
 }
 
-func writeJSON(writer http.ResponseWriter, status int, body envelope) {
+func writeJSON(writer http.ResponseWriter, status int, body Envelope) {
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(status)
 

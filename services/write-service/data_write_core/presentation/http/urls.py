@@ -3,8 +3,12 @@ from django.urls import path
 from .views.actions import ActionResolveView
 from .views.automations import AutomationListView, AutomationResourceView
 from .views.fallback_read import (
+    FallbackActionListView,
+    FallbackAutomationListView,
+    FallbackAutomationResourceView,
     FallbackGoalListView,
     FallbackGoalResourceView,
+    FallbackNotificationCountView,
     FallbackNotificationListView,
     FallbackNotificationResourceView,
     FallbackTransactionListView,
@@ -186,9 +190,29 @@ urlpatterns = [
         name="fallback-webhooks-event-list",
     ),
     path(
+        "fallback-reads/actions",
+        FallbackActionListView.as_view(),
+        name="fallback-actions-list",
+    ),
+    path(
+        "fallback-reads/automations",
+        FallbackAutomationListView.as_view(),
+        name="fallback-automations-list",
+    ),
+    path(
+        "fallback-reads/automations/<uuid:automation_id>",
+        FallbackAutomationResourceView.as_view(),
+        name="fallback-automations-resource",
+    ),
+    path(
         "fallback-reads/notifications",
         FallbackNotificationListView.as_view(),
         name="fallback-notifications-list",
+    ),
+    path(
+        "fallback-reads/notifications/count",
+        FallbackNotificationCountView.as_view(),
+        name="fallback-notifications-count",
     ),
     path(
         "fallback-reads/notifications/<uuid:notification_id>",

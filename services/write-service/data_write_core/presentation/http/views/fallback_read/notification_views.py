@@ -3,6 +3,8 @@ from write_service.common.http_contract import ok
 from write_service.common.pagination import CREATED_AT_DESC, PageRequest, build_page
 
 from data_write_core.application.queries import (
+    CountFallbackNotificationsQuery,
+    CountFallbackNotificationsQueryHandler,
     GetFallbackNotificationQuery,
     GetFallbackNotificationQueryHandler,
     ListFallbackNotificationsQuery,
@@ -11,11 +13,16 @@ from data_write_core.application.queries import (
 
 from ...decorators import trace_handler_flow
 from ...serializers import (
+    EnvelopedNotificationCountsResponseSerializer,
     EnvelopedNotificationResponseSerializer,
     ErrorResponseSerializer,
     PaginatedNotificationResponseSerializer,
 )
-from ._presenters import present_notification, present_notifications
+from ._presenters import (
+    present_notification,
+    present_notification_counts,
+    present_notifications,
+)
 from ._schema import CURSOR_PARAMETER, LIMIT_PARAMETER, resource_id_parameter
 from .base import FallbackReadView
 
@@ -74,3 +81,29 @@ class FallbackNotificationResourceView(FallbackReadView):
             present_notification(notification),
             {"cached": False},
         )
+
+
+class FallbackNotificationCountView(FallbackReadView):
+    """The bell badge. It is routed BEFORE the resource view, which would
+    otherwise not match `count` at all — the resource path takes a UUID — but
+    the ordering is what keeps that true if the resource path ever loosens."""
+
+    @extend_schema(
+        operation_id="fallback_notifications_count",
+        summary="Count unacknowledged notifications (consistent fallback)",
+        description=(
+            "Always-consistent badge counts served from the write side. "
+            "The gateway routes here when the Read Service is not caught up."
+        ),
+        responses={
+            200: EnvelopedNotificationCountsResponseSerializer,
+            401: ErrorResponseSerializer,
+        },
+    )
+    @trace_handler_flow
+    async def get(self, request):
+        counts = await CountFallbackNotificationsQueryHandler().handle(
+            CountFallbackNotificationsQuery(user_id=int(request.user.unique_id))
+        )
+
+        return ok(present_notification_counts(counts), {})

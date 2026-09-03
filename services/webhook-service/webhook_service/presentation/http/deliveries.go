@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"services/webhook-service/webhook_service/presentation/http/contract"
 	"strconv"
 	"strings"
 
@@ -33,7 +34,7 @@ type deliveryLogReader interface {
 func (s *Server) handleDeliveryLog(writer http.ResponseWriter, request *http.Request) {
 	userExternalID, authenticated := authenticatedUserID(request)
 	if !authenticated {
-		writeError(
+		contract.WriteError(
 			writer,
 			request,
 			http.StatusUnauthorized,
@@ -42,8 +43,15 @@ func (s *Server) handleDeliveryLog(writer http.ResponseWriter, request *http.Req
 		)
 		return
 	}
+
 	if s.deliveryLog == nil {
-		writeError(writer, request, http.StatusServiceUnavailable, "service_unavailable", "Delivery log is unavailable.")
+		contract.WriteError(
+			writer,
+			request,
+			http.StatusServiceUnavailable,
+			"service_unavailable",
+			"Delivery log is unavailable.",
+		)
 		return
 	}
 
@@ -55,17 +63,31 @@ func (s *Server) handleDeliveryLog(writer http.ResponseWriter, request *http.Req
 
 	page, listErr := s.deliveryLog.List(request.Context(), query)
 	if errors.Is(listErr, services.ErrWebhookNotFound) {
-		writeError(writer, request, http.StatusNotFound, "not_found", "Webhook not found.")
+		contract.WriteError(
+			writer,
+			request,
+			http.StatusNotFound,
+			"not_found",
+			"Webhook not found.",
+		)
+
 		return
 	}
 	if listErr != nil {
 		slog.Error("delivery log query failed", "webhook_id", query.WebhookID, "error", listErr)
-		writeError(writer, request, http.StatusInternalServerError, "internal_error", "Could not read the delivery log.")
+		contract.WriteError(
+			writer,
+			request,
+			http.StatusInternalServerError,
+			"internal_error",
+			"Could not read the delivery log.",
+		)
+
 		return
 	}
 
 	rows, nextCursor, previousCursor := paginate(page.Rows, query)
-	writeOK(writer, presentDeliveries(rows), map[string]any{
+	contract.WriteOK(writer, presentDeliveries(rows), map[string]any{
 		"limit":       query.Limit,
 		"total":       page.Total,
 		"next_cursor": nextCursor,
@@ -89,17 +111,23 @@ func (e validationError) Error() string {
 func writeValidationError(writer http.ResponseWriter, request *http.Request, err error) {
 	var failure validationError
 	if !errors.As(err, &failure) {
-		writeError(writer, request, http.StatusUnprocessableEntity, "validation_failed", err.Error())
+		contract.WriteError(
+			writer,
+			request,
+			http.StatusUnprocessableEntity,
+			"validation_failed",
+			err.Error(),
+		)
 		return
 	}
 
-	writeError(
+	contract.WriteError(
 		writer,
 		request,
 		failure.status,
 		failure.errorCode,
 		failure.message,
-		errorDetail{
+		contract.ErrorDetail{
 			Field:   failure.field,
 			Code:    failure.detailCode,
 			Message: failure.message,
@@ -188,8 +216,11 @@ func readAnchor(
 		return nil, nil
 	}
 
-	anchor, decodeErr := decodeCursor(raw, queryFingerprint(filters, webhookID))
-	if errors.Is(decodeErr, errCursorMismatch) {
+	anchor, decodeErr := contract.DecodeCursor(
+		raw,
+		contract.QueryFingerprint(filters, webhookID),
+	)
+	if errors.Is(decodeErr, contract.ErrCursorMismatch) {
 		return nil, validationError{
 			field:      cursorParam,
 			detailCode: "invalid",
@@ -229,18 +260,28 @@ func paginate(
 		return rows, nil, nil
 	}
 
-	fingerprint := queryFingerprint(query.Filters, query.WebhookID)
+	fingerprint := contract.QueryFingerprint(query.Filters, query.WebhookID)
 	backwards := query.Anchor != nil && query.Anchor.Backwards
 
 	var nextCursor, previousCursor *string
 	if !backwards && hasMore || backwards {
 		last := rows[len(rows)-1]
-		cursor := encodeCursor(directionNext, last.CreatedAt, last.ID, fingerprint)
+		cursor := contract.EncodeCursor(
+			contract.DirectionNext,
+			last.CreatedAt,
+			last.ID,
+			fingerprint,
+		)
 		nextCursor = &cursor
 	}
 	if query.Anchor != nil && (!backwards || hasMore) {
 		first := rows[0]
-		cursor := encodeCursor(directionPrevious, first.CreatedAt, first.ID, fingerprint)
+		cursor := contract.EncodeCursor(
+			contract.DirectionPrevious,
+			first.CreatedAt,
+			first.ID,
+			fingerprint,
+		)
 		previousCursor = &cursor
 	}
 

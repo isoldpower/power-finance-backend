@@ -1,4 +1,4 @@
-package http
+package contract
 
 type Config struct {
 	Host string

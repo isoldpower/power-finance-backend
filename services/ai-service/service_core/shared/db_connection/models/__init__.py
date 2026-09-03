@@ -1,4 +1,5 @@
 from .account import AccountModel
+from .assistant_message import AssistantMessageModel
 from .base import (
     ACCOUNT_GROUPS,
     CREDIT_NORMAL_GROUPS,
@@ -12,6 +13,7 @@ from .user import UserModel
 
 __all__ = [
     "AccountModel",
+    "AssistantMessageModel",
     "EntryModel",
     "OutboxEntryModel",
     "ProjectedTransaction",

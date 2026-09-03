@@ -1,6 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
+from django.db.models import Count, Q
 from write_service.common.pagination import PageRequest, apply_keyset
 
 from data_write_core.application.interfaces import NotificationRepository
@@ -64,6 +65,18 @@ class DjangoNotificationRepository(NotificationRepository):
         user_id: int,
     ) -> int:
         return await NotificationModel.objects.filter(user_id=user_id).acount()
+
+    async def count_notification_badge(self, user_id: int) -> tuple[int, int]:
+        """One aggregate rather than two counts: across two queries an
+        acknowledgement landing between them could report a badge larger than
+        the total it is a subset of."""
+
+        counted = await NotificationModel.objects.filter(user_id=user_id).aaggregate(
+            total=Count("id"),
+            unacknowledged=Count("id", filter=Q(acknowledged_at__isnull=True)),
+        )
+
+        return (counted["unacknowledged"] or 0, counted["total"] or 0)
 
     async def acknowledge_notifications(
         self,

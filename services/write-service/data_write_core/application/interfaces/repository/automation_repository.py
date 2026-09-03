@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from uuid import UUID
 
+from write_service.common.pagination import PageRequest
+
 from data_write_core.domain.entities import AutomationEntity
 
 
@@ -12,6 +14,23 @@ class AutomationRepository(ABC):
 
     @abstractmethod
     async def save_automation(self, automation: AutomationEntity) -> AutomationEntity:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def list_user_automations(
+        self,
+        user_id: int,
+        page: PageRequest,
+        enabled: bool | None,
+    ) -> list[AutomationEntity]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def count_user_automations(
+        self,
+        user_id: int,
+        enabled: bool | None,
+    ) -> int:
         raise NotImplementedError()
 
     @abstractmethod

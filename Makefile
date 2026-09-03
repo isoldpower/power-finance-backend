@@ -15,6 +15,8 @@ KAFKA_CONSUMER_LIB_DIR := libraries/kafka-consumer-py
 SAGA_LIB_DIR         := libraries/saga-pattern-py
 READ_AT_LEAST_LIB_DIR := libraries/read-at-least-py
 FILTER_GRAMMAR_LIB_DIR := libraries/filter-grammar-py
+WEBHOOK_CATALOG_LIB_DIR := libraries/webhook-catalog-py
+CONTRACT_TESTS_DIR := contract_tests
 
 UVICORN_HOST := 0.0.0.0
 UVICORN_PORT := 8000
@@ -85,19 +87,20 @@ clean: | $(HOOK_SENTINEL) ## Remove __pycache__ and bytecode artefacts
 	find . -type f -name '*.pyc' -delete 2>/dev/null || true
 
 .PHONY: test
-test: test-correlation test-libraries test-write test-read test-ai ## Run every test suite
+test: test-correlation test-libraries test-write test-read test-ai test-contract ## Run every test suite
 
 .PHONY: test-correlation
 test-correlation: | $(HOOK_SENTINEL) ## Run correlation-py library tests (unittest)
 	uv run python -m unittest discover -s $(CORRELATION_LIB_DIR)/correlation/__tests__ -t $(CORRELATION_LIB_DIR)
 
 .PHONY: test-libraries
-test-libraries: | $(HOOK_SENTINEL) ## Run the pytest library suites (kafka-client, kafka-consumer, saga, read-at-least, filter-grammar)
+test-libraries: | $(HOOK_SENTINEL) ## Run the pytest library suites (kafka-client, kafka-consumer, saga, read-at-least, filter-grammar, webhook-catalog)
 	cd $(KAFKA_CLIENT_LIB_DIR) && uv run pytest -q
 	cd $(KAFKA_CONSUMER_LIB_DIR) && uv run pytest -q
 	cd $(SAGA_LIB_DIR) && uv run pytest -q
 	cd $(READ_AT_LEAST_LIB_DIR) && uv run pytest -q
 	cd $(FILTER_GRAMMAR_LIB_DIR) && uv run pytest -q
+	cd $(WEBHOOK_CATALOG_LIB_DIR) && uv run pytest -q
 
 .PHONY: test-write
 test-write: | $(HOOK_SENTINEL) ## Run Write Service tests (pytest, postgres-write on host port 5433)
@@ -110,6 +113,10 @@ test-read: | $(HOOK_SENTINEL) ## Run Read Service tests (pytest, postgres-read o
 .PHONY: test-ai
 test-ai: | $(HOOK_SENTINEL) ## Run AI Service tests (pytest, postgres-ai on host port 5436)
 	@$(MAKE) -C $(AI_SERVICE_DIR) test
+
+.PHONY: test-contract
+test-contract: | $(HOOK_SENTINEL) ## Run the cross-service contract suite (no infrastructure needed)
+	uv run pytest $(CONTRACT_TESTS_DIR) -q
 
 .PHONY: lint
 lint: | $(HOOK_SENTINEL) ## Check code with ruff
@@ -135,6 +142,7 @@ typecheck: | $(HOOK_SENTINEL) ## Run mypy against services + libraries
 	uv run mypy services/write-service libraries
 	uv run mypy services/read-service
 	uv run mypy services/ai-service
+	uv run mypy $(CONTRACT_TESTS_DIR)
 
 .PHONY: precommit-install
 precommit-install: ## Force-reinstall the git pre-commit hook

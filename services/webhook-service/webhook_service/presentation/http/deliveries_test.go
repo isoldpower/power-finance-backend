@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"services/webhook-service/webhook_service/presentation/http/contract"
 	"testing"
 	"time"
 
@@ -47,7 +48,7 @@ func deliveryRows(count int) []types.Delivery {
 }
 
 func serve(log deliveryLogReader, target string, userID string) *httptest.ResponseRecorder {
-	server := NewServer(Config{}, health.NewProbe(), log)
+	server := NewServer(contract.Config{}, health.NewProbe(), log)
 	request := httptest.NewRequest(http.MethodGet, target, nil)
 	if userID != "" {
 		request.Header.Set(GatewayUserHeader, userID)

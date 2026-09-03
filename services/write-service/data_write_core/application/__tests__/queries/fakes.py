@@ -11,9 +11,14 @@ from write_service.common.pagination import (
 )
 
 from data_write_core.domain.entities import (
+    ActionEntity,
+    AutomationEffect,
+    AutomationEntity,
+    AutomationTrigger,
     BalanceCheckpointEntity,
     GoalEntity,
     MoneyFlowEntity,
+    NotificationEntity,
     TransactionEntity,
     WalletEntity,
 )
@@ -34,7 +39,17 @@ from data_write_core.domain.value_objects import (
 class _KeyedRow:
     id: str
     created_at: datetime
-    item: WalletEntity | GoalEntity | TransactionEntity
+    item: WalletEntity | GoalEntity | TransactionEntity | AutomationEntity
+
+
+@dataclass(frozen=True)
+class _RankedRow:
+    """The action queue leads with urgency, so its cursor carries a third key."""
+
+    id: str
+    created_at: datetime
+    severity_rank: int
+    item: ActionEntity
 
 
 def make_page(limit: int = 25, cursor=None) -> PageRequest:
@@ -404,3 +419,151 @@ def _aware(moment):
     handler asks for is UTC-aware."""
 
     return moment if moment.tzinfo is not None else moment.replace(tzinfo=UTC)
+
+
+def make_action(
+    action_id: str,
+    *,
+    user_id: int = 7,
+    severity: str = "info",
+    source: str = "assistant",
+    status: str = "pending",
+    created_at: datetime | None = None,
+) -> ActionEntity:
+    moment = created_at or datetime(2026, 1, 1)
+
+    return ActionEntity(
+        id=action_id,
+        user_id=str(user_id),
+        user_external_id="user_clerk",
+        source=source,
+        kind="wallet_low",
+        severity=severity,
+        status=status,
+        title="Wallet is low",
+        body="",
+        created_at=moment,
+    )
+
+
+def make_automation(
+    automation_id: str,
+    *,
+    user_id: int = 7,
+    enabled: bool = True,
+    created_at: datetime | None = None,
+    deleted_at: datetime | None = None,
+) -> AutomationEntity:
+    moment = created_at or datetime(2026, 1, 1)
+
+    return AutomationEntity(
+        id=automation_id,
+        user_id=str(user_id),
+        user_external_id="user_clerk",
+        name="Tag groceries",
+        trigger=AutomationTrigger(type="event", event="transaction.created"),
+        effects=(AutomationEffect(type="set_category", params={"category": "Food"}),),
+        created_at=moment,
+        enabled=enabled,
+        deleted_at=deleted_at,
+    )
+
+
+def make_notification(
+    notification_id: str,
+    *,
+    user_id: int = 7,
+    acknowledged_at: datetime | None = None,
+) -> NotificationEntity:
+    return NotificationEntity(
+        id=notification_id,
+        title="Rent is due",
+        body="",
+        user_id=str(user_id),
+        created_at=datetime(2026, 1, 1),
+        acknowledged_at=acknowledged_at,
+    )
+
+
+class FakeActionRepository:
+    def __init__(self, actions: list[ActionEntity] | None = None) -> None:
+        self._actions = {str(action.unique_id): action for action in (actions or [])}
+
+    def _matching(self, status, source, severity) -> list[ActionEntity]:
+        return [
+            action
+            for action in self._actions.values()
+            if action.status == status
+            and (source is None or action.source == source)
+            and (severity is None or action.severity == severity)
+        ]
+
+    async def list_user_actions(
+        self, user_id: int, page, status, source, severity
+    ) -> list[ActionEntity]:
+        ordered = sorted(
+            self._matching(status, source, severity),
+            key=lambda action: (action.severity_rank, action.created_at),
+            reverse=True,
+        )
+        rows = [
+            _RankedRow(
+                id=action.unique_id,
+                created_at=action.created_at,
+                severity_rank=action.severity_rank,
+                item=action,
+            )
+            for action in ordered
+        ]
+
+        return [row.item for row in keyset_slice(rows, page)]
+
+    async def count_user_actions(self, user_id: int, status, source, severity) -> int:
+        return len(self._matching(status, source, severity))
+
+
+class FakeAutomationRepository:
+    def __init__(self, automations: list[AutomationEntity] | None = None) -> None:
+        self._automations = {str(rule.unique_id): rule for rule in (automations or [])}
+
+    def _matching(self, enabled: bool | None) -> list[AutomationEntity]:
+        return [
+            rule
+            for rule in self._automations.values()
+            if not rule.is_deleted and (enabled is None or rule.enabled == enabled)
+        ]
+
+    async def get_user_automation_by_id(self, automation_id, user_id: int) -> AutomationEntity:
+        rule = self._automations.get(str(automation_id))
+        if rule is None:
+            raise LookupError(f"automation {automation_id} not found")
+        return rule
+
+    async def list_user_automations(self, user_id: int, page, enabled) -> list[AutomationEntity]:
+        ordered = sorted(
+            self._matching(enabled),
+            key=lambda rule: rule.created_at,
+            reverse=True,
+        )
+        rows = [
+            _KeyedRow(id=rule.unique_id, created_at=rule.created_at, item=rule) for rule in ordered
+        ]
+
+        return [row.item for row in keyset_slice(rows, page)]
+
+    async def count_user_automations(self, user_id: int, enabled) -> int:
+        return len(self._matching(enabled))
+
+
+class FakeNotificationRepository:
+    def __init__(self, notifications: list[NotificationEntity] | None = None) -> None:
+        self._notifications = list(notifications or [])
+
+    async def count_notification_badge(self, user_id: int) -> tuple[int, int]:
+        unacknowledged = [
+            notification
+            for notification in self._notifications
+            if notification.acknowledged_at is None
+        ]
+
+        return len(unacknowledged), len(self._notifications)

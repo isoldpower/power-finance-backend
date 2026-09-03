@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"services/webhook-service/webhook_service/presentation/http/contract"
 	"time"
 
 	"services/webhook-service/internal/health"
@@ -19,7 +20,7 @@ type Server struct {
 }
 
 func NewServer(
-	serverConfig Config,
+	serverConfig contract.Config,
 	readinessProbe *health.Probe,
 	deliveryLog deliveryLogReader,
 ) *Server {

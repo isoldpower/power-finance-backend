@@ -1,5 +1,5 @@
-from .temp_handler import TempMessageHandler
+from .conversation_handler import ConversationHandler
 
 __all__ = [
-    "TempMessageHandler",
+    "ConversationHandler",
 ]

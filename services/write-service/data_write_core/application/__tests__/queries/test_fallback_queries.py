@@ -4,15 +4,31 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 import pytest
-from write_service.common.pagination import CURSOR_CODEC, build_page
+from write_service.common.pagination import (
+    ACTION_QUEUE,
+    CURSOR_CODEC,
+    PageRequest,
+    build_page,
+    query_fingerprint,
+)
 
 from data_write_core.application.queries import (
+    CountFallbackNotificationsQuery,
+    CountFallbackNotificationsQueryHandler,
+    FallbackActionFilters,
+    FallbackAutomationFilters,
+    GetFallbackAutomationQuery,
+    GetFallbackAutomationQueryHandler,
     GetFallbackGoalQuery,
     GetFallbackGoalQueryHandler,
     GetFallbackTransactionQuery,
     GetFallbackTransactionQueryHandler,
     GetFallbackWalletQuery,
     GetFallbackWalletQueryHandler,
+    ListFallbackActionsQuery,
+    ListFallbackActionsQueryHandler,
+    ListFallbackAutomationsQuery,
+    ListFallbackAutomationsQueryHandler,
     ListFallbackGoalsQuery,
     ListFallbackGoalsQueryHandler,
     ListFallbackTransactionsQuery,
@@ -22,13 +38,19 @@ from data_write_core.application.queries import (
 )
 
 from .fakes import (
+    FakeActionRepository,
+    FakeAutomationRepository,
     FakeGoalRepository,
     FakeMoneyFlowRepository,
+    FakeNotificationRepository,
     FakeTransactionRepository,
     FakeWalletRepository,
+    make_action,
+    make_automation,
     make_checkpoint,
     make_flow,
     make_goal,
+    make_notification,
     make_page,
     make_transaction_entity,
     make_wallet,
@@ -336,3 +358,203 @@ async def test_get_goal_folds_unsettled_onto_the_checkpoint():
 
     assert goal.progress == Decimal("160")
     assert goal.target == Decimal("1000")
+
+
+ACTION_INFO = "66666666-6666-6666-6666-666666666666"
+ACTION_CRITICAL = "77777777-7777-7777-7777-777777777777"
+AUTOMATION_A = "88888888-8888-8888-8888-888888888888"
+AUTOMATION_B = "99999999-9999-9999-9999-999999999999"
+AUTOMATION_DELETED = "aaaaaaaa-1111-1111-1111-111111111111"
+NOTIFICATION_A = "bbbbbbbb-1111-1111-1111-111111111111"
+NOTIFICATION_B = "cccccccc-1111-1111-1111-111111111111"
+
+
+def _action_page(limit: int = 25, cursor=None) -> PageRequest:
+    filters = FallbackActionFilters()
+
+    return PageRequest(
+        limit=limit,
+        order=ACTION_QUEUE,
+        fingerprint=query_fingerprint(ACTION_QUEUE, filters.as_cursor_material()),
+        cursor=cursor,
+    )
+
+
+async def test_the_action_queue_leads_with_urgency_not_recency():
+    """The whole reason actions need their own sort order: a critical action
+    raised yesterday outranks an informational one raised a minute ago."""
+
+    repository = FakeActionRepository(
+        [
+            make_action(ACTION_INFO, severity="info", created_at=datetime(2026, 3, 1)),
+            make_action(ACTION_CRITICAL, severity="critical", created_at=datetime(2026, 1, 1)),
+        ]
+    )
+    handler = ListFallbackActionsQueryHandler(repository)
+
+    actions, total = await handler.handle(
+        ListFallbackActionsQuery(
+            user_id=7,
+            page=_action_page(),
+            filters=FallbackActionFilters(),
+        )
+    )
+
+    assert [str(action.id) for action in actions] == [ACTION_CRITICAL, ACTION_INFO]
+    assert total == 2
+
+
+async def test_an_action_carries_the_rank_its_cursor_sorts_on():
+    """`severity_rank` never reaches the client, but the page builder reads it
+    off the DTO to mint the cursor — so it has to survive the mapping."""
+
+    repository = FakeActionRepository([make_action(ACTION_CRITICAL, severity="critical")])
+    handler = ListFallbackActionsQueryHandler(repository)
+
+    actions, _ = await handler.handle(
+        ListFallbackActionsQuery(
+            user_id=7,
+            page=_action_page(),
+            filters=FallbackActionFilters(),
+        )
+    )
+
+    assert actions[0].severity_rank == 3
+
+
+async def test_the_action_queue_answers_only_the_asked_for_status():
+    repository = FakeActionRepository(
+        [
+            make_action(ACTION_INFO, status="pending"),
+            make_action(ACTION_CRITICAL, status="resolved"),
+        ]
+    )
+    handler = ListFallbackActionsQueryHandler(repository)
+
+    actions, total = await handler.handle(
+        ListFallbackActionsQuery(
+            user_id=7,
+            page=_action_page(),
+            filters=FallbackActionFilters(),
+        )
+    )
+
+    assert [str(action.id) for action in actions] == [ACTION_INFO]
+    assert total == 1
+
+
+async def test_the_action_cursor_survives_a_page_turn():
+    repository = FakeActionRepository(
+        [
+            make_action(ACTION_CRITICAL, severity="critical", created_at=datetime(2026, 1, 2)),
+            make_action(ACTION_INFO, severity="info", created_at=datetime(2026, 1, 1)),
+        ]
+    )
+    handler = ListFallbackActionsQueryHandler(repository)
+    first_request = _action_page(limit=1)
+
+    actions, total = await handler.handle(
+        ListFallbackActionsQuery(
+            user_id=7,
+            page=first_request,
+            filters=FallbackActionFilters(),
+        )
+    )
+    first_page = build_page(actions, total, first_request)
+
+    assert [str(action.id) for action in first_page.items] == [ACTION_CRITICAL]
+
+    next_request = _action_page(
+        limit=1,
+        cursor=CURSOR_CODEC.decode(
+            first_page.meta(cached=False)["next_cursor"],
+            first_request.fingerprint,
+        ),
+    )
+    following, following_total = await handler.handle(
+        ListFallbackActionsQuery(
+            user_id=7,
+            page=next_request,
+            filters=FallbackActionFilters(),
+        )
+    )
+
+    assert [str(action.id) for action in following] == [ACTION_INFO]
+    assert following_total == 2
+
+
+async def test_a_soft_deleted_rule_is_gone_from_the_automation_list():
+    """The read projection keeps the row but the list hides it. The fallback has
+    to hide it too, or a stale read would resurrect a rule the user deleted."""
+
+    repository = FakeAutomationRepository(
+        [
+            make_automation(AUTOMATION_A),
+            make_automation(AUTOMATION_DELETED, deleted_at=datetime(2026, 2, 1)),
+        ]
+    )
+    handler = ListFallbackAutomationsQueryHandler(repository)
+
+    automations, total = await handler.handle(
+        ListFallbackAutomationsQuery(
+            user_id=7,
+            page=make_page(),
+            filters=FallbackAutomationFilters(),
+        )
+    )
+
+    assert [str(rule.id) for rule in automations] == [AUTOMATION_A]
+    assert total == 1
+
+
+async def test_the_enabled_filter_is_a_tristate():
+    repository = FakeAutomationRepository(
+        [
+            make_automation(AUTOMATION_A, enabled=True),
+            make_automation(AUTOMATION_B, enabled=False),
+        ]
+    )
+    handler = ListFallbackAutomationsQueryHandler(repository)
+
+    async def listed(enabled: bool | None) -> list[str]:
+        automations, _ = await handler.handle(
+            ListFallbackAutomationsQuery(
+                user_id=7,
+                page=make_page(),
+                filters=FallbackAutomationFilters(enabled=enabled),
+            )
+        )
+        return sorted(str(rule.id) for rule in automations)
+
+    assert await listed(True) == [AUTOMATION_A]
+    assert await listed(False) == [AUTOMATION_B]
+    assert await listed(None) == sorted([AUTOMATION_A, AUTOMATION_B])
+
+
+async def test_a_single_rule_reads_back_whole():
+    repository = FakeAutomationRepository([make_automation(AUTOMATION_A)])
+    handler = GetFallbackAutomationQueryHandler(repository)
+
+    automation = await handler.handle(
+        GetFallbackAutomationQuery(user_id=7, automation_id=UUID(AUTOMATION_A))
+    )
+
+    assert str(automation.id) == AUTOMATION_A
+    assert automation.trigger.type == "event"
+    assert automation.trigger.event == "transaction.created"
+    assert automation.trigger.schedule is None
+
+
+async def test_the_badge_counts_the_unread_and_the_whole():
+    repository = FakeNotificationRepository(
+        [
+            make_notification(NOTIFICATION_A),
+            make_notification(NOTIFICATION_B, acknowledged_at=datetime(2026, 1, 2)),
+        ]
+    )
+    handler = CountFallbackNotificationsQueryHandler(repository)
+
+    counts = await handler.handle(CountFallbackNotificationsQuery(user_id=7))
+
+    assert counts.unacknowledged == 1
+    assert counts.total == 2

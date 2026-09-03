@@ -15,6 +15,7 @@ from .fakes import (
     CONTEXT,
     ClientDisconnectedError,
     DisconnectingTransport,
+    ExplodingHandler,
     ImmediateSignal,
     MalformedFrameError,
     RecordingHandler,
@@ -45,7 +46,7 @@ async def test_a_claimed_message_is_answered():
 
     await _run(_session(transport))
 
-    assert transport.sent == ["answered"]
+    assert transport.sent == [{"reply": "answered"}]
 
 
 async def test_the_conversation_continues_across_turns():
@@ -57,7 +58,7 @@ async def test_the_conversation_continues_across_turns():
     await _run(_session(transport, [handler]))
 
     assert handler.seen == [{"n": 1}, {"n": 2}, {"n": 3}]
-    assert transport.sent == ["answered", "answered", "answered"]
+    assert transport.sent == [{"reply": "answered"}] * 3
 
 
 async def test_a_handler_may_claim_a_message_and_answer_with_silence():
@@ -161,3 +162,29 @@ async def test_handlers_are_told_who_is_connected():
 
     assert [seen.external_id for seen in handler.contexts] == ["clerk_99"]
     assert [seen.path for seen in handler.contexts] == ["/api/v1/chat/advice"]
+
+
+async def test_a_handler_that_raises_closes_the_socket_rather_than_hanging():
+    """A bug in a handler is not a conversation the client can carry on. Left
+    to escape it would kill the task and leave the socket open and mute, which
+    reads to a client as an answer that never comes."""
+
+    transport = ScriptedTransport([{"say": "hi"}])
+
+    termination = await _run(_session(transport, [ExplodingHandler()]))
+
+    assert termination.reason == "handler_failed"
+    assert transport.closed_with.code == TerminationReason.INTERNAL_ERROR
+
+
+async def test_frames_are_forwarded_one_at_a_time_as_they_are_produced():
+    """The point of streaming: a client sees the reply before it is finished."""
+
+    handler = RecordingHandler(
+        frames=({"event": "accepted"}, {"event": "delta"}, {"event": "message"}),
+    )
+    transport = ScriptedTransport([{"text": "hi"}, ClientDisconnectedError])
+
+    await _run(_session(transport, [handler]))
+
+    assert [frame["event"] for frame in transport.sent] == ["accepted", "delta", "message"]

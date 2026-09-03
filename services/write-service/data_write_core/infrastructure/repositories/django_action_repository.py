@@ -1,6 +1,8 @@
 from datetime import datetime
 from uuid import UUID
 
+from write_service.common.pagination import PageRequest, apply_keyset
+
 from data_write_core.application.interfaces import ActionRepository
 from data_write_core.domain.entities import ActionEntity, ActionStatus
 
@@ -24,6 +26,45 @@ class DjangoActionRepository(ActionRepository):
         await stored_action.asave()
 
         return ActionMapper.to_domain(stored_action)
+
+    def _owned_queryset(
+        self,
+        user_id: int,
+        status: str,
+        source: str | None,
+        severity: str | None,
+    ):
+        queryset = ActionModel.objects.filter(user_id=user_id, status=status)
+        if source is not None:
+            queryset = queryset.filter(source=source)
+        if severity is not None:
+            queryset = queryset.filter(severity=severity)
+
+        return queryset
+
+    async def list_user_actions(
+        self,
+        user_id: int,
+        page: PageRequest,
+        status: str,
+        source: str | None,
+        severity: str | None,
+    ) -> list[ActionEntity]:
+        queryset = apply_keyset(
+            self._owned_queryset(user_id, status, source, severity),
+            page,
+        )
+
+        return [ActionMapper.to_domain(action) async for action in queryset]
+
+    async def count_user_actions(
+        self,
+        user_id: int,
+        status: str,
+        source: str | None,
+        severity: str | None,
+    ) -> int:
+        return await self._owned_queryset(user_id, status, source, severity).acount()
 
     async def get_user_action_by_id(self, action_id: UUID, user_id: int) -> ActionEntity:
         requested_action = await ActionModel.objects.aget(

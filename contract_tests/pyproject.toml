@@ -1,0 +1,23 @@
+[project]
+name = "contract-tests"
+version = "0.0.0"
+description = "Cross-service contract tests: the conventions and the published surface, checked against API_TARGET.md and the gateway config rather than against one service at a time."
+requires-python = ">=3.12"
+dependencies = [
+    "pyyaml>=6.0,<7.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["contract_tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["contract_tests"]

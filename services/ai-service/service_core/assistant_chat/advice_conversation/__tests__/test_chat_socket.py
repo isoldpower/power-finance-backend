@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from .. import GATEWAY_USER_HEADER, TerminationReason, build_chat_router
+from .fakes import InMemoryMessageRepository
 
 AUTHENTICATED = {GATEWAY_USER_HEADER: "clerk_7"}
 
@@ -21,18 +22,83 @@ REPOSITORY = pathlib.Path(__file__).resolve().parents[6]
 CLERK_PLUGIN = REPOSITORY / "infrastructure" / "kong" / "plugins" / "clerk-jwt" / "handler.lua"
 
 
-def _client() -> TestClient:
+def _client(messages: InMemoryMessageRepository | None = None) -> TestClient:
+    """Given an in-memory store on purpose: these assertions are about who may
+    open a socket and what reaches the wire, not about SQL."""
+
     app = FastAPI()
-    app.include_router(build_chat_router(), prefix="/api/v1")
+    app.include_router(
+        build_chat_router(messages=messages or InMemoryMessageRepository()),
+        prefix="/api/v1",
+    )
 
     return TestClient(app)
 
 
 def test_a_socket_carrying_the_gateway_identity_is_served():
     with _client().websocket_connect("/api/v1/chat/advice", headers=AUTHENTICATED) as socket:
-        socket.send_json({"name": "Nikita"})
+        socket.send_json({"text": "Why is my dining spend up?"})
 
-        assert socket.receive_text() == "Hello, Nikita"
+        assert socket.receive_json()["event"] == "accepted"
+
+
+def test_the_reply_arrives_as_the_target_event_vocabulary():
+    """API_TARGET.md specifies this exchange as SSE. It is a WebSocket here by
+    decision, but the events are the documented ones, so a client codes against
+    one protocol either way."""
+
+    with _client().websocket_connect("/api/v1/chat/advice", headers=AUTHENTICATED) as socket:
+        socket.send_json({"text": "hello"})
+
+        events = []
+        while True:
+            frame = socket.receive_json()
+            events.append(frame["event"])
+            if frame["event"] in {"message", "error"}:
+                break
+
+    assert events[0] == "accepted"
+    assert events[-1] == "message"
+    assert "delta" in events
+
+
+def test_the_deltas_concatenate_into_the_authoritative_text():
+    """A client renders deltas for responsiveness and then replaces them with
+    the terminal message. The two must agree, or it flickers."""
+
+    with _client().websocket_connect("/api/v1/chat/advice", headers=AUTHENTICATED) as socket:
+        socket.send_json({"text": "hello"})
+
+        accumulated = ""
+        while True:
+            frame = socket.receive_json()
+            if frame["event"] == "delta":
+                accumulated += frame["data"]["text"]
+            if frame["event"] == "message":
+                final = frame["data"]
+                break
+
+    assert accumulated == final["text"]
+    assert final["text"] == "Received message: hello"
+
+
+def test_both_ids_arrive_before_any_text():
+    """`accepted` is what makes recovery possible: a client that disconnects
+    immediately still knows which two messages to refetch."""
+
+    store = InMemoryMessageRepository()
+
+    with _client(store).websocket_connect("/api/v1/chat/advice", headers=AUTHENTICATED) as socket:
+        socket.send_json({"text": "hello"})
+        accepted = socket.receive_json()
+
+    assert accepted["event"] == "accepted"
+    assert set(accepted["data"]) == {"user_message_id", "message_id"}
+
+    # Both messages are already persisted at this point, which is what the
+    # frame is promising.
+    stored = {str(message.id) for message in store.stored()}
+    assert stored == {accepted["data"]["user_message_id"], accepted["data"]["message_id"]}
 
 
 def test_a_socket_without_the_gateway_identity_is_closed():

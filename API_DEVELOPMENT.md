@@ -146,14 +146,34 @@ Specified in the target doc, including the delivery contract. What was left out:
   size and of restating superseded money;
 
 ## Assistant
-Specified in the target doc. What was left out:
+Specified in the target doc. The reply arrives over the WebSocket rather than as SSE, and there is
+NO model behind it yet — `EchoReplyGenerator` answers `"Received message: {text}"` from behind the
+`ReplyGenerator` port. Everything below assumes a real generator eventually lands there.
 
+What was left out:
+
+- **A model.** The port, the store, the frame protocol, the reference extraction and the failure
+  path are all real; the generator is not. Wiring a provider means one adapter, an API key setting
+  and a decision about which model. Deliberately the user's call to make;
+- **`Idempotency-Key` on a send, and a stricter rate-limit tier.** Both are specified for the SSE
+  `POST` and neither survives the move to a socket: a frame carries no headers, and Kong limits the
+  handshake rather than the frames. Neither costs anything while the reply is canned — there is no
+  upstream to bill — and both come back with a real generator, most likely as a client-supplied id
+  inside the frame and a per-connection token budget;
+- **A shared cache for the overview.** It is memoised in process, so `meta.cached` is per replica
+  and a rolling deploy cannot warm anything. Redis is the obvious fix and was not worth new
+  infrastructure for three counts;
+- **Signals in the user's language and timezone.** The target says a signal is generated text in the
+  user's `language` preference and that windows are calendar months in THEIR zone. This service
+  receives neither preference, so the labels are English and the months are UTC;
 - **Named conversations.** One rolling thread per user today. Multiple threads with their own titles
   and history is a product decision, not a technical one. The endpoints are shaped so it arrives as a
   conversation id in the path rather than a restructure;
 - **Resumable generation.** A dropped connection loses the live view; the answer is recovered by
-  refetching. True resume means a replayable per-message stream — `GET /assistant/messages/{id}/stream`
-  with an offset — and it is only worth it if long answers turn out to be common;
+  refetching. Note the socket makes this WORSE than the SSE design would: a reconnect re-opens a
+  conversation rather than a stream, so there is not even a message to resume against. True resume
+  means a replayable per-message stream with an offset, and it is only worth it if long answers turn
+  out to be common;
 - **Stop generation.** No way to cancel a reply in flight. Wants a `DELETE` on the in-flight message
   or an abort signal, plus a decision on whether the partial text is kept;
 - **Inline reference anchors.** `refs` is a flat list, so a client cannot underline the phrase a

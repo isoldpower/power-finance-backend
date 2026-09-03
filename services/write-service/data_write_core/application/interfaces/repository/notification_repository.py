@@ -47,6 +47,13 @@ class NotificationRepository(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    async def count_notification_badge(
+        self,
+        user_id: int,
+    ) -> tuple[int, int]:
+        raise NotImplementedError()
+
+    @abstractmethod
     async def acknowledge_notifications(
         self,
         notification_ids: list[UUID],

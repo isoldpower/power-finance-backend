@@ -1,6 +1,8 @@
 from write_service.common.timestamps import to_iso
 
 from data_write_core.application.dtos import (
+    ActionDTO,
+    AutomationDTO,
     NotificationDTO,
     TransactionDTO,
     WalletDTO,
@@ -8,9 +10,14 @@ from data_write_core.application.dtos import (
     WebhookSubscriptionDTO,
 )
 from data_write_core.application.money_scales import money_at_scale
-from data_write_core.application.queries import FallbackWalletDetail
+from data_write_core.application.queries import (
+    FallbackNotificationCounts,
+    FallbackWalletDetail,
+)
 
 from ...presenters import (
+    ActionHttpPresenter,
+    AutomationHttpPresenter,
     NotificationHttpPresenter,
     TransactionHttpPresenter,
     WebhookHttpPresenter,
@@ -93,3 +100,26 @@ def present_notification(notification: NotificationDTO) -> dict:
 
 def present_notifications(notifications: list[NotificationDTO]) -> list[dict]:
     return [present_notification(notification) for notification in notifications]
+
+
+def present_notification_counts(counts: FallbackNotificationCounts) -> dict:
+    return {
+        "unacknowledged": counts.unacknowledged,
+        "total": counts.total,
+    }
+
+
+def present_action(action: ActionDTO) -> dict:
+    return ActionHttpPresenter.present_one(action)
+
+
+def present_actions(actions: list[ActionDTO]) -> list[dict]:
+    return [present_action(action) for action in actions]
+
+
+def present_automation(automation: AutomationDTO) -> dict:
+    return AutomationHttpPresenter.present_one(automation)
+
+
+def present_automations(automations: list[AutomationDTO]) -> list[dict]:
+    return [present_automation(automation) for automation in automations]

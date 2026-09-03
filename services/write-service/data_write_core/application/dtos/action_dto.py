@@ -19,6 +19,7 @@ class ActionDTO:
     source: str
     kind: str
     severity: str
+    severity_rank: int
     status: str
     title: str
     body: str

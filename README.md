@@ -75,6 +75,10 @@ service stack is also standalone-runnable from its own directory
   `webhook-service` (Go, `go mod`) and `antifraud-service` (Java/Flink). Each
   has its own README.
 - `libraries/` — shared Python libs and the Go `kafka-client-go`.
+- `contract_tests/` — cross-service contract suite: the conventions and the
+  published surface, checked against `API_TARGET.md`, `API_DIFF.md` and the
+  gateway config. Needs no infrastructure; see its
+  [README](contract_tests/README.md).
 - `infrastructure/` — Kafka, Kong gateway, Postgres, Debezium —
   [infrastructure/README.md](infrastructure/README.md).
 - `docs/` — the [architecture spec](docs/architecture.md), ADRs, and diagrams.

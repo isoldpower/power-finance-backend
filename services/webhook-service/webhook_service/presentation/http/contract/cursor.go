@@ -1,4 +1,4 @@
-package http
+package contract
 
 import (
 	"crypto/sha256"
@@ -14,18 +14,18 @@ import (
 )
 
 const (
-	cursorVersion     = 1
-	fingerprintLength = 16
-	orderSignature    = "created_at:desc,id:desc"
-	isoLayout         = "2006-01-02T15:04:05.999999-07:00"
+	CursorVersion     = 1
+	FingerprintLength = 16
+	OrderSignature    = "created_at:desc,id:desc"
+	IsoLayout         = "2006-01-02T15:04:05.999999-07:00"
 
-	directionNext     = "next"
-	directionPrevious = "prev"
+	DirectionNext     = "next"
+	DirectionPrevious = "prev"
 )
 
 var (
-	errCursorInvalid  = errors.New("cursor_invalid")
-	errCursorMismatch = errors.New("cursor_mismatch")
+	ErrCursorInvalid  = errors.New("cursor_invalid")
+	ErrCursorMismatch = errors.New("cursor_mismatch")
 )
 
 type cursorPayload struct {
@@ -35,11 +35,11 @@ type cursorPayload struct {
 	Fingerprint string   `json:"f"`
 }
 
-// queryFingerprint binds a cursor to the query that produced it, so a client
+// QueryFingerprint binds a cursor to the query that produced it, so a client
 // cannot carry a cursor from one filter set into another and silently skip rows.
-func queryFingerprint(filters types.DeliveryLogFilters, webhookID string) string {
+func QueryFingerprint(filters types.DeliveryLogFilters, webhookID string) string {
 	material := map[string]any{
-		"order": orderSignature,
+		"order": OrderSignature,
 		"query": map[string]any{
 			"webhook_id": webhookID,
 			"status":     nullable(filters.Status),
@@ -50,7 +50,7 @@ func queryFingerprint(filters types.DeliveryLogFilters, webhookID string) string
 	canonical, _ := json.Marshal(material)
 	digest := sha256.Sum256(canonical)
 
-	return hex.EncodeToString(digest[:])[:fingerprintLength]
+	return hex.EncodeToString(digest[:])[:FingerprintLength]
 }
 
 func nullable(value string) any {
@@ -61,11 +61,11 @@ func nullable(value string) any {
 	return value
 }
 
-func encodeCursor(direction string, createdAt time.Time, id string, fingerprint string) string {
+func EncodeCursor(direction string, createdAt time.Time, id string, fingerprint string) string {
 	payload, _ := json.Marshal(cursorPayload{
-		Version:     cursorVersion,
+		Version:     CursorVersion,
 		Direction:   direction,
-		Values:      []string{createdAt.Format(isoLayout), id},
+		Values:      []string{createdAt.Format(IsoLayout), id},
 		Fingerprint: fingerprint,
 	})
 
@@ -75,41 +75,44 @@ func encodeCursor(direction string, createdAt time.Time, id string, fingerprint 
 	)
 }
 
-func decodeCursor(raw string, fingerprint string) (*types.DeliveryAnchor, error) {
+func DecodeCursor(raw string, fingerprint string) (*types.DeliveryAnchor, error) {
 	padded := raw + strings.Repeat("=", (4-len(raw)%4)%4)
 	decoded, decodeErr := base64.URLEncoding.DecodeString(padded)
 	if decodeErr != nil {
-		return nil, errCursorInvalid
+		return nil, ErrCursorInvalid
 	}
 
 	var payload cursorPayload
 	if unmarshalErr := json.Unmarshal(decoded, &payload); unmarshalErr != nil {
-		return nil, errCursorInvalid
+		return nil, ErrCursorInvalid
 	}
-	if payload.Version != cursorVersion || len(payload.Values) != 2 {
-		return nil, errCursorInvalid
+	if payload.Version != CursorVersion || len(payload.Values) != 2 {
+		return nil, ErrCursorInvalid
 	}
-	if payload.Direction != directionNext && payload.Direction != directionPrevious {
-		return nil, errCursorInvalid
+	if payload.Direction != DirectionNext && payload.Direction != DirectionPrevious {
+		return nil, ErrCursorInvalid
 	}
 	if payload.Fingerprint != fingerprint {
-		return nil, errCursorMismatch
+		return nil, ErrCursorMismatch
 	}
 
 	createdAt, parseErr := parseCursorTime(payload.Values[0])
 	if parseErr != nil {
-		return nil, errCursorInvalid
+		return nil, ErrCursorInvalid
 	}
 
 	return &types.DeliveryAnchor{
 		CreatedAt: createdAt,
 		ID:        payload.Values[1],
-		Backwards: payload.Direction == directionPrevious,
+		Backwards: payload.Direction == DirectionPrevious,
 	}, nil
 }
 
 func parseCursorTime(raw string) (time.Time, error) {
-	parsed, parseErr := time.Parse(time.RFC3339Nano, strings.Replace(raw, "+00:00", "Z", 1))
+	parsed, parseErr := time.Parse(
+		time.RFC3339Nano,
+		strings.Replace(raw, "+00:00", "Z", 1),
+	)
 	if parseErr != nil {
 		return time.Time{}, fmt.Errorf("cursor: parse timestamp: %w", parseErr)
 	}

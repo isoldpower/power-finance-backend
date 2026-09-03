@@ -5,7 +5,7 @@ FastAPI service shipping **two process types** from one codebase, per
 
 | Process | Entry point | What it does |
 | --- | --- | --- |
-| `ai-service` | `ai_service.main:app` | The assistant surface (Phase 11) and the health probes |
+| `ai-service` | `ai_service.main:app` | The assistant surface — the chat socket, the conversation store and the panel overview — plus the health probes |
 | `ai-dispatcher` | `python -m background_workers.main` | Consumes write-service events and derives the postings behind each transaction (Phase 5.2) |
 
 ## Layout
@@ -30,12 +30,14 @@ Inside `service_core`:
 | Slice | What it is |
 | --- | --- |
 | `write_reactions/` | One package per **event** — `user_created`, `transaction_created`, `transaction_updated`, `transaction_deleted`. |
-| `assistant_chat/` | One package per **conversation** — today just `advice_conversation`, the `/chat/advice` socket. Laid out like a `write_reactions` slice, with an `http/` edge as read-service's query slices have. |
+| `assistant_chat/` | `advice_conversation` — the one rolling conversation: its socket, its store and its REST edge — and `panel_overview`, the signals and prompts beside it. Laid out like a `write_reactions` slice, with an `http/` edge as read-service's query slices have. |
 | `shared/db_connection/` | The engine, the models, `session_scope`, the settings and the Alembic chain. |
 | `shared/kafka_outbox/` | The outbox mechanism: the row shape, the proto-to-row builder, the port and its SQLAlchemy adapter. |
 | `shared/health_guard/` | `PostgresHealthProbe` and the connectivity errors, shared by the consumer's `HealthGuardedHandler` and by `health_probes`. |
 | `shared/logging/` | The one logger hierarchy both processes write into — `registry` mints the loggers, and the three modules beside it hold the messages, one per sub-logger. |
 | `shared/payloads/` | Reading a write-service event into protobuf, and turning a malformed one into the `PoisonError` that sends it to the DLQ. |
+| `shared/http_contract/` | The `{data, meta}` envelope, the error codes and the `ApiError` the app renders them from. A third copy, like `money` and `http_contract` elsewhere. |
+| `shared/pagination/` | Keyset cursors in the wire format the Django services mint, plus the page and its `meta`. |
 
 ### A slice owns its whole stack
 
@@ -58,7 +60,10 @@ work needs:
 | --- | --- |
 | *(slice root)* | `chat_session` and `message_router` — the conversation itself |
 | `contracts/` | the vocabulary: `Termination`, `ConnectionContext`, `RoutedReplies`, and the `MessageHandler`, `ChatTransport` and `TerminationSignal` ports |
-| `handlers/` | one `MessageHandler` per file — the seam a model goes behind, the way `dispatchers/` is the seam for postings |
+| `handlers/` | one `MessageHandler` per file — today `ConversationHandler`, which runs one turn |
+| `generators/` | one `ReplyGenerator` per file — the seam a model goes behind, the way `dispatchers/` is the seam for postings |
+| `references/` | one `ReferenceExtractor` per file — what turns a finished reply into `refs` |
+| `repositories/` | the conversation's storage port |
 | `signals/` | one `TerminationSignal` per file: the process shutdown one, and the one that never fires |
 | `infrastructure/` | the only modules that have heard of FastAPI — the transport, the gateway header, the context builder |
 | `http/` | the router, which is where those are assembled |
@@ -175,21 +180,75 @@ A dispatch replaces the whole leg set rather than diffing it — legs have no
 identity outside the transaction that caused them, which makes replacement both
 simpler and idempotent under redelivery.
 
+## The conversation
+
+There is ONE conversation per user — a rolling thread, not a list of sessions —
+so nothing in the slice takes a conversation id. Adding named threads later
+means adding that argument, not restructuring anything.
+
+A turn runs like this, and the order is the contract:
+
+1. the question and an empty `streaming` answer are BOTH persisted;
+2. `accepted` goes out carrying both ids — before any generation, so a client
+   that drops immediately still knows what to refetch;
+3. `delta` frames carry increments of text as the generator produces them;
+4. the answer is settled with its whole text and its `refs`, and `message`
+   repeats it authoritatively.
+
+A generation that fails settles the answer `failed` **keeping whatever text it
+produced** and yields `error` instead of `message`. It is not deleted: a user
+who watched half an answer appear and then vanish has no way to tell that from
+a bug. `error` ends the turn, not the socket.
+
+`ReplyGenerator` is the seam a model goes behind. `EchoReplyGenerator` is the
+only adapter today and answers `"Received message: {text}"` — **no model is
+wired, on purpose**. It still yields several increments, because a client that
+concatenates deltas is the thing this socket exists to prove out and a
+single-chunk reply would never exercise it.
+
+`refs` are EXTRACTED from the finished reply rather than returned by the
+generator: they are only knowable once the whole text exists.
+`ProjectedReferenceExtractor` resolves the ids a reply mentions against the two
+things this service can see — the transactions it projects and the accounts it
+owns — scoped to the caller. An id it cannot resolve is dropped rather than
+guessed at, and a lookup that fails does not cost the user their answer.
+
+Messages are keyed by the **external** (Clerk) id, not the internal one: both
+edges authenticate on `X-User-Id`, and it lets a user talk before `UserSynced`
+has seeded their chart of accounts.
+
 ## Public surface
 
-One route, behind the gateway:
+Three routes, behind the gateway. All of them authenticate on `X-User-Id`, set
+by Kong's `clerk-jwt` plugin.
 
-| Endpoint | What it is | Auth |
-| --- | --- | --- |
-| `GET /api/v1/chat/advice` | WebSocket upgrade; the assistant socket | `X-User-Id`, set by Kong's `clerk-jwt` plugin |
+| Endpoint | What it is |
+| --- | --- |
+| `GET /api/v1/chat/advice` | WebSocket upgrade; sending a message and streaming the reply |
+| `GET`/`DELETE /api/v1/assistant/messages` | the conversation history, and clearing it |
+| `GET /api/v1/assistant/overview` | the panel's signals and suggested prompts |
 
-Kong forwards `/api/v1/chat` here — a longer path than the read route's bare
-`/api/v1`, which is what stops the upgrade being offered to read-service. The
-handshake is refused with a policy-violation close before it is accepted when
-`X-User-Id` is absent: a request without it did not come through Kong. This
-service never sees a token and never validates one; it trusts the header, which
-holds only because the gateway is the sole route in and no host port is
-published.
+API_TARGET.md specifies the send as an SSE `POST /assistant/messages`. It is the
+WebSocket here by decision — the socket already existed — and the frames carry
+the target's own `accepted` / `delta` / `message` / `error` vocabulary, so a
+client codes against one protocol either way.
+
+Kong forwards `/api/v1/chat` and `/api/v1/assistant` here — longer paths than
+the read route's bare `/api/v1`, which is what stops the upgrade being offered
+to read-service and the history being answered by a projection that does not
+have it. `test_app_assembly.py` parses `kong.yml` and pins both against what the
+app mounts, because the two live in different files in different languages and
+nothing else links them.
+
+The handshake is refused with a policy-violation close before it is accepted
+when `X-User-Id` is absent, and the REST edge answers 401 `unauthorized`: a
+request without it did not come through Kong. This service never sees a token
+and never validates one; it trusts the header, which holds only because the
+gateway is the sole route in and no host port is published.
+
+The overview is cached IN PROCESS rather than in Redis — this service has no
+cache tier, and adding one to memoise three counts would be new infrastructure
+for a read that is cheap to begin with. `meta.cached` is therefore per replica.
 
 ## Health
 

@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 
 from .contracts import (
     ConnectionContext,
@@ -12,20 +12,35 @@ class MessageRouter:
         self._handlers = tuple(handlers)
 
     async def route(self, message: dict, context: ConnectionContext) -> RoutedReplies:
-        replies: list[str] = []
-        message_claimed = False
-
-        for handler in self._handlers:
-            if await handler.is_responsible(message, context):
-                message_claimed = True
-                reply = await handler.handle(message, context)
-                if reply is not None:
-                    replies.append(reply)
-
-                if await handler.is_singleton(message, context):
-                    break
+        responsible = await self._responsible_handlers(message, context)
 
         return RoutedReplies(
-            claimed=message_claimed,
-            replies=tuple(replies),
+            claimed=bool(responsible),
+            frames=self._stream(responsible, message, context),
         )
+
+    async def _responsible_handlers(
+        self,
+        message: dict,
+        context: ConnectionContext,
+    ) -> tuple[MessageHandler, ...]:
+        responsible: list[MessageHandler] = []
+        for handler in self._handlers:
+            if not await handler.is_responsible(message, context):
+                continue
+
+            responsible.append(handler)
+            if await handler.is_singleton(message, context):
+                break
+
+        return tuple(responsible)
+
+    async def _stream(
+        self,
+        handlers: tuple[MessageHandler, ...],
+        message: dict,
+        context: ConnectionContext,
+    ) -> AsyncIterator[dict]:
+        for handler in handlers:
+            async for frame in handler.handle(message, context):
+                yield frame

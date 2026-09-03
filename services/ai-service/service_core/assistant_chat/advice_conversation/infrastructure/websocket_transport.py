@@ -16,9 +16,9 @@ class WebSocketTransport:
         except ValueError as malformed:
             raise MalformedFrameError from malformed
 
-    async def send(self, text: str) -> None:
+    async def send(self, frame: dict) -> None:
         try:
-            await self._websocket.send_text(text)
+            await self._websocket.send_json(frame)
         except WebSocketDisconnect as disconnected:
             raise ClientDisconnectedError from disconnected
 

@@ -182,6 +182,7 @@ def action_to_dto(action: ActionEntity) -> ActionDTO:
         source=action.source,
         kind=action.kind,
         severity=action.severity,
+        severity_rank=action.severity_rank,
         status=action.status,
         title=action.title,
         body=action.body,

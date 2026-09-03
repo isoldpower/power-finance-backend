@@ -1138,30 +1138,187 @@ window, and the endpoint and subscription shapes match the target's field names.
 ## Phase 11 — Assistant
 Last, because a useful assistant cites resources from every other slice.
 
+**STATUS: implemented, with two decisions by the user that override the target.**
+
+> **DECIDED (2026-09-02): the reply streams over the EXISTING WebSocket, not SSE.**
+> `POST /assistant/messages` does not exist. A client sends `{"text": ...}` to the
+> `GET /api/v1/chat/advice` socket that was already built, and the reply comes back as WS frames
+> `{"event": ..., "data": {...}}` carrying the target's own event vocabulary — `accepted`, `delta`,
+> `message`, `error` — with the same ordering guarantees and the same terminal semantics. The
+> protocol is the documented one; only the transport differs. That also makes the Kong buffering
+> note moot: a WebSocket is not proxy-buffered, so there is no `X-Accel-Buffering` to set. The
+> notification stream still needs it and still has it.
+
+> **DECIDED (2026-09-02): no model is wired.** The reply is always
+> `"Received message: {text}"`. Everything around it is real — persistence, the frame protocol,
+> reference extraction, the failure path — and a provider drops in behind `ReplyGenerator` later.
+
+- **`ReplyGenerator` is the seam**, the way `PostingDispatcher` is the seam for postings, and
+  `EchoReplyGenerator` is its only adapter. It yields the reply in several increments rather than
+  one, because the thing this socket exists to prove out is a client that concatenates deltas, and
+  a single-chunk reply would never exercise that. A test asserts the increments reproduce the reply
+  byte for byte, whitespace included;
+- **the handler contract became streaming.** `MessageHandler.handle` now returns an
+  `AsyncIterator[dict]` and `ChatTransport.send` takes a frame rather than a string, because
+  `accepted` has to reach the client BEFORE generation starts and the old contract collected a
+  finished reply first. `MessageRouter` settles `claimed` up front — that is the routing decision
+  the session refuses an unroutable frame on — and only then streams. `TempMessageHandler` was
+  scaffolding by its own docstring and is gone;
+- **a handler that raises now closes the socket** with `Termination.handler_failed()`, which was
+  defined and unused. Letting it escape killed the task and left the socket open and mute, which
+  reads to a client as an answer that never comes;
+- **both messages are stored before any text exists.** That is what makes `accepted` meaningful and
+  what makes a dropped connection lose the live view rather than the answer. A generation that
+  fails settles the answer `failed` WITH its partial text and yields `error`; it never also yields
+  `message`, so a client is never told two different things about one turn;
+- **messages are keyed by the EXTERNAL (Clerk) id**, not the internal one. Both edges authenticate
+  on the gateway's `X-User-Id` and neither carries an internal id, and it means a user can hold a
+  conversation before `UserSynced` has seeded their chart of accounts;
+- **`refs` are EXTRACTED from the finished reply**, per 11.4, rather than returned by the generator
+  — references are only knowable once the whole text exists, which is also why the terminal frame
+  repeats the full text. `ProjectedReferenceExtractor` resolves the ids a reply mentions against
+  the two things this service can actually see: the transactions it projects and the accounts it
+  owns. An id it cannot resolve is dropped rather than guessed at, and one belonging to another
+  user resolves to nothing. A lookup that fails does not cost the user their answer;
+- **the overview is cached IN PROCESS, not in Redis.** ai-service has no cache tier, and adding one
+  to memoise three counts would be new infrastructure for a read that is cheap to begin with. The
+  consequence is that `meta.cached` is per replica, which is the honest reading of a cache that is
+  not shared;
+- **the signals are derived, not invented.** Spend-vs-last-month is a PERCENTAGE computed inside a
+  single currency — the one the user transacts in most — because a percentage across mixed
+  currencies would either need today's exchange rate inside a cached read or be quietly wrong. The
+  windows are calendar months in UTC; the target resolves them in the user's timezone preference,
+  which this service does not receive;
+- **the service grew an `http_contract` and a `pagination` package of its own.** Third copies, and
+  deliberate: this is the house pattern for `http_contract` and `money`, and read-service's
+  pagination builds Django `Q` objects. The cursor wire format is byte-compatible with the other
+  services and a test pins the `{v,d,k,f}` payload, so a client stores one kind of opaque token
+  whichever service answered;
+- **`limit` is clamped, not refused.** FastAPI's own `le=` validation answered 422 with
+  `{"detail": [...]}` — neither the convention (every other collection caps at 100 and serves the
+  page) nor the error envelope. Parsing moved into `resolve_limit` so both are right;
+
 - **11.1** Message store, `GET /assistant/messages` (newest-first; the client reverses for display),
   `DELETE /assistant/messages` as a hard delete returning a count;
-- **11.2** `POST /assistant/messages` as SSE: `accepted` first with both ids, `delta` increments,
-  a terminal `message` carrying the authoritative text and `refs`, `error` as the failure terminal.
-  The reply persists whether or not the client is listening; a failed generation is stored with
-  `status: "failed"` and its partial text. 503 `assistant_unavailable` on an unreachable upstream,
-  and a stricter rate-limit tier than the per-user default;
+- **11.2** ~~`POST /assistant/messages` as SSE~~ — the same protocol over the WebSocket, see above:
+  `accepted` first with both ids, `delta` increments, a terminal `message` carrying the
+  authoritative text and `refs`, `error` as the failure terminal. The reply persists whether or not
+  the client is listening; a failed generation is stored with `status: "failed"` and its partial
+  text;
 - **11.3** `GET /assistant/overview` — `signals` (preformatted display strings, the one deliberate
   formatting exception in the API) and `prompts`. Cacheable, carries `meta.cached`;
 - **11.4** `refs` extraction into the flat `{type, id}` list. No inline anchors;
 
-Neither SSE endpoint may be buffered by Kong — verify `X-Accel-Buffering: no` on this one the same
-way the notification stream needs it.
+> **GAP (11.2).** Two things the target asks of `POST /assistant/messages` do not apply to a socket
+> and are NOT built: `Idempotency-Key` (a WebSocket frame carries no headers) and the stricter
+> per-request rate-limit tier (Kong's limiter counts the handshake, not the frames). Neither is
+> load-bearing while the reply is canned — there is no upstream to bill — but both come back the
+> moment a model does. 503 `assistant_unavailable` exists as the `error` frame's code rather than
+> as an HTTP status, for the same reason.
 
 ---
 
 ## Closing steps
-- Regenerate the OpenAPI schema (`drf-spectacular` is already wired in both services) and check it
-  against the target document endpoint by endpoint;
-- Contract tests for the conventions themselves, not just per endpoint: envelope shape, money
-  grammar, timestamp format, cursor round-trip, error-code coverage. These are what stop the surface
-  drifting one endpoint at a time;
-- Add a test asserting the 507 fallback never reaches a client (see the note below);
-- Retire the `/api/v1/reads` alias once no client uses it;
+
+**STATUS: done.** All four became one suite — `contract_tests/`, a workspace member with no
+infrastructure dependency, run by `make test-contract` and included in `make test`. It reads the
+three OpenAPI documents, API_TARGET.md, API_DIFF.md and `kong.yml`, so an endpoint added tomorrow is
+covered without the suite being edited. That is the point: an audit passes once, a test keeps
+passing.
+
+- **the schemas were regenerated and reconciled endpoint by endpoint.** 53 target endpoints against
+  the served surface: 4 not served and 7 served-but-undocumented, and every one of the eleven is an
+  already-recorded deviation (`GET /metrics` replacing three paths, the assistant socket replacing
+  `POST /assistant/messages`, `PUT /wallets/{id}`, `/transactions/{id}/adjust`,
+  `POST /webhooks/search`, the two extra notification endpoints). The reconciliation is now
+  `test_target_surface.py` and it fails in BOTH directions — an endpoint documented and not served,
+  or served and not documented;
+- **the conventions are asserted by walking the schemas, not per endpoint.** Every JSON success is
+  `{data, meta}` with both halves required; every failure is the error envelope naming a code and a
+  message; every operation declares at least one failure; every collection carries the four page
+  keys; every cursor is a nullable string; every money object declares `amount` as a string at any
+  depth; every `*_at` is an ISO string. `test_response_conventions.py`, ~400 parametrised cases
+  across the three documents;
+- **the cursor is pinned across all FOUR implementations.** One golden token, written down rather
+  than round-tripped — a round trip through one codec passes even when all four have drifted
+  together. read-service, write-service and ai-service each mint it in a subprocess and must produce
+  the same bytes and the same fingerprint; webhook-service's Go codec pins the same string in its own
+  test, because it cannot be driven from Python, and the contract suite asserts the two goldens are
+  the same string;
+- **the error vocabulary is held against the target's tables.** No undocumented `error.code` or
+  `details[].code` can be raised, and every documented code carries the status the table gives it.
+  The three extras (`service_unavailable`, `insufficient_funds`, `conflict`) and the one extra detail
+  code (`invalid`) are allow-listed AND each is asserted to appear in API_DIFF.md — so an addition
+  cannot be allow-listed without also being explained to clients. `details[].code` turned out to be
+  documented in TWO tables: the general one and the filter grammar's own;
+- **`/api/v1/reads` was already retired** by Step 0.5, which moved the split into the gateway. Two
+  mentions survive in this document and both describe the starting state. Now asserted from both
+  ends: no Kong route carries the segment, and read-service serves no path under it;
+
+> **GAP (staleness fallback), narrowed to three.** The gate is per-user and global, so any write can
+> make any gated read answer 507 until the projection catches up — and the plugin rewrites the prefix
+> regardless of whether a counterpart exists. A read with no counterpart therefore does not leak the
+> 507; the reroute lands on a route that is not there and the client gets write-service's **404**: a
+> resource that exists, reported as missing. Worse than the leak the step was written to prevent.
+>
+> Four of the original seven are now built (see below). Three remain:
+>
+> | read | why there is still no fallback |
+> |------|--------------------------------|
+> | `GET /accounts`, `GET /accounts/{id}` | accounts live in ai-service's database; write-service cannot answer them at all |
+> | `GET /metrics` | needs the whole aggregate, currency conversion included, on the write side |
+>
+> `/accounts` cannot be done without a cross-service read; `/metrics` is a Phase 6-sized job. Both
+> are listed in `MISSING_FALLBACK` in `test_staleness_fallback.py`, which now asserts in BOTH
+> directions — a listed hole that has quietly been fixed fails, and a gated read that is neither
+> listed nor covered fails. (The original marker was `pytest.xfail()` called in the test body, which
+> always xfails and so could never have caught a hole being closed. It is a plain assertion now.)
+>
+> The THREE searches are a separate, permanent case and are documented for clients: the plugin only
+> re-issues GETs and the write side has no Elasticsearch, so a stale search genuinely answers 507.
+> A test asserts API_DIFF.md still explains it.
+
+> **BUILT (staleness fallback, four of seven).** `GET /actions`, `GET /automations`,
+> `GET /automations/{id}` and `GET /notifications/count` now have write-side counterparts under
+> `/api/v1/fallback-reads/`, so a stale read of any of them is answered rather than turned into a
+> 404. What the build settled:
+>
+> - **the action queue needed its sort order carried across.** `ACTION_QUEUE`
+>   (`severity_rank DESC, created_at DESC, id DESC`) now exists on the write side too, and
+>   `severity_rank` was added to write-service's `ActionDTO` — it is never presented, but the page
+>   builder reads it off the row to mint the cursor, so the reroute cannot page without it;
+> - **the cursor fingerprint covers the FILTERS, not just the order.** `/actions` and `/automations`
+>   are the two reroutable reads with filters, so write-service has to rebuild byte-identical filter
+>   material or reject a page the client can already see as `cursor_mismatch`. Two contract tests now
+>   compare the two sides' material and sort signature, each read from the service's own filter
+>   object rather than restated in the test;
+> - **that forced `application/query_filters.py`**, an infrastructure-free module. Importing
+>   `application.queries` boots the repository registry, which opens an ImmuDB connection — fine in
+>   the service, fatal for a contract suite that must run with nothing up. The filter dataclasses
+>   live outside `queries` for exactly that reason and are re-exported from it;
+> - **the badge is ONE aggregate, not two counts.** Across two queries an acknowledgement landing
+>   between them could report a badge larger than the total it is a subset of;
+> - **a soft-deleted rule is hidden from the automation LIST and returned by the automation DETAIL.**
+>   That is not a choice, it is parity: the read projection sets `deleted_at` rather than removing the
+>   row, its list filters on it and its detail does not. The fallback matches both. Worth revisiting
+>   on the READ side — the asymmetry is the read's, not the fallback's;
+> - **the rejection message for a bad filter value is the read side's, word for word**, so a client
+>   cannot tell which side refused it.
+>
+> Still open on the same subsystem, and NOT fixed here: the notification and webhook list fallbacks
+> pass no `query_material` to `PageRequest.from_request`, while their read-side counterparts bind the
+> cursor to the active filters. Page 2 of a FILTERED `GET /notifications` or `GET /webhooks` that
+> trips the gate is therefore rejected as a cursor mismatch. It also predates this work: those
+> fallbacks ignore the filters entirely (the Phase 7 parity gap), so fixing the fingerprint without
+> also applying the filters would answer the wrong rows.
+
+> **FIXED while writing these tests.** Two schema defects the per-endpoint tests could not see.
+> `GET /notifications/count` published `meta` nowhere: its meta serializer had no fields, and
+> drf-spectacular drops a field-less serializer entirely, so a generated client had no `meta` on the
+> one endpoint that always sends `{}`. It also declared no failure response at all. And ai-service's
+> three assistant endpoints published bare `object` bodies with no declared errors — a generated
+> client got an untyped dictionary and no idea a call could be refused. Both now publish the
+> envelope, and `empty_meta_field()` exists so the next `meta: {}` endpoint cannot repeat it.
 
 ---
 

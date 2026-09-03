@@ -7,7 +7,7 @@ from data_read_core.shared.logging import (
     log_request_served,
 )
 from data_read_core.shared.read_at_least import read_at_least_gate
-from data_read_core.shared.rest_framework import async_api_view
+from data_read_core.shared.rest_framework import ErrorResponseSerializer, async_api_view
 
 from ..dtos import CountNotificationsQuery
 from ..query_handler import CountNotificationsQueryHandler
@@ -25,7 +25,10 @@ from ._serializers import EnvelopedNotificationCountsSerializer
         "Increment locally on arrival and treat this as the value at load time "
         "- refetching per event would defeat the point of having a stream."
     ),
-    responses={200: EnvelopedNotificationCountsSerializer},
+    responses={
+        200: EnvelopedNotificationCountsSerializer,
+        401: ErrorResponseSerializer,
+    },
 )
 @async_api_view(["GET"])
 @read_at_least_gate
