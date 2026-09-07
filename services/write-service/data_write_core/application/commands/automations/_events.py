@@ -4,25 +4,18 @@ from datetime import datetime
 from kafka_messages import (
     AutomationCreated,
     AutomationDeleted,
+    AutomationEffect as EffectMessage,
     AutomationRan,
+    AutomationTrigger as TriggerMessage,
     AutomationUpdated,
 )
-from kafka_messages import (
-    AutomationEffect as EffectMessage,
-)
-from kafka_messages import AutomationTrigger as TriggerMessage
 
+from data_write_core.application.commands.config import AggregateType
 from data_write_core.domain.entities import AutomationEntity
 from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 
-AUTOMATION_AGGREGATE = "automation"
-
 
 def _trigger_of(automation: AutomationEntity) -> TriggerMessage:
-    """`filter_body` crosses as JSON TEXT rather than a Struct: it is opaque to
-    every consumer except the engine, and a Struct would invite reading into a
-    tree whose grammar is owned elsewhere."""
-
     return TriggerMessage(
         trigger_type=automation.trigger.type,
         event=automation.trigger.event or "",
@@ -92,10 +85,6 @@ def automation_ran(
     runs: int,
     at: datetime,
 ):
-    """`runs` counts MATCHES that applied effects, not evaluations: a rule
-    checked a thousand times that never matched reports 0, which is what makes a
-    silently-stopped rule distinguishable from a working one."""
-
     message = AutomationRan(
         automation_id=automation_id,
         user_external_id=user_external_id,
@@ -106,7 +95,7 @@ def automation_ran(
 
     return build_outbox_entry(
         message,
-        aggregate_type=AUTOMATION_AGGREGATE,
+        aggregate_type=AggregateType.AUTOMATION,
         aggregate_id=automation_id,
         partition_key=user_external_id,
     )
@@ -115,7 +104,7 @@ def automation_ran(
 def _entry(message, automation: AutomationEntity):
     return build_outbox_entry(
         message,
-        aggregate_type=AUTOMATION_AGGREGATE,
+        aggregate_type=AggregateType.AUTOMATION,
         aggregate_id=automation.unique_id,
         partition_key=automation.user_external_id,
     )

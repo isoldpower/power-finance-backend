@@ -18,10 +18,6 @@ class GetWalletQuery:
 
 @dataclass(frozen=True)
 class PeriodFlowsAnalysis:
-    """Money that moved through the wallet over the requested window, in the
-    WALLET's currency. Nothing is converted — this is wallet detail, not
-    Metrics."""
-
     inflow: Decimal
     outflow: Decimal
 

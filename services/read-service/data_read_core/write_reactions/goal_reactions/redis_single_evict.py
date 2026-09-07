@@ -11,8 +11,6 @@ from .._utilities import decode_payload
 
 
 class EvictGoalCache(Effect):
-    """Evict the single-goal cache entry keyed by goal id."""
-
     def __init__(self, payload_type: type[Message] = GoalDeleted) -> None:
         self._payload_type = payload_type
 

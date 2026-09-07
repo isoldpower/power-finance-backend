@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from typing import Any
 
+from data_write_core.domain.automations.validation.config import RefusalCode
+
 from ..refusal import (
-    EFFECT_PARAMS_INVALID,
-    EFFECT_SUBJECT_MISMATCH,
     AutomationRefusal,
 )
 
@@ -25,7 +25,7 @@ class EffectRule(ABC):
 
         raise AutomationRefusal(
             path=f"{path}.type",
-            detail_code=EFFECT_SUBJECT_MISMATCH,
+            detail_code=RefusalCode.EFFECT_SUBJECT_MISMATCH,
             reason=(
                 f"`{self.effect_type}` cannot apply to a `{trigger_type}` trigger, "
                 f"whose subject is {subject}."
@@ -43,7 +43,7 @@ class EffectRule(ABC):
             case _:
                 raise AutomationRefusal(
                     path=path,
-                    detail_code=EFFECT_PARAMS_INVALID,
+                    detail_code=RefusalCode.EFFECT_PARAMS_INVALID,
                     reason="`params` must be an object.",
                 )
 
@@ -53,7 +53,7 @@ class EffectRule(ABC):
 
         raise AutomationRefusal(
             path=path,
-            detail_code=EFFECT_PARAMS_INVALID,
+            detail_code=RefusalCode.EFFECT_PARAMS_INVALID,
             reason=(
                 f"`{self.effect_type}` takes exactly {sorted(self.required_params)}; "
                 f"got {sorted(supplied)}."

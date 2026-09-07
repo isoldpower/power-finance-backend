@@ -4,9 +4,8 @@ from uuid import uuid4
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message
 
+from .config import OutboxSettings
 from .contracts import OutboxEntry
-
-_SCHEMA_VERSION = 1
 
 
 def build_outbox_entry(
@@ -22,7 +21,7 @@ def build_outbox_entry(
     message.event_id = str(event_id)
     message.occurred_at.FromDatetime(occurred_at)
     if not message.schema_version:
-        message.schema_version = _SCHEMA_VERSION
+        message.schema_version = int(OutboxSettings.SCHEMA_VERSION)
 
     return OutboxEntry(
         event_id=event_id,

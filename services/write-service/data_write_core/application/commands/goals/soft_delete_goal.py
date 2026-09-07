@@ -29,8 +29,6 @@ class SoftDeleteGoalCommand:
 
 
 class SoftDeleteGoalCommandHandler(CommandHandlerBase[GoalDTO], LoadGoalMixin):
-    """Closing a goal, not deleting it."""
-
     _goal_repository: GoalRepository
     _outbox_repository: OutboxRepository
 

@@ -11,6 +11,4 @@ class AccountRepository(ABC):
     async def recompute_balances(
         self, account_ids: Collection[UUID], now: datetime
     ) -> list[BalanceChange]:
-        """Re-derive each account's balance from its entries; report the moves."""
-
         raise NotImplementedError()

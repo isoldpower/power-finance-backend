@@ -22,8 +22,6 @@ def build_provider() -> RateProvider:
 
 @lru_cache(maxsize=1)
 def get_rate_service() -> ExchangeRateService:
-    """Process-wide, like the Redis client it holds."""
-
     return ExchangeRateService(
         provider=build_provider(),
         cache=RedisRateCache(

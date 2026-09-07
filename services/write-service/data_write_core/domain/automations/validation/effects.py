@@ -1,10 +1,9 @@
 from typing import Any
 
+from data_write_core.domain.automations.validation.config import RefusalCode, RefusalPath
+
 from ..vocabulary import EffectType, subject_of
 from .refusal import (
-    EFFECT_UNKNOWN_TYPE,
-    EFFECTS_PATH,
-    REQUIRED,
     AutomationRefusal,
 )
 from .rules import rule_for
@@ -17,12 +16,12 @@ def validate_effects(effects: Any, trigger_type: str) -> None:
                 _validate_effect(
                     effect,
                     trigger_type,
-                    f"{EFFECTS_PATH}[{index}]",
+                    f"{RefusalPath.EFFECTS}[{index}]",
                 )
         case _:
             raise AutomationRefusal(
-                path=EFFECTS_PATH,
-                detail_code=REQUIRED,
+                path=RefusalPath.EFFECTS,
+                detail_code=RefusalCode.REQUIRED,
                 reason="A rule needs at least one effect.",
             )
 
@@ -36,7 +35,7 @@ def _validate_effect(effect: Any, trigger_type: str, path: str) -> None:
         case _:
             raise AutomationRefusal(
                 path=path,
-                detail_code=EFFECT_UNKNOWN_TYPE,
+                detail_code=RefusalCode.EFFECT_UNKNOWN_TYPE,
                 reason="An effect must be an object.",
             )
 
@@ -58,6 +57,6 @@ def _validate_known_effect(
 def _unknown_effect(path: str) -> AutomationRefusal:
     return AutomationRefusal(
         path=path,
-        detail_code=EFFECT_UNKNOWN_TYPE,
+        detail_code=RefusalCode.EFFECT_UNKNOWN_TYPE,
         reason=f"Unknown effect type. Legal values: {', '.join(EffectType)}.",
     )

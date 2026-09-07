@@ -17,8 +17,6 @@ async def fetch_owned_webhooks(
     page: PageRequest,
     filters: WebhookFilters,
 ) -> list[WebhookReadModel]:
-    """One page plus the lookahead row `build_page` needs to mint cursors."""
-
     queryset = apply_keyset(_owned_queryset(user_id, filters), page)
 
     return [webhook async for webhook in queryset]

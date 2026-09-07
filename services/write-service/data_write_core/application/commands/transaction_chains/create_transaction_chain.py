@@ -243,9 +243,6 @@ def currency_of(
     aggregate: TransactionAggregate,
     container_dtos: dict[str, MoneyContainerDTO],
 ) -> str:
-    """A chain can span containers — a transfer is two entries against two of
-    them — so each transaction takes its own container's currency."""
-
     return container_dtos[str(aggregate.root.container_id)].currency
 
 

@@ -77,9 +77,6 @@ class GoalEntity(EntityRoot, GoalData):
         )
 
     def apply(self, data: GoalData, now: datetime) -> None:
-        """Restore a previous snapshot. `currency_code` is deliberately not restored:
-        it never changed, so writing it back would be the only path by which a bug
-        here could move it."""
         self.title = data.title
         self.target = data.target
         self.finish_at = data.finish_at

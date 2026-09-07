@@ -1,10 +1,3 @@
-"""The one map an outbox event is looked up in.
-
-Derived from each handler's own `triggers` so the registry cannot disagree with
-the events a handler says it serves. Adding a subject is a class and a line in
-the tuple below.
-"""
-
 from .base import EventAutomationHandler
 from .transaction import TransactionAutomationHandler
 

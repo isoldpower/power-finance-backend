@@ -1,7 +1,10 @@
 from fastapi import WebSocket, WebSocketDisconnect
 
-from ..contracts import Termination
-from ..exceptions import ClientDisconnectedError, MalformedFrameError
+from ..application.contracts import (
+    ClientDisconnectedError,
+    MalformedFrameError,
+    Termination,
+)
 
 
 class WebSocketTransport:

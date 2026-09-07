@@ -1,5 +1,3 @@
-"""A provider that talks to nothing. For local work and tests."""
-
 from datetime import UTC, datetime
 from decimal import Decimal
 

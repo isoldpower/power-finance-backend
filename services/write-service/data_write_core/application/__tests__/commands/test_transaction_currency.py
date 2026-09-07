@@ -1,10 +1,3 @@
-"""Where the currency on `TransactionCreated` comes from.
-
-ai-service denominates every posting it writes from this one field, and it has
-no other source for it: the ledger never sees the wallet. A transaction that
-leaves here without its container's currency lands as an undenominated row.
-"""
-
 from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
@@ -67,10 +60,6 @@ def test_the_created_event_carries_the_currency_it_is_given():
 
 
 def test_a_chained_transaction_takes_its_own_container_s_currency():
-    """A transfer is one chain across two wallets. Reading the currency off the
-    chain rather than off each transaction would denominate the far side of
-    every cross-currency transfer wrongly."""
-
     containers = {
         str(EUR_WALLET): _dto(EUR_WALLET, "EUR"),
         str(JPY_WALLET): _dto(JPY_WALLET, "JPY"),

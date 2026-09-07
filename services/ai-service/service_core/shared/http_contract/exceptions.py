@@ -10,16 +10,14 @@ class ErrorDetail:
     message: str
 
     def as_dict(self) -> dict:
-        return {"field": self.field, "code": str(self.code), "message": self.message}
+        return {
+            "field": self.field,
+            "code": str(self.code),
+            "message": self.message,
+        }
 
 
 class ApiError(Exception):
-    """A failure already shaped like the error envelope.
-
-    Carrying the code rather than the status is what keeps the two from
-    drifting: the status is derived from the code, in one place.
-    """
-
     def __init__(
         self,
         code: ErrorCode,

@@ -1,9 +1,3 @@
-"""The notification backlog and its badge.
-
-A notification is display-only: nothing is derived from it, which is why the
-stream can carry the whole resource and why this slice has no money in it.
-"""
-
 import json
 import uuid
 from datetime import UTC, datetime
@@ -111,9 +105,6 @@ async def _dispatch(message, seq: int) -> None:
     await router.dispatch(make_event(message, outbox_seq=seq))
 
 
-# --- shape ------------------------------------------------------------------
-
-
 async def test_a_notification_carries_the_documented_shape():
     await _notification(
         severity="critical",
@@ -140,8 +131,6 @@ async def test_a_notification_carries_the_documented_shape():
 
 
 async def test_acknowledged_at_is_a_timestamp_not_a_boolean():
-    """The fact and its time are one field, the same shape `deleted_at` uses."""
-
     await _notification(acknowledged_at=MARCH)
 
     payload = body_of(await as_user(NOTIFICATIONS))
@@ -150,8 +139,6 @@ async def test_acknowledged_at_is_a_timestamp_not_a_boolean():
 
 
 async def test_a_half_filled_subject_is_null():
-    """A reference needs both halves to be followable."""
-
     await _notification(subject_type="wallet", subject_id="")
 
     payload = body_of(await as_user(NOTIFICATIONS))
@@ -169,13 +156,7 @@ async def test_the_producer_s_payload_bag_never_reaches_the_client():
     assert "payload" not in payload["data"][0]
 
 
-# --- ordering and filters ---------------------------------------------------
-
-
 async def test_severity_does_not_reorder_the_feed():
-    """This is a feed to be read, not a queue to be worked through: a critical
-    notification from Tuesday does NOT outrank an info from this morning."""
-
     await _notification(title="old critical", severity="critical", created_at=JANUARY)
     await _notification(title="new info", severity="info", created_at=MARCH)
 
@@ -185,8 +166,6 @@ async def test_severity_does_not_reorder_the_feed():
 
 
 async def test_acknowledged_is_a_tristate():
-    """Absent means BOTH — which is not the same request as either value."""
-
     await _notification(title="read", acknowledged_at=MARCH)
     await _notification(title="unread")
 
@@ -232,9 +211,6 @@ async def test_the_feed_does_not_show_someone_else_s_notifications():
     assert [row["title"] for row in payload["data"]] == ["mine"]
 
 
-# --- GET /notifications/count -----------------------------------------------
-
-
 async def test_the_badge_counts_unacknowledged_against_the_total():
     await _notification(acknowledged_at=MARCH)
     await _notification()
@@ -258,9 +234,6 @@ async def test_the_badge_ignores_someone_else_s_notifications():
     payload = body_of(await as_user(COUNT))
 
     assert payload["data"]["total"] == 0
-
-
-# --- projection -------------------------------------------------------------
 
 
 async def test_a_created_event_projects_the_whole_shape():
@@ -292,9 +265,6 @@ async def test_a_created_event_projects_the_whole_shape():
 
 
 async def test_an_event_with_no_severity_projects_as_info():
-    """A producer that never set the field is saying "ordinary", not "unknown
-    urgency the client must handle"."""
-
     await _dispatch(
         NotificationCreated(
             event_id="evt-n2",
@@ -333,9 +303,6 @@ async def test_an_acknowledgement_records_when_it_happened():
 
 
 async def test_a_redelivered_acknowledgement_does_not_move_the_timestamp():
-    """`acknowledged_at` records when the user saw it. A redelivered event is
-    the same fact arriving twice, not a second reading."""
-
     notification = await _notification(acknowledged_at=FEBRUARY)
 
     await _dispatch(

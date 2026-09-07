@@ -20,8 +20,6 @@ def removal_events(
     user_external_id: str,
     now: datetime,
 ) -> list[OutboxEntry]:
-    """The events one deletion produces, in the order consumers see them."""
-
     entries_list = [
         posting_deleted(
             posting,

@@ -2,14 +2,11 @@ local redis = require "resty.redis"
 local resty_string = require "resty.string"
 
 local window_script = require "kong.plugins.user-tier-rate-limit.window_script"
-
-
-local KEEPALIVE_TIMEOUT_MS = 60000
-local KEEPALIVE_POOL_SIZE  = 100
-local TTL_WINDOWS = 2
+local plugin_config = require "kong.plugins.user-tier-rate-limit.config"
 
 
 local script_sha
+
 
 --- Digest of the script, computed once per worker.
 local script_digest = function()
@@ -22,9 +19,6 @@ end
 
 
 --- Open a connection to Redis using values from the plugin config.
--- Selects database and authenticates when configured. On any failure
--- the caller is expected to fail open (no counters touched, no
--- headers set) rather than 503 the request path.
 --
 -- @param config table  plugin config record
 -- @return table|nil  resty.redis client on success
@@ -70,8 +64,8 @@ end
 -- @param client table  resty.redis client previously returned by `connect_to_redis`
 local release = function(client)
     local success, keepalive_error = client:set_keepalive(
-        KEEPALIVE_TIMEOUT_MS,
-        KEEPALIVE_POOL_SIZE
+        plugin_config.RedisConnection.KEEPALIVE_TIMEOUT_MS,
+        plugin_config.RedisConnection.KEEPALIVE_POOL_SIZE
     )
 
     if not success then
@@ -129,7 +123,7 @@ end
 
 
 --- Evaluate every window for one user and, if all of them admit the request,
--- count it against all of them.
+--- count it against all of them.
 --
 -- @param client table  resty.redis client
 -- @param config table  plugin config record
@@ -160,7 +154,7 @@ local evaluate_windows = function(client, config, user_id, windows)
 
         arguments[#arguments + 1] = config[window.config_key]
         arguments[#arguments + 1] = position.previous_weight
-        arguments[#arguments + 1] = window.seconds * TTL_WINDOWS
+        arguments[#arguments + 1] = window.seconds * plugin_config.RedisConnection.TTL_WINDOWS
     end
 
     local reply, script_error = run_script(client, keys, arguments)

@@ -6,8 +6,6 @@ LOWEST_SERVER_ERROR_STATUS = status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
 class ErrorCode(StrEnum):
-    """Top-level `error.code`, each member carrying the status it is served with."""
-
     _status_code: int
 
     def __new__(cls, wire_code: str, status_code: int) -> "ErrorCode":
@@ -59,12 +57,10 @@ class ErrorCode(StrEnum):
 
     @property
     def carries_details(self) -> bool:
-        """Field-level details never ride along with a 500."""
         return self is not ErrorCode.INTERNAL_ERROR
 
     @classmethod
     def from_wire(cls, wire_code: str | None) -> "ErrorCode | None":
-        """The member a framework exception declared, if it names one of ours."""
         if wire_code is None:
             return None
 
@@ -72,7 +68,6 @@ class ErrorCode(StrEnum):
 
     @classmethod
     def for_status(cls, status_code: int) -> "ErrorCode":
-        """The code a failure gets when it arrives carrying only a status."""
         named = ERROR_CODE_BY_STATUS.get(status_code)
         if named is not None:
             return named

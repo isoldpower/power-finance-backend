@@ -26,8 +26,6 @@ class Row:
 
 
 def rows(count: int) -> list[Row]:
-    """Newest first, as every collection in this API is ordered."""
-
     return [
         Row(id=f"r{index}", created_at=(START - timedelta(days=index)).isoformat())
         for index in range(count)
@@ -58,9 +56,6 @@ def test_limit_is_clamped_not_rejected(raw, expected):
 
 
 def test_non_integer_limit_fails_validation():
-    """Clamping answers "as few / as many as possible"; a non-integer is a bug
-    in the caller and says so."""
-
     with pytest.raises(ValidationFailed):
         DEFAULT_LIMIT_POLICY.resolve("twenty")
 
@@ -86,9 +81,6 @@ def test_last_page_has_no_next_cursor():
 
 
 def test_walking_forward_then_back_returns_the_same_page():
-    """Keyset pages neither repeat nor skip: the anchor is a position in the
-    ordering, not a count of rows to skip."""
-
     everything = rows(6)
 
     first_request = page_request(limit=2)
@@ -99,7 +91,6 @@ def test_walking_forward_then_back_returns_the_same_page():
     assert [row.id for row in second.items] == ["r2", "r3"]
 
     back_request = page_request(limit=2, cursor=second.previous_cursor)
-    # Paging backwards scans in reverse, so the store hands rows back tail-first.
     back = build_page([everything[1], everything[0]], total=6, request=back_request)
 
     assert [row.id for row in back.items] == ["r0", "r1"]

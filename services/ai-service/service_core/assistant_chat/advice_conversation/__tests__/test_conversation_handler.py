@@ -1,10 +1,8 @@
-"""One turn of the conversation: what is persisted, in what order, and what
-survives a generation that fails."""
-
 from uuid import UUID, uuid4
 
-from ..contracts import MessageRole, MessageStatus, ResourceReference
-from ..handlers import ConversationHandler
+from ..application import ConversationHandler
+from ..application.dtos import ResourceReferenceDTO
+from ..domain.entities import MessageRole, MessageStatus, ResourceReference
 from .fakes import (
     CONTEXT,
     ExplodingReferenceExtractor,
@@ -46,9 +44,6 @@ async def test_the_turn_is_accepted_then_streamed_then_settled():
 
 
 async def test_both_messages_are_stored_before_any_text_exists():
-    """`accepted` promises the ids are real. It arrives before generation, so
-    a client that drops immediately can still refetch the answer."""
-
     store = InMemoryMessageRepository()
     handler = _handler(store, ScriptedGenerator("text"))
 
@@ -61,8 +56,6 @@ async def test_both_messages_are_stored_before_any_text_exists():
 
 
 async def test_the_question_is_stored_complete_and_uncited():
-    """User messages always have `status: complete` and empty `refs`."""
-
     store = InMemoryMessageRepository()
     await _frames(_handler(store, ScriptedGenerator("text")), "a question")
 
@@ -86,11 +79,10 @@ async def test_the_answer_settles_complete_with_the_whole_text():
 
 
 async def test_references_are_attached_once_the_text_is_whole():
-    """They are not knowable until generation completes, which is why the
-    terminal frame repeats the full text rather than only announcing the end."""
-
     store = InMemoryMessageRepository()
-    references = StaticReferenceExtractor(ResourceReference(type="transaction", id=TRANSACTION_ID))
+    references = StaticReferenceExtractor(
+        ResourceReferenceDTO(type="transaction", id=TRANSACTION_ID)
+    )
     handler = _handler(store, ScriptedGenerator("a ", "reply"), references)
 
     frames = await _frames(handler)
@@ -109,9 +101,6 @@ async def test_deltas_carry_text_only():
 
 
 async def test_a_failed_generation_keeps_what_it_produced():
-    """A user who watched half an answer appear and then vanish has no way to
-    tell that from a bug, so the partial reply is stored rather than dropped."""
-
     store = InMemoryMessageRepository()
     handler = _handler(store, FailingGenerator("You spent "))
 
@@ -134,9 +123,6 @@ async def test_a_failed_generation_names_the_message_it_abandoned():
 
 
 async def test_a_failure_does_not_produce_a_message_frame():
-    """`error` is terminal for the turn. A client that saw both would not know
-    which one to believe."""
-
     handler = _handler(InMemoryMessageRepository(), FailingGenerator("half"))
 
     events = [frame["event"] for frame in await _frames(handler)]
@@ -145,8 +131,6 @@ async def test_a_failure_does_not_produce_a_message_frame():
 
 
 async def test_a_broken_reference_lookup_does_not_cost_the_user_their_answer():
-    """The text is the reply; the chips beside it are a convenience."""
-
     store = InMemoryMessageRepository()
     handler = _handler(
         store,

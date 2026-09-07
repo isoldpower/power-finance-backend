@@ -2,8 +2,7 @@ import logging
 from typing import Any
 
 from django.http import Http404
-from rest_framework import exceptions as drf_exceptions
-from rest_framework import status
+from rest_framework import exceptions as drf_exceptions, status
 from rest_framework.response import Response
 
 from .codes import STATUS_FOR_ERROR_CODE, DetailCode, ErrorCode
@@ -107,8 +106,6 @@ def _render_api_exception(exc: drf_exceptions.APIException) -> Response:
             else ErrorCode.BAD_REQUEST
         )
 
-    # Our own APIExceptions declare a contract code; DRF's declare their own
-    # vocabulary, which resolves to nothing here and leaves the status mapping.
     declared_code = ErrorCode.from_wire(getattr(exc, "default_code", None))
     if declared_code is not None:
         error_code = declared_code

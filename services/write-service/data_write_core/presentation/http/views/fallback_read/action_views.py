@@ -13,14 +13,14 @@ from ...decorators import trace_handler_flow
 from ...serializers import ErrorResponseSerializer, PaginatedActionResponseSerializer
 from ._presenters import present_actions
 from ._query_params import resolve_choice, resolve_choice_or
-from ._schema import (
+from .base import FallbackReadView
+from .config import (
     CURSOR_PARAMETER,
     LIMIT_PARAMETER,
     SEVERITY_PARAMETER,
     SOURCE_PARAMETER,
     STATUS_PARAMETER,
 )
-from .base import FallbackReadView
 
 
 class FallbackActionListView(FallbackReadView):

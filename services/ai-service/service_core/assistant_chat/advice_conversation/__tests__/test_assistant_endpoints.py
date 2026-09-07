@@ -1,5 +1,3 @@
-"""The conversation's REST edge: reading the history and clearing it."""
-
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -12,12 +10,7 @@ from service_core.shared.db_connection import get_session_factory
 from service_core.shared.http_contract import ApiError, error_response
 
 from .. import build_assistant_router
-from ..contracts import (
-    ConversationMessage,
-    MessageRole,
-    MessageStatus,
-    ResourceReference,
-)
+from ..application.dtos import ConversationMessageDTO, ResourceReferenceDTO
 from ..infrastructure import SqlAlchemyMessageRepository
 
 AUTHENTICATED = {"X-User-Id": "clerk_7"}
@@ -47,10 +40,10 @@ async def _seed(owner: str, count: int) -> None:
     for index in range(count):
         await store.append(
             owner,
-            ConversationMessage(
+            ConversationMessageDTO(
                 id=uuid4(),
-                role=MessageRole.USER if index % 2 == 0 else MessageRole.ASSISTANT,
-                status=MessageStatus.COMPLETE,
+                role="user" if index % 2 == 0 else "assistant",
+                status="complete",
                 text=f"message {index}",
                 created_at=NOON + timedelta(minutes=index),
             ),
@@ -70,13 +63,13 @@ async def test_a_message_carries_the_documented_shape(client):
     store = SqlAlchemyMessageRepository(get_session_factory())
     await store.append(
         "clerk_7",
-        ConversationMessage(
+        ConversationMessageDTO(
             id=uuid4(),
-            role=MessageRole.ASSISTANT,
-            status=MessageStatus.COMPLETE,
+            role="assistant",
+            status="complete",
             text="You spent 412.30 USD",
             created_at=NOON,
-            refs=(ResourceReference(type="transaction", id=uuid4()),),
+            refs=(ResourceReferenceDTO(type="transaction", id=uuid4()),),
         ),
     )
 
@@ -89,8 +82,6 @@ async def test_a_message_carries_the_documented_shape(client):
 
 
 async def test_refs_are_an_empty_array_rather_than_null(client):
-    """`[]`, never `null`, and never absent."""
-
     await _seed("clerk_7", 1)
 
     assert client.get(MESSAGES, headers=AUTHENTICATED).json()["data"][0]["refs"] == []
@@ -173,9 +164,6 @@ async def test_clearing_does_not_reach_another_conversation(client):
 
 
 async def test_an_oversized_limit_is_clamped_rather_than_refused(client):
-    """Every other collection in this API caps at 100 and serves the page. A
-    422 here would be this one endpoint disagreeing with the convention."""
-
     await _seed("clerk_7", 3)
 
     response = client.get(f"{MESSAGES}?limit=5000", headers=AUTHENTICATED)

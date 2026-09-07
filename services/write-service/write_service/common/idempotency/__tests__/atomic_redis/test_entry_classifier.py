@@ -1,5 +1,3 @@
-"""EntryClassifier: turns a raw redis entry + the current request hash into an AcquireResult."""
-
 from __future__ import annotations
 
 from django.test import SimpleTestCase
@@ -7,15 +5,12 @@ from django.test import SimpleTestCase
 from write_service.common.idempotency.atomic_redis.entry_classifier import (
     EntryClassifier,
 )
-from write_service.common.idempotency.atomic_redis.entry_codec import (
-    STATE_COMPLETED,
-    STATE_IN_FLIGHT,
-)
 from write_service.common.idempotency.atomic_redis.outcomes import (
     AlreadyCompleted,
     InProgress,
     Mismatch,
 )
+from write_service.common.idempotency.config import EntryState
 
 
 class EntryClassifierTests(SimpleTestCase):
@@ -26,7 +21,7 @@ class EntryClassifierTests(SimpleTestCase):
 
     def test_different_hash_returns_mismatch_with_stored_hash(self) -> None:
         outcome = EntryClassifier.classify(
-            existing_entry={"state": STATE_IN_FLIGHT, "request_hash": "stored"},
+            existing_entry={"state": EntryState.IN_FLIGHT, "request_hash": "stored"},
             request_hash="incoming",
         )
 
@@ -36,7 +31,7 @@ class EntryClassifierTests(SimpleTestCase):
 
     def test_matching_hash_in_flight_returns_in_progress(self) -> None:
         outcome = EntryClassifier.classify(
-            existing_entry={"state": STATE_IN_FLIGHT, "request_hash": "h"},
+            existing_entry={"state": EntryState.IN_FLIGHT, "request_hash": "h"},
             request_hash="h",
         )
 
@@ -45,7 +40,7 @@ class EntryClassifierTests(SimpleTestCase):
     def test_matching_hash_completed_returns_already_completed_with_response(self) -> None:
         outcome = EntryClassifier.classify(
             existing_entry={
-                "state": STATE_COMPLETED,
+                "state": EntryState.COMPLETED,
                 "request_hash": "h",
                 "status_code": 201,
                 "body": {"id": 1},
@@ -64,7 +59,7 @@ class EntryClassifierTests(SimpleTestCase):
     def test_completed_entry_missing_headers_defaults_to_empty_dict(self) -> None:
         outcome = EntryClassifier.classify(
             existing_entry={
-                "state": STATE_COMPLETED,
+                "state": EntryState.COMPLETED,
                 "request_hash": "h",
                 "status_code": 200,
                 "body": None,
@@ -78,7 +73,7 @@ class EntryClassifierTests(SimpleTestCase):
     def test_status_code_is_coerced_to_int(self) -> None:
         outcome = EntryClassifier.classify(
             existing_entry={
-                "state": STATE_COMPLETED,
+                "state": EntryState.COMPLETED,
                 "request_hash": "h",
                 "status_code": "201",
                 "body": {},
@@ -91,7 +86,7 @@ class EntryClassifierTests(SimpleTestCase):
 
     def test_empty_stored_hash_falls_through_to_state_check(self) -> None:
         outcome = EntryClassifier.classify(
-            existing_entry={"state": STATE_IN_FLIGHT, "request_hash": ""},
+            existing_entry={"state": EntryState.IN_FLIGHT, "request_hash": ""},
             request_hash="any",
         )
 

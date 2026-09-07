@@ -7,27 +7,17 @@ from data_read_core.shared.http_contract import (
 )
 from data_read_core.shared.postgres_orm import Severity
 
+from ..config import FALSE_STATEMENTS, TRUTH_STATEMENTS, Messages, ParamsList
 from ..dtos import NotificationFilters
-
-# The query-param spellings. They live here rather than beside the dataclass
-# because they name what a REQUEST calls these, which is HTTP's business.
-ACKNOWLEDGED_PARAM = "acknowledged"
-SEVERITY_PARAM = "severity"
-
-TRUTH_STATEMENTS = {"1", "true", "yes", "on"}
-FALSE_STATEMENTS = {"0", "false", "no", "off"}
-
-NOT_A_BOOLEAN_MESSAGE = "{parameter} must be a boolean ({legal})."
-UNKNOWN_SEVERITY_MESSAGE = "Unknown severity. Legal values: {legal}."
 
 
 def read_filters(request: Request) -> NotificationFilters:
     return NotificationFilters(
         acknowledged=_read_acknowledged(
-            request.query_params.get(ACKNOWLEDGED_PARAM),
+            request.query_params.get(ParamsList.ACKNOWLEDGED),
         ),
         severity=_read_severity(
-            request.query_params.get(SEVERITY_PARAM),
+            request.query_params.get(ParamsList.SEVERITY),
         ),
     )
 
@@ -45,10 +35,10 @@ def _read_acknowledged(raw_acknowledged: str | None) -> bool | None:
     raise ValidationFailed(
         details=[
             ErrorDetail(
-                field=ACKNOWLEDGED_PARAM,
+                field=ParamsList.ACKNOWLEDGED,
                 code=DetailCode.INVALID,
-                message=NOT_A_BOOLEAN_MESSAGE.format(
-                    parameter=ACKNOWLEDGED_PARAM,
+                message=Messages.NOT_A_BOOLEAN.format(
+                    parameter=ParamsList.ACKNOWLEDGED,
                     legal=", ".join(sorted(TRUTH_STATEMENTS | FALSE_STATEMENTS)),
                 ),
             )
@@ -67,9 +57,9 @@ def _read_severity(raw: str | None) -> str | None:
     raise ValidationFailed(
         details=[
             ErrorDetail(
-                field=SEVERITY_PARAM,
+                field=ParamsList.SEVERITY,
                 code=DetailCode.INVALID,
-                message=UNKNOWN_SEVERITY_MESSAGE.format(legal=", ".join(Severity)),
+                message=Messages.UNKNOWN_SEVERITY.format(legal=", ".join(Severity)),
             )
         ]
     )

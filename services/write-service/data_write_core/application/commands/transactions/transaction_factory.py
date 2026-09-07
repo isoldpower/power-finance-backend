@@ -22,7 +22,6 @@ def build_transaction(
     transaction_type: TransactionType,
     created_at: datetime,
 ) -> TransactionAggregate:
-    """Assemble a transaction and its opening flow."""
     if amount == Decimal("0"):
         raise InvalidTransactionAmountError(amount)
 

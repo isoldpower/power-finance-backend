@@ -146,8 +146,6 @@ class TransactionToDtoTests(SimpleTestCase):
         self.assertIsNone(built_dto.chain_id)
 
     def test_amount_leaves_as_a_positive_magnitude(self) -> None:
-        """Direction is carried by `type`, so the sign never reaches the wire."""
-
         wallet = _wallet_entity()
         aggregate = self._aggregate(UUID(wallet.unique_id), "-12.50")
 

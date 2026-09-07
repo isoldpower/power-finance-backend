@@ -25,7 +25,6 @@ class WalletRepository(ABC):
         user_id: int,
         page: PageRequest | None = None,
     ) -> list[WalletEntity]:
-        """One page of rows, including the lookahead row. Newest first."""
         raise NotImplementedError()
 
     @abstractmethod

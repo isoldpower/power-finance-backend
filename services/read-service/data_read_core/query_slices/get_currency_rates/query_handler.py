@@ -32,9 +32,6 @@ class GetCurrencyRatesQueryHandler:
         )
 
     async def _known_targets(self, target_codes: list[str] | None) -> list[str] | None:
-        """Every requested code is checked against the table first, so an
-        unknown one is a 422 rather than a silently missing map entry."""
-
         if target_codes is None:
             return None
 

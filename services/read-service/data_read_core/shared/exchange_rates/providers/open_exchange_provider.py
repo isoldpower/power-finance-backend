@@ -1,9 +1,3 @@
-"""https://open.er-api.com — daily rates, no key, no attribution requirement.
-
-Free feeds update once a day, so this provider is paired with a generous
-`max_age` upstream rather than polled.
-"""
-
 import json
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation

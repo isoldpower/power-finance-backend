@@ -2,10 +2,9 @@ from rest_framework.request import Request
 
 from data_read_core.shared.money import CURRENCY_CATALOG, parse_amount
 
-from ..dtos import ALL_GROUPS, ChartFilters
+from ..config import GroupFilter, ParamsList
+from ..dtos import ChartFilters
 from ._serializers import ChartRequestSerializer
-
-LOWBAR_FIELD = "lowbar"
 
 
 async def read_filters(request: Request) -> ChartFilters:
@@ -17,7 +16,7 @@ async def read_filters(request: Request) -> ChartFilters:
     raw_lowbar = requested["lowbar"]
 
     return ChartFilters(
-        group=requested.get("group") or ALL_GROUPS,
-        lowbar=parse_amount(raw_lowbar, currency.digits, LOWBAR_FIELD),
+        group=requested.get("group") or GroupFilter.ALL,
+        lowbar=parse_amount(raw_lowbar, currency.digits, ParamsList.LOWBAR),
         currency=currency.code,
     )

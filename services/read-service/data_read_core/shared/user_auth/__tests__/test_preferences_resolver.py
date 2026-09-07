@@ -54,9 +54,6 @@ async def test_absent_preferences_fall_back_per_field():
 
 
 async def test_an_unsupported_currency_degrades_instead_of_failing():
-    """`unsafeMetadata` is client-writable, so a bad preference must degrade
-    presentation rather than fail a request."""
-
     preferences = await resolve_preferences(request_with(HTTP_X_USER_CURRENCY="XYZ"))
 
     assert preferences.currency == "USD"
@@ -76,10 +73,6 @@ async def test_currency_is_case_insensitive():
 
 
 async def test_cache_signature_separates_reporting_currencies():
-    """Nothing invalidates on the server when a preference changes, so a cache
-    key that ignored the currency would hand a user their old currency back
-    under `meta.cached: true`."""
-
     in_euros = await resolve_preferences(request_with(HTTP_X_USER_CURRENCY="EUR"))
     in_dollars = await resolve_preferences(request_with(HTTP_X_USER_CURRENCY="USD"))
 

@@ -5,9 +5,6 @@ from django.utils import timezone
 
 
 class OutboxEntryModel(models.Model):
-    """Transactional outbox row written in the same DB transaction as business
-    state; column names match Debezium's Outbox Event Router SMT defaults."""
-
     id = models.BigAutoField(primary_key=True)
     event_id = models.UUIDField(default=uuid4, editable=False, unique=True)
     aggregate_type = models.CharField(max_length=64, db_column="aggregatetype")

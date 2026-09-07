@@ -1,36 +1,42 @@
-from .chat_session import ChatSession
-from .contracts import (
+from .application import (
+    ChatSession,
     ChatTransport,
+    ClientDisconnectedError,
     ConnectionContext,
-    ConversationMessage,
+    ConversationHandler,
+    ConversationMessageDTO,
+    EchoReplyGenerator,
+    MalformedFrameError,
     MessageHandler,
-    MessageRole,
-    MessageStatus,
+    MessageRepository,
+    MessageRouter,
+    NeverTerminates,
+    ProcessShutdownSignal,
     ReferenceExtractor,
-    ReplyEvent,
     ReplyGenerator,
-    ResourceReference,
-    RoutedReplies,
+    ResourceReferenceDTO,
     Termination,
     TerminationReason,
     TerminationSignal,
 )
-from .exceptions import ClientDisconnectedError, MalformedFrameError
-from .generators import EchoReplyGenerator
-from .handlers import ConversationHandler
-from .http import build_assistant_router, build_chat_router
+from .domain.entities import (
+    ConversationMessage,
+    MessageRole,
+    MessageStatus,
+    ReplyEvent,
+    ResourceReference,
+    RoutedReplies,
+)
 from .infrastructure import (
     GATEWAY_USER_HEADER,
+    ProjectedReferenceExtractor,
     SqlAlchemyMessageRepository,
     WebSocketTransport,
     authenticated_user,
     build_context_from_request,
 )
-from .message_router import MessageRouter
-from .message_view import present_message, present_messages
-from .references import ProjectedReferenceExtractor
-from .repositories import MessageRepository
-from .signals import NeverTerminates, ProcessShutdownSignal
+from .presentation import present_message, present_messages
+from .presentation.http import build_assistant_router, build_chat_router
 
 __all__ = [
     "GATEWAY_USER_HEADER",
@@ -40,6 +46,7 @@ __all__ = [
     "ConnectionContext",
     "ConversationHandler",
     "ConversationMessage",
+    "ConversationMessageDTO",
     "EchoReplyGenerator",
     "MalformedFrameError",
     "MessageHandler",
@@ -54,6 +61,7 @@ __all__ = [
     "ReplyEvent",
     "ReplyGenerator",
     "ResourceReference",
+    "ResourceReferenceDTO",
     "RoutedReplies",
     "SqlAlchemyMessageRepository",
     "Termination",

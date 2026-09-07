@@ -2,8 +2,6 @@ from django.db import models
 
 
 class AutomationReadModel(models.Model):
-    """A user-authored rule, projected."""
-
     id = models.UUIDField(primary_key=True)
     user_id = models.BigIntegerField()
 

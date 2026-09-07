@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from .config import ASCENDING_PREFIX, DESCENDING_PREFIX, GREATER_THAN_LOOKUP, LESS_THAN_LOOKUP
+from .config import KeysetLookup, OrderingFormat
 
 
 class SortDirection(StrEnum):
@@ -26,11 +26,11 @@ _OPPOSITE_DIRECTIONS = {
 }
 
 _DJANGO_ORDERING_PREFIXES = {
-    SortDirection.ASCENDING: ASCENDING_PREFIX,
-    SortDirection.DESCENDING: DESCENDING_PREFIX,
+    SortDirection.ASCENDING: OrderingFormat.ASCENDING_PREFIX,
+    SortDirection.DESCENDING: OrderingFormat.DESCENDING_PREFIX,
 }
 
 _KEYSET_LOOKUPS = {
-    SortDirection.ASCENDING: GREATER_THAN_LOOKUP,
-    SortDirection.DESCENDING: LESS_THAN_LOOKUP,
+    SortDirection.ASCENDING: KeysetLookup.GREATER_THAN,
+    SortDirection.DESCENDING: KeysetLookup.LESS_THAN,
 }

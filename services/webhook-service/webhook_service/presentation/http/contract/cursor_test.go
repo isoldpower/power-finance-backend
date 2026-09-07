@@ -82,7 +82,8 @@ func TestGarbageCursorIsRefused(t *testing.T) {
 func TestGoldenCursorMatchesThePythonServices(t *testing.T) {
 	const (
 		goldenFingerprint = "1387ffe9d3754887"
-		goldenToken       = "eyJ2IjoxLCJkIjoibmV4dCIsImsiOlsiMjAyNi0wOC0xMlQxMjowMDowMCswMDowMCIsIjdjM2U5YTEwLTRkMmItNGY3Ny05MWNjLTVlOGIwYTJmNmQzNCJdLCJmIjoiMTM4N2ZmZTlkMzc1NDg4NyJ9"
+		goldenToken       = "eyJ2IjoxLCJkIjoibmV4dCIsImsiOlsiMjAyNi0wOC0xMlQxMjowMDowMCswMDowMCIs" +
+			"IjdjM2U5YTEwLTRkMmItNGY3Ny05MWNjLTVlOGIwYTJmNmQzNCJdLCJmIjoiMTM4N2ZmZTlkMzc1NDg4NyJ9"
 	)
 
 	minted := EncodeCursor(

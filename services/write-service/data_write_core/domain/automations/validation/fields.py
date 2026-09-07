@@ -3,16 +3,16 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
 
-from ..vocabulary import Severity
-from .refusal import EFFECT_PARAMS_INVALID, AutomationRefusal
+from data_write_core.domain.automations.validation.config import FieldSettings, RefusalCode
 
-CURRENCY_CODE_LENGTH = 3
+from ..vocabulary import Severity
+from .refusal import AutomationRefusal
 
 
 def refuse(path: str, reason: str) -> AutomationRefusal:
     return AutomationRefusal(
         path=path,
-        detail_code=EFFECT_PARAMS_INVALID,
+        detail_code=RefusalCode.EFFECT_PARAMS_INVALID,
         reason=reason,
     )
 
@@ -75,7 +75,7 @@ def _require_above_zero(raw: str, path: str) -> None:
 
 def _require_currency_code(currency: Any, path: str) -> None:
     match currency:
-        case str() as code if len(code) == CURRENCY_CODE_LENGTH:
+        case str() as code if len(code) == FieldSettings.CURRENCY_CODE_LENGTH:
             return
         case _:
             raise refuse(

@@ -2,8 +2,7 @@ package types
 
 import "time"
 
-// DeliveryLogFilters narrow the log. A blank value means "no restriction",
-// matching the API's rule that an absent filter is not a default.
+// DeliveryLogFilters narrow the log.
 type DeliveryLogFilters struct {
 	Status string
 	Event  string
@@ -16,6 +15,7 @@ type DeliveryAnchor struct {
 	Backwards bool
 }
 
+// DeliveryLogQuery is one page request against the delivery log.
 type DeliveryLogQuery struct {
 	UserExternalID string
 	WebhookID      string
@@ -24,8 +24,7 @@ type DeliveryLogQuery struct {
 	Anchor         *DeliveryAnchor
 }
 
-// DeliveryLogPage is one scanned window: `Rows` holds up to Limit+1 rows so the
-// caller can tell whether another page exists without a second query.
+// DeliveryLogPage is one scanned window: Rows holds up to Limit+1, the extra being the lookahead.
 type DeliveryLogPage struct {
 	Rows  []Delivery
 	Total int

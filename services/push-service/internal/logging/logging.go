@@ -12,7 +12,7 @@ func Setup() {
 	install(levelFromName(os.Getenv("LOG_LEVEL")))
 }
 
-// SetLevel reinstalls the default logger at the given level, used once the
+// SetLevel re-installs the default logger at the given level, used once the
 // configuration (file + env) has been resolved.
 func SetLevel(name string) {
 	install(levelFromName(name))

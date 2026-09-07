@@ -3,9 +3,6 @@ from django.conf import settings
 
 
 class DataWriteCoreConfig(AppConfig):
-    """Single Django app holding all write-side business logic and
-    cross-cutting infrastructure (outbox, SAGA adapter, fraud client)."""
-
     default_auto_field = "django.db.models.BigAutoField"
     name = "data_write_core"
     label = "data_write_core"

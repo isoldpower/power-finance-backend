@@ -11,9 +11,6 @@ from .._utilities import decode_payload, handle_database_errors
 
 
 class RemoveWalletReadModel(Effect):
-    """Close the wallet projection rather than dropping the row: it leaves lists
-    and search but stays queryable by id."""
-
     async def apply(self, event: EventMessage) -> None:
         event_payload = decode_payload(event, WalletDeleted)
         await handle_database_errors(

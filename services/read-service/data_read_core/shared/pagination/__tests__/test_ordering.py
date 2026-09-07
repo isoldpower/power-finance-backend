@@ -16,9 +16,6 @@ MOMENT_IN_MILLISECONDS = int(MOMENT.timestamp() * 1000)
 
 @pytest.mark.parametrize("value", [MOMENT, MOMENT.isoformat()])
 def test_timestamps_encode_the_same_from_a_model_or_a_document(value):
-    """Postgres rows arrive holding `datetime`s and Elasticsearch hits arrive
-    already serialised; one collection can be paged through either."""
-
     assert DATETIME_CODEC.to_cursor_value(value) == MOMENT.isoformat()
 
 

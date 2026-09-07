@@ -46,9 +46,6 @@ async def test_the_presented_shape_spells_digits_as_decimals():
 
 
 async def test_the_endpoint_reports_itself_as_unpaginated():
-    """The page rules do not apply to a static table fetched once at app load,
-    so `limit` and both cursors stay null and the list is always complete."""
-
     fetched = await ListCurrenciesQueryHandler().handle(ListCurrenciesQuery())
 
     assert CompletePage(fetched.rows).meta() == {

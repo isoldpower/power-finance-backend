@@ -1,44 +1,43 @@
 from dataclasses import dataclass
 from typing import Any
 
-from service_core.shared.http_contract import DetailCode, ErrorDetail, ValidationFailed
+from service_core.shared.http_contract import (
+    DetailCode,
+    ErrorDetail,
+    ValidationFailed,
+)
 
-LIMIT_PARAM = "limit"
-NON_INTEGER_LIMIT = "limit must be an integer."
-
-DEFAULT_LIMIT = 25
-MINIMUM_LIMIT = 1
-MAXIMUM_LIMIT = 100
-
-MESSAGE_FEED_ORDER = "created_at:desc,id:desc"
+from .config import (
+    LimitMessage,
+    LimitSettings,
+    ParamsList,
+)
 
 
 def resolve_limit(raw: str | int | None) -> int:
-    """Clamped rather than refused, matching the other services: an oversized
-    page is a client mistake worth serving.
-
-    Parsed here rather than by the framework so a bad value leaves through the
-    API's error envelope instead of FastAPI's own 422 body.
-    """
-
     if raw is None or raw == "":
-        return DEFAULT_LIMIT
+        return int(LimitSettings.DEFAULT)
 
     try:
         requested = int(raw)
     except (TypeError, ValueError):
         raise ValidationFailed(
-            message=NON_INTEGER_LIMIT,
+            message=LimitMessage.NON_INTEGER,
             details=(
                 ErrorDetail(
-                    field=LIMIT_PARAM,
+                    field=ParamsList.LIMIT,
                     code=DetailCode.INVALID,
-                    message=NON_INTEGER_LIMIT,
+                    message=LimitMessage.NON_INTEGER,
                 ),
             ),
         ) from None
 
-    return max(MINIMUM_LIMIT, min(MAXIMUM_LIMIT, requested))
+    return int(
+        max(
+            LimitSettings.MINIMUM,
+            min(LimitSettings.MAXIMUM, requested),
+        )
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +55,7 @@ class Page:
             "next_cursor": self.next_cursor,
             "prev_cursor": self.previous_cursor,
         }
+
         if cached is not None:
             block["cached"] = cached
 

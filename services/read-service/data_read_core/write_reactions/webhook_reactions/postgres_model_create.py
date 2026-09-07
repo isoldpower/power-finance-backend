@@ -10,9 +10,6 @@ from .._utilities import decode_payload, handle_database_errors
 
 
 class CreateWebhookReadModel(Effect):
-    """Projects the endpoint config WITHOUT the secret — reads never expose
-    it; only the webhook-service consumes it."""
-
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, WebhookEndpointCreated)
         await handle_database_errors(

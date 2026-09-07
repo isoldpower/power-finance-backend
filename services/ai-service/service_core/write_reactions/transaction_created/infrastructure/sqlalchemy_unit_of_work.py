@@ -3,9 +3,7 @@ from types import TracebackType
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from service_core.shared.db_connection import (
-    session_scope,
-)
+from service_core.shared.db_connection import session_scope
 from service_core.shared.kafka_outbox import (
     OutboxRepository,
     SqlAlchemyOutboxRepository,

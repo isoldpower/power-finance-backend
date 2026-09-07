@@ -1,5 +1,4 @@
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 
 from data_read_core.shared.http_contract import (
     DetailCode,
@@ -21,20 +20,16 @@ from data_read_core.shared.rest_framework import (
     async_api_view,
 )
 
-from ..dtos import ENABLED_PARAM, AutomationFilters, ListAutomationsQuery
+from ..config import (
+    ENABLED_PARAMETER,
+    FALSE_STATEMENTS,
+    TRUTH_STATEMENTS,
+    ParamsList,
+)
+from ..dtos import AutomationFilters, ListAutomationsQuery
 from ..query_handler import ListAutomationsQueryHandler
 from ._presenters import present_many
 from ._serializers import PaginatedAutomationSerializer
-
-TRUTH_STATEMENTS = {"1", "true", "yes", "on"}
-FALSE_STATEMENTS = {"0", "false", "no", "off"}
-
-ENABLED_PARAMETER = OpenApiParameter(
-    ENABLED_PARAM,
-    type=OpenApiTypes.BOOL,
-    location=OpenApiParameter.QUERY,
-    description="Restrict to enabled or disabled. ABSENT means both.",
-)
 
 
 @extend_schema(
@@ -62,7 +57,7 @@ async def list_automations(request):
     logger = get_query_logger("list_automations")
     log_request_received(logger, "list_automations", user_id=request.user.id)
 
-    filters = AutomationFilters(enabled=_read_enabled(request.query_params.get(ENABLED_PARAM)))
+    filters = AutomationFilters(enabled=_read_enabled(request.query_params.get(ParamsList.ENABLED)))
     page_request = PageRequest.from_request(
         request,
         CREATED_AT_DESC,
@@ -107,9 +102,9 @@ def _read_enabled(raw: str | None) -> bool | None:
     raise ValidationFailed(
         details=[
             ErrorDetail(
-                field=ENABLED_PARAM,
+                field=ParamsList.ENABLED,
                 code=DetailCode.INVALID,
-                message=f"{ENABLED_PARAM} must be a boolean ({
+                message=f"{ParamsList.ENABLED} must be a boolean ({
                     ', '.join(sorted(TRUTH_STATEMENTS | FALSE_STATEMENTS))
                 })",
             )

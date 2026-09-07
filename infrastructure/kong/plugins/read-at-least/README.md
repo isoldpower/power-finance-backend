@@ -1,0 +1,29 @@
+-- Custom Kong plugin: read-at-least
+--
+-- Implements the request-side mechanics for the Read-At-Least header.
+-- The response side (signing X-Write-Version on write routes and
+-- recording the per-user offset to Redis) lives in the separate
+-- `write-ral-version` plugin so the read and write halves can be
+-- attached to their own routes without cross-coupling.
+--
+--   * When the client supplies a Read-At-Least header, validate it as
+--     `<offset>:<hex-hmac-sha256>` against a gateway-internal secret.
+--     This stops clients from forging arbitrary offsets to force
+--     Read-Service 503 fallbacks.
+--
+--   * When the client omits Read-At-Least, look up the user's latest
+--     write offset in Redis (key `ral:user:{sub}`, populated by the
+--     write-ral-version plugin on write responses) and inject a freshly
+--     signed header. Falls open (no header, free read) on Redis miss
+--     or any lookup failure.
+--
+-- "Offset" here is the Postgres outbox seq id (BIGSERIAL), not the
+-- Kafka offset — see write-ral-version/redis_writer.lua for how the value
+-- gets into Redis.
+--
+-- Runs AFTER clerk-jwt so kong.ctx.shared.clerk_claims is populated.
+
+
+-- PRIORITY 700 keeps read-at-least below clerk-jwt (801) so the verified
+-- claims have already been stashed in kong.ctx.shared by the time this
+-- runs.

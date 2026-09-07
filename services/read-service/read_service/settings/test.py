@@ -1,13 +1,3 @@
-"""Test settings: Postgres test DB, external dependencies patched out.
-
-Tests run against a real Postgres so the `data_read_core` migrations build the
-test schema the same way production does. Django auto-creates and tears down
-`test_<NAME>`.
-
-Defaults point at the `postgres-read` container from the compose stack
-(exposed on host port 5434); override via env for CI.
-"""
-
 import os
 
 from .base import *  # noqa: F401,F403

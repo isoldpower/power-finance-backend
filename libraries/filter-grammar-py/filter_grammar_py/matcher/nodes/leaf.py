@@ -42,7 +42,12 @@ class LeafNode(MatchNode):
                 path=f"{path}.{OPERATOR_KEY}",
             )
 
-        return cls(leaf.field_name, leaf.operator, leaf.value, field_policy)
+        return cls(
+            leaf.field_name,
+            leaf.operator,
+            leaf.value,
+            field_policy,
+        )
 
     @property
     def field_name(self) -> str:
@@ -58,6 +63,11 @@ class LeafNode(MatchNode):
             return False
 
         try:
-            return compare(self._operator, present, self._expected, self._field_policy)
+            return compare(
+                self._operator,
+                present,
+                self._expected,
+                self._field_policy,
+            )
         except UncomparableValue:
             return False

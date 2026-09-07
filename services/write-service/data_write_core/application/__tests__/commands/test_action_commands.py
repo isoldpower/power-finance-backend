@@ -1,9 +1,3 @@
-"""Answering the queue, and the two rules that keep it a queue.
-
-An action is a DECISION: the choices come from the server as `resolutions`, and
-answering is terminal.
-"""
-
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
@@ -25,8 +19,6 @@ from data_write_core.domain.exceptions import (
 )
 from data_write_core.domain.value_objects import ActionResolution, ResolutionIntent
 
-# The SAGA coordinator opens a real transaction around the write step, so
-# these need a database even though the repositories are fakes.
 pytestmark = pytest.mark.django_db(transaction=True)
 
 USER_ID = 7
@@ -129,9 +121,6 @@ def raise_command(**overrides) -> RaiseActionCommand:
 
 
 async def test_an_action_with_nothing_to_choose_is_refused():
-    """`resolutions` is never empty. An action with nothing to choose is a
-    notification, not an action."""
-
     handler = RaiseActionCommandHandler(FakeActionRepository(), FakeOutboxRepository())
 
     with pytest.raises(EmptyResolutionsError):
@@ -139,10 +128,6 @@ async def test_an_action_with_nothing_to_choose_is_refused():
 
 
 async def test_a_recurring_condition_collapses_onto_one_row():
-    """A scheduled check that fires daily until payday updates ONE action
-    instead of appending a row per run and burying the queue it is trying to
-    surface."""
-
     existing = make_action(group_key="recurring:netflix", source="scheduler")
     repository = FakeActionRepository([existing])
     handler = RaiseActionCommandHandler(repository, FakeOutboxRepository())
@@ -156,8 +141,6 @@ async def test_a_recurring_condition_collapses_onto_one_row():
 
 
 async def test_a_non_recurring_action_starts_at_one_occurrence():
-    """Never 0 — one occurrence is one sighting."""
-
     repository = FakeActionRepository()
     handler = RaiseActionCommandHandler(repository, FakeOutboxRepository())
 
@@ -178,9 +161,6 @@ async def test_two_actions_without_a_group_key_do_not_collapse():
 
 
 async def test_resolving_empties_the_choices_and_records_when():
-    """A resolved action offers no further choices, and an empty array rather
-    than a stale list is what stops a client re-rendering dead buttons."""
-
     action = make_action()
     repository = FakeActionRepository([action])
     handler = ResolveActionCommandHandler(repository, FakeOutboxRepository())
@@ -202,9 +182,6 @@ async def test_resolving_empties_the_choices_and_records_when():
 
 
 async def test_dismissal_produces_dismissed_rather_than_resolved():
-    """The distinction is recorded for analytics: "how often is this
-    recommendation ignored" is not answerable if both collapse to one state."""
-
     action = make_action()
     handler = ResolveActionCommandHandler(
         FakeActionRepository([action]),
@@ -225,8 +202,6 @@ async def test_dismissal_produces_dismissed_rather_than_resolved():
 
 
 async def test_an_id_valid_on_another_action_is_still_unknown_here():
-    """`resolution_id` must be one of the ids offered on THIS action."""
-
     action = make_action(resolutions=(DISMISS,))
     handler = ResolveActionCommandHandler(
         FakeActionRepository([action]),
@@ -246,9 +221,6 @@ async def test_an_id_valid_on_another_action_is_still_unknown_here():
 
 @pytest.mark.parametrize("answered", ["resolved", "dismissed", "expired"])
 async def test_answering_twice_is_a_conflict(answered: str):
-    """A conflict rather than a validation error: the request was well-formed
-    and would have succeeded earlier."""
-
     action = make_action(status=answered, resolutions=())
     handler = ResolveActionCommandHandler(
         FakeActionRepository([action]),
@@ -283,8 +255,6 @@ async def test_the_sweep_expires_only_what_has_lapsed():
 
 
 async def test_an_expired_action_can_no_longer_be_answered():
-    """Expiry is an answer like any other — it closes the queue entry."""
-
     lapsed = make_action(expires_at=NOW - timedelta(hours=1))
     repository = FakeActionRepository([lapsed])
     await ExpireLapsedActionsCommandHandler(repository, FakeOutboxRepository()).handle(

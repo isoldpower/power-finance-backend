@@ -33,9 +33,6 @@ def _aggregate(*amounts: str, deleted_at: datetime | None = None) -> Transaction
 
 
 def _restate(aggregate: TransactionAggregate, magnitude: str):
-    """What the view does: a positive magnitude, signed by the direction the
-    transaction already has."""
-
     signed = TransactionEntity.signed(Decimal(magnitude), aggregate.type)
 
     return aggregate.adjust(signed)
@@ -70,8 +67,6 @@ def test_correcting_downwards_appends_a_positive_delta():
 
 
 def test_the_transaction_is_not_cancelled_by_a_correction():
-    """The whole point of adjusting rather than cancel-and-recreate."""
-
     aggregate = _aggregate("-50.00")
 
     _restate(aggregate, "70.00")
@@ -100,8 +95,6 @@ def test_corrections_compose():
 
 
 def test_restating_the_same_amount_appends_nothing():
-    """Absolute semantics, so a replayed correction is naturally a no-op."""
-
     aggregate = _aggregate("-50.00")
 
     assert _restate(aggregate, "50.00") is None
@@ -118,9 +111,6 @@ def test_an_income_stays_an_income():
 
 
 def test_the_direction_cannot_be_flipped_through_the_view_path():
-    """The view signs the magnitude with the existing type, so a caller has no
-    way to reach the flip — the domain guard is the backstop."""
-
     aggregate = _aggregate("-50.00")
 
     with pytest.raises(TransactionDirectionChangeError):

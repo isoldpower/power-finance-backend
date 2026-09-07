@@ -1,7 +1,6 @@
 from uuid import UUID
 
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -21,13 +20,7 @@ from ...serializers import (
 from ..mixins import CommandResponseMixin
 from ._meta import chain_meta
 from .base import TransactionChainView
-
-CHAIN_ID_PARAMETER = OpenApiParameter(
-    "chain_id",
-    type=OpenApiTypes.UUID,
-    location=OpenApiParameter.PATH,
-    description="Chain ID",
-)
+from .config import CHAIN_ID_PARAMETER
 
 
 class TransactionChainResourceView(TransactionChainView, CommandResponseMixin):

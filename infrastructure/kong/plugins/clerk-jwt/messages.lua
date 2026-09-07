@@ -1,17 +1,4 @@
 -- Centralised 401 response builders.
---
--- Each helper calls `kong.response.exit`, which terminates the
--- request immediately — callers should `return messages.X()` so the
--- access phase short-circuits cleanly without further processing.
---
--- Every one of them answers in the API's standard error envelope with
--- `error.code = "unauthorized"`: a client parses a gateway failure exactly
--- the way it parses a service failure.
---
--- Messages are intentionally generic; they avoid leaking internal
--- failure reasons (token shape, JWKS state, key id) to the caller, while
--- staying specific enough in the gateway log to debug from.
-
 local envelope = require "power_finance.envelope"
 
 

@@ -1,0 +1,3360 @@
+openapi: 3.0.3
+info:
+  title: ''
+  version: 0.0.0
+paths:
+  /api/schema/:
+    get:
+      operationId: api_schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - ug
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/accounts:
+    get:
+      operationId: accounts_list
+      description: |-
+        Retrieve a page of your double-entry chart of accounts, newest first. These accounts are derived by the backend from your transactions; they are not created or edited directly.
+
+        `group` narrows the page but never reorders it — assets do not lead liabilities. `meta.groups` reports every group regardless, so the tab labels do not change when a tab is selected.
+      summary: List ledger accounts
+      parameters:
+      - in: query
+        name: currency
+        schema:
+          type: string
+          default: USD
+          minLength: 1
+        description: The currency `lowbar` is expressed in. Unknown codes 422.
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: group
+        schema:
+          enum:
+          - all
+          - assets
+          - liabilities
+          - equity
+          type: string
+          default: all
+          minLength: 1
+        description: |-
+          Narrow the chart to one group. `all` is the default.
+
+          * `all` - all
+          * `assets` - assets
+          * `liabilities` - liabilities
+          * `equity` - equity
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      - in: query
+        name: lowbar
+        schema:
+          type: string
+          default: '0'
+          minLength: 1
+        description: Hide accounts whose balance is smaller than this in MAGNITUDE,
+          so a threshold does not silently drop every liability. Money Shape grammar,
+          validated against `currency`'s scale.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAccountPreview'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/accounts/{account_id}:
+    get:
+      operationId: accounts_retrieve
+      description: |-
+        Retrieve one ledger account with a page of the postings dispatched into it, newest first. `limit` and `cursor` paginate `history`, reported under `meta.history`.
+
+        `money` is the account's balance in its BOOK currency; each history entry carries the currency of the transaction that produced it, which may differ.
+      summary: Get account details
+      parameters:
+      - in: path
+        name: account_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Account ID
+        required: true
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAccountDetail'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/actions:
+    get:
+      operationId: actions_list
+      description: |+
+        Things you must DECIDE about, most urgent first.
+
+        Ordered `severity DESC, created_at DESC, id DESC`. Unlike the notification feed this IS a queue to be worked through, so a critical action outranks an older informational one.
+
+      summary: List the needs-action queue
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      - in: query
+        name: severity
+        schema:
+          type: string
+          enum:
+          - critical
+          - info
+          - warning
+        description: Restrict to one severity. Absent means all of them.
+      - in: query
+        name: source
+        schema:
+          type: string
+          enum:
+          - assistant
+          - scheduler
+        description: Restrict to one producer. Absent means both.
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - dismissed
+          - expired
+          - pending
+          - resolved
+        description: Which queue state to list. Defaults to `pending`.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedActionPreview'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/automations:
+    get:
+      operationId: automations_list
+      description: |-
+        Every rule you have authored, newest first.
+
+        The list returns the COMPLETE resource, not a preview: a rule is small and its condition renders inline, so a detail request would fetch nothing new.
+
+        Ordering is `created_at DESC, id DESC` — the REVERSE of evaluation order. The list shows newest first because that is how you think about your rules; the engine runs oldest first so later rules can override earlier ones.
+      summary: List automation rules
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: enabled
+        schema:
+          type: boolean
+        description: Restrict to enabled or disabled. ABSENT means both.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAutomation'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/automations/{automation_id}:
+    get:
+      operationId: automations_retrieve
+      description: The identical shape one element of `GET /automations` carries.
+        It exists for reading a rule by id; the list already returns everything a
+        detail view would show.
+      summary: Get one automation rule
+      parameters:
+      - in: path
+        name: automation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Automation ID
+        required: true
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAutomationDetail'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/currencies:
+    get:
+      operationId: currencies_list
+      description: 'The full ISO-4217 reference table this API accepts. Static, small
+        and the same for every caller, so it is NOT paginated: `meta.limit` and both
+        cursors are null and the response is always complete. Fetch once at app load.
+        `decimals` is the scale every amount in that currency is rendered at.'
+      summary: List currencies
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrencyCollection'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/currencies/convert:
+    get:
+      operationId: currencies_convert_retrieve
+      description: |-
+        Converts one amount at the feed's current rate. `from` and `to` are ordinary money objects, each at its own currency's scale; `rate` is the multiplier as a plain string and carries no currency.
+
+        The server rounds once, so `to` is authoritative — a client that multiplies `rate` itself can land on a different last digit.
+
+        An unknown code fails with 422 `unsupported_currency`; a known code with no fresh rate fails with 409 `rate_unavailable`.
+      summary: Convert an amount between currencies
+      parameters:
+      - in: query
+        name: amount
+        schema:
+          type: string
+          minLength: 1
+        description: Decimal string, validated against `from_code`'s scale. `?amount=100.005&from_code=USD`
+          fails with 422 / `amount_precision`.
+        required: true
+      - in: query
+        name: from_code
+        schema:
+          type: string
+          minLength: 1
+        required: true
+      - in: query
+        name: to_code
+        schema:
+          type: string
+          minLength: 1
+        required: true
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedConversion'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/currencies/rates/{code}:
+    get:
+      operationId: currencies_rates_retrieve
+      description: |-
+        Every rate the feed carries, expressed against the currency in the path. Nothing is converted here, so the field is `base` — the denominator of the map — rather than `from`.
+
+        A code this API does not know fails with 422 `unsupported_currency`. A known code the feed has no fresh reading for fails with 409 `rate_unavailable` rather than returning an old number.
+      summary: Get exchange rates against a base currency
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        description: ISO-4217 code the rates are expressed against.
+        required: true
+      - in: query
+        name: target
+        schema:
+          type: array
+          items:
+            type: string
+        description: Restrict the map to these codes. Repeat the param or pass a comma-separated
+          list. Absent returns every rate the feed has.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedCurrencyRates'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/goals:
+    get:
+      operationId: goals_list
+      description: Retrieve a page of your savings goals, newest first. Goals do not
+        sort by `finish_at` or by completion — a goal does not move in the list because
+        its deadline approaches. Closed goals are excluded.
+      summary: List goals
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGoalPreview'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/goals/{goal_id}:
+    get:
+      operationId: goals_retrieve
+      description: Retrieve a specific goal with a page of its history. `limit` and
+        `cursor` paginate `history`, reported under `meta.history`. A closed goal
+        still resolves by id — DELETE removes it from lists, not from existence.
+      summary: Get goal details
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: path
+        name: goal_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Goal ID
+        required: true
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedGoalDetail'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/metrics:
+    get:
+      operationId: metrics_retrieve
+      description: |-
+        All three derived views in one response.
+
+        `balance`, `net-worth` and `cash-flow` are booleans that each default to TRUE - a bare request returns everything. Send `?cash-flow=false` to drop a section; it comes back as `null` rather than disappearing, so the three keys are always present.
+      summary: Get the balance sheet, net worth and cash flow
+      parameters:
+      - in: query
+        name: balance
+        schema:
+          type: boolean
+          default: true
+        description: Include the `balance` section. Every section defaults to true,
+          so a bare request returns all three.
+      - in: query
+        name: cash-flow
+        schema:
+          type: boolean
+          default: true
+        description: Include the `cash_flow` section. Every section defaults to true,
+          so a bare request returns all three.
+      - in: query
+        name: net-worth
+        schema:
+          type: boolean
+          default: true
+        description: Include the `net_worth` section. Every section defaults to true,
+          so a bare request returns all three.
+      - in: query
+        name: points
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 10
+        description: Series length, clamped to 1..100 rather than rejected. `meta.points`
+          reports what was applied.
+      - in: query
+        name: since
+        schema:
+          type: string
+          format: date-time
+        description: Day-zero for `net_worth`'s series and for `cash_flow`. Absent
+          means all time. It does NOT bound `balance`, which is a snapshot.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedMetrics'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/notifications:
+    get:
+      operationId: notifications_list
+      description: |-
+        Retrieve a page of your notifications, newest first.
+
+        Ordering is the global default — `created_at DESC, id DESC`. Unlike the actions queue this is a feed to be read rather than a list to be worked through, so a `critical` notification from Tuesday does NOT outrank an `info` from this morning.
+      summary: List notifications
+      parameters:
+      - in: query
+        name: acknowledged
+        schema:
+          type: boolean
+        description: Restrict to read or unread. ABSENT means both — it is a tristate,
+          not a boolean defaulting to either value.
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      - in: query
+        name: severity
+        schema:
+          type: string
+          enum:
+          - critical
+          - info
+          - warning
+        description: Restrict to one severity. Absent means all of them.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationPreview'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/notifications/{notification_id}:
+    get:
+      operationId: notifications_retrieve
+      description: Retrieve a specific notification.
+      summary: Get notification details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Notification ID
+        required: true
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedNotificationDetail'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/notifications/count:
+    get:
+      operationId: notifications_count_retrieve
+      description: |-
+        The bell badge, so it does not require walking the list. Not paginated and takes no params.
+
+        This value goes stale the moment the stream delivers a notification. Increment locally on arrival and treat this as the value at load time - refetching per event would defeat the point of having a stream.
+      summary: Count unacknowledged notifications
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedNotificationCounts'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/transactions:
+    get:
+      operationId: transactions_list
+      description: Retrieve a page of your transactions, newest first.
+      summary: List transactions
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTransactionPreview'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/transactions/{transaction_id}:
+    get:
+      operationId: transactions_retrieve
+      description: Retrieve a specific transaction.
+      summary: Get transaction details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Transaction ID
+        required: true
+      - in: path
+        name: transaction_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedTransactionDetail'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/transactions/search:
+    post:
+      operationId: transactions_search
+      description: Retrieve transactions matching a filter tree passed in the request
+        body. POST carries the tree; this is a read in every other respect — it honours
+        Read-At-Least and emits no write version. Served from the Elasticsearch projection.
+      summary: Search transactions with filters
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterTransactionsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FilterTransactionsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FilterTransactionsRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTransactionSearchResult'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/wallets:
+    get:
+      operationId: wallets_list
+      description: 'Retrieve a page of your wallets: favorites first, then newest
+        first. Closed wallets are excluded.'
+      summary: List wallets
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWalletPreview'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/wallets/{wallet_id}:
+    get:
+      operationId: wallets_retrieve
+      description: Retrieve a specific wallet, including its inflow and outflow over
+        the requested `period` and a page of its recent transactions. `limit` and
+        `cursor` paginate `recent`, reported under `meta.recent`; the window is echoed
+        in `meta.period`. A closed wallet still resolves by id — DELETE removes it
+        from lists and search, not from existence.
+      summary: Get wallet details
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Wallet ID
+        required: true
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      - in: query
+        name: period
+        schema:
+          type: string
+          enum:
+          - all_time
+          - last_month
+          - last_week
+          - last_year
+          default: last_month
+        description: Window for the `period` inflow/outflow figures. Every value is
+          a CALENDAR window resolved in your timezone preference, not a rolling count
+          of days.
+      - in: path
+        name: wallet_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWalletDetail'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/wallets/search:
+    post:
+      operationId: wallets_search
+      description: Retrieve wallets matching a filter tree passed in the request body.
+        POST carries the tree; this is a read in every other respect — it honours
+        Read-At-Least and emits no write version. Served from the Elasticsearch projection.
+      summary: Search wallets with filters
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterWalletsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FilterWalletsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FilterWalletsRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWalletSearchResult'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/webhooks:
+    get:
+      operationId: webhooks_list
+      description: Retrieve a page of your webhook endpoints, newest first.
+      summary: List webhooks
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: enabled
+        schema:
+          type: boolean
+        description: Restrict to enabled or disabled endpoints. ABSENT means both
+          — it is a tristate, not a boolean defaulting to either value.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWebhookPreview'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/webhooks/{webhook_id}:
+    get:
+      operationId: webhooks_retrieve
+      description: Retrieve a specific webhook endpoint.
+      summary: Get webhook details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      - in: path
+        name: webhook_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWebhookDetail'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/webhooks/{webhook_id}/events:
+    get:
+      operationId: webhooks_subscriptions_list
+      description: 'Retrieve every event type the webhook is subscribed to. The set
+        is bounded by the event catalogue, so this endpoint is not paginated: it reports
+        `limit: null` with both cursors null and always returns everything.'
+      summary: List webhook event subscriptions
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      - in: path
+        name: webhook_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWebhookSubscriptionResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/webhooks/event-types:
+    get:
+      operationId: webhooks_event_types_list
+      description: 'The catalog a subscription''s `event` must name. Small, the same
+        for every caller and always returned complete, so it is NOT paginated: `meta.limit`
+        and both cursors are null. Populate the subscription UI from here rather than
+        from a list in client code — adding an event type is additive and needs no
+        client release.'
+      summary: List subscribable webhook event types
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEventTypeCollection'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/webhooks/search:
+    post:
+      operationId: webhooks_search
+      description: Retrieve webhook endpoints matching a filter tree passed in the
+        request body. POST carries the tree; this is a read in every other respect
+        — it honours Read-At-Least and emits no write version.
+      summary: Search webhooks with filters
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterWebhooksRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FilterWebhooksRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FilterWebhooksRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWebhookSearchResult'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /health/live:
+    get:
+      operationId: health_live_retrieve
+      description: |-
+        Liveness probe: always 200 while the ASGI worker can answer at all.
+        Kubernetes treats failures here as fatal and restarts the pod, so this
+        endpoint deliberately performs no dependency checks.
+      tags:
+      - health
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatusResponse'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDegradedResponse'
+          description: ''
+  /health/ready:
+    get:
+      operationId: health_ready_retrieve
+      description: |-
+        Readiness probe: 200 when Postgres, Redis and Elasticsearch are all
+        reachable, 503 otherwise. Kong/Kubernetes use this signal to gate traffic;
+        failing here does not restart the pod (that's liveness's job).
+      tags:
+      - health
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthChecksResponse'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDegradedResponse'
+          description: ''
+  /health/startup:
+    get:
+      operationId: health_startup_retrieve
+      description: |-
+        Startup probe: 200 once the database is reachable and all migrations
+        are applied. Kubernetes holds liveness/readiness checks until this
+        succeeds, giving slow boots room without being killed.
+      tags:
+      - health
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthChecksResponse'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDegradedResponse'
+          description: ''
+components:
+  schemas:
+    AccountDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        group:
+          type: string
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        money:
+          $ref: '#/components/schemas/Money'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountHistoryEntry'
+      required:
+      - created_at
+      - group
+      - history
+      - id
+      - money
+      - name
+      - updated_at
+    AccountHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Stable anchor for the history cursor. The target's examples
+            omit it, but a keyset-paginated collection needs one.
+        title:
+          type: string
+        debit:
+          type: boolean
+          description: True debits the account, false credits it.
+        created_at:
+          type: string
+          format: date-time
+        source_transaction:
+          type: string
+          format: uuid
+        icon:
+          type: string
+          description: Display glyph, decoration only.
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: The leg at the TRANSACTION's currency, which is not necessarily
+            the book currency the account's balance is summed in.
+      required:
+      - created_at
+      - debit
+      - icon
+      - id
+      - money
+      - source_transaction
+      - title
+    AccountPreview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        group:
+          type: string
+          description: assets, liabilities or equity; blank when ungrouped
+        name:
+          type: string
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: The account's balance in the BOOK currency it is summed in,
+            not in the currency of the transactions behind it.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - group
+      - id
+      - money
+      - name
+      - updated_at
+    ActionMoney:
+      type: object
+      properties:
+        amount:
+          type: string
+        currency:
+          type: string
+      required:
+      - amount
+      - currency
+    ActionPreview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        source:
+          $ref: '#/components/schemas/SourceEnum'
+        kind:
+          type: string
+          description: An OPEN vocabulary. Use it to pick an icon and fall back to
+            a generic one for values you do not know. Never derive labels, button
+            counts or behaviour from it — that is what `resolutions` is.
+        severity:
+          $ref: '#/components/schemas/SeverityEnum'
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        title:
+          type: string
+        body:
+          type: string
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/ActionSubject'
+          nullable: true
+        money:
+          allOf:
+          - $ref: '#/components/schemas/ActionMoney'
+          nullable: true
+          description: In the currency the action concerns. NOT the reporting currency.
+        group_key:
+          type: string
+          nullable: true
+          description: Collapses recurring conditions onto one row. Null when it does
+            not recur.
+        occurrences:
+          type: integer
+          description: 1 for a non-recurring action, never 0.
+        last_seen_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+        resolutions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActionResolution'
+          description: Never empty while pending; always empty once answered.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - body
+      - created_at
+      - deleted_at
+      - expires_at
+      - group_key
+      - id
+      - kind
+      - last_seen_at
+      - money
+      - occurrences
+      - resolutions
+      - resolved_at
+      - severity
+      - source
+      - status
+      - subject
+      - title
+      - updated_at
+    ActionResolution:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        intent:
+          allOf:
+          - $ref: '#/components/schemas/IntentEnum'
+          description: |-
+            A rendering hint, not behaviour. A client may style all of them identically.
+
+            * `primary` - primary
+            * `secondary` - secondary
+            * `danger` - danger
+        applies:
+          type: boolean
+          description: Whether choosing it changes OTHER resources.
+      required:
+      - applies
+      - id
+      - intent
+      - label
+    ActionSubject:
+      type: object
+      properties:
+        type:
+          type: string
+          description: A resource name in this API.
+        id:
+          type: string
+      required:
+      - id
+      - type
+    Automation:
+      type: object
+      description: 'One rule as the list returns it: the complete resource, not a
+        preview.'
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        icon:
+          type: string
+        enabled:
+          type: boolean
+        trigger:
+          $ref: '#/components/schemas/AutomationTrigger'
+        effects:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationEffect'
+        last_run_at:
+          type: string
+          format: date-time
+          nullable: true
+        runs:
+          type: integer
+          description: MATCHES that applied effects, not evaluations. A rule checked
+            a thousand times that never matched reports 0.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - deleted_at
+      - effects
+      - enabled
+      - icon
+      - id
+      - last_run_at
+      - name
+      - runs
+      - trigger
+      - updated_at
+    AutomationDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        icon:
+          type: string
+        enabled:
+          type: boolean
+        trigger:
+          $ref: '#/components/schemas/AutomationTrigger'
+        effects:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationEffect'
+        last_run_at:
+          type: string
+          format: date-time
+          nullable: true
+        runs:
+          type: integer
+          description: MATCHES that applied effects, not evaluations. A rule checked
+            a thousand times that never matched reports 0.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - deleted_at
+      - effects
+      - enabled
+      - icon
+      - id
+      - last_run_at
+      - name
+      - runs
+      - trigger
+      - updated_at
+    AutomationEffect:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/AutomationEffectTypeEnum'
+        params:
+          type: object
+          additionalProperties: {}
+      required:
+      - params
+      - type
+    AutomationEffectTypeEnum:
+      enum:
+      - set_category
+      - notify
+      - raise_action
+      - transfer
+      type: string
+      description: |-
+        * `set_category` - set_category
+        * `notify` - notify
+        * `raise_action` - raise_action
+        * `transfer` - transfer
+    AutomationTrigger:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/AutomationTriggerTypeEnum'
+        event:
+          nullable: true
+          description: |-
+            Null unless `type` is `event`. Always present.
+
+            * `transaction.created` - transaction.created
+            * `transaction.updated` - transaction.updated
+          oneOf:
+          - $ref: '#/components/schemas/EventEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        schedule:
+          nullable: true
+          description: |-
+            Null unless `type` is `schedule`. Always present.
+
+            * `daily` - daily
+            * `weekly` - weekly
+            * `monthly` - monthly
+          oneOf:
+          - $ref: '#/components/schemas/ScheduleEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        filter_body:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          description: The same filter tree the `/search` endpoints take. Null means
+            the rule is unconditional.
+      required:
+      - event
+      - filter_body
+      - schedule
+      - type
+    AutomationTriggerTypeEnum:
+      enum:
+      - event
+      - schedule
+      type: string
+      description: |-
+        * `event` - event
+        * `schedule` - schedule
+    BalanceSheet:
+      type: object
+      properties:
+        assets:
+          $ref: '#/components/schemas/Money'
+        liabilities:
+          $ref: '#/components/schemas/Money'
+        equity:
+          $ref: '#/components/schemas/Money'
+        balanced:
+          type: boolean
+          description: True when `assets == liabilities + equity` AND no transaction
+            was posted with legs that disagreed. A diagnostic, never an error.
+        comments:
+          type: string
+          nullable: true
+          description: Why the sheet does not balance. Null when it does.
+      required:
+      - assets
+      - balanced
+      - comments
+      - equity
+      - liabilities
+    CashFlow:
+      type: object
+      properties:
+        inflow:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'A positive magnitude: what arrived.'
+        outflow:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'A positive magnitude: what left.'
+        total_net:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: '`inflow - outflow`. Negative when more left than arrived.'
+        savings_rate:
+          type: number
+          format: double
+          nullable: true
+          description: The share of income that was not spent, as a percentage — a
+            bare number, not money. Null when nothing came in, where the rate is undefined
+            rather than zero.
+      required:
+      - inflow
+      - outflow
+      - savings_rate
+      - total_net
+    ChartMeta:
+      type: object
+      properties:
+        limit:
+          type: integer
+          nullable: true
+          description: Effective page size. Null on non-paginated endpoints.
+        total:
+          type: integer
+          description: Total items matching the request, ignoring pagination.
+        next_cursor:
+          type: string
+          nullable: true
+          description: Opaque token for the page after this one. Null when exhausted.
+        prev_cursor:
+          type: string
+          nullable: true
+          description: Opaque token for the page before this one. Null on the first
+            page.
+        cached:
+          type: boolean
+          description: True when the payload was served from cache rather than rebuilt.
+        lowbar:
+          type: string
+          description: The threshold actually applied, at `currency`'s scale.
+        currency:
+          type: string
+          description: The currency `lowbar` was read in.
+        group:
+          type: string
+          description: The group filter actually applied.
+        groups:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Per-group counts for the tab labels. NOT narrowed by `group`
+            — it always describes every group — but `lowbar` does apply, so a count
+            matches what selecting that tab returns.
+      required:
+      - currency
+      - group
+      - groups
+      - limit
+      - lowbar
+      - next_cursor
+      - prev_cursor
+      - total
+    CollectionMeta:
+      type: object
+      properties:
+        limit:
+          type: integer
+          nullable: true
+          description: Effective page size. Null on non-paginated endpoints.
+        total:
+          type: integer
+          description: Total items matching the request, ignoring pagination.
+        next_cursor:
+          type: string
+          nullable: true
+          description: Opaque token for the page after this one. Null when exhausted.
+        prev_cursor:
+          type: string
+          nullable: true
+          description: Opaque token for the page before this one. Null on the first
+            page.
+        cached:
+          type: boolean
+          description: True when the payload was served from cache rather than rebuilt.
+      required:
+      - limit
+      - next_cursor
+      - prev_cursor
+      - total
+    Conversion:
+      type: object
+      properties:
+        to:
+          $ref: '#/components/schemas/Money'
+        rate:
+          type: string
+          description: 'The multiplier applied, as a decimal string. NOT money: no
+            currency, no scale padding, up to 12 fraction digits. `to` is the authoritative
+            figure — render that rather than multiplying this.'
+        from:
+          $ref: '#/components/schemas/Money'
+      required:
+      - from
+      - rate
+      - to
+    ConversionMeta:
+      type: object
+      properties:
+        fetched_at:
+          type: string
+          format: date-time
+          description: When the FEED published the rate, not when the conversion ran.
+      required:
+      - fetched_at
+    Currency:
+      type: object
+      properties:
+        code:
+          type: string
+          description: ISO-4217 alphabetic code.
+        symbol:
+          type: string
+          description: Display symbol. Empty when the currency has no established
+            one.
+        name:
+          type: string
+        decimals:
+          type: integer
+          description: Fraction digits every amount in this currency is rendered at.
+      required:
+      - code
+      - decimals
+      - name
+      - symbol
+    CurrencyCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Currency'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    CurrencyRates:
+      type: object
+      properties:
+        base:
+          type: string
+          description: The denominator of every rate in the map, not a converted-from
+            code.
+        rates:
+          type: object
+          additionalProperties:
+            type: string
+          description: 'Code to rate. Rates are decimal strings but are NOT money:
+            they carry no currency, are unpadded, and hold up to 12 fraction digits.'
+      required:
+      - base
+      - rates
+    CurrencyRatesMeta:
+      type: object
+      properties:
+        fetched_at:
+          type: string
+          format: date-time
+          description: When the FEED published these rates, not when this response
+            was built.
+        target:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: The `target` filter echoed back. Null when the whole map was
+            returned.
+      required:
+      - fetched_at
+      - target
+    DirectionEnum:
+      enum:
+      - up
+      - down
+      - flat
+      type: string
+      description: |-
+        * `up` - up
+        * `down` - down
+        * `flat` - flat
+    EnvelopedAccountDetail:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AccountDetail'
+        meta:
+          $ref: '#/components/schemas/ResourceMeta'
+      required:
+      - data
+      - meta
+    EnvelopedAutomationDetail:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AutomationDetail'
+        meta:
+          $ref: '#/components/schemas/ResourceMeta'
+      required:
+      - data
+      - meta
+    EnvelopedConversion:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Conversion'
+        meta:
+          $ref: '#/components/schemas/ConversionMeta'
+      required:
+      - data
+      - meta
+    EnvelopedCurrencyRates:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CurrencyRates'
+        meta:
+          $ref: '#/components/schemas/CurrencyRatesMeta'
+      required:
+      - data
+      - meta
+    EnvelopedGoalDetail:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GoalDetail'
+        meta:
+          $ref: '#/components/schemas/ResourceMeta'
+      required:
+      - data
+      - meta
+    EnvelopedMetrics:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Metrics'
+        meta:
+          $ref: '#/components/schemas/MetricsMeta'
+      required:
+      - data
+      - meta
+    EnvelopedNotificationCounts:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/NotificationCounts'
+        meta:
+          type: object
+          additionalProperties: {}
+          description: Always `{}` — this endpoint is neither paginated nor cached.
+      required:
+      - data
+      - meta
+    EnvelopedNotificationDetail:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/NotificationDetail'
+        meta:
+          $ref: '#/components/schemas/ResourceMeta'
+      required:
+      - data
+      - meta
+    EnvelopedTransactionDetail:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/TransactionDetail'
+        meta:
+          $ref: '#/components/schemas/ResourceMeta'
+      required:
+      - data
+      - meta
+    EnvelopedWalletDetail:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WalletDetail'
+        meta:
+          $ref: '#/components/schemas/ResourceMeta'
+      required:
+      - data
+      - meta
+    EnvelopedWebhookDetail:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WebhookDetail'
+        meta:
+          $ref: '#/components/schemas/ResourceMeta'
+      required:
+      - data
+      - meta
+    ErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+      required:
+      - code
+      - message
+    ErrorDetail:
+      type: object
+      properties:
+        field:
+          type: string
+          nullable: true
+        code:
+          type: string
+        message:
+          type: string
+      required:
+      - code
+      - field
+      - message
+    ErrorMeta:
+      type: object
+      properties:
+        request_id:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+      required:
+      - request_id
+      - timestamp
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+        meta:
+          $ref: '#/components/schemas/ErrorMeta'
+      required:
+      - error
+      - meta
+    EventEnum:
+      enum:
+      - transaction.created
+      - transaction.updated
+      type: string
+      description: |-
+        * `transaction.created` - transaction.created
+        * `transaction.updated` - transaction.updated
+    FilterTransactionsRequest:
+      type: object
+      properties:
+        filter_body: {}
+      required:
+      - filter_body
+    FilterWalletsRequest:
+      type: object
+      properties:
+        filter_body: {}
+      required:
+      - filter_body
+    FilterWebhooksRequest:
+      type: object
+      properties:
+        filter_body: {}
+      required:
+      - filter_body
+    GoalDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        url:
+          type: string
+          nullable: true
+        currency:
+          type: string
+        finish_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        target:
+          $ref: '#/components/schemas/Money'
+        progress:
+          $ref: '#/components/schemas/Money'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryEntry'
+      required:
+      - created_at
+      - currency
+      - deleted_at
+      - finish_at
+      - history
+      - id
+      - name
+      - progress
+      - target
+      - updated_at
+      - url
+    GoalPreview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        url:
+          type: string
+          nullable: true
+          description: Always null for now. Reserved for attaching an e-commerce link.
+        currency:
+          type: string
+          description: Fixed at creation; target and progress use it.
+        finish_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        target:
+          $ref: '#/components/schemas/Money'
+        progress:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: Derived from the goal's transactions, never written.
+      required:
+      - created_at
+      - currency
+      - deleted_at
+      - finish_at
+      - id
+      - name
+      - progress
+      - target
+      - updated_at
+      - url
+    HealthChecksResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Probe status ("ok" or "degraded")
+        checks:
+          type: object
+          additionalProperties:
+            type: string
+          description: Per-dependency status ("ok" or a failure description)
+      required:
+      - checks
+      - status
+    HealthDegradedResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Always "degraded"
+        error:
+          type: string
+          description: Failure description
+      required:
+      - error
+      - status
+    HealthStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Probe status ("ok" or "degraded")
+      required:
+      - status
+    HistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Stable anchor for the history cursor. The target's examples
+            omit it, but a keyset-paginated collection needs one.
+        title:
+          type: string
+        debit:
+          type: boolean
+          description: True when the entry moved money IN.
+        created_at:
+          type: string
+          format: date-time
+        source_transaction:
+          type: string
+          format: uuid
+        icon:
+          type: string
+          description: Display glyph, decoration only.
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: A positive magnitude; direction is `debit`.
+      required:
+      - created_at
+      - debit
+      - icon
+      - id
+      - money
+      - source_transaction
+      - title
+    IntentEnum:
+      enum:
+      - primary
+      - secondary
+      - danger
+      type: string
+      description: |-
+        * `primary` - primary
+        * `secondary` - secondary
+        * `danger` - danger
+    Metrics:
+      type: object
+      properties:
+        balance:
+          allOf:
+          - $ref: '#/components/schemas/BalanceSheet'
+          nullable: true
+          description: Null when `balance=false` was sent.
+        net_worth:
+          allOf:
+          - $ref: '#/components/schemas/NetWorth'
+          nullable: true
+          description: Null when `net-worth=false` was sent.
+        cash_flow:
+          allOf:
+          - $ref: '#/components/schemas/CashFlow'
+          nullable: true
+          description: Null when `cash-flow=false` was sent.
+      required:
+      - balance
+      - cash_flow
+      - net_worth
+    MetricsMeta:
+      type: object
+      properties:
+        since:
+          type: string
+          format: date-time
+          nullable: true
+          description: Echoed back. Null means all time, which is the default.
+        points:
+          type: integer
+          description: How many series points were sampled.
+        sections:
+          type: array
+          items:
+            type: string
+          description: Which sections this response actually carries.
+        cached:
+          type: boolean
+      required:
+      - points
+      - sections
+      - since
+    Money:
+      type: object
+      properties:
+        amount:
+          type: string
+          description: Canonical decimal string at the currency's own scale — two
+            fraction digits for USD, none for JPY. Never a JSON number.
+        currency:
+          type: string
+          description: ISO-4217 alphabetic code.
+      required:
+      - amount
+      - currency
+    NetDiff:
+      type: object
+      properties:
+        percentage:
+          type: number
+          format: double
+          nullable: true
+          description: Growth over the window as a bare number — not money, so no
+            currency and no scale. Null when the window opened at zero, where any
+            change is infinite growth.
+        direction:
+          allOf:
+          - $ref: '#/components/schemas/DirectionEnum'
+          description: |-
+            `flat` is a real value, not the absence of a direction.
+
+            * `up` - up
+            * `down` - down
+            * `flat` - flat
+      required:
+      - direction
+      - percentage
+    NetWorth:
+      type: object
+      properties:
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: Net worth NOW, not at the end of the window.
+        net_diff:
+          $ref: '#/components/schemas/NetDiff'
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeriesPoint'
+          description: A fixed-size sampling of exactly `points` entries, not a paginated
+            collection — so it gets no namespaced pagination triple in `meta`.
+      required:
+      - money
+      - net_diff
+      - series
+    NotificationCounts:
+      type: object
+      properties:
+        unacknowledged:
+          type: integer
+          description: The badge.
+        total:
+          type: integer
+          description: Every notification the user has, acknowledged or not.
+      required:
+      - total
+      - unacknowledged
+    NotificationDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        severity:
+          allOf:
+          - $ref: '#/components/schemas/SeverityEnum'
+          description: |-
+            Shares its vocabulary with action severity on purpose.
+
+            * `info` - info
+            * `warning` - warning
+            * `critical` - critical
+        title:
+          type: string
+        body:
+          type: string
+          description: Already-rendered prose. Money inside it is part of the sentence
+            the backend generated; there is no money object to substitute.
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/NotificationSubject'
+          nullable: true
+          description: What the client deep-links to when the notification is tapped.
+        acknowledged_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Null means unread. A timestamp, not a boolean.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - acknowledged_at
+      - body
+      - created_at
+      - deleted_at
+      - id
+      - severity
+      - subject
+      - title
+      - updated_at
+    NotificationPreview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        severity:
+          allOf:
+          - $ref: '#/components/schemas/SeverityEnum'
+          description: |-
+            Shares its vocabulary with action severity on purpose.
+
+            * `info` - info
+            * `warning` - warning
+            * `critical` - critical
+        title:
+          type: string
+        body:
+          type: string
+          description: Already-rendered prose. Money inside it is part of the sentence
+            the backend generated; there is no money object to substitute.
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/NotificationSubject'
+          nullable: true
+          description: What the client deep-links to when the notification is tapped.
+        acknowledged_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Null means unread. A timestamp, not a boolean.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - acknowledged_at
+      - body
+      - created_at
+      - deleted_at
+      - id
+      - severity
+      - subject
+      - title
+      - updated_at
+    NotificationSubject:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          description: Open vocabulary — `wallet`, `transaction`, and whatever comes
+            next.
+      required:
+      - id
+      - type
+    NullEnum:
+      enum:
+      - null
+    PaginatedAccountPreview:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountPreview'
+        meta:
+          $ref: '#/components/schemas/ChartMeta'
+      required:
+      - data
+      - meta
+    PaginatedActionPreview:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActionPreview'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedAutomation:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Automation'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedGoalPreview:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GoalPreview'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedNotificationPreview:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationPreview'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedTransactionPreview:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionPreview'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedTransactionSearchResult:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionSearchResult'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedWalletPreview:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WalletPreview'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedWalletSearchResult:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WalletSearchResult'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedWebhookPreview:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookPreview'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedWebhookSearchResult:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookSearchResult'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedWebhookSubscriptionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookSubscriptionResponse'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    ResourceMeta:
+      type: object
+      properties:
+        cached:
+          type: boolean
+          description: True when the payload was served from cache rather than rebuilt.
+    ScheduleEnum:
+      enum:
+      - daily
+      - weekly
+      - monthly
+      type: string
+      description: |-
+        * `daily` - daily
+        * `weekly` - weekly
+        * `monthly` - monthly
+    SeriesPoint:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: The END of the slice this point summarises.
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: Net worth as it stood at that moment.
+      required:
+      - money
+      - timestamp
+    SeverityEnum:
+      enum:
+      - info
+      - warning
+      - critical
+      type: string
+      description: |-
+        * `info` - info
+        * `warning` - warning
+        * `critical` - critical
+    SourceEnum:
+      enum:
+      - assistant
+      - scheduler
+      type: string
+      description: |-
+        * `assistant` - assistant
+        * `scheduler` - scheduler
+    StatusEnum:
+      enum:
+      - pending
+      - resolved
+      - dismissed
+      - expired
+      type: string
+      description: |-
+        * `pending` - pending
+        * `resolved` - resolved
+        * `dismissed` - dismissed
+        * `expired` - expired
+    TransactionAnalysis:
+      type: object
+      properties:
+        balanced:
+          type: boolean
+        comment:
+          type: string
+          nullable: true
+      required:
+      - balanced
+      - comment
+    TransactionDetail:
+      type: object
+      properties:
+        evidence:
+          allOf:
+          - $ref: '#/components/schemas/TransactionEvidence'
+          nullable: true
+        postings:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionPosting'
+          description: Backend-derived double-entry legs
+        analysis:
+          allOf:
+          - $ref: '#/components/schemas/TransactionAnalysis'
+          nullable: true
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: A positive magnitude; direction is `type`.
+        type:
+          type: string
+          description: expense or income, read off the sign of the folded ledger flows.
+        origin:
+          type: string
+        wallet:
+          $ref: '#/components/schemas/TransactionWallet'
+        category:
+          type: string
+          nullable: true
+        chain_id:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - analysis
+      - category
+      - chain_id
+      - created_at
+      - deleted_at
+      - evidence
+      - id
+      - money
+      - name
+      - origin
+      - postings
+      - type
+      - updated_at
+      - wallet
+    TransactionEvidence:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+      required:
+      - url
+    TransactionPosting:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        icon:
+          type: string
+        debit:
+          type: boolean
+        position:
+          type: integer
+        money:
+          type: object
+          additionalProperties: {}
+      required:
+      - account_id
+      - debit
+      - icon
+      - id
+      - money
+      - position
+      - title
+    TransactionPreview:
+      type: object
+      description: The target's transaction preview.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: A positive magnitude; direction is `type`.
+        type:
+          type: string
+          description: expense or income, read off the sign of the folded ledger flows.
+        origin:
+          type: string
+        wallet:
+          $ref: '#/components/schemas/TransactionWallet'
+        category:
+          type: string
+          nullable: true
+        chain_id:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - category
+      - chain_id
+      - created_at
+      - deleted_at
+      - id
+      - money
+      - name
+      - origin
+      - type
+      - updated_at
+      - wallet
+    TransactionSearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: A positive magnitude; direction is `type`.
+        type:
+          type: string
+          description: expense or income, read off the sign of the folded ledger flows.
+        origin:
+          type: string
+        wallet:
+          $ref: '#/components/schemas/TransactionWallet'
+        category:
+          type: string
+          nullable: true
+        chain_id:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - category
+      - chain_id
+      - created_at
+      - deleted_at
+      - id
+      - money
+      - name
+      - origin
+      - type
+      - updated_at
+      - wallet
+    TransactionWallet:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+      - id
+      - name
+    WalletDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        category:
+          type: string
+        currency:
+          type: string
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: The spendable balance, not what the user owns.
+        zero_balance:
+          $ref: '#/components/schemas/Money'
+        favorite:
+          type: boolean
+        color:
+          type: string
+        recent:
+          type: array
+          items:
+            $ref: '#/components/schemas/WalletRecentTransaction'
+          description: The wallet's own transaction feed, paginated through this endpoint's
+            limit/cursor and reported in `meta.recent`.
+        period:
+          allOf:
+          - $ref: '#/components/schemas/WalletPeriodFlows'
+          description: Money in and out over the window `?period=` asked for, resolved
+            in the caller's timezone preference and reported in the wallet's own currency.
+            Echoed in `meta.period`.
+      required:
+      - category
+      - color
+      - created_at
+      - currency
+      - deleted_at
+      - favorite
+      - id
+      - money
+      - name
+      - period
+      - recent
+      - updated_at
+      - zero_balance
+    WalletPeriodFlows:
+      type: object
+      properties:
+        inflow:
+          $ref: '#/components/schemas/Money'
+        outflow:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: A positive magnitude, not a negative balance change.
+      required:
+      - inflow
+      - outflow
+    WalletPreview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        category:
+          type: string
+        currency:
+          type: string
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: The spendable balance, not what the user owns.
+        zero_balance:
+          $ref: '#/components/schemas/Money'
+        favorite:
+          type: boolean
+        color:
+          type: string
+      required:
+      - category
+      - color
+      - created_at
+      - currency
+      - deleted_at
+      - favorite
+      - id
+      - money
+      - name
+      - updated_at
+      - zero_balance
+    WalletRecentTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: A positive magnitude; direction is `type`.
+        type:
+          type: string
+          description: expense or income, read off the sign of the folded ledger flows.
+        origin:
+          type: string
+        wallet:
+          $ref: '#/components/schemas/TransactionWallet'
+        category:
+          type: string
+          nullable: true
+        chain_id:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - category
+      - chain_id
+      - created_at
+      - deleted_at
+      - id
+      - money
+      - name
+      - origin
+      - type
+      - updated_at
+      - wallet
+    WalletSearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        category:
+          type: string
+        currency:
+          type: string
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: The spendable balance, not what the user owns.
+        zero_balance:
+          $ref: '#/components/schemas/Money'
+        favorite:
+          type: boolean
+        color:
+          type: string
+      required:
+      - category
+      - color
+      - created_at
+      - currency
+      - deleted_at
+      - favorite
+      - id
+      - money
+      - name
+      - updated_at
+      - zero_balance
+    WebhookDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        enabled:
+          type: boolean
+          description: The pause switch. A disabled endpoint keeps its subscriptions
+            and receives nothing.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - enabled
+      - id
+      - title
+      - updated_at
+      - url
+    WebhookEventType:
+      type: object
+      properties:
+        event:
+          type: string
+          description: The value a subscription names and the `X-Webhook-Event` header
+            carries.
+        subject:
+          type: string
+          description: The resource the delivery payload's `data` carries.
+        description:
+          type: string
+          description: Human-readable label for the subscription UI. Not a contract
+            — never parse it.
+      required:
+      - description
+      - event
+      - subject
+    WebhookEventTypeCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookEventType'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    WebhookPreview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        enabled:
+          type: boolean
+          description: The pause switch. A disabled endpoint keeps its subscriptions
+            and receives nothing.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - enabled
+      - id
+      - title
+      - updated_at
+      - url
+    WebhookSearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        enabled:
+          type: boolean
+          description: The pause switch. A disabled endpoint keeps its subscriptions
+            and receives nothing.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - enabled
+      - id
+      - title
+      - updated_at
+      - url
+    WebhookSubscriptionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        webhook_id:
+          type: string
+          format: uuid
+        event:
+          type: string
+          description: An `event` from GET /webhooks/event-types.
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - event
+      - id
+      - webhook_id
+  securitySchemes:
+    clerkBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Clerk session token. The gateway verifies it and forwards the resolved
+        user to this service; requests that do not traverse the gateway are rejected
+        with 401.

@@ -10,9 +10,6 @@ from .._utilities import decode_payload
 
 
 class UpdateWalletDocument(Effect):
-    """Patch the searchable fields of a wallet document on update. Upserts so an
-    edit that races ahead of the create projection still lands."""
-
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, WalletUpdated)
         partial = {

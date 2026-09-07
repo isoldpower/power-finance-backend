@@ -1,7 +1,7 @@
 from dataclasses import dataclass, replace
 from typing import Any
 
-from .config import DJANGO_LOOKUP_SEPARATOR
+from .config import OrderingFormat
 from .row_fields import read_row_field
 from .sort_direction import SortDirection
 from .value_codecs import TEXT_CODEC, ValueCodec
@@ -9,9 +9,6 @@ from .value_codecs import TEXT_CODEC, ValueCodec
 
 @dataclass(frozen=True)
 class SortKey:
-    """One component of an ordering: the field, the direction it runs in, and
-    how its values survive a round trip through a cursor."""
-
     field: str
     direction: SortDirection = SortDirection.DESCENDING
     codec: ValueCodec = TEXT_CODEC
@@ -26,12 +23,10 @@ class SortKey:
 
     @property
     def keyset_lookup_path(self) -> str:
-        return f"{self.field}{DJANGO_LOOKUP_SEPARATOR}{self.direction.keyset_lookup}"
+        return f"{self.field}{OrderingFormat.DJANGO_LOOKUP_SEPARATOR}{self.direction.keyset_lookup}"
 
     @property
     def descending(self) -> bool:
-        """Asked by the in-memory store, which sorts rather than emits a lookup."""
-
         return self.direction is SortDirection.DESCENDING
 
     def reversed(self) -> "SortKey":

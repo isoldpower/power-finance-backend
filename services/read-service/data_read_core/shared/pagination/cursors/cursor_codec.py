@@ -22,8 +22,6 @@ from .page_direction import PageDirection
 
 @dataclass(frozen=True)
 class CursorCodec:
-    """Turns a position into the token a client stores, and back."""
-
     version: int = CURSOR_VERSION
 
     def encode(self, direction: PageDirection, values: list[Any], fingerprint: str) -> str:

@@ -1,13 +1,16 @@
-"""Exchange rates: the feed read-service books against, behind a cache, with
-staleness treated as a failure rather than a silently old number."""
-
-from .config import ExchangeRateSettings, get_exchange_rate_settings
-from .contracts import RateProvider
-from .exceptions import RateUnavailable
+from .application import (
+    ExchangeRateService,
+    RateProvider,
+    RateSnapshot,
+    RateSnapshotDTO,
+    RateUnavailable,
+)
 from .factory import build_provider, get_rate_service
-from .open_exchange_provider import OpenExchangeRatesProvider
-from .rate_service import ExchangeRateService
-from .rate_snapshot import RateSnapshot
+from .infrastructure import (
+    ExchangeRateSettings,
+    OpenExchangeRatesProvider,
+    get_exchange_rate_settings,
+)
 
 __all__ = [
     "ExchangeRateService",
@@ -15,6 +18,7 @@ __all__ = [
     "OpenExchangeRatesProvider",
     "RateProvider",
     "RateSnapshot",
+    "RateSnapshotDTO",
     "RateUnavailable",
     "build_provider",
     "get_exchange_rate_settings",

@@ -1,13 +1,7 @@
-"""The probes this service wires into the shared health guard."""
-
 from data_read_core.shared.health_guard import (
     ElasticsearchHealthProbe,
     RedisHealthProbe,
-)
-from data_read_core.shared.health_guard import (
     elasticsearch_health_probe as es_probe_module,
-)
-from data_read_core.shared.health_guard import (
     redis_health_probe as redis_probe_module,
 )
 

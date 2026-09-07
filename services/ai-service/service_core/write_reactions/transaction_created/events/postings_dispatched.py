@@ -3,7 +3,8 @@ from uuid import UUID
 
 from kafka_messages import AccountPostingsDispatched
 
-from ....shared.kafka_outbox import OutboxEntry, build_outbox_entry
+from service_core.shared.kafka_outbox import OutboxEntry, build_outbox_entry
+
 from ._aggregates import POSTING_AGGREGATE
 
 

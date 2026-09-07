@@ -15,7 +15,11 @@ type Gate struct {
 	logger    *slog.Logger
 }
 
-func NewGate(store Store, extractor EventIDExtractor, logger *slog.Logger) *Gate {
+func NewGate(
+	store Store,
+	extractor EventIDExtractor,
+	logger *slog.Logger,
+) *Gate {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -56,7 +60,12 @@ func (g *Gate) AlreadyProcessed(
 	}
 
 	if isSeen {
-		g.logger.DebugContext(ctx, "kafka.dedupe.skip", slog.String("event_id", eventID))
+		g.logger.DebugContext(
+			ctx,
+			"kafka.dedupe.skip",
+			slog.String("event_id", eventID),
+		)
+
 		return true, nil
 	} else {
 		return false, nil

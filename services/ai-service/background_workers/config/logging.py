@@ -1,6 +1,6 @@
 from logging.config import dictConfig
 
-from service_core.shared.logging import LOGGER_ROOT
+from service_core.shared.logging import LoggerSettings
 
 
 def configure_logging(level: str) -> None:
@@ -25,7 +25,7 @@ def configure_logging(level: str) -> None:
                 },
             },
             "loggers": {
-                LOGGER_ROOT: {
+                LoggerSettings.ROOT: {
                     "handlers": ["console"],
                     "level": level,
                     "propagate": False,

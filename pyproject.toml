@@ -22,7 +22,7 @@ members = [
     "libraries/webhook-catalog-py",
     "libraries/saga-pattern-py",
     "services/ai-service",
-    "contract_tests",
+    "infrastructure/tests/contract",
 ]
 
 # immudb-py 1.5.0 ships broken metadata: it declares a dependency on the Hive
@@ -98,6 +98,11 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "**/__tests__/**" = ["B"]
 "**/__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+# Keep `X as Y` in the same statement as its siblings. Without this isort gives
+# every aliased name a `from module import (...)` block of its own.
+combine-as-imports = true
 
 [tool.ruff.format]
 quote-style = "double"

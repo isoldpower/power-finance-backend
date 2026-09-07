@@ -12,8 +12,6 @@ REDIS_CONNECTIVITY_ERRORS: tuple[type[BaseException], ...] = (
 
 
 class RedisHealthProbe(HealthProbe):
-    """`HealthProbe` backed by a Redis PING."""
-
     @property
     def name(self) -> str:
         return "redis"

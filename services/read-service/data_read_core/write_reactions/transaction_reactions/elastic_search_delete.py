@@ -10,9 +10,6 @@ from .._utilities import decode_payload
 
 
 class RemoveTransactionDocument(Effect):
-    """Stamp the document cancelled instead of deleting it; search filters on
-    `deleted_at`, so both projections tell the same story."""
-
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, TransactionDeleted)
         deleted_at = payload.deleted_at.ToDatetime(tzinfo=UTC).isoformat()

@@ -19,12 +19,14 @@ type retryScheduler interface {
 	Run(ctx context.Context)
 }
 
+// WebhookHandler routes decoded outbox events to the projection or the dispatcher.
 type WebhookHandler struct {
 	projection configProjection
 	dispatcher deliveryDispatcher
 	scheduler  retryScheduler
 }
 
+// NewWebhookHandler wires the handler over its projection, dispatcher and scheduler.
 func NewWebhookHandler(
 	projection configProjection,
 	dispatcher deliveryDispatcher,
@@ -37,8 +39,7 @@ func NewWebhookHandler(
 	}
 }
 
-// Start launches the background delivery-retry scheduler and returns a channel
-// that is closed once it has stopped, so the caller can join it on shutdown.
+// Start launches the retry scheduler, returning a channel closed once it has stopped.
 func (h *WebhookHandler) Start(ctx context.Context) <-chan struct{} {
 	done := make(chan struct{})
 	go func() {
@@ -49,8 +50,7 @@ func (h *WebhookHandler) Start(ctx context.Context) <-chan struct{} {
 	return done
 }
 
-// Handle routes a decoded outbox event to config projection or delivery
-// dispatch, acknowledging unrelated events.
+// Handle routes a decoded outbox event to config projection or delivery dispatch, acknowledging unrelated events.
 func (h *WebhookHandler) Handle(ctx context.Context, event types.OutboxEvent) error {
 	if h.projection.Handles(event.EventType) {
 		return h.projection.Apply(ctx, event)

@@ -1,5 +1,4 @@
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 
 from data_read_core.shared.http_contract import ok
 from data_read_core.shared.logging import (
@@ -16,21 +15,12 @@ from data_read_core.shared.rest_framework import (
     async_api_view,
 )
 
+from ..config import ENABLED_PARAMETER
 from ..dtos import ListWebhooksQuery
 from ..query_handler import ListWebhooksQueryHandler
 from ._filters import read_filters
 from ._presenters import present_many
 from ._serializers import PaginatedWebhookPreviewSerializer
-
-ENABLED_PARAMETER = OpenApiParameter(
-    "enabled",
-    type=OpenApiTypes.BOOL,
-    location=OpenApiParameter.QUERY,
-    description=(
-        "Restrict to enabled or disabled endpoints. ABSENT means both — it is "
-        "a tristate, not a boolean defaulting to either value."
-    ),
-)
 
 
 @extend_schema(

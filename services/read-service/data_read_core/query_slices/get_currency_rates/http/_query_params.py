@@ -1,13 +1,10 @@
 from rest_framework.request import Request
 
-TARGET_PARAMETER = "target"
-CODE_SEPARATOR = ","
+from ..config import CODE_SEPARATOR, ParamsList
 
 
 def read_target_codes(request: Request) -> list[str] | None:
-    """The requested codes, or `None` for "the whole map"."""
-
-    raw_values = request.query_params.getlist(TARGET_PARAMETER)
+    raw_values = request.query_params.getlist(ParamsList.TARGET)
     codes = [
         code.strip()
         for raw_value in raw_values

@@ -1,13 +1,10 @@
-"""The cache in front of the feed, and what it refuses to serve."""
-
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
 
-from ..exceptions import RateUnavailable
-from ..rate_service import ExchangeRateService
-from ..rate_snapshot import RateSnapshot
+from ..application import ExchangeRateService, RateUnavailable
+from ..application.dtos import RateSnapshotDTO
 
 
 class CountingProvider:
@@ -18,9 +15,9 @@ class CountingProvider:
         self._age = age
         self.fetches = 0
 
-    async def fetch(self, base_code: str) -> RateSnapshot:
+    async def fetch(self, base_code: str) -> RateSnapshotDTO:
         self.fetches += 1
-        return RateSnapshot(
+        return RateSnapshotDTO(
             base=base_code.upper(),
             rates=self._rates,
             fetched_at=datetime.now(UTC) - self._age,
@@ -44,8 +41,6 @@ async def test_a_rate_is_the_multiplier_to_the_quote_currency():
 
 
 async def test_a_second_ask_is_served_from_the_cache():
-    """A batch of postings arriving together must not each hit the feed."""
-
     provider = CountingProvider({"USD": Decimal("1.1")})
     service = _service(provider)
 
@@ -56,9 +51,6 @@ async def test_a_second_ask_is_served_from_the_cache():
 
 
 async def test_the_same_currency_never_asks_the_feed():
-    """Booking a USD transaction into a USD book is not a feed question, and
-    making it one would fail those postings whenever the feed is down."""
-
     provider = CountingProvider({})
 
     rate, _ = await _service(provider).rate_between("USD", "USD")
@@ -75,9 +67,6 @@ async def test_a_currency_the_feed_does_not_quote_is_refused():
 
 
 async def test_rates_older_than_the_limit_are_refused_not_served():
-    """A stale rate would be written into a permanent ledger row. Failing the
-    dispatch lets it retry; booking against it cannot be undone."""
-
     provider = CountingProvider({"USD": Decimal("1.1")}, age=timedelta(days=30))
 
     with pytest.raises(RateUnavailable):

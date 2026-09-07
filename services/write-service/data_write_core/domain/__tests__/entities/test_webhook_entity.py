@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from data_write_core.domain.entities import WebhookEntity
-from data_write_core.domain.entities.webhook import SECRET_GRACE_PERIOD
+from data_write_core.domain.entities.config import SECRET_GRACE_PERIOD
 
 MOMENT = datetime(2026, 8, 12, 11, 51)
 
@@ -40,9 +40,6 @@ def test_rotation_keeps_the_replaced_secret_for_the_grace_period():
 
 
 def test_rotating_twice_inside_the_window_drops_the_oldest_secret():
-    """Only two secrets are ever live. A third rotation invalidates the oldest
-    immediately rather than widening the window."""
-
     webhook = make_webhook()
     webhook.rotate_secret(now=MOMENT)
     second_secret = webhook.secret
@@ -56,8 +53,6 @@ def test_rotating_twice_inside_the_window_drops_the_oldest_secret():
 
 
 def test_restoring_a_snapshot_undoes_the_whole_rotation():
-    """A failed saga must not leave a new secret beside a stale grace window."""
-
     webhook = make_webhook()
     before = webhook.secret_snapshot()
     webhook.rotate_secret(now=MOMENT)
@@ -84,9 +79,6 @@ def test_enabled_is_the_pause_switch_and_survives_a_partial_update():
 
 
 def test_changing_the_url_does_not_rotate_the_secret():
-    """The same secret now signs requests to a different host, which is the
-    user's decision to make."""
-
     webhook = make_webhook()
 
     webhook.update(now=MOMENT, url="https://elsewhere.example.com/hook")

@@ -15,10 +15,6 @@ class ConversionSerializer(serializers.Serializer):
     )
 
     def get_fields(self):
-        """`from` is a Python keyword, so the field is declared under a legal
-        name and renamed before it is bound. `source` is deliberately not set —
-        DRF derives it from the final name, and stating it would be redundant."""
-
         fields = super().get_fields()
         fields["from"] = fields.pop("from_side")
 
@@ -37,9 +33,6 @@ class EnvelopedConversionSerializer(serializers.Serializer):
 
 
 class ConversionRequestSerializer(serializers.Serializer):
-    """The three query params, so a missing one fails as `required` through the
-    same path a missing body field would."""
-
     from_code = serializers.CharField()
     to_code = serializers.CharField()
     amount = serializers.CharField(

@@ -1,10 +1,3 @@
-"""Authoring a rule, through the handlers rather than the validators.
-
-The validation rules have their own suite; what these cover is the part that
-only the handlers can get wrong — what is written, what is published, and what
-is put back when publishing fails.
-"""
-
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -25,8 +18,6 @@ from data_write_core.domain.entities import (
     AutomationTrigger,
 )
 
-# The SAGA coordinator opens a real transaction around the write step, so these
-# need a database even though the repositories are fakes.
 pytestmark = pytest.mark.django_db(transaction=True)
 
 USER_ID = 7
@@ -41,11 +32,6 @@ NOTIFY = [{"type": "notify", "params": {"severity": "info", "title": "Ran"}}]
 
 
 class FakeAutomationRepository:
-    """Answers with a FRESH entity every read, exactly as the Django repository
-    does — it maps a row to a new object each time. A fake that handed back one
-    shared instance would make the update compensation look like it worked when
-    it was only mutating the same object twice."""
-
     def __init__(self, automations: list[AutomationEntity] | None = None) -> None:
         self.rows: dict[str, dict] = {}
         for automation in automations or []:
@@ -162,9 +148,6 @@ def create_command(**overrides) -> CreateAutomationCommand:
     return CreateAutomationCommand(**defaults)
 
 
-# --- create -----------------------------------------------------------------
-
-
 async def test_a_created_rule_is_written_and_published():
     repository, outbox = FakeAutomationRepository(), FakeOutboxRepository()
 
@@ -177,9 +160,6 @@ async def test_a_created_rule_is_written_and_published():
 
 
 async def test_a_rule_defaults_to_enabled():
-    """A rule created disabled is legitimate, but the common case is wanting it
-    to work."""
-
     repository = FakeAutomationRepository()
 
     rule, _ = await CreateAutomationCommandHandler(repository, FakeOutboxRepository()).handle(
@@ -201,9 +181,6 @@ async def test_an_invalid_rule_is_refused_before_anything_is_written():
 
 
 async def test_a_rule_nobody_heard_about_is_removed_again():
-    """It would evaluate here and nowhere else, so a failed publish takes the
-    row with it."""
-
     repository = FakeAutomationRepository()
 
     with pytest.raises(RuntimeError):
@@ -216,13 +193,7 @@ async def test_a_rule_nobody_heard_about_is_removed_again():
     assert repository.deleted
 
 
-# --- update -----------------------------------------------------------------
-
-
 async def test_a_trigger_is_replaced_whole_rather_than_merged():
-    """There is no way to say "change the third leaf", so a client editing a
-    condition sends the complete new trigger."""
-
     stored = make_stored_rule()
     repository, outbox = FakeAutomationRepository([stored]), FakeOutboxRepository()
 
@@ -260,10 +231,6 @@ async def test_disabling_a_rule_leaves_everything_else_alone():
 
 
 async def test_an_edit_reads_the_rule_once():
-    """The compensation snapshot comes off the entity, not off a second read:
-    two reads cost a query and are not taken under one transaction, so they can
-    disagree about what "before" was."""
-
     stored = make_stored_rule()
     repository = FakeAutomationRepository([stored])
 
@@ -280,8 +247,6 @@ async def test_an_edit_reads_the_rule_once():
 
 
 async def test_a_failed_publish_puts_the_previous_rule_back():
-    """The compensation restores a snapshot taken before the edit."""
-
     stored = make_stored_rule()
     repository = FakeAutomationRepository([stored])
 
@@ -319,9 +284,6 @@ async def test_an_updated_condition_is_validated_before_it_is_stored():
 
     assert repository.stored(stored.unique_id).trigger.event == "transaction.created"
     assert outbox.entries == []
-
-
-# --- delete -----------------------------------------------------------------
 
 
 async def test_a_deleted_rule_is_soft_deleted_and_returned():

@@ -1,21 +1,14 @@
-"""The closed set of things a rule can do.
-
-The executors themselves are thin — each hands off to the ordinary command for
-its slice — so what is worth pinning here is what a rule is NOT allowed to
-decide, and the one detail the loop guard depends on.
-"""
-
 from uuid import UUID, uuid4
 
 import pytest
 
 from data_write_core.application.commands.automations.engine import EFFECT_EXECUTORS
 from data_write_core.application.commands.automations.engine.effects import (
-    AUTOMATION_KIND,
     AUTOMATION_RESOLUTIONS,
     raise_action,
     transfer,
 )
+from data_write_core.application.commands.config import ActionKind
 from data_write_core.domain.automations import EffectType, RunContext
 from data_write_core.domain.entities import ActionSource
 from data_write_core.domain.value_objects import TransactionOrigin
@@ -40,8 +33,6 @@ def context(subject_type: str = "transaction") -> RunContext:
 
 
 class Capture:
-    """Stands in for a command handler, keeping the command it was given."""
-
     commands: list = []
 
     def __init__(self, *args, **kwargs) -> None:
@@ -59,28 +50,16 @@ def _clear_captures():
 
 
 def test_every_effect_in_the_vocabulary_has_an_executor():
-    """A type with no executor is refused at run time rather than skipped, so a
-    gap here is a rule that saves and then fails — catch it at build time."""
-
     assert set(EFFECT_EXECUTORS) == {member.value for member in EffectType}
 
 
-# --- raise_action -----------------------------------------------------------
-
-
 def test_the_choices_offered_are_the_backend_s_not_the_rule_s():
-    """A user-authored rule cannot define `resolutions` — that would make them a
-    free-form structure and reintroduce server-driven forms."""
-
     assert AUTOMATION_RESOLUTIONS
     assert not any(resolution.applies for resolution in AUTOMATION_RESOLUTIONS)
     assert any(resolution.dismissal for resolution in AUTOMATION_RESOLUTIONS)
 
 
 async def test_an_automation_action_comes_from_the_scheduler_and_groups_by_its_rule(monkeypatch):
-    """`group_key` is what makes a daily rule bump ONE row's `occurrences`
-    instead of appending an action a day."""
-
     monkeypatch.setattr(raise_action, "RaiseActionCommandHandler", Capture)
     run = context()
 
@@ -92,18 +71,12 @@ async def test_an_automation_action_comes_from_the_scheduler_and_groups_by_its_r
     command = Capture.commands[0]
 
     assert command.source == ActionSource.SCHEDULER
-    assert command.kind == AUTOMATION_KIND
+    assert command.kind == ActionKind.AUTOMATION
     assert command.group_key == f"automation:{run.automation_id}"
     assert command.resolutions == AUTOMATION_RESOLUTIONS
 
 
-# --- transfer ---------------------------------------------------------------
-
-
 async def test_a_transfer_is_two_entries_of_one_ordinary_chain(monkeypatch):
-    """Identical to POST /transactions/chains, and subject to every rule that
-    applies there — including a closed target wallet failing the run."""
-
     monkeypatch.setattr(transfer, "CreateTransactionChainCommandHandler", Capture)
 
     await EFFECT_EXECUTORS[EffectType.TRANSFER].apply(
@@ -123,9 +96,6 @@ async def test_a_transfer_is_two_entries_of_one_ordinary_chain(monkeypatch):
 
 
 async def test_the_money_a_rule_moves_is_marked_as_the_engine_s_own(monkeypatch):
-    """The loop guard. Without this mark a rule triggered by
-    `transaction.created` would fire on the transactions it just created."""
-
     monkeypatch.setattr(transfer, "CreateTransactionChainCommandHandler", Capture)
 
     await EFFECT_EXECUTORS[EffectType.TRANSFER].apply(
@@ -143,9 +113,6 @@ async def test_the_money_a_rule_moves_is_marked_as_the_engine_s_own(monkeypatch)
 
 
 def test_a_client_cannot_claim_the_engine_s_origin():
-    """Claiming `automation` on a hand-made transaction would be a way to make
-    it invisible to every rule the user wrote."""
-
     from data_write_core.domain.value_objects import CLIENT_ORIGINS
 
     assert TransactionOrigin.AUTOMATION not in CLIENT_ORIGINS

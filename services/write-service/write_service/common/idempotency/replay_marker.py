@@ -1,6 +1,6 @@
 from rest_framework.response import Response
 
-META_KEY = "idempotent_replay"
+from .config import MetaKey
 
 
 def mark_replay(response: Response, replayed: bool) -> Response:
@@ -13,6 +13,6 @@ def mark_replay(response: Response, replayed: bool) -> Response:
         meta = {}
         body["meta"] = meta
 
-    meta[META_KEY] = replayed
+    meta[MetaKey.REPLAY] = replayed
 
     return response

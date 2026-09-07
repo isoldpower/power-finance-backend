@@ -86,11 +86,34 @@ by their docker-compose service names on the internal network.
 
 ### Custom image
 
-`kong/Dockerfile` bundles `lua-resty-jwt` (not in the upstream `kong:3.7` image)
-so the in-tree `clerk-jwt` plugin can `require "resty.jwt"`. The rockspec is
-installed directly from GitHub (cdbattags, the current upstream maintainer)
-because luarocks.org's root manifest blows past Lua 5.1's 64KB constant limit and
-fails to load.
+`kong/Dockerfile` builds from `kong:3.7` with a build context of
+`./infrastructure/kong`.
+
+It bundles `lua-resty-jwt` (not in the upstream image) so the in-tree
+`clerk-jwt` plugin can `require "resty.jwt"`. The rockspec is installed directly
+from GitHub (cdbattags, the current upstream maintainer) because luarocks.org's
+root manifest blows past Lua 5.1's 64KB constant limit and fails to load.
+
+Everything the gateway needs is **baked into the image** — the declarative
+config, the five custom plugins and the shared Lua — so it is deploy-ready with
+no bind mounts. Only secrets and ports come from the runtime environment:
+
+| copied | to |
+| --- | --- |
+| `kong.yml` | `/etc/kong/kong.yml` |
+| `plugins/<name>` | `/usr/local/share/lua/5.1/kong/plugins/<name>` |
+| `shared/lua` | `/usr/local/share/lua/5.1/power_finance` |
+
+The shared library — the API error envelope several plugins render through — is
+installed **outside** `kong/plugins/` on purpose. Anything under that directory
+is something Kong will try to load as a plugin, and this is not one. It lands
+under the namespace the plugins require it by: `power_finance.envelope`.
+
+The static, non-secret configuration is baked as `ENV` so the image runs
+standalone: `KONG_DATABASE=off` with `KONG_DECLARATIVE_CONFIG`, the
+`KONG_PLUGINS` allowlist (`bundled` plus the five custom ones), logs to
+stdout/stderr, the proxy and admin listens, buffering off and the 1-hour proxy
+timeouts the long-lived routes need, and the `clerk_jwks_locks` shared dict.
 
 ### Plugin pipeline
 
@@ -158,7 +181,7 @@ router rather than in the paths a client types: reads and writes of the same
 resource share a URL and differ only by method. `GET` goes to the Read Service,
 `POST`/`PUT`/`PATCH`/`DELETE` to the Write Service.
 
-Three kinds of route beat that bare prefix by being longer:
+Four kinds of route beat that bare prefix by being longer:
 
 - the search endpoints (`/api/v1/{wallets,transactions,webhooks}/search`), which
   are reads that arrive as `POST` because a filter tree does not survive a query
@@ -168,7 +191,11 @@ Three kinds of route beat that bare prefix by being longer:
 - `/api/v1/notifications/stream`, which is routed to Push Service;
 - `/api/v1/chat`, which is routed to AI Service. A WebSocket handshake arrives
   as a `GET`, so without the longer path the upgrade would be offered to Read
-  Service, which does not speak it.
+  Service, which does not speak it;
+- `/api/v1/assistant`, the conversation's REST edge, also on AI Service. Being
+  longer than read-service's bare `/api/v1` is what stops the history being
+  served by a projection that does not have it — the messages live in AI
+  Service's own Postgres.
 
 `/api/v1/fallback-reads/…` is internal to the `read-fallback` plugin and is
 never a public path.
@@ -212,10 +239,10 @@ up ai-service alone never tries to register a connector against a
 
 `debezium/connectors/` holds one Outbox Event Router config per outbox:
 
-| Connector | Database | Table | Slot / publication |
-| --- | --- | --- | --- |
-| `outbox-connector.json` | `postgres-write` | `public.outbox_events` | `dbz_outbox_slot` / `dbz_outbox_publication` |
-| `ai-outbox-connector.json` | `postgres-ai` | `public.ai_outbox_events` | `dbz_ai_outbox_slot` / `dbz_ai_outbox_publication` |
+| Connector                  | Database         | Table                     | Slot / publication                                 |
+|----------------------------|------------------|---------------------------|----------------------------------------------------|
+| `outbox-connector.json`    | `postgres-write` | `public.outbox_events`    | `dbz_outbox_slot` / `dbz_outbox_publication`       |
+| `ai-outbox-connector.json` | `postgres-ai`    | `public.ai_outbox_events` | `dbz_ai_outbox_slot` / `dbz_ai_outbox_publication` |
 
 Both route to the same topic, `events.async`, keyed by `partitionkey` and
 carrying the same four headers (`event_id`, `aggregate_type`, `event_type`,

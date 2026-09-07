@@ -1,9 +1,3 @@
-"""Reading webhook endpoints, their subscriptions and the event catalog.
-
-The delivery log is deliberately absent here: it lives in webhook-service's own
-Postgres and the gateway routes that one read there.
-"""
-
 import json
 import uuid
 from datetime import UTC, datetime
@@ -96,9 +90,6 @@ async def _subscription(webhook: WebhookReadModel, event_type: str) -> WebhookSu
     )
 
 
-# --- endpoint shape ---------------------------------------------------------
-
-
 async def test_an_endpoint_reports_enabled_and_never_its_secret():
     await _webhook()
 
@@ -112,8 +103,6 @@ async def test_an_endpoint_reports_enabled_and_never_its_secret():
 
 
 async def test_an_endpoint_has_no_deleted_at():
-    """Webhooks are HARD deleted, unlike every other resource in this API."""
-
     await _webhook()
 
     assert "deleted_at" not in body_of(await as_user(WEBHOOKS))["data"][0]
@@ -132,9 +121,6 @@ async def test_another_users_endpoint_is_not_found():
     webhook = await _webhook(owner=OTHER_USER_ID)
 
     assert (await as_user(f"{WEBHOOKS}/{webhook.id}")).status_code == 404
-
-
-# --- the enabled filter -----------------------------------------------------
 
 
 async def test_absent_enabled_returns_both():
@@ -167,9 +153,6 @@ async def test_a_non_boolean_enabled_is_refused():
 
 
 async def test_the_filter_does_not_leak_across_cached_pages():
-    """The filter is part of the cache key, or a filtered page would be served
-    from an unfiltered one."""
-
     await _webhook(title="live", is_active=True)
     await _webhook(title="paused", is_active=False, created_at=JANUARY)
 
@@ -177,9 +160,6 @@ async def test_the_filter_does_not_leak_across_cached_pages():
     rows = body_of(await as_user(f"{WEBHOOKS}?enabled=true"))["data"]
 
     assert [row["title"] for row in rows] == ["live"]
-
-
-# --- subscriptions ----------------------------------------------------------
 
 
 async def test_a_subscription_is_its_own_resource_named_by_event():
@@ -200,9 +180,6 @@ async def test_subscriptions_of_another_users_endpoint_are_not_found():
     assert (await as_user(f"{WEBHOOKS}/{webhook.id}/events")).status_code == 404
 
 
-# --- the event catalog ------------------------------------------------------
-
-
 async def test_the_catalog_serves_the_shared_table():
     body = body_of(await as_user(f"{WEBHOOKS}/event-types"))
 
@@ -213,8 +190,6 @@ async def test_the_catalog_serves_the_shared_table():
 
 
 async def test_the_catalog_is_not_paginated():
-    """It is small, fixed at any given moment and always returned complete."""
-
     meta = body_of(await as_user(f"{WEBHOOKS}/event-types"))["meta"]
 
     assert meta == {
@@ -226,20 +201,11 @@ async def test_the_catalog_is_not_paginated():
 
 
 async def test_the_catalog_never_leaks_the_publisher_mapping():
-    """`outbox_types` is how the publisher routes an event, not something a
-    subscriber can act on."""
-
     for row in body_of(await as_user(f"{WEBHOOKS}/event-types"))["data"]:
         assert set(row) == {"event", "subject", "description"}
 
 
-# --- search --------------------------------------------------------------
-
-
 async def test_search_filters_on_enabled_not_the_stored_column():
-    """`is_active` is storage; the API's name for the pause switch is
-    `enabled`, and that is what a filter tree must spell."""
-
     await _webhook(title="live", is_active=True)
     await _webhook(title="paused", is_active=False, created_at=JANUARY)
 

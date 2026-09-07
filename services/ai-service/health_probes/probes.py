@@ -66,4 +66,4 @@ async def _migration_status(migrations: DatabaseMigrations) -> str:
 def _aggregate_status(checks: dict[str, str]) -> str:
     all_ok = all(status == ProbeStatus.OK.value for status in checks.values())
 
-    return (ProbeStatus.OK if all_ok else ProbeStatus.DEGRADED).value
+    return ProbeStatus.OK if all_ok else ProbeStatus.DEGRADED

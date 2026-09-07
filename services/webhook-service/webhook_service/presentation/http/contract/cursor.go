@@ -13,6 +13,7 @@ import (
 	"services/webhook-service/webhook_service/types"
 )
 
+// CursorVersion is the payload version a cursor must carry to be read.
 const (
 	CursorVersion     = 1
 	FingerprintLength = 16
@@ -23,6 +24,7 @@ const (
 	DirectionPrevious = "prev"
 )
 
+// ErrCursorInvalid is returned for a cursor this endpoint cannot read.
 var (
 	ErrCursorInvalid  = errors.New("cursor_invalid")
 	ErrCursorMismatch = errors.New("cursor_mismatch")
@@ -35,8 +37,7 @@ type cursorPayload struct {
 	Fingerprint string   `json:"f"`
 }
 
-// QueryFingerprint binds a cursor to the query that produced it, so a client
-// cannot carry a cursor from one filter set into another and silently skip rows.
+// QueryFingerprint binds a cursor to its query, so one filter set's cursor cannot be used on another.
 func QueryFingerprint(filters types.DeliveryLogFilters, webhookID string) string {
 	material := map[string]any{
 		"order": OrderSignature,
@@ -61,6 +62,7 @@ func nullable(value string) any {
 	return value
 }
 
+// EncodeCursor mints an opaque cursor for one position in one query.
 func EncodeCursor(direction string, createdAt time.Time, id string, fingerprint string) string {
 	payload, _ := json.Marshal(cursorPayload{
 		Version:     CursorVersion,
@@ -75,6 +77,7 @@ func EncodeCursor(direction string, createdAt time.Time, id string, fingerprint 
 	)
 }
 
+// DecodeCursor reads a cursor back, refusing one minted for a different query.
 func DecodeCursor(raw string, fingerprint string) (*types.DeliveryAnchor, error) {
 	padded := raw + strings.Repeat("=", (4-len(raw)%4)%4)
 	decoded, decodeErr := base64.URLEncoding.DecodeString(padded)

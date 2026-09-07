@@ -39,9 +39,6 @@ def make_subscription() -> WebhookSubscriptionDTO:
 
 
 def test_endpoint_reports_enabled_and_no_deleted_at():
-    """Webhooks are HARD deleted, so unlike every other resource here there is
-    no `deleted_at` to report."""
-
     presented = WebhookHttpPresenter.present_one(make_webhook(enabled=False))
 
     assert presented["enabled"] is False
@@ -76,9 +73,6 @@ def test_subscription_carries_event_and_nothing_it_does_not_have():
 
 
 def test_the_fallback_shape_matches_the_primary_one():
-    """The gateway can reroute mid-session, so a client must not be able to
-    tell which side answered."""
-
     assert present_webhook(make_webhook()) == WebhookHttpPresenter.present_one(make_webhook())
     assert present_webhook_subscription(make_subscription()) == (
         WebhookHttpPresenter.present_subscription(make_subscription())

@@ -74,8 +74,6 @@ async def test_the_base_comes_from_the_path_and_is_case_insensitive():
 
 
 async def test_an_unknown_base_is_rejected_before_the_feed_is_asked():
-    """422, not 409: the code is wrong, and no amount of waiting fixes it."""
-
     exploding = StubRateService(failure=AssertionError("feed must not be asked"))
 
     with pytest.raises(UnsupportedCurrency):
@@ -98,9 +96,6 @@ async def test_targets_narrow_the_map():
 
 
 async def test_an_unknown_target_is_rejected_rather_than_dropped_from_the_map():
-    """Silently omitting it would look like `rate_unavailable` for a code that
-    simply does not exist."""
-
     with pytest.raises(UnsupportedCurrency):
         await handler().handle(GetCurrencyRatesQuery(base_code="USD", target_codes=["XYZ"]))
 

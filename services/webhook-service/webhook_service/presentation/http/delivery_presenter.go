@@ -7,7 +7,6 @@ import (
 	"services/webhook-service/webhook_service/types"
 )
 
-// presentDelivery renders one log row.
 func presentDelivery(delivery types.Delivery) map[string]any {
 	return map[string]any{
 		"id":              delivery.ID,

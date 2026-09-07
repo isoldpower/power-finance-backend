@@ -2,6 +2,7 @@ from .accounts import (
     log_balances_recomputed,
     log_template_accounts_seeded,
 )
+from .config import LoggerChannel, LoggerSettings
 from .dispatch import (
     debug_nothing_to_remove,
     log_postings_dispatched,
@@ -14,13 +15,11 @@ from .projection import (
     log_transaction_projected,
     log_transaction_soft_deleted,
 )
-from .registry import (
-    LOGGER_ROOT,
-    get_service_logger,
-)
+from .registry import get_service_logger
 
 __all__ = [
-    "LOGGER_ROOT",
+    "LoggerChannel",
+    "LoggerSettings",
     "debug_nothing_to_remove",
     "debug_stale_event_skipped",
     "debug_unknown_transaction",

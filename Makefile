@@ -16,7 +16,7 @@ SAGA_LIB_DIR         := libraries/saga-pattern-py
 READ_AT_LEAST_LIB_DIR := libraries/read-at-least-py
 FILTER_GRAMMAR_LIB_DIR := libraries/filter-grammar-py
 WEBHOOK_CATALOG_LIB_DIR := libraries/webhook-catalog-py
-CONTRACT_TESTS_DIR := contract_tests
+CONTRACT_TESTS_DIR := infrastructure/tests/contract
 
 UVICORN_HOST := 0.0.0.0
 UVICORN_PORT := 8000

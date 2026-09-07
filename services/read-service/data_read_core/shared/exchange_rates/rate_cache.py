@@ -11,8 +11,6 @@ def get_rates_cache_key(base_code: str) -> str:
 
 
 class RedisRateCache:
-    """The feed is shared by every user, so the cache is not user-scoped."""
-
     def __init__(self, redis_client: Redis, ttl_seconds: int) -> None:
         self._redis_client = redis_client
         self._ttl_seconds = ttl_seconds

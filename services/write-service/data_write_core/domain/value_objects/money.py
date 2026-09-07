@@ -6,8 +6,6 @@ from ..exceptions import CurrencyMismatchError, NegativeMoneyError
 
 @dataclass(frozen=True)
 class Money:
-    """Money dataclass used to bind amount to currency."""
-
     amount: Decimal
     currency_code: str
 
@@ -32,8 +30,6 @@ class Money:
 
 
 class NonNegativeMoney(Money):
-    """Money dataclass used to bind amount to currency. Can be only >= 0"""
-
     def __init__(self, amount: Decimal, currency_code: str) -> None:
         if amount < 0:
             raise NegativeMoneyError(amount=amount)

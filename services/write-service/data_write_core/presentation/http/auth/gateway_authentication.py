@@ -5,22 +5,20 @@ from rest_framework.request import Request
 
 from data_write_core.application.bootstrap import get_repository_registry
 
+from .config import HeaderName
 from .gateway_user import GatewayUser
-from .headers import GATEWAY_USER_HEADER
 from .preferences import resolve_preferences
 
 
 class GatewayUserHeaderAuthentication(BaseAuthentication):
-    """Resolve the caller from the headers the gateway set."""
-
     async def authenticate(self, request: Request):
         if request.method == "OPTIONS":
             return None
 
-        external_user_id = request.headers.get(GATEWAY_USER_HEADER, "").strip()
+        external_user_id = request.headers.get(HeaderName.GATEWAY_USER, "").strip()
         if not external_user_id:
             raise AuthenticationFailed(
-                f"Missing {GATEWAY_USER_HEADER} header — request must traverse the API gateway."
+                f"Missing {HeaderName.GATEWAY_USER} header — request must traverse the API gateway."
             )
 
         user_repository = get_repository_registry().user_repository
@@ -41,7 +39,5 @@ class GatewayUserHeaderAuthentication(BaseAuthentication):
 
 
 class IsGatewayAuthenticated(BasePermission):
-    """Only a caller the gateway resolved gets through."""
-
     def has_permission(self, request: Request, view) -> bool:
         return isinstance(request.user, GatewayUser)

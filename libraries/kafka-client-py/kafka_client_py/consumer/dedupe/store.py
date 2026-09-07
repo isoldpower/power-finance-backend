@@ -72,11 +72,17 @@ class PostgresDedupeStore(DedupeStore):
 
         if connection is not None:
             async with connection.cursor() as cursor:
-                await cursor.execute(insert_statement, insert_parameters)
+                await cursor.execute(
+                    insert_statement,
+                    insert_parameters,
+                )
             return
 
         async with self._pool.connection() as owned_connection, owned_connection.cursor() as cursor:
-            await cursor.execute(insert_statement, insert_parameters)
+            await cursor.execute(
+                insert_statement,
+                insert_parameters,
+            )
 
 
 class InMemoryDedupeStore:

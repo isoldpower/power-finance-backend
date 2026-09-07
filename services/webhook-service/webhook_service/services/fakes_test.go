@@ -47,7 +47,14 @@ func (f *fakeDeliveryStore) MarkFailed(_ context.Context, deliveryID string, _ i
 	return nil
 }
 
-func (f *fakeDeliveryStore) Reschedule(_ context.Context, deliveryID string, attempts int, lastError string, nextAttemptAt time.Time, _ time.Time) error {
+func (f *fakeDeliveryStore) Reschedule(
+	_ context.Context,
+	deliveryID string,
+	attempts int,
+	lastError string,
+	nextAttemptAt time.Time,
+	_ time.Time,
+) error {
 	f.rescheduled = append(f.rescheduled, rescheduleCall{
 		deliveryID:    deliveryID,
 		attempts:      attempts,
@@ -108,7 +115,11 @@ type fakeEndpointResolver struct {
 	calls     int
 }
 
-func (f *fakeEndpointResolver) ActiveEndpointsForEvent(_ context.Context, _ int, _ string) ([]types.WebhookEndpoint, error) {
+func (f *fakeEndpointResolver) ActiveEndpointsForEvent(
+	_ context.Context,
+	_ int,
+	_ string,
+) ([]types.WebhookEndpoint, error) {
 	f.calls++
 	return f.endpoints, f.err
 }
@@ -139,52 +150,5 @@ type signalingAttempter struct {
 
 func (s *signalingAttempter) Attempt(_ context.Context, delivery types.Delivery, _ string) error {
 	s.attempted <- delivery
-	return nil
-}
-
-type fakeConfigStore struct {
-	upserted       []types.WebhookEndpoint
-	updated        []string
-	updatedEnabled []bool
-	rotated        []string
-	rotations      []types.SecretRotation
-	deleted        []string
-	addedSubs      []types.WebhookSubscription
-	removedSubs    []string
-	err            error
-}
-
-func (f *fakeConfigStore) UpsertEndpoint(_ context.Context, endpoint types.WebhookEndpoint, _ time.Time) error {
-	if f.err != nil {
-		return f.err
-	}
-	f.upserted = append(f.upserted, endpoint)
-	return nil
-}
-
-func (f *fakeConfigStore) UpdateEndpoint(_ context.Context, webhookID, _, _ string, enabled bool, _ time.Time) error {
-	f.updated = append(f.updated, webhookID)
-	f.updatedEnabled = append(f.updatedEnabled, enabled)
-	return nil
-}
-
-func (f *fakeConfigStore) RotateSecret(_ context.Context, rotation types.SecretRotation, _ time.Time) error {
-	f.rotated = append(f.rotated, rotation.WebhookID)
-	f.rotations = append(f.rotations, rotation)
-	return nil
-}
-
-func (f *fakeConfigStore) DeleteEndpoint(_ context.Context, webhookID string) error {
-	f.deleted = append(f.deleted, webhookID)
-	return nil
-}
-
-func (f *fakeConfigStore) AddSubscription(_ context.Context, subscription types.WebhookSubscription, _ time.Time) error {
-	f.addedSubs = append(f.addedSubs, subscription)
-	return nil
-}
-
-func (f *fakeConfigStore) RemoveSubscription(_ context.Context, subscriptionID string) error {
-	f.removedSubs = append(f.removedSubs, subscriptionID)
 	return nil
 }

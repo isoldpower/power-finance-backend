@@ -7,7 +7,8 @@ from data_write_core.domain.exceptions import (
     TransactionChainTooLongError,
     TransactionChainUnknownReferenceError,
 )
-from data_write_core.domain.services import MAX_CHAIN_LENGTH, ChainNode, order_chain
+from data_write_core.domain.services import ChainNode, order_chain
+from data_write_core.domain.services.config import ChainSettings
 
 
 def _nodes(*pairs: tuple[str, str | None]) -> list[ChainNode]:
@@ -27,8 +28,6 @@ def test_a_dependency_commits_before_its_dependent():
 
 
 def test_a_transfer_orders_the_expense_before_the_income():
-    """The canonical case: two legs, the second stated as following the first."""
-
     ordered = order_chain(_nodes(("transaction-1", None), ("transaction-2", "transaction-1")))
 
     assert ordered == [0, 1]
@@ -70,13 +69,17 @@ def test_an_unknown_reference_names_the_entry_that_made_it():
 
 
 def test_a_chain_at_the_cap_is_allowed():
-    ordered = order_chain(_nodes(*((str(index), None) for index in range(MAX_CHAIN_LENGTH))))
+    ordered = order_chain(
+        _nodes(*((str(index), None) for index in range(ChainSettings.MAX_CHAIN_LENGTH)))
+    )
 
-    assert len(ordered) == MAX_CHAIN_LENGTH
+    assert len(ordered) == ChainSettings.MAX_CHAIN_LENGTH
 
 
 def test_a_chain_over_the_cap_is_rejected():
     with pytest.raises(TransactionChainTooLongError) as caught:
-        order_chain(_nodes(*((str(index), None) for index in range(MAX_CHAIN_LENGTH + 1))))
+        order_chain(
+            _nodes(*((str(index), None) for index in range(ChainSettings.MAX_CHAIN_LENGTH + 1)))
+        )
 
-    assert caught.value.maximum == MAX_CHAIN_LENGTH
+    assert caught.value.maximum == ChainSettings.MAX_CHAIN_LENGTH

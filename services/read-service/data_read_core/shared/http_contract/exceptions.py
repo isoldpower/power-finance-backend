@@ -10,8 +10,6 @@ MESSAGE_KEY = "message"
 
 @dataclass(frozen=True)
 class ErrorDetail:
-    """One field-level failure in `error.details`, `field` being a JSON path."""
-
     field: str | None
     code: DetailCode
     message: str
@@ -25,8 +23,6 @@ class ErrorDetail:
 
 
 class ApiError(Exception):
-    """Base class for every failure that maps onto the error envelope."""
-
     code: ErrorCode = ErrorCode.INTERNAL_ERROR
     message: str = "Unexpected server failure"
 
@@ -66,16 +62,11 @@ class Forbidden(ApiError):
 
 
 class NotFound(ApiError):
-    """404 also covers "belongs to another user": 403 would make every UUID path
-    an existence oracle."""
-
     code = ErrorCode.NOT_FOUND
     message = "Resource does not exist"
 
 
 class Conflict(ApiError):
-    """409: the request can succeed once state changes, where 422 never will."""
-
     code = ErrorCode.CONFLICT
     message = "Request conflicts with the current server state"
 

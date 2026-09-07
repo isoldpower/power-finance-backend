@@ -2,8 +2,10 @@ package types
 
 import "time"
 
+// DeliveryStatus is the lifecycle state of one queued delivery.
 type DeliveryStatus string
 
+// The states a delivery moves through, from enqueue to a terminal outcome.
 const (
 	DeliveryPending        DeliveryStatus = "pending"
 	DeliveryInProgress     DeliveryStatus = "in_progress"
@@ -32,6 +34,7 @@ func IsKnownDeliveryStatus(candidate string) bool {
 	return false
 }
 
+// WebhookEndpoint is one projected customer endpoint.
 type WebhookEndpoint struct {
 	ID             string
 	UserID         int
@@ -43,8 +46,7 @@ type WebhookEndpoint struct {
 	IsActive       bool
 }
 
-// EndpointSecrets is what an endpoint can currently sign with: the live secret
-// and, inside a rotation's grace window, the one it replaced.
+// EndpointSecrets is what an endpoint may sign with: the live secret and, in grace, the previous one.
 type EndpointSecrets struct {
 	Secret                  string
 	SecretVersion           int
@@ -68,6 +70,7 @@ func (s EndpointSecrets) For(secretVersion int, now time.Time) string {
 	return s.PreviousSecret
 }
 
+// WebhookSubscription binds an endpoint to one event type.
 type WebhookSubscription struct {
 	ID        string
 	WebhookID string
@@ -75,6 +78,7 @@ type WebhookSubscription struct {
 	EventType string
 }
 
+// Delivery is one queued attempt to reach an endpoint with an event.
 type Delivery struct {
 	ID             string
 	WebhookID      string
@@ -93,8 +97,7 @@ type Delivery struct {
 	UpdatedAt      time.Time
 }
 
-// SecretRotation is what a WebhookSecretRotated event installs: the new secret
-// and the window the replaced one stays valid for.
+// SecretRotation is what a WebhookSecretRotated event installs: a secret and a grace window.
 type SecretRotation struct {
 	WebhookID               string
 	Secret                  string

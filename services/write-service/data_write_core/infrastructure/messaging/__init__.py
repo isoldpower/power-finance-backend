@@ -1,6 +1,7 @@
+from data_write_core.infrastructure.messaging.config import PartitionKey
+
 from .memory_event_bus import InMemoryEventBus
 from .proto import (
-    GLOBAL_PARTITION_KEY,
     build_outbox_entry,
     datetime_to_timestamp,
 )
@@ -13,7 +14,7 @@ from .severity import (
 )
 
 __all__ = [
-    "GLOBAL_PARTITION_KEY",
+    "PartitionKey.GLOBAL",
     "SEVERITIES",
     "Severity",
     "InMemoryEventBus",

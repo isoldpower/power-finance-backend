@@ -1,6 +1,3 @@
-"""End of the wire: URL wiring, gateway auth, query-param validation and the
-envelope. The handlers themselves are covered by the per-slice tests."""
-
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -20,8 +17,6 @@ AUTH_HEADERS = {"X-User-Id": EXTERNAL_USER_ID}
 
 
 def as_user(path: str):
-    """Everything the gateway would have added, minus the gateway."""
-
     return AsyncClient().get(path, headers=AUTH_HEADERS)
 
 
@@ -53,9 +48,6 @@ class StubRateService:
 
 @pytest.fixture
 def stub_rates(monkeypatch):
-    """Swap the rate service both currency slices build for themselves. Keeps
-    the endpoints off Redis and off the feed."""
-
     def install(service: StubRateService) -> None:
         for module in (
             "data_read_core.query_slices.get_currency_rates.query_handler",
@@ -88,9 +80,6 @@ def body_of(response) -> dict:
 
 
 async def test_currencies_are_served_unpaginated_and_complete():
-    """`total` counts what was returned because everything is returned: there
-    is no page to be a subset of."""
-
     response = await as_user("/api/v1/currencies")
 
     assert response.status_code == 200

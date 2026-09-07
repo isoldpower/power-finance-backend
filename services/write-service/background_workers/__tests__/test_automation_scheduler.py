@@ -1,11 +1,3 @@
-"""The scheduled half of the engine.
-
-The sweeper deliberately knows nothing about when a rule is due — the period is
-part of the run key, so a pass that is too early is refused its claim rather
-than skipped. What it must get right is covering every schedule and surviving
-one of them failing.
-"""
-
 from datetime import UTC, datetime
 
 from data_write_core.domain.automations import TriggerSchedule
@@ -32,9 +24,6 @@ class FakeEngine:
 
 
 async def test_every_schedule_is_swept_on_every_pass():
-    """Not just the one that "should" be due: dueness is the run key's job, so
-    the sweeper's is to ask about all of them."""
-
     engine = FakeEngine()
 
     await sweep_once(NOW, engine)
@@ -51,7 +40,4 @@ async def test_one_schedule_failing_does_not_cost_the_others_their_period():
 
 
 def test_the_sweeper_wakes_far_more_often_than_daily_means():
-    """Waking often costs a query and buys a short catch-up after an outage,
-    because a rule that already ran this period is refused its claim."""
-
     assert AutomationScheduleSettings().interval_seconds <= 3600

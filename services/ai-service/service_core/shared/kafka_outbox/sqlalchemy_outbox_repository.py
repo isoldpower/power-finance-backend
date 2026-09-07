@@ -4,6 +4,7 @@ from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db_connection import OutboxEntryModel
+from .config import OutboxColumn
 from .contracts import OutboxEntry
 from .outbox_repository import OutboxRepository
 
@@ -20,13 +21,13 @@ class SqlAlchemyOutboxRepository(OutboxRepository):
             insert(OutboxEntryModel),
             [
                 {
-                    "event_id": entry.event_id,
-                    "aggregate_type": entry.aggregate_type,
-                    "aggregate_id": entry.aggregate_id,
-                    "partition_key": entry.partition_key,
-                    "event_type": entry.event_type,
-                    "payload": entry.payload,
-                    "occurred_at": entry.occurred_at,
+                    OutboxColumn.EVENT_ID: entry.event_id,
+                    OutboxColumn.AGGREGATE_TYPE: entry.aggregate_type,
+                    OutboxColumn.AGGREGATE_ID: entry.aggregate_id,
+                    OutboxColumn.PARTITION_KEY: entry.partition_key,
+                    OutboxColumn.EVENT_TYPE: entry.event_type,
+                    OutboxColumn.PAYLOAD: entry.payload,
+                    OutboxColumn.OCCURRED_AT: entry.occurred_at,
                 }
                 for entry in entries
             ],

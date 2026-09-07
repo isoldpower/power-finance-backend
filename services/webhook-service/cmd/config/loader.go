@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log/slog"
 	"os"
 	httpserver "services/webhook-service/webhook_service/presentation/http/contract"
 	"strings"
@@ -45,7 +44,7 @@ func Load() webhook_service.Config {
 	configPath := resolveConfigPath()
 	ResolveViper(viperInstance, configPath)
 	if resolveErr := TryResolveConfig(viperInstance); resolveErr != nil {
-		slog.Warn("failed to read config file", "path", configPath, "error", resolveErr)
+		logConfigFileUnreadable(configPath, resolveErr)
 	}
 
 	return webhook_service.Config{
@@ -65,10 +64,12 @@ func Load() webhook_service.Config {
 			DSN: viperInstance.GetString(postgresDSNKey),
 		},
 		Delivery: services.DeliveryConfig{
-			Timeout:           time.Duration(viperInstance.GetInt(deliveryTimeoutKey)) * time.Second,
-			MaxAttempts:       viperInstance.GetInt(deliveryMaxAttemptsKey),
-			RetryBackoff:      time.Duration(viperInstance.GetInt(deliveryRetryBackoffKey)) * time.Second,
-			SchedulerInterval: time.Duration(viperInstance.GetInt(deliverySchedulerIntervalKey)) * time.Second,
+			Timeout:      time.Duration(viperInstance.GetInt(deliveryTimeoutKey)) * time.Second,
+			MaxAttempts:  viperInstance.GetInt(deliveryMaxAttemptsKey),
+			RetryBackoff: time.Duration(viperInstance.GetInt(deliveryRetryBackoffKey)) * time.Second,
+			SchedulerInterval: time.Duration(
+				viperInstance.GetInt(deliverySchedulerIntervalKey),
+			) * time.Second,
 		},
 	}
 }

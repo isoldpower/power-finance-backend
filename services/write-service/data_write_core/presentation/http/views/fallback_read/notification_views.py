@@ -23,8 +23,8 @@ from ._presenters import (
     present_notification_counts,
     present_notifications,
 )
-from ._schema import CURSOR_PARAMETER, LIMIT_PARAMETER, resource_id_parameter
 from .base import FallbackReadView
+from .config import CURSOR_PARAMETER, LIMIT_PARAMETER, resource_id_parameter
 
 
 class FallbackNotificationListView(FallbackReadView):
@@ -84,10 +84,6 @@ class FallbackNotificationResourceView(FallbackReadView):
 
 
 class FallbackNotificationCountView(FallbackReadView):
-    """The bell badge. It is routed BEFORE the resource view, which would
-    otherwise not match `count` at all — the resource path takes a UUID — but
-    the ordering is what keeps that true if the resource path ever loosens."""
-
     @extend_schema(
         operation_id="fallback_notifications_count",
         summary="Count unacknowledged notifications (consistent fallback)",

@@ -1,6 +1,3 @@
-"""Exchange rates: a feed behind an interface, cached, with staleness treated as
-a failure rather than a silently old number."""
-
 from .exceptions import RateUnavailable
 from .factory import build_provider, get_rate_service
 from .providers import OpenExchangeRatesProvider, RateProvider, StaticRateProvider

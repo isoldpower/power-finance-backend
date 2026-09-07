@@ -1,6 +1,7 @@
+from .config import LoggerChannel
 from .registry import get_service_logger
 
-_logger = get_service_logger("accounts")
+_logger = get_service_logger(LoggerChannel.ACCOUNTS)
 
 
 def log_template_accounts_seeded(user_id: int, account_count: int) -> None:

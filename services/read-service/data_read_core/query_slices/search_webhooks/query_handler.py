@@ -9,9 +9,6 @@ from .logger_shortcuts import log_search_served
 
 
 class SearchWebhooksQueryHandler:
-    """Webhook configs are low-volume so search runs against the Postgres
-    projection (no Elasticsearch index for webhooks)."""
-
     async def handle(self, query: SearchWebhooksQuery) -> FetchedRows:
         filter_query = FilterTree(WEBHOOK_FILTER_POLICY).resolve(query.filter_body)
         models, total = await search_owned_webhooks(

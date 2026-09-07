@@ -35,9 +35,6 @@ class AccountReadModel(models.Model):
                 include=["group", "name", "balance", "currency_code"],
                 name="ra_user_keyset_idx",
             ),
-            # The chart's own order is `created_at DESC` (above). This one
-            # serves the `group` filter and the `meta.groups` aggregate, both
-            # of which read the group without touching the sort key.
             models.Index(
                 fields=["user_id", "group"],
                 include=["balance", "currency_code"],

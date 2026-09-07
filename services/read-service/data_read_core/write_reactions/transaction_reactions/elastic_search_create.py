@@ -13,8 +13,6 @@ from ._utilities import _container_label
 
 
 class IndexTransactionDocument(Effect):
-    """Index the full transaction document into the search index on creation."""
-
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, TransactionCreated)
         wallet = await _container_label(

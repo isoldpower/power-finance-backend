@@ -33,10 +33,6 @@ class AutomationEffectSerializer(serializers.Serializer):
 
 
 def automation_fields() -> dict:
-    """The whole rule. The list returns the COMPLETE resource rather than a
-    preview — a rule is small and the browser renders its condition inline — so
-    both slices are built from one field set."""
-
     return {
         "id": serializers.UUIDField(),
         "name": serializers.CharField(),

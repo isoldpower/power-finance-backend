@@ -12,9 +12,10 @@ from .repositories import UnitOfWorkFactory
 
 
 class UpdateProjectedTransactionAmount(Effect):
-    """Applies a new amount to an already-projected transaction."""
-
-    def __init__(self, unit_of_work: UnitOfWorkFactory = SqlAlchemyDispatchUnitOfWork) -> None:
+    def __init__(
+        self,
+        unit_of_work: UnitOfWorkFactory = SqlAlchemyDispatchUnitOfWork,
+    ) -> None:
         self._unit_of_work = unit_of_work
 
     async def apply(self, event: EventMessage) -> None:

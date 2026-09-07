@@ -72,9 +72,6 @@ async def test_both_sides_are_money_at_their_own_scale():
 
 
 async def test_the_target_scale_governs_the_rounding_not_the_source():
-    """JPY has no minor unit, so the result is whole yen even though the source
-    amount and the rate both carry fractions."""
-
     conversion = await handler().handle(
         ConvertCurrencyQuery(from_code="USD", to_code="JPY", raw_amount="10.55")
     )
@@ -91,9 +88,6 @@ async def test_the_rate_is_not_padded_to_either_currencys_scale():
 
 
 async def test_the_amount_is_validated_against_the_source_scale():
-    """`?amount=100.005&from_code=USD` is a precision failure, not a rounding
-    opportunity."""
-
     with pytest.raises(ValidationFailed) as failure:
         await handler().handle(
             ConvertCurrencyQuery(from_code="USD", to_code="RUB", raw_amount="100.005")

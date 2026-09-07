@@ -1,10 +1,3 @@
-"""Which environment Alembic gets, and what each one configures.
-
-The migrations themselves are exercised by running them; what is worth a test
-here is the fork, because picking the wrong mode fails in a way that looks like
-a connection problem rather than a wiring one.
-"""
-
 from unittest.mock import MagicMock
 
 import pytest
@@ -17,9 +10,9 @@ from service_core.shared.db_connection.alembic.environment import (
     OfflineAlembicEnvironment,
     OnlineAlembicEnvironment,
     build_environment,
+    env_base as base_module,
+    offline_env as offline_module,
 )
-from service_core.shared.db_connection.alembic.environment import env_base as base_module
-from service_core.shared.db_connection.alembic.environment import offline_env as offline_module
 
 URL = "postgresql+psycopg://postgres:postgres@localhost:5436/power_finance_ai_test"
 
@@ -52,9 +45,6 @@ def test_both_environments_are_the_same_abstraction():
 
 
 def test_the_url_is_read_back_off_the_config():
-    """Not kept as a field of its own: `env.py` writes it to the config, and a
-    second copy is a second thing that can be stale."""
-
     assert OfflineAlembicEnvironment(_config(), ModelBase.metadata).url == URL
 
 
@@ -64,12 +54,7 @@ def test_a_run_without_a_url_says_so():
 
 
 def test_offline_renders_parameters_into_the_sql(monkeypatch):
-    """There is no DBAPI in offline mode, so bound parameters would emit
-    placeholders nothing ever fills."""
-
     context = MagicMock()
-    # Both modules hold their own reference to Alembic's context proxy — the
-    # mode configures it, the base class runs the migrations through it.
     monkeypatch.setattr(offline_module, "context", context)
     monkeypatch.setattr(base_module, "context", context)
     metadata = MetaData()
@@ -86,9 +71,6 @@ def test_offline_renders_parameters_into_the_sql(monkeypatch):
 
 
 def test_the_migrations_run_inside_one_transaction(monkeypatch):
-    """Shared by both modes: a migration that fails part way must not leave the
-    schema half-changed."""
-
     context = MagicMock()
     monkeypatch.setattr(offline_module, "context", context)
     monkeypatch.setattr(base_module, "context", context)

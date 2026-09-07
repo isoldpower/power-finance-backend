@@ -6,12 +6,7 @@ from data_read_core.shared.http_contract import (
     ValidationFailed,
 )
 
-from ..dtos import ALL_SECTIONS, Section
-
-TRUTH_STATEMENTS = {"1", "true", "yes", "on"}
-FALSE_STATEMENTS = {"0", "false", "no", "off"}
-
-NOT_A_BOOLEAN_MESSAGE = "{parameter} must be a boolean ({legal})"
+from ..config import ALL_SECTIONS, FALSE_STATEMENTS, TRUTH_STATEMENTS, Messages, Section
 
 
 def read_sections(request: Request) -> frozenset[Section]:
@@ -40,7 +35,7 @@ def _read_flag(raw_flag: str | None, parameter: str) -> bool:
             ErrorDetail(
                 field=parameter,
                 code=DetailCode.INVALID,
-                message=NOT_A_BOOLEAN_MESSAGE.format(
+                message=Messages.NOT_A_BOOLEAN.format(
                     parameter=parameter,
                     legal=", ".join(sorted(TRUTH_STATEMENTS | FALSE_STATEMENTS)),
                 ),

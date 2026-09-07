@@ -1,10 +1,3 @@
-"""What a rule knows about itself.
-
-Matching lives on the entity because the POLICY comes off the rule's own
-trigger. That is the invariant worth a test: a rule is matched against the same
-field set it was validated against when it was saved.
-"""
-
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -55,10 +48,6 @@ def test_a_scheduled_rule_is_matched_against_the_wallets_policy():
 
 
 def test_a_rule_carries_its_policy_rather_than_being_handed_one():
-    """`balance` is a wallet field. An event rule cannot be matched against it,
-    even by a caller that would like to — which is what stops a rule from being
-    validated against one field set and matched against another."""
-
     rule = make_rule(AutomationTrigger(type="event", event="transaction.created", filter_body=RICH))
 
     with pytest.raises(PolicyViolationError):
@@ -79,9 +68,6 @@ def test_a_condition_that_does_not_hold_does_not_match():
 
 
 def test_a_snapshot_survives_the_edit_it_was_taken_before():
-    """What the saga compensation restores. Taken off the entity rather than by
-    reading the row again — two reads cost a query and can disagree."""
-
     rule = make_rule(
         AutomationTrigger(type="event", event="transaction.created", filter_body=COFFEE)
     )
@@ -97,8 +83,6 @@ def test_a_snapshot_survives_the_edit_it_was_taken_before():
 
 
 def test_restoring_puts_the_rule_back_including_its_timestamps():
-    """A compensation is not an edit, so `updated_at` goes back too."""
-
     rule = make_rule(
         AutomationTrigger(type="event", event="transaction.created", filter_body=COFFEE)
     )

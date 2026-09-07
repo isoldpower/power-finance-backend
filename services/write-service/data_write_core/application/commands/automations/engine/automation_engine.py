@@ -20,7 +20,7 @@ from ....interfaces import (
     TransactionRepository,
     WalletRepository,
 )
-from ...automations.record_run import RecordAutomationRunCommandHandler
+from ..record_run import RecordAutomationRunCommandHandler
 from .rule_runner import RuleRunner
 from .subject_loader import SubjectLoader
 

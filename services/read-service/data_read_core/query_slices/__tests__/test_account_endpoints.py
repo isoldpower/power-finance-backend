@@ -1,6 +1,3 @@
-"""The ledger over HTTP: the chart and its filters, one account with its
-history, and the postings the transaction detail has always promised."""
-
 import json
 import uuid
 from datetime import UTC, datetime
@@ -67,9 +64,6 @@ def body_of(response) -> dict:
 @pytest.fixture(autouse=True)
 async def _empty_cache():
     async def clear() -> None:
-        # The rate service holds a Redis client of its own. Clearing only
-        # `get_redis` would leave it wired to the connection this fixture is
-        # about to close.
         get_rate_service.cache_clear()
         get_redis.cache_clear()
         redis = get_redis()
@@ -189,9 +183,6 @@ async def test_the_chart_lists_the_user_s_accounts():
 
 
 async def test_a_balance_is_money_in_the_book_currency():
-    """The balance is a sum of converted legs, so it carries the currency it
-    was summed in — a bare decimal string would leave a client guessing."""
-
     await _account(balance="125.00", currency="USD")
 
     payload = body_of(await as_user("/api/v1/accounts"))
@@ -200,8 +191,6 @@ async def test_a_balance_is_money_in_the_book_currency():
 
 
 async def test_the_chart_is_ordered_newest_first_not_by_group():
-    """`group` filters; it does not order. Assets do not lead liabilities."""
-
     await _account(
         group="assets",
         name="oldest",
@@ -241,9 +230,6 @@ async def test_an_unknown_group_is_rejected():
 
 
 async def test_the_group_counts_ignore_the_group_filter():
-    """The tab labels have to hold still when a tab is selected, so `groups`
-    describes the whole chart no matter what `group` narrowed the page to."""
-
     await _account(group="assets", name="one")
     await _account(group="assets", name="two")
     await _account(group="liabilities", name="owed")
@@ -264,9 +250,6 @@ async def test_the_lowbar_hides_small_accounts():
 
 
 async def test_the_lowbar_compares_magnitudes_so_it_keeps_liabilities():
-    """A liability's balance is negative. A signed comparison would drop the
-    whole group the moment a client set any threshold at all."""
-
     await _account(group="liabilities", name="owed", balance="-500.00")
     await _account(group="liabilities", name="trivial", balance="-0.40")
 
@@ -309,10 +292,6 @@ async def test_an_unsupported_lowbar_currency_is_rejected():
 
 
 async def test_a_lowbar_in_another_currency_is_converted_before_it_compares():
-    """The threshold arrives in the caller's currency and the balances are in
-    the book currency, so one of the two has to move. Converting the threshold
-    once is the half that a single index can still serve."""
-
     await _account(name="kept", balance="500.00", currency="USD")
     await _account(name="dropped", balance="0.50", currency="USD")
 
@@ -367,8 +346,6 @@ async def test_the_history_is_paginated_under_its_own_meta_namespace():
 
 
 async def test_a_history_entry_carries_an_id_the_cursor_can_anchor_on():
-    """The target's example omits it; a keyset-paginated collection cannot."""
-
     account = await _account()
     transaction = await _transaction()
     posting = await _posting(account=account, transaction=transaction)
@@ -379,10 +356,6 @@ async def test_a_history_entry_carries_an_id_the_cursor_can_anchor_on():
 
 
 async def test_history_entries_are_denominated_at_their_own_currency_s_scale():
-    """The account's balance is in the book currency; each leg is in the
-    currency of the transaction behind it — and JPY has no minor unit, so
-    rendering it at two decimals would invent one."""
-
     account = await _account(currency="USD")
     transaction = await _transaction()
     await _posting(account=account, transaction=transaction, amount="125", currency="JPY")
@@ -394,9 +367,6 @@ async def test_history_entries_are_denominated_at_their_own_currency_s_scale():
 
 
 async def test_someone_else_s_account_is_not_found():
-    """A 404 rather than a 403: 403 would make every UUID path an existence
-    oracle."""
-
     account = await _account(owner=OTHER_USER_ID)
 
     response = await as_user(f"/api/v1/accounts/{account.id}")
@@ -411,9 +381,6 @@ async def test_an_unknown_account_is_not_found():
 
 
 async def test_the_transaction_detail_carries_its_double_entry():
-    """The payload has advertised `postings` since before there was a ledger
-    to fill it from."""
-
     account = await _account(group="assets", name="temporary-assets")
     other = await _account(group="liabilities", name="temporary-liability")
     transaction = await _transaction()
@@ -448,9 +415,6 @@ async def test_the_transaction_detail_reports_the_dispatch_verdict():
 
 
 async def test_a_transaction_the_ledger_has_not_reached_still_serves():
-    """ai-service dispatches after the write returns, so a freshly created
-    transaction is readable before its postings exist."""
-
     transaction = await _transaction()
 
     payload = body_of(await as_user(f"/api/v1/transactions/{transaction.id}"))
@@ -460,11 +424,6 @@ async def test_a_transaction_the_ledger_has_not_reached_still_serves():
 
 
 async def test_a_new_posting_invalidates_the_cached_transaction_detail():
-    """The postings ride inside the cached transaction DTO, so a dispatch that
-    lands after the detail was first read has to evict it. Without that, the
-    payload keeps advertising an empty ledger for the whole cache TTL — and the
-    transaction row itself never changed, so nothing else would evict it."""
-
     account = await _account()
     transaction = await _transaction()
 
@@ -502,9 +461,6 @@ async def _dispatch(message, seq: int) -> None:
 
 
 async def test_a_removed_posting_invalidates_the_cached_transaction_detail():
-    """The same staleness in reverse: a re-dispatch replaces legs, and a detail
-    cached before it would keep serving postings that no longer exist."""
-
     account = await _account()
     transaction = await _transaction()
     posting = await _posting(account=account, transaction=transaction)
@@ -560,10 +516,6 @@ async def test_a_dispatch_verdict_invalidates_the_cached_transaction_detail():
 
 
 async def test_a_new_account_invalidates_the_cached_chart():
-    """List pages are cached under a per-user version counter, so a chart read
-    before the account existed would keep serving without it until the entry
-    expired on its own."""
-
     first = body_of(await as_user("/api/v1/accounts"))
     assert first["data"] == []
 
@@ -615,10 +567,6 @@ async def test_a_balance_change_invalidates_the_cached_chart():
 
 
 async def test_a_new_posting_shows_up_in_the_detail_without_an_eviction():
-    """The embedded history is read live rather than cached — only the account
-    ROW is cached — so a leg that lands after a first read needs nothing
-    invalidated to become visible."""
-
     account = await _account()
     transaction = await _transaction()
 
@@ -650,9 +598,6 @@ async def test_a_new_posting_shows_up_in_the_detail_without_an_eviction():
 
 
 async def test_a_balance_change_invalidates_the_cached_detail():
-    """The account row IS cached, so a restated balance has to evict it — the
-    row is otherwise unreachable until the entry expires on its own."""
-
     account = await _account(balance="0.00")
 
     first = body_of(await as_user(f"/api/v1/accounts/{account.id}"))
@@ -680,10 +625,6 @@ async def test_a_balance_change_invalidates_the_cached_detail():
 
 
 async def test_an_account_event_without_a_currency_reads_as_the_book_currency():
-    """A producer predating the field sends an empty string. Every account it
-    could describe was booked in the default, so storing a blank would only
-    make the presenter guess later."""
-
     await _dispatch(
         AccountCreated(
             event_id="evt-legacy",

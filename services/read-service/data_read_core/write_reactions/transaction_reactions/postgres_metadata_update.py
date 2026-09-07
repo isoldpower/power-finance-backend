@@ -10,9 +10,6 @@ from .._utilities import decode_payload, handle_database_errors
 
 
 class UpdateTransactionMetadataReadModel(Effect):
-    """A PATCH. Touches no money — the amount is folded from the ledger, and
-    nothing in this event carries one."""
-
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, TransactionMetadataUpdated)
         await handle_database_errors(

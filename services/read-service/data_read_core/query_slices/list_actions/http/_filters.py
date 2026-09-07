@@ -3,27 +3,26 @@ from rest_framework.request import Request
 from data_read_core.shared.http_contract import DetailCode, ErrorDetail, ValidationFailed
 from data_read_core.shared.postgres_orm import ActionSeverity, ActionSource, ActionStatus
 
-from ..dtos import ActionFilters, Param
-
-UNKNOWN_VALUE_MESSAGE = "Unknown {parameter}. Legal values: {legal}."
+from ..config import Messages, ParamsList
+from ..dtos import ActionFilters
 
 
 def read_filters(request: Request) -> ActionFilters:
     return ActionFilters(
         status=_read_choice(
-            request.query_params.get(Param.STATUS_PARAM),
-            Param.STATUS_PARAM,
+            request.query_params.get(ParamsList.STATUS),
+            ParamsList.STATUS,
             ActionStatus,
             default=ActionStatus.PENDING,
         ),
         source=_read_choice(
-            request.query_params.get(Param.SOURCE_PARAM),
-            Param.SOURCE_PARAM,
+            request.query_params.get(ParamsList.SOURCE),
+            ParamsList.SOURCE,
             ActionSource,
         ),
         severity=_read_choice(
-            request.query_params.get(Param.SEVERITY_PARAM),
-            Param.SEVERITY_PARAM,
+            request.query_params.get(ParamsList.SEVERITY),
+            ParamsList.SEVERITY,
             ActionSeverity,
         ),
     )
@@ -47,7 +46,7 @@ def _read_choice(
             ErrorDetail(
                 field=parameter,
                 code=DetailCode.INVALID,
-                message=UNKNOWN_VALUE_MESSAGE.format(
+                message=Messages.UNKNOWN_VALUE.format(
                     parameter=parameter,
                     legal=", ".join(member.value for member in vocabulary),
                 ),

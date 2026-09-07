@@ -4,7 +4,6 @@ from typing import Any
 
 
 def fingerprint(method: str, path: str, body: Any) -> str:
-    """Served to provide hashed function call to provide creating/restoring historical responses"""
     canonical_body = _canonical_body(body)
 
     h = hashlib.sha256()
@@ -18,8 +17,6 @@ def fingerprint(method: str, path: str, body: Any) -> str:
 
 
 def _canonical_body(body: bytes | bytearray | str | None) -> str:
-    """Use to translate body to the stable presentation
-    (e.g. same logical input is translated to same output)"""
     if body is None or body == "":
         return ""
 

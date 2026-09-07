@@ -1,12 +1,10 @@
-"""ReplayResponseBuilder: rebuild a Response from a StoredResponse and tag it as replayed."""
-
 from __future__ import annotations
 
 from django.test import SimpleTestCase
 
 from write_service.common.idempotency.atomic_redis.outcomes import StoredResponse
+from write_service.common.idempotency.config import HeaderName
 from write_service.common.idempotency.replay_response import (
-    REPLAY_HEADER,
     ReplayResponseBuilder,
 )
 
@@ -26,8 +24,6 @@ class ReplayResponseBuilderTests(SimpleTestCase):
         self.assertEqual(rebuilt.data["data"], {"id": 1})
 
     def test_marks_the_body_as_a_replay(self) -> None:
-        """`meta.idempotent_replay` is the contract; the header is a convenience."""
-
         stored = StoredResponse(
             status_code=201,
             body={"data": {"id": 1}, "meta": {"idempotent_replay": False}},
@@ -44,7 +40,7 @@ class ReplayResponseBuilderTests(SimpleTestCase):
 
         rebuilt = ReplayResponseBuilder.build(stored)
 
-        self.assertEqual(rebuilt[REPLAY_HEADER], "true")
+        self.assertEqual(rebuilt[HeaderName.REPLAYED], "true")
 
     def test_propagates_stored_headers(self) -> None:
         stored = StoredResponse(
@@ -62,10 +58,10 @@ class ReplayResponseBuilderTests(SimpleTestCase):
         stored = StoredResponse(
             status_code=200,
             body={},
-            headers={REPLAY_HEADER: "false"},
+            headers={HeaderName.REPLAYED: "false"},
             request_hash="h",
         )
 
         rebuilt = ReplayResponseBuilder.build(stored)
 
-        self.assertEqual(rebuilt[REPLAY_HEADER], "true")
+        self.assertEqual(rebuilt[HeaderName.REPLAYED], "true")

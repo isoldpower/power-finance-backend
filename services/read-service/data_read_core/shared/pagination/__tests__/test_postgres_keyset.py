@@ -1,6 +1,3 @@
-"""Keyset paging against a real Postgres, which is the only place the predicate
-and the index have to agree."""
-
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
@@ -74,14 +71,11 @@ async def test_walking_pages_covers_every_row_exactly_once():
 
 
 async def test_a_row_inserted_at_the_head_cannot_shift_a_page():
-    """The failure offset has: insert while paging, and offset=25 re-serves a
-    row the client already saw."""
-
     created = await make_transactions(4)
     first_request = page_request(limit=2)
     first = build_page(await read_page(first_request), total=4, request=first_request)
 
-    await make_transactions(1)  # newest row, lands at the head of the collection
+    await make_transactions(1)
 
     second_request = page_request(limit=2, cursor=first.next_cursor)
     second = build_page(await read_page(second_request), total=5, request=second_request)
@@ -106,9 +100,6 @@ async def test_paging_backwards_returns_the_previous_page_in_reading_order():
 
 
 async def test_cursor_resolves_after_its_anchor_row_is_deleted():
-    """A cursor describes a position in the ordering, not a row that must still
-    exist."""
-
     created = await make_transactions(4)
     first_request = page_request(limit=2)
     first = build_page(await read_page(first_request), total=4, request=first_request)

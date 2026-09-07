@@ -1,6 +1,6 @@
 from fastapi import WebSocket
 
-from ..contracts import ConnectionContext
+from ..application.contracts import ConnectionContext
 
 
 def build_context_from_request(

@@ -1,16 +1,10 @@
 from data_read_core.query_slices.list_transactions.infra import (
     get_list_cache_key as transaction_list_cache_key,
-)
-from data_read_core.query_slices.list_transactions.infra import (
     get_list_version_key as transaction_list_version_key,
 )
 from data_read_core.query_slices.list_wallets.infra import (
     get_filter_hash as wallet_filter_hash,
-)
-from data_read_core.query_slices.list_wallets.infra import (
     get_list_cache_key as wallet_list_cache_key,
-)
-from data_read_core.query_slices.list_wallets.infra import (
     get_list_version_key as wallet_list_version_key,
 )
 
@@ -54,9 +48,6 @@ def test_cache_key_embeds_version_filter_and_page():
 
 
 def test_first_page_and_cursor_page_get_different_keys():
-    """The cursor already encodes the anchor, the direction and the query
-    fingerprint, so it is the whole cache identity of a page bar its size."""
-
     first = wallet_list_cache_key(7, 3, "abc123", 10, "first")
     second = wallet_list_cache_key(7, 3, "abc123", 10, "Y3Vyc29y")
 

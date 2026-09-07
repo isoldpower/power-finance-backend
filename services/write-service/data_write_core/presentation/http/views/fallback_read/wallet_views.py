@@ -21,13 +21,13 @@ from ...serializers import (
 )
 from ._presenters import present_wallet_detail, present_wallets
 from ._query_params import resolve_period
-from ._schema import (
+from .base import FallbackReadView
+from .config import (
     CURSOR_PARAMETER,
     LIMIT_PARAMETER,
     PERIOD_PARAMETER,
     resource_id_parameter,
 )
-from .base import FallbackReadView
 
 
 class FallbackWalletListView(FallbackReadView):

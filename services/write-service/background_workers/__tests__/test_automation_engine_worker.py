@@ -1,18 +1,10 @@
-"""The event side of the engine, at its edge.
-
-What is worth testing here is the mapping and the refusals: which proto events
-count as which trigger, where the user's external id comes from, and what a
-malformed message does. Running the rules themselves is the engine's own suite.
-"""
-
 import json
 from dataclasses import dataclass, field
 from uuid import UUID
 
 import pytest
 from data_write_core.domain.automations import TriggerEvent
-from kafka_client_py import PoisonError
-from kafka_client_py import envelope as KafkaEnvelope
+from kafka_client_py import PoisonError, envelope as KafkaEnvelope
 
 from background_workers.services.automation_engine import (
     EVENT_AUTOMATION_HANDLERS,
@@ -46,25 +38,16 @@ def record(event_type: str, body: dict, key: bytes = b"user_abc") -> FakeRecord:
 
 
 def test_both_kinds_of_edit_are_the_same_trigger():
-    """The user wrote "when a transaction changes", not "when a column
-    changes" — so an amount edit and a metadata edit are one event to a rule."""
-
     assert TRIGGER_BY_EVENT_TYPE["TransactionUpdated"] is TriggerEvent.TRANSACTION_UPDATED
     assert TRIGGER_BY_EVENT_TYPE["TransactionMetadataUpdated"] is TriggerEvent.TRANSACTION_UPDATED
     assert TRIGGER_BY_EVENT_TYPE["TransactionCreated"] is TriggerEvent.TRANSACTION_CREATED
 
 
 def test_deletion_is_not_a_trigger():
-    """There is no `transaction.deleted` trigger, so the engine has nothing to
-    do with one — and a rule must not fire on a transaction that is gone."""
-
     assert "TransactionDeleted" not in TRIGGER_BY_EVENT_TYPE
 
 
 async def test_an_event_no_rule_can_trigger_on_is_ignored_rather_than_poisoned():
-    """Every outbox event lands on this topic. An event with no trigger is
-    normal traffic, not a broken message."""
-
     await handle_automation_event(record("WalletCreated", {"wallet_id": "w-1"}))
 
 
@@ -88,9 +71,6 @@ def test_the_subject_comes_off_the_payload():
 
 
 def test_one_handler_serves_every_transaction_event():
-    """The subject decides the handler; the occurrence only decides which stored
-    rules are asked."""
-
     served = {
         event_type
         for event_type, handler in EVENT_AUTOMATION_HANDLERS.items()
@@ -107,9 +87,6 @@ def test_the_registry_agrees_with_what_each_handler_says_it_serves():
 
 
 def test_the_engine_starts_at_the_end_of_the_topic():
-    """Automations are FORWARD-ONLY. A new consumer group reading from the
-    beginning would apply every rule to every transaction the user ever made."""
-
     config = AutomationEngineConfig(
         bootstrap_servers="kafka:9092",
         group_id="write-service.automation-engine",

@@ -1,20 +1,11 @@
 local redis = require "resty.redis"
 
-
 local DEFAULT_KEY_PREFIX  = "ral:user:"
 local KEEPALIVE_TIMEOUT_MS = 60000
 local KEEPALIVE_POOL_SIZE  = 100
 
 
--- The write side of this contract lives in the `write-ral-version` plugin
--- (write-ral-version/redis_writer.lua). It performs a monotonic Lua SET
--- on the same keys this module GETs from.
-
-
 --- Open a connection to Redis using values from the plugin config.
--- Selects database and authenticates when configured. On any failure
--- the caller is expected to fail open (no header injected) rather
--- than 503 the read path.
 --
 -- @param config table  plugin config record
 -- @return table|nil  resty.redis client on success
@@ -48,8 +39,7 @@ local connect_to_redis = function(config)
 end
 
 
---- Return the Redis client to the keepalive pool for reuse on
--- subsequent requests. Avoids a TCP handshake per access phase.
+--- Return the Redis client to the keepalive pool for reuse on subsequent requests.
 --
 -- @param client table  resty.redis client previously returned by `connect`
 local release = function(client)
@@ -61,10 +51,6 @@ end
 
 
 --- Look up the latest stored offset for a user.
--- Returns nil for any "no offset known" state (cache miss, malformed
--- value, connection failure) so the caller can fail open uniformly.
--- Connection failures and corrupt values are surfaced as the second
--- return value purely for logging — the request still proceeds.
 --
 -- @param config table  plugin config record
 -- @param user_id string  Clerk `sub` claim from the verified JWT

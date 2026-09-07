@@ -1,6 +1,4 @@
-"""Which handler answers, and when the search stops."""
-
-from ..message_router import MessageRouter
+from ..application import MessageRouter
 from .fakes import CONTEXT, RecordingHandler
 
 
@@ -46,9 +44,6 @@ async def test_a_message_nobody_claims_is_reported_unclaimed():
 
 
 async def test_a_claimed_but_silent_message_is_not_unclaimed():
-    """The distinction the session acts on: silence is a normal turn, an
-    unclaimed message ends the conversation."""
-
     routed = await MessageRouter([RecordingHandler(reply=None)]).route({"a": 1}, CONTEXT)
 
     assert routed.claimed is True
@@ -66,9 +61,6 @@ async def test_an_unresponsible_handler_is_never_asked_to_handle():
 
 
 async def test_claiming_is_settled_before_anything_is_generated():
-    """`claimed` is the routing decision, and the session refuses an unroutable
-    frame on it. Reading it must not have started a handler."""
-
     handler = RecordingHandler()
 
     routed = await MessageRouter([handler]).route({"a": 1}, CONTEXT)

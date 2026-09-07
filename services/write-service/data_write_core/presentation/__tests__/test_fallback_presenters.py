@@ -98,8 +98,6 @@ async def test_present_transaction_matches_read_service_shape():
 
 
 async def test_amounts_are_emitted_at_the_currency_scale():
-    """Same code path, different scale: two digits for EUR, none for JPY."""
-
     presented = await present_transaction(_transaction("90", currency="JPY"))
 
     assert presented["money"] == {"amount": "90", "currency": "JPY"}

@@ -1,11 +1,8 @@
 class ReadAtLeastError(Exception):
-    """Base class for read-your-writes failures."""
+    pass
 
 
 class NotCaughtUp(ReadAtLeastError):
-    """Raised when the read side has not applied enough writes to satisfy a
-    client's Read-At-Least requirement."""
-
     def __init__(self, scope: str, required: int, applied: int | None) -> None:
         self.scope = scope
         self.required = required

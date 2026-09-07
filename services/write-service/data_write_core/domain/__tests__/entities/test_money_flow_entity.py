@@ -25,9 +25,6 @@ def _money_flow_data(
 
 class MoneyFlowCreateTests(SimpleTestCase):
     def test_create_emits_nothing_on_its_own(self) -> None:
-        """A flow is not an event-worthy fact by itself. The transaction that
-        owns it raises TransactionCreatedEvent, once, for the whole thing."""
-
         collector = EventCollector()
         MoneyFlowEntity.create(user_id=9, data=_money_flow_data(), _event_collector=collector)
 

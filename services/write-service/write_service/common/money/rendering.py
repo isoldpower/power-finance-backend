@@ -1,12 +1,9 @@
 from decimal import Decimal
 
-AMOUNT_KEY = "amount"
-CURRENCY_KEY = "currency"
+from write_service.common.money.config import MoneyKey
 
 
 def format_amount(amount: Decimal, decimals: int) -> str:
-    """Render at exactly `decimals` fraction digits, with no negative zero."""
-
     quantized = amount.quantize(Decimal(1).scaleb(-decimals))
     if quantized == 0:
         quantized = abs(quantized)
@@ -15,4 +12,4 @@ def format_amount(amount: Decimal, decimals: int) -> str:
 
 
 def money(amount: Decimal, currency: str, decimals: int) -> dict[str, str]:
-    return {AMOUNT_KEY: format_amount(amount, decimals), CURRENCY_KEY: currency}
+    return {MoneyKey.AMOUNT: format_amount(amount, decimals), MoneyKey.CURRENCY: currency}

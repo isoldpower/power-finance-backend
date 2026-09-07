@@ -83,10 +83,6 @@ async def test_subscribe_rejects_duplicate_subscription():
 
 
 async def test_subscribe_accepts_every_event_in_the_shared_catalog():
-    """The catalog GET /webhooks/event-types serves and the one the validator
-    checks against are the same table, so nothing can be advertised as
-    subscribable and then refused here."""
-
     for event in event_values():
         handler = AddWebhookSubscriptionCommandHandler(
             webhook_repository=FakeWebhookRepository(
@@ -96,7 +92,6 @@ async def test_subscribe_accepts_every_event_in_the_shared_catalog():
             outbox_repository=object(),
         )
 
-        # Reaching the duplicate check means the event type was accepted.
         with pytest.raises(DuplicateWebhookSubscriptionError):
             await handler.handle(
                 AddWebhookSubscriptionCommand(

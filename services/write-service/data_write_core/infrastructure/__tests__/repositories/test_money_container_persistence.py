@@ -1,12 +1,3 @@
-"""Round-trips through the real ORM for the container base table.
-
-The rest of the write-service suite works against repository fakes, which is fine
-for everything the domain decides but says nothing about the two things this
-mapping actually relies on: that saving a subclass writes both tables with the
-right discriminator, and that a transaction's single container key holds the arc
-together as well as the two nullable ones did.
-"""
-
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4

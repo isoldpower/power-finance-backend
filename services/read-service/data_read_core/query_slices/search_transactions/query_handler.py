@@ -9,8 +9,6 @@ from .logger_shortcuts import log_search_served
 
 
 class SearchTransactionsQueryHandler:
-    """Search is served straight from Elasticsearch with no Redis caching."""
-
     async def handle(self, query: SearchTransactionsQuery) -> FetchedRows:
         filter_query = FilterTree(TRANSACTION_FILTER_POLICY).resolve_es(query.filter_body)
         sources, total = await search_owned_transactions(

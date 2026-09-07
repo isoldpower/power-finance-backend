@@ -1,9 +1,3 @@
-"""Reading user-authored rules.
-
-The list returns the COMPLETE resource rather than a preview: a rule is small
-and its condition renders inline, so a detail request would fetch nothing new.
-"""
-
 import json
 import uuid
 from datetime import UTC, datetime
@@ -41,8 +35,6 @@ MARCH = datetime(2026, 3, 10, tzinfo=UTC)
 COFFEE_FILTER = {"and": [{"field_name": "name", "operator": "icontains", "value": "coffee"}]}
 CACHE_PREFIXES = ("read:automations:*", "ver:automations:*")
 
-# `None` is a meaningful filter_body — it means the rule is unconditional —
-# so the helper needs a sentinel to tell it from "not supplied".
 UNSET = object()
 
 
@@ -121,9 +113,6 @@ async def _dispatch(message, seq: int) -> None:
     await router.dispatch(make_event(message, outbox_seq=seq))
 
 
-# --- shape ------------------------------------------------------------------
-
-
 async def test_a_rule_carries_its_whole_definition():
     await _automation()
 
@@ -140,9 +129,6 @@ async def test_a_rule_carries_its_whole_definition():
 
 
 async def test_both_trigger_selectors_are_always_present():
-    """The inapplicable one is `null` rather than an omitted key, so a client
-    reads `trigger.schedule` without guarding."""
-
     await _automation(trigger_type="schedule", trigger_event="", trigger_schedule="monthly")
 
     trigger = body_of(await as_user(AUTOMATIONS))["data"][0]["trigger"]
@@ -152,21 +138,12 @@ async def test_both_trigger_selectors_are_always_present():
 
 
 async def test_an_unconditional_rule_carries_a_null_filter_body():
-    """`null` means "always", which is why an empty group is refused rather
-    than meaning the same thing."""
-
     await _automation(filter_body=None)
 
     assert body_of(await as_user(AUTOMATIONS))["data"][0]["trigger"]["filter_body"] is None
 
 
-# --- ordering and filters ---------------------------------------------------
-
-
 async def test_the_list_is_newest_first_which_reverses_evaluation_order():
-    """The list shows newest first because that is how a user thinks about
-    their rules; the engine runs oldest first so later rules can override."""
-
     await _automation(name="older", created_at=JANUARY)
     await _automation(name="newer", created_at=MARCH)
 
@@ -196,9 +173,6 @@ async def test_a_non_boolean_enabled_is_rejected():
 
 
 async def test_a_deleted_rule_leaves_the_list_but_still_resolves_by_id():
-    """DELETE answers with the rule it removed, so a client re-reading that id
-    should still find it."""
-
     deleted = await _automation(name="gone", deleted_at=MARCH)
 
     listed = body_of(await as_user(AUTOMATIONS))
@@ -229,9 +203,6 @@ async def test_the_detail_returns_the_identical_shape():
     fetched = body_of(await as_user(f"{AUTOMATIONS}/{automation.id}"))["data"]
 
     assert fetched == listed
-
-
-# --- projection -------------------------------------------------------------
 
 
 def _created(automation_id: str, user_id: int, **overrides) -> AutomationCreated:
@@ -270,9 +241,6 @@ async def test_a_created_event_projects_the_condition_and_the_effects():
 
 
 async def test_an_update_replaces_the_rule_whole():
-    """`trigger` and `effects` are replaced, never merged: deep-merging a
-    condition tree has no sane definition."""
-
     automation_id = str(uuid.uuid4())
     user_id = await _user_id()
     await _dispatch(_created(automation_id, user_id), seq=1)
@@ -326,9 +294,6 @@ async def test_a_delete_event_removes_the_rule_from_the_list():
 
 
 async def test_the_engine_s_counters_are_projected_not_derived():
-    """`runs` counts matches that APPLIED effects, which only the engine can
-    know — the read side never computes it."""
-
     automation = await _automation()
 
     await _dispatch(

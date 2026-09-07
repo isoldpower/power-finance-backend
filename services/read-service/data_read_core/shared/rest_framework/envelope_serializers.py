@@ -31,14 +31,6 @@ class ResourceMetaSerializer(serializers.Serializer):
 
 
 def empty_meta_field() -> serializers.Field:
-    """`meta` for an endpoint that has nothing to say about the response.
-
-    A field-less serializer is dropped from the generated document entirely, so
-    spelling this as an empty `Serializer` would publish a response with no
-    `meta` key at all while still sending one — the single place a client
-    generated from the schema would disagree with the envelope.
-    """
-
     return serializers.DictField(
         help_text="Always `{}` — this endpoint is neither paginated nor cached.",
     )
@@ -70,8 +62,6 @@ def collection_response(
     item_serializer: type[serializers.Serializer],
     component_name: str | None = None,
 ) -> type:
-    """Build the `data` + `meta` serializer for a collection."""
-
     return type(
         component_name or f"Paginated{item_serializer.__name__}",
         (serializers.Serializer,),
@@ -83,8 +73,6 @@ def collection_response(
 
 
 def resource_response(item_serializer: type[serializers.Serializer]) -> type:
-    """Build the `data` + `meta` serializer for a single resource."""
-
     return type(
         f"Enveloped{item_serializer.__name__}",
         (serializers.Serializer,),

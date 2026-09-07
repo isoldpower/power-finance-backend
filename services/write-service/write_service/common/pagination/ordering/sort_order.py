@@ -2,19 +2,17 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from .config import SIGNATURE_SEPARATOR
+from .config import OrderingFormat
 from .sort_key import SortKey
 
 
 @dataclass(frozen=True)
 class SortOrder:
-    """The lexicographic ordering a collection is served in."""
-
     keys: tuple[SortKey, ...]
 
     @property
     def signature(self) -> str:
-        return SIGNATURE_SEPARATOR.join(key.signature for key in self.keys)
+        return OrderingFormat.SIGNATURE_SEPARATOR.join(key.signature for key in self.keys)
 
     @property
     def django_ordering(self) -> list[str]:

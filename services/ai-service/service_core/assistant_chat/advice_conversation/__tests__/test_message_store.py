@@ -1,20 +1,9 @@
-"""The conversation's storage, against a real Postgres.
-
-The parts worth testing here are the keyset page and the hard delete — exactly
-the parts a fake store would have to reimplement in order to be wrong about.
-"""
-
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from service_core.shared.db_connection import get_session_factory
 
-from ..contracts import (
-    ConversationMessage,
-    MessageRole,
-    MessageStatus,
-    ResourceReference,
-)
+from ..application.dtos import ConversationMessageDTO, ResourceReferenceDTO
 from ..infrastructure import SqlAlchemyMessageRepository
 
 OWNER = "clerk_7"
@@ -30,12 +19,12 @@ def _store() -> SqlAlchemyMessageRepository:
 def _message(
     *,
     minute: int = 0,
-    role: MessageRole = MessageRole.USER,
-    status: MessageStatus = MessageStatus.COMPLETE,
+    role: str = "user",
+    status: str = "complete",
     text: str = "hello",
-    refs: tuple[ResourceReference, ...] = (),
-) -> ConversationMessage:
-    return ConversationMessage(
+    refs: tuple[ResourceReferenceDTO, ...] = (),
+) -> ConversationMessageDTO:
+    return ConversationMessageDTO(
         id=uuid4(),
         role=role,
         status=status,
@@ -45,7 +34,7 @@ def _message(
     )
 
 
-async def _seed(store, owner: str, count: int) -> list[ConversationMessage]:
+async def _seed(store, owner: str, count: int) -> list[ConversationMessageDTO]:
     written = [_message(minute=index, text=f"message {index}") for index in range(count)]
     for message in written:
         await store.append(owner, message)
@@ -56,9 +45,9 @@ async def _seed(store, owner: str, count: int) -> list[ConversationMessage]:
 async def test_a_stored_message_round_trips():
     store = _store()
     written = _message(
-        role=MessageRole.ASSISTANT,
+        role="assistant",
         text="You spent 412.30 USD",
-        refs=(ResourceReference(type="transaction", id=TRANSACTION_ID),),
+        refs=(ResourceReferenceDTO(type="transaction", id=TRANSACTION_ID),),
     )
 
     await store.append(OWNER, written)
@@ -77,9 +66,6 @@ async def test_the_feed_is_newest_first():
 
 
 async def test_a_page_carries_the_lookahead_row():
-    """`build_page` mints cursors from it, so the store has to return
-    `limit + 1` rather than exactly `limit`."""
-
     store = _store()
     await _seed(store, OWNER, 5)
 
@@ -89,7 +75,7 @@ async def test_a_page_carries_the_lookahead_row():
 async def test_a_forward_anchor_continues_past_it():
     store = _store()
     written = await _seed(store, OWNER, 5)
-    anchor = written[3]  # "message 3", second newest
+    anchor = written[3]
 
     page = await store.page(OWNER, limit=10, anchor=(anchor.created_at, anchor.id))
 
@@ -97,9 +83,6 @@ async def test_a_forward_anchor_continues_past_it():
 
 
 async def test_a_backward_anchor_returns_the_newer_side_still_newest_first():
-    """A backward scan walks the opposite way and is reversed before it is
-    returned, so a caller only ever sees the order the feed is served in."""
-
     store = _store()
     written = await _seed(store, OWNER, 5)
     anchor = written[1]
@@ -126,31 +109,31 @@ async def test_one_users_conversation_is_not_another_users():
 
 async def test_settling_closes_out_a_streaming_message():
     store = _store()
-    answer = _message(role=MessageRole.ASSISTANT, status=MessageStatus.STREAMING, text="")
+    answer = _message(role="assistant", status="streaming", text="")
     await store.append(OWNER, answer)
 
     await store.settle(
         answer.id,
-        MessageStatus.COMPLETE,
+        "complete",
         "the whole answer",
-        (ResourceReference(type="transaction", id=TRANSACTION_ID),),
+        (ResourceReferenceDTO(type="transaction", id=TRANSACTION_ID),),
     )
 
     settled = (await store.page(OWNER, limit=10))[0]
-    assert settled.status is MessageStatus.COMPLETE
+    assert settled.status == "complete"
     assert settled.text == "the whole answer"
-    assert settled.refs == (ResourceReference(type="transaction", id=TRANSACTION_ID),)
+    assert settled.refs == (ResourceReferenceDTO(type="transaction", id=TRANSACTION_ID),)
 
 
 async def test_a_failed_message_keeps_its_partial_text():
     store = _store()
-    answer = _message(role=MessageRole.ASSISTANT, status=MessageStatus.STREAMING, text="")
+    answer = _message(role="assistant", status="streaming", text="")
     await store.append(OWNER, answer)
 
-    await store.settle(answer.id, MessageStatus.FAILED, "half an ans", ())
+    await store.settle(answer.id, "failed", "half an ans", ())
 
     failed = (await store.page(OWNER, limit=10))[0]
-    assert failed.status is MessageStatus.FAILED
+    assert failed.status == "failed"
     assert failed.text == "half an ans"
 
 

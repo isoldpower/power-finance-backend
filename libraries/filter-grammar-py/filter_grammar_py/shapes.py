@@ -2,13 +2,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from .entities import GroupOperator
 from .exceptions import (
     InvalidGroupChildrenError,
     InvalidGroupingError,
     InvalidStructureError,
     UnknownNodeError,
 )
+from .vocabulary import GroupOperator
 
 FIELD_NAME_KEY = "field_name"
 OPERATOR_KEY = "operator"

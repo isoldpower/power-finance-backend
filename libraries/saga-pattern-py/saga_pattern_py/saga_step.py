@@ -5,8 +5,6 @@ TForwardResult = TypeVar("TForwardResult")
 
 
 class SagaStep(ABC, Generic[TForwardResult]):
-    """One unit of work in a SAGA."""
-
     @property
     def name(self) -> str:
         return type(self).__name__

@@ -1,5 +1,3 @@
-"""The process-wide async Redis client is a cached singleton."""
-
 from data_read_core.shared.redis_cache import get_redis
 
 

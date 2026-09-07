@@ -6,8 +6,6 @@ from django.utils import timezone
 
 
 class AutomationModel(models.Model):
-    """A user-authored rule: WHEN something matches, DO something."""
-
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     user_external_id = models.CharField(max_length=64, blank=True, default="")
 

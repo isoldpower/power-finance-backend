@@ -9,9 +9,6 @@ async def search_owned_webhooks(
     filter_query: Q,
     page: PageRequest,
 ) -> tuple[list[WebhookReadModel], int]:
-    """Matching rows for one page — plus the lookahead row — and the total
-    behind them, which counts every match rather than the page."""
-
     queryset = WebhookReadModel.objects.filter(filter_query, user_id=user_id)
     total = await queryset.acount()
     rows = apply_keyset(queryset, page)

@@ -1,7 +1,3 @@
-"""Base settings shared by all environments. Concrete environments (local,
-production) extend this module and override values that differ.
-"""
-
 from pathlib import Path
 
 import environ

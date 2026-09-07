@@ -75,8 +75,5 @@ class ActionResolveView(BaseAsyncAPIView, CommandResponseMixin):
         return self.form_write_response(
             status_code=status.HTTP_200_OK,
             response_body=ActionHttpPresenter.present_one(resolved.action),
-            # Only when the choice actually moved something outside the action:
-            # a version the client cannot use would invite a `Read-At-Least` on
-            # a read that was never going to change.
             write_version=write_version if resolved.applies else None,
         )

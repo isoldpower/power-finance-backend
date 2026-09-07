@@ -17,18 +17,18 @@ type endpointResolver interface {
 	) ([]types.WebhookEndpoint, error)
 }
 
-// deliveryWaker is signalled after new deliveries are enqueued so the scheduler
-// can attempt them promptly instead of waiting for its next tick.
 type deliveryWaker interface {
 	Wake()
 }
 
+// DeliveryDispatcher fans a domain event out to every subscribed endpoint.
 type DeliveryDispatcher struct {
 	endpoints  endpointResolver
 	deliveries deliveryStore
 	waker      deliveryWaker
 }
 
+// NewDeliveryDispatcher wires the dispatcher over its stores and scheduler.
 func NewDeliveryDispatcher(
 	endpoints endpointResolver,
 	deliveries deliveryStore,
@@ -41,8 +41,7 @@ func NewDeliveryDispatcher(
 	}
 }
 
-// Dispatch fans the event out to every subscribed endpoint by durably enqueueing
-// a delivery and waking the scheduler.
+// Dispatch fans the event out to every subscribed endpoint by durably enqueueing a delivery and waking the scheduler.
 func (d *DeliveryDispatcher) Dispatch(ctx context.Context, event types.OutboxEvent) error {
 	webhookEventType := types.WebhookEventTypeFor(event.EventType)
 	if webhookEventType == "" {
@@ -95,11 +94,8 @@ func (d *DeliveryDispatcher) Dispatch(ctx context.Context, event types.OutboxEve
 	return nil
 }
 
-// envelopeFields are the outbox event's own bookkeeping.
 var envelopeFields = []string{"event_id", "occurred_at", "schema_version"}
 
-// buildDeliveryBody wraps the domain event in the envelope the receiver's code
-// is written against.
 func buildDeliveryBody(event types.OutboxEvent, webhookEventType string) ([]byte, error) {
 	var decoded map[string]any
 	if err := json.Unmarshal(event.Payload, &decoded); err != nil {

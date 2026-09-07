@@ -12,10 +12,11 @@ from data_read_core.shared.postgres_orm import (
     TransactionReadModel,
 )
 
+from ..config import ZERO
+
 CurrencyTotals = dict[str, Decimal]
 BucketedTotals = dict[int, CurrencyTotals]
 GroupSubtotals = dict[str, CurrencyTotals]
-ZERO = Decimal(0)
 
 
 @dataclass(frozen=True)

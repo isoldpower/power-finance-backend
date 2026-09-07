@@ -8,8 +8,6 @@ from .sort_key import SortKey
 
 @dataclass(frozen=True)
 class SortOrder:
-    """The lexicographic ordering a collection is served in."""
-
     keys: tuple[SortKey, ...]
 
     @property

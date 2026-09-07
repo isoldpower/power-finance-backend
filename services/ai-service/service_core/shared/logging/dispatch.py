@@ -1,6 +1,7 @@
+from .config import LoggerChannel
 from .registry import get_service_logger
 
-_logger = get_service_logger("dispatch")
+_logger = get_service_logger(LoggerChannel.DISPATCH)
 
 
 def log_postings_dispatched(transaction_id: str, leg_count: int, backend: str) -> None:

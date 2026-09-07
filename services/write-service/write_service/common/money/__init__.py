@@ -1,8 +1,9 @@
+from write_service.common.money.config import MoneySettings
+
 from .fields import MoneyAmountField
 from .parsing import (
     CANONICAL_AMOUNT,
     CURRENCY_AGNOSTIC_RULES,
-    MAX_INTEGER_DIGITS,
     AmountCandidate,
     AmountRule,
     CanonicalFormRule,
@@ -14,7 +15,7 @@ from .rendering import format_amount, money
 __all__ = [
     "CANONICAL_AMOUNT",
     "CURRENCY_AGNOSTIC_RULES",
-    "MAX_INTEGER_DIGITS",
+    "MoneySettings.MAX_INTEGER_DIGITS",
     "AmountCandidate",
     "AmountRule",
     "CanonicalFormRule",

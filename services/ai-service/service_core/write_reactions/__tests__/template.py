@@ -11,32 +11,18 @@ and not the other way round.
 
 from ..transaction_created import (
     AccountSpec as CreatedAccountSpec,
-)
-from ..transaction_created import (
     PostingDispatcher as CreatedDispatcher,
-)
-from ..transaction_created import (
     TemplateAccount as CreatedTemplateAccount,
-)
-from ..transaction_created import (
     TemplateDispatcher as CreatedTemplateDispatcher,
 )
 from ..transaction_updated import (
     AccountSpec as UpdatedAccountSpec,
-)
-from ..transaction_updated import (
     PostingDispatcher as UpdatedDispatcher,
-)
-from ..transaction_updated import (
     TemplateAccount as UpdatedTemplateAccount,
-)
-from ..transaction_updated import (
     TemplateDispatcher as UpdatedTemplateDispatcher,
 )
 from ..user_created import (
     AccountSpec as SeedAccountSpec,
-)
-from ..user_created import (
     TemplateAccount as SeedTemplateAccount,
 )
 

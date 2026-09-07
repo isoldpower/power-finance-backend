@@ -6,8 +6,6 @@ from uuid import UUID
 
 @dataclass(frozen=True, slots=True)
 class OutboxEntry:
-    """A row bound for the outbox table, already flattened out of its proto."""
-
     event_id: UUID
     event_type: str
     aggregate_type: str

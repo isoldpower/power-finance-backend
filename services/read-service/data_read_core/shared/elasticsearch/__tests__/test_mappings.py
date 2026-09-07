@@ -1,5 +1,3 @@
-"""Index names and mapping definitions for the ES projections."""
-
 from data_read_core.shared.elasticsearch import (
     INDEX_DEFINITIONS,
     TRANSACTIONS_INDEX,

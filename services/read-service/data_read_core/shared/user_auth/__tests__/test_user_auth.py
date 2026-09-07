@@ -1,5 +1,3 @@
-"""Gateway header authentication + permission."""
-
 from types import SimpleNamespace
 
 import pytest
@@ -33,9 +31,6 @@ def test_permission_allows_a_caller_the_gateway_resolved():
 
 
 def test_permission_denies_anything_that_merely_claims_to_be_authenticated():
-    """The type is the check: something that only answers `is_authenticated`
-    never went through the gateway."""
-
     request = SimpleNamespace(user=SimpleNamespace(is_authenticated=True))
 
     assert IsGatewayAuthenticated().has_permission(request, view=None) is False
@@ -81,9 +76,6 @@ async def test_authenticate_returns_provisioned_user():
 
 @pytest.mark.django_db(transaction=True)
 async def test_authenticate_binds_preferences_to_the_caller():
-    """Identity and preferences arrive on the same request and are needed
-    together, so a handler reads both off `request.user`."""
-
     await get_user_model().objects.acreate(id=2, username="ext-2")
 
     caller, _ = await GatewayUserHeaderAuthentication().authenticate(

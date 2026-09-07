@@ -20,9 +20,6 @@ class TransactionHttpPresenter:
             "money": await money_at_scale(transaction.amount, transaction.currency_code),
             "type": str(transaction.transaction_type),
             "origin": str(transaction.origin),
-            # The target renders a goal-funded transaction under `wallet` too:
-            # clients treat the two interchangeably, and the container's kind is not
-            # part of the transaction shape.
             "wallet": {
                 "id": str(transaction.container.id),
                 "name": transaction.container.name,

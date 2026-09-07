@@ -7,8 +7,7 @@ import (
 	"services/webhook-service/webhook_service"
 )
 
-// RunAPICommand boots the webhook delivery pipeline together with its HTTP
-// server and blocks until shutdown.
+// RunAPICommand boots the webhook delivery pipeline together with its HTTP server and blocks until shutdown.
 type RunAPICommand struct {
 	commandInstance *cobra.Command
 }
@@ -20,7 +19,8 @@ func NewRunAPICommand() *RunAPICommand {
 	command.commandInstance = &cobra.Command{
 		Use:   "run-api",
 		Short: "Run the webhook-service HTTP API, Kafka consumer and delivery workers",
-		Long:  "Boots the webhook delivery pipeline (Kafka consumer, dispatcher, retry scheduler) and the HTTP server, then blocks until shutdown.",
+		Long: "Boots the webhook delivery pipeline (Kafka consumer, dispatcher, retry " +
+			"scheduler) and the HTTP server, then blocks until shutdown.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return webhook_service.StartWebhookService(config.Load())
 		},

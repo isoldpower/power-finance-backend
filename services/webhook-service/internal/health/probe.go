@@ -2,10 +2,12 @@ package health
 
 import "sync/atomic"
 
+// Probe is the readiness flag the health endpoints report.
 type Probe struct {
 	ready atomic.Bool
 }
 
+// NewProbe returns a probe that starts out unready.
 func NewProbe() *Probe {
 	return &Probe{}
 }

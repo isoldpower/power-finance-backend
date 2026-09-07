@@ -145,7 +145,6 @@ class UnexpectedFailureTranslator(ExceptionTranslator):
         return RenderedError(code=ErrorCode.INTERNAL_ERROR, message=UNEXPECTED_FAILURE_MESSAGE)
 
 
-# Order matters: a `ValidationError` is also an `APIException`.
 TRANSLATORS: tuple[ExceptionTranslator, ...] = (
     ApiErrorTranslator(),
     MissingResourceTranslator(),

@@ -1,3 +1,4 @@
+from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 
@@ -16,3 +17,17 @@ class DatabaseSettings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_database_settings() -> DatabaseSettings:
     return DatabaseSettings()
+
+
+class AccountGroup(StrEnum):
+    ASSETS = "assets"
+    LIABILITIES = "liabilities"
+    EQUITY = "equity"
+
+    @classmethod
+    def debit_normal(cls) -> tuple["AccountGroup", ...]:
+        return (cls.ASSETS,)
+
+    @classmethod
+    def credit_normal(cls) -> tuple["AccountGroup", ...]:
+        return (cls.LIABILITIES, cls.EQUITY)

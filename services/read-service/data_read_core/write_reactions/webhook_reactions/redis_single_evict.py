@@ -9,8 +9,6 @@ from .._utilities import decode_payload
 
 
 class EvictWebhookCache(Effect):
-    """Evict the single-webhook cache entry keyed by webhook id."""
-
     def __init__(self, payload_type: type[Message]) -> None:
         self._payload_type = payload_type
 

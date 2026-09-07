@@ -7,8 +7,6 @@ from .translators import FailureContext, translator_for
 
 
 def api_exception_handler(exception: Exception, context: dict[str, Any]) -> Response:
-    """DRF's `EXCEPTION_HANDLER`: the one place a failure becomes a response."""
-
     failure = FailureContext(context)
     rendered = translator_for(exception).translate(exception, failure)
 

@@ -15,28 +15,13 @@ from data_read_core.shared.rest_framework import (
     ErrorResponseSerializer,
     async_api_view,
 )
-from data_read_core.shared.timestamps import DEFAULT_PERIOD, Period
 
+from ..config import PERIOD_PARAMETER, CacheNamespace, ParamsList
 from ..dtos import GetWalletQuery
 from ..query_handler import GetWalletQueryHandler
 from ._presenters import present_one
-from ._query_params import PERIOD_PARAM, resolve_period
+from ._query_params import resolve_period
 from ._serializers import EnvelopedWalletDetailSerializer
-
-RECENT_NAMESPACE = "recent"
-
-PERIOD_PARAMETER = OpenApiParameter(
-    PERIOD_PARAM,
-    type=OpenApiTypes.STR,
-    location=OpenApiParameter.QUERY,
-    enum=[period.value for period in Period],
-    default=DEFAULT_PERIOD.value,
-    description=(
-        "Window for the `period` inflow/outflow figures. Every value is a "
-        "CALENDAR window resolved in your timezone preference, not a rolling "
-        "count of days."
-    ),
-)
 
 
 @extend_schema(
@@ -94,8 +79,8 @@ async def get_wallet(request, wallet_id=None):
     return ok(
         await present_one(detail, recent_page.items),
         {
-            **recent_page.meta(namespace=RECENT_NAMESPACE),
-            PERIOD_PARAM: str(period),
+            **recent_page.meta(namespace=CacheNamespace.RECENT),
+            ParamsList.PERIOD: str(period),
             "cached": fetched.cached,
         },
     )

@@ -2,11 +2,11 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
+from data_write_core.application.commands.config import WalletDefaults
 from data_write_core.application.commands.transactions.transaction_factory import (
     build_transaction,
 )
 from data_write_core.application.commands.wallets.create_new_wallet import (
-    OPENING_BALANCE_NAME,
     UNSET,
     CreateNewWalletCommand,
     CreateNewWalletCommandHandler,
@@ -51,9 +51,6 @@ def _wallet(zero_balance: str = "0", currency_code: str = "USD") -> WalletEntity
 
 class TestOpeningBalanceDefault:
     def test_an_omitted_opening_balance_lands_on_the_datum(self):
-        """A wallet nobody funded should open owning and owing nothing, which
-        for a credit line means opening at its limit, not at zero."""
-
         resolved = CreateNewWalletCommandHandler._resolve_opening_balance(
             _command(zero_balance=Decimal("100"), opening_balance=UNSET)
         )
@@ -83,16 +80,13 @@ class TestOpeningOutboxEntries:
                 currency_code="USD",
                 title="Main",
             ),
-            metadata=TransactionMetadata(name=OPENING_BALANCE_NAME),
+            metadata=TransactionMetadata(name=WalletDefaults.OPENING_BALANCE_NAME),
             amount=abs(Decimal(amount)),
             transaction_type=TransactionEntity.type_for(Decimal(amount)),
             created_at=datetime(2026, 1, 1),
         )
 
     def test_a_funded_wallet_emits_the_wallet_then_the_transaction(self):
-        """Order is load-bearing: the transaction projection reads the wallet
-        row for its currency, and both entries share a partition key."""
-
         entries = CreateNewWalletCommandHandler._outbox_entries(
             _wallet(),
             self._opening_transaction("50.00"),
@@ -120,13 +114,9 @@ class TestOpeningOutboxEntries:
 
         assert opening.origin_flow.container_id == UUID(WALLET_ID)
         assert opening.amount == Decimal("50.00")
-        assert opening.root.name == OPENING_BALANCE_NAME
+        assert opening.root.name == WalletDefaults.OPENING_BALANCE_NAME
 
     def test_the_opening_transaction_is_denominated_in_the_wallet_s_currency(self):
-        """The opening balance is a real transaction, so ai-service posts it
-        like any other and needs a currency for it. The only source is the
-        wallet being created — there is no container row to read yet."""
-
         entries = CreateNewWalletCommandHandler._outbox_entries(
             _wallet(currency_code="JPY"),
             self._opening_transaction("50.00"),

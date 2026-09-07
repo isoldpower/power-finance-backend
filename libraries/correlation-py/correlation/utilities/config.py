@@ -5,4 +5,8 @@ SETTING_NAME = "CORRELATION_ID_HEADER"
 
 
 def resolve_header_name() -> str:
-    return getattr(settings, SETTING_NAME, DEFAULT_HEADER_NAME)
+    return getattr(
+        settings,
+        SETTING_NAME,
+        DEFAULT_HEADER_NAME,
+    )

@@ -5,13 +5,11 @@ from .postgres_requests import (
     sum_wallet_flows,
 )
 from .redis_connection import (
-    CACHE_TTL_SECONDS,
     get_redis_client,
     get_single_cache_key,
 )
 
 __all__ = [
-    "CACHE_TTL_SECONDS",
     "count_recent_transactions",
     "fetch_owned_wallet",
     "fetch_recent_transactions",

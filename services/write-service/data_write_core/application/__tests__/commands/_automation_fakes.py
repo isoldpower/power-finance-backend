@@ -77,8 +77,6 @@ class FakeOutboxRepository:
 
 
 class RecordingEffect(EffectExecutor):
-    """Stands in for the real executors, which reach into four other slices."""
-
     def __init__(self, name: str, log: list[tuple[str, str]], fails: bool = False) -> None:
         self.name = name
         self.log = log

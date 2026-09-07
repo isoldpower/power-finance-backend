@@ -2,6 +2,7 @@ from drf_spectacular.utils import extend_schema
 from write_service.common.http_contract import ok
 from write_service.common.pagination import CREATED_AT_DESC, PageRequest, build_page
 
+from data_write_core.application.config import ParamsList
 from data_write_core.application.queries import (
     FallbackAutomationFilters,
     GetFallbackAutomationQuery,
@@ -18,15 +19,13 @@ from ...serializers import (
 )
 from ._presenters import present_automation, present_automations
 from ._query_params import resolve_tristate_flag
-from ._schema import (
+from .base import FallbackReadView
+from .config import (
     CURSOR_PARAMETER,
     ENABLED_PARAMETER,
     LIMIT_PARAMETER,
     resource_id_parameter,
 )
-from .base import FallbackReadView
-
-ENABLED_PARAM = "enabled"
 
 
 class FallbackAutomationListView(FallbackReadView):
@@ -46,7 +45,7 @@ class FallbackAutomationListView(FallbackReadView):
     @trace_handler_flow
     async def get(self, request):
         filters = FallbackAutomationFilters(
-            enabled=resolve_tristate_flag(request, ENABLED_PARAM),
+            enabled=resolve_tristate_flag(request, ParamsList.ENABLED),
         )
         page_request = PageRequest.from_request(
             request,

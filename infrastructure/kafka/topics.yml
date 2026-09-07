@@ -3,6 +3,11 @@
 # A catalogue of the event streams and the services on each end of them. Nothing
 # reads this file: the dev broker auto-creates topics on first use, so `settings`
 # describes the shape a real cluster should provision, not what is running.
+#
+# Kafka Connect's own storage topics — connect_configs, connect_offsets,
+# connect_statuses — are deliberately absent. Connect creates them itself with
+# the replication factors set in ../debezium/compose.yaml, and they carry no
+# domain events.
 
 topics:
   - name: events.async
@@ -182,8 +187,3 @@ topics:
       replication_factor: 1
       retention: 30d
       cleanup_policy: delete
-
-# Kafka Connect's own storage topics — connect_configs, connect_offsets,
-# connect_statuses — are deliberately absent. Connect creates them itself with
-# the replication factors set in ../debezium/compose.yaml, and they carry no
-# domain events.

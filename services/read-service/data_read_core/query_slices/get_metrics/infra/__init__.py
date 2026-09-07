@@ -10,13 +10,11 @@ from .postgres_requests import (
     sum_by_bucket,
 )
 from .redis_connection import (
-    CACHE_TTL_SECONDS,
     get_metrics_cache_key,
     get_redis_client,
 )
 
 __all__ = [
-    "CACHE_TTL_SECONDS",
     "BucketedTotals",
     "CurrencyTotals",
     "GroupSubtotals",

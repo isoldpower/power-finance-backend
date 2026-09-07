@@ -5,7 +5,7 @@ from data_read_core.shared.pagination import PageRequest
 from data_read_core.shared.postgres_orm import AutomationReadModel
 from data_read_core.shared.timestamps import to_iso
 
-ENABLED_PARAM = "enabled"
+from .config import ParamsList
 
 
 @dataclass(frozen=True)
@@ -13,7 +13,7 @@ class AutomationFilters:
     enabled: bool | None = None
 
     def as_cache_material(self) -> dict:
-        return {ENABLED_PARAM: self.enabled}
+        return {ParamsList.ENABLED: self.enabled}
 
 
 @dataclass(frozen=True)

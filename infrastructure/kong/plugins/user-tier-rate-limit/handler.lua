@@ -1,40 +1,14 @@
--- Custom Kong plugin: user-tier-rate-limit
---
--- Per-user rate limit applied on top of the IP floor. Runs after clerk-jwt
--- so the verified `sub` claim is available — no claims means the request
--- is anonymous and this plugin is a no-op (the IP floor still applies).
---
--- Why custom: Kong's bundled rate-limiting plugin can only have one
--- instance per scope. We need the IP floor (built-in) AND a per-user
--- ceiling at the same time, so the user tier needs to be a separate
--- plugin class. Uses SLIDING WINDOW strategy. Failure modes are fail-open.
-
 local messages      = require "kong.plugins.user-tier-rate-limit.messages"
 local redis_counter = require "kong.plugins.user-tier-rate-limit.redis_counter"
+local plugin_config = require "kong.plugins.user-tier-rate-limit.config"
 
-
--- PRIORITY 600 keeps user-tier-rate-limit below clerk-jwt (801) so the
--- verified claims have already been stashed in kong.ctx.shared by the
--- time this runs.
 local UserTierRateLimitHandler = {
     PRIORITY = 600,
     VERSION  = "0.3.0",
 }
 
 
--- Window definitions. Adding a new window (e.g. per-second burst, per-day
--- quota) is a matter of pushing one more row here — the counter and the script
--- both loop over whatever this table holds.
-local WINDOWS = {
-    { label = "minute", seconds = 60,   header_suffix = "Minute", config_key = "per_minute" },
-    { label = "hour",   seconds = 3600, header_suffix = "Hour",   config_key = "per_hour" },
-}
-
-
 --- Set the `X-RateLimit-{Limit,Remaining}-{window}` response headers.
--- Mirrors the shape used by Kong's bundled rate-limiting plugin so
--- clients see one consistent header family regardless of which tier
--- bound their traffic.
 --
 -- @param evaluated_window table  one row of the counter's reply
 local set_window_headers = function(evaluated_window)
@@ -99,7 +73,7 @@ function UserTierRateLimitHandler:access(config)
     end
 
     local evaluated, evaluate_error = redis_counter.evaluate_windows(
-        client, config, claims.sub, WINDOWS
+        client, config, claims.sub, plugin_config.LimitingWindows
     )
     redis_counter.release(client)
 

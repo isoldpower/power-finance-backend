@@ -1,5 +1,3 @@
-"""The closed vocabulary of effects, one class each."""
-
 from ...vocabulary import EffectType
 from .base import EffectRule
 from .notify import NotifyRule

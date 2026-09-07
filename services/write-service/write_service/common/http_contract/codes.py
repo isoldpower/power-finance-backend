@@ -42,8 +42,6 @@ class ErrorCode(StrEnum):
 
     @classmethod
     def from_wire(cls, wire_code: str | None) -> "ErrorCode | None":
-        """The member a framework exception declared, if it names one of ours."""
-
         if wire_code is None:
             return None
 

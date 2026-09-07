@@ -19,4 +19,7 @@ def compare(
     if operator == ComparisonOperator.In:
         return contains(left, expected, value_type)
 
-    return OPERATORS[operator](left, value_type.coerce(expected))
+    return OPERATORS[operator](
+        left,
+        value_type.coerce(expected),
+    )

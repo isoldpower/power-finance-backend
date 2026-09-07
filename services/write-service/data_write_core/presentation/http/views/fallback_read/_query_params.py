@@ -4,12 +4,7 @@ from rest_framework.request import Request
 from write_service.common.http_contract import DetailCode, ErrorDetail, ValidationFailed
 from write_service.common.timestamps import DEFAULT_PERIOD, Period
 
-PERIOD_PARAM = "period"
-TRUTH_STATEMENTS = {"1", "true", "yes", "on"}
-FALSE_STATEMENTS = {"0", "false", "no", "off"}
-UNKNOWN_PERIOD_MESSAGE = "Unknown period. Legal values: {legal}."
-UNKNOWN_VALUE_MESSAGE = "Unknown {parameter}. Legal values: {legal}."
-NOT_A_BOOLEAN_MESSAGE = "{parameter} must be a boolean ({legal})."
+from .config import FALSE_STATEMENTS, TRUTH_STATEMENTS, Messages, ParamsList
 
 
 def resolve_tristate_flag(request: Request, parameter: str) -> bool | None:
@@ -28,7 +23,7 @@ def resolve_tristate_flag(request: Request, parameter: str) -> bool | None:
             ErrorDetail(
                 field=parameter,
                 code=DetailCode.INVALID,
-                message=NOT_A_BOOLEAN_MESSAGE.format(
+                message=Messages.NOT_A_BOOLEAN.format(
                     parameter=parameter,
                     legal=", ".join(sorted(TRUTH_STATEMENTS | FALSE_STATEMENTS)),
                 ),
@@ -42,8 +37,6 @@ def resolve_choice(
     parameter: str,
     vocabulary: type[StrEnum],
 ) -> str | None:
-    """An optional filter: absent means "every value"."""
-
     return _read_choice(request, parameter, vocabulary) or None
 
 
@@ -53,8 +46,6 @@ def resolve_choice_or(
     vocabulary: type[StrEnum],
     default: str,
 ) -> str:
-    """A filter with a default, which therefore always resolves to a value."""
-
     return _read_choice(request, parameter, vocabulary) or default
 
 
@@ -63,9 +54,6 @@ def _read_choice(
     parameter: str,
     vocabulary: type[StrEnum],
 ) -> str | None:
-    """The read side's `_read_choice`, word for word — including the message, so
-    a rejected filter reads the same whichever side answered the request."""
-
     raw_value = request.query_params.get(parameter)
     if not raw_value:
         return None
@@ -79,7 +67,7 @@ def _read_choice(
             ErrorDetail(
                 field=parameter,
                 code=DetailCode.INVALID,
-                message=UNKNOWN_VALUE_MESSAGE.format(
+                message=Messages.UNKNOWN_VALUE.format(
                     parameter=parameter,
                     legal=", ".join(member.value for member in vocabulary),
                 ),
@@ -89,7 +77,7 @@ def _read_choice(
 
 
 def resolve_period(request: Request) -> Period:
-    raw_period = request.query_params.get(PERIOD_PARAM)
+    raw_period = request.query_params.get(ParamsList.PERIOD)
     if not raw_period:
         return DEFAULT_PERIOD
 
@@ -99,9 +87,9 @@ def resolve_period(request: Request) -> Period:
         raise ValidationFailed(
             details=[
                 ErrorDetail(
-                    field=PERIOD_PARAM,
+                    field=ParamsList.PERIOD,
                     code=DetailCode.INVALID,
-                    message=UNKNOWN_PERIOD_MESSAGE.format(
+                    message=Messages.UNKNOWN_PERIOD.format(
                         legal=", ".join(period.value for period in Period)
                     ),
                 )

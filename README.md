@@ -39,7 +39,7 @@
 - **Gateway** — Kong with in-tree Lua plugins: Clerk JWT auth, the Read-At-Least
   sign/verify pair, read-fallback, and two-tier (IP + per-user) rate limiting.
 - **Fraud (planned)** — a deep-path fraud service on Java/Apache Flink
-  ([ADR-0001](docs/adr-0001-fraud-service-java-flink.md)).
+  ([ADR-0001](docs/adr-0001-fraud-service.md)).
 
 ## Services
 
@@ -75,12 +75,12 @@ service stack is also standalone-runnable from its own directory
   `webhook-service` (Go, `go mod`) and `antifraud-service` (Java/Flink). Each
   has its own README.
 - `libraries/` — shared Python libs and the Go `kafka-client-go`.
-- `contract_tests/` — cross-service contract suite: the conventions and the
-  published surface, checked against `API_TARGET.md`, `API_DIFF.md` and the
-  gateway config. Needs no infrastructure; see its
-  [README](contract_tests/README.md).
 - `infrastructure/` — Kafka, Kong gateway, Postgres, Debezium —
-  [infrastructure/README.md](infrastructure/README.md).
+  [infrastructure/README.md](infrastructure/README.md). Its `tests/contract/`
+  is the cross-service contract suite: the conventions and the published
+  surface, checked against `API_TARGET.md`, `API_DIFF.md` and the gateway
+  config. Needs no infrastructure to run; see its
+  [README](infrastructure/tests/contract/README.md).
 - `docs/` — the [architecture spec](docs/architecture.md), ADRs, and diagrams.
 - `old-structure/` — the pre-CQRS monolith, kept for reference only and excluded
   from all tooling.
@@ -145,5 +145,5 @@ Gateway specifics (plugins, rate-limit tiers, the Read-At-Least mechanism) are i
 ## Documentation
 
 - [Architecture spec](docs/architecture.md) — components, data flows, patterns.
-- [ADR-0001: fraud service on Java/Flink](docs/adr-0001-fraud-service-java-flink.md)
+- [ADR-0001: fraud service on Java/Flink](docs/adr-0001-fraud-service.md)
 - [Infrastructure](infrastructure/README.md) — Kafka, Kong, Postgres, Debezium.

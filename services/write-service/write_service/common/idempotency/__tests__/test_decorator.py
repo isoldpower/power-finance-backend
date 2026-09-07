@@ -15,8 +15,8 @@ from write_service.common.idempotency.atomic_redis import (
     Mismatch,
     StoredResponse,
 )
+from write_service.common.idempotency.config import HeaderName
 from write_service.common.idempotency.decorator import (
-    IDEMPOTENCY_HEADER,
     get_store,
     idempotent,
     set_store,
@@ -39,8 +39,6 @@ class _FakeEntry:
 
 @dataclass
 class FakeStore:
-    """In-memory stand-in for RedisIdempotencyStore. Same surface, no Lua."""
-
     entries: dict[str, _FakeEntry] = field(default_factory=dict)
     raise_on_acquire: bool = False
     raise_on_store: bool = False
@@ -90,7 +88,6 @@ def _make_request(
     headers: dict[str, str] | None = None,
     user_id: int = 42,
 ) -> SimpleNamespace:
-    """Stub Request with the surface the decorator inspects."""
     return SimpleNamespace(
         method=method,
         path=path,
@@ -122,7 +119,7 @@ class IdempotentDecoratorTests(IsolatedAsyncioTestCase):
 
     async def test_success_caches_response_and_replay_returns_cached(self) -> None:
         view = self._view(required=True)
-        req = _make_request(headers={IDEMPOTENCY_HEADER: "k-1"}, body={"amount": "10"})
+        req = _make_request(headers={HeaderName.IDEMPOTENCY_KEY: "k-1"}, body={"amount": "10"})
 
         first = await view(self, req)
         self.assertEqual(first.status_code, 201)
@@ -135,10 +132,10 @@ class IdempotentDecoratorTests(IsolatedAsyncioTestCase):
 
     async def test_same_key_different_body_returns_422(self) -> None:
         view = self._view(required=True)
-        req_a = _make_request(headers={IDEMPOTENCY_HEADER: "k-2"}, body={"amount": "10"})
+        req_a = _make_request(headers={HeaderName.IDEMPOTENCY_KEY: "k-2"}, body={"amount": "10"})
         await view(self, req_a)
 
-        req_b = _make_request(headers={IDEMPOTENCY_HEADER: "k-2"}, body={"amount": "999"})
+        req_b = _make_request(headers={HeaderName.IDEMPOTENCY_KEY: "k-2"}, body={"amount": "999"})
         with self.assertRaises(IdempotencyKeyReused):
             await view(self, req_b)
 
@@ -147,7 +144,7 @@ class IdempotentDecoratorTests(IsolatedAsyncioTestCase):
         from write_service.common.idempotency.request_hash import fingerprint
 
         body = {"amount": "10"}
-        req = _make_request(headers={IDEMPOTENCY_HEADER: "k-3"}, body=body)
+        req = _make_request(headers={HeaderName.IDEMPOTENCY_KEY: "k-3"}, body=body)
         h = fingerprint(req.method, req.path, body)
         self.store.entries[f"{req.user.unique_id}:k-3"] = _FakeEntry(
             request_hash=h, state="in_flight"
@@ -174,14 +171,14 @@ class IdempotentDecoratorTests(IsolatedAsyncioTestCase):
     async def test_redis_unavailable_required_raises_503(self) -> None:
         self.store.raise_on_acquire = True
         view = self._view(required=True)
-        req = _make_request(headers={IDEMPOTENCY_HEADER: "k-4"})
+        req = _make_request(headers={HeaderName.IDEMPOTENCY_KEY: "k-4"})
         with self.assertRaises(IdempotencyUnavailable):
             await view(self, req)
 
     async def test_redis_unavailable_optional_passes_through(self) -> None:
         self.store.raise_on_acquire = True
         view = self._view(required=False)
-        req = _make_request(headers={IDEMPOTENCY_HEADER: "k-5"})
+        req = _make_request(headers={HeaderName.IDEMPOTENCY_KEY: "k-5"})
         response = await view(self, req)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(self.handler_calls, 1)
@@ -189,7 +186,7 @@ class IdempotentDecoratorTests(IsolatedAsyncioTestCase):
     async def test_error_response_releases_lock(self) -> None:
         error_response = Response({"error": "boom"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         view = self._view(required=True, response=error_response)
-        req = _make_request(headers={IDEMPOTENCY_HEADER: "k-6"})
+        req = _make_request(headers={HeaderName.IDEMPOTENCY_KEY: "k-6"})
         await view(self, req)
 
         view2 = self._view(required=True)
@@ -205,7 +202,7 @@ class IdempotentDecoratorTests(IsolatedAsyncioTestCase):
             view.handler_calls += 1
             raise boom
 
-        req = _make_request(headers={IDEMPOTENCY_HEADER: "k-7"})
+        req = _make_request(headers={HeaderName.IDEMPOTENCY_KEY: "k-7"})
         with self.assertRaises(RuntimeError):
             await post(self, req)
 

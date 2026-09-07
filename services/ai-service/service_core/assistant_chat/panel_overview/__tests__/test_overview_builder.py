@@ -1,9 +1,7 @@
-"""What the panel's headline signals say, and when."""
-
 from decimal import Decimal
 
-from ..contracts import ConversationActivity, SignalTone
-from ..overview_builder import (
+from ..domain.entities import ConversationActivity, SignalTone
+from ..domain.overview_builder import (
     FIRST_TRANSACTION_PROMPT,
     NO_BASELINE,
     NOTHING_SPENT,
@@ -58,8 +56,6 @@ def test_spending_the_same_is_neither_good_nor_bad():
 
 
 def test_a_first_month_has_nothing_to_compare_against():
-    """A percentage against zero is not a large number, it is undefined."""
-
     spend = _signal(build_overview(_activity(this_month="100")), SPEND_LABEL)
 
     assert spend.value == NO_BASELINE
@@ -74,8 +70,6 @@ def test_a_month_with_no_spending_says_so():
 
 
 def test_counts_are_written_as_display_text():
-    """`value` is a preformatted string, not a number a client re-renders."""
-
     overview = build_overview(_activity(uncategorised=3, recorded=12))
 
     assert _signal(overview, UNCATEGORISED_LABEL).value == "3 transactions"
@@ -89,9 +83,6 @@ def test_a_single_transaction_is_not_pluralised():
 
 
 def test_uncategorised_work_is_suggested_as_a_prompt():
-    """Prompts are input to the conversation exactly as if the user had typed
-    them, so they should name something worth asking about."""
-
     overview = build_overview(_activity(uncategorised=3, recorded=5))
 
     assert overview.prompts[0] == UNCATEGORISED_PROMPT

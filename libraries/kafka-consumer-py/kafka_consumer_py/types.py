@@ -7,8 +7,6 @@ from kafka_client_py import ConsumedMessage
 
 @dataclass(frozen=True, slots=True)
 class EventMessage:
-    """Decoded Kafka message exposed to handlers."""
-
     event_id: str
     event_type: str
     aggregate_type: str

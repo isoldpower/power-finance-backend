@@ -28,9 +28,6 @@ class DjangoAutomationRepository(AutomationRepository):
         return AutomationMapper.to_domain(stored)
 
     def _owned_queryset(self, user_id: int, enabled: bool | None):
-        """Soft-deleted rules are gone from the read projection, so they must be
-        gone here too — otherwise the fallback would resurrect them."""
-
         queryset = AutomationModel.objects.filter(
             user_id=user_id,
             deleted_at__isnull=True,

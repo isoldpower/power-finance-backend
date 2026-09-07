@@ -6,7 +6,7 @@ from data_read_core.shared.rest_framework import (
     MoneySerializer,
 )
 
-from ..dtos import ALL_GROUPS, GROUP_CHOICES
+from ..config import GROUP_CHOICES, GroupFilter
 
 
 class AccountPreviewSerializer(serializers.Serializer):
@@ -51,7 +51,7 @@ class ChartRequestSerializer(serializers.Serializer):
     group = serializers.ChoiceField(
         choices=GROUP_CHOICES,
         required=False,
-        default=ALL_GROUPS,
+        default=str(GroupFilter.ALL),
         help_text="Narrow the chart to one group. `all` is the default.",
     )
     lowbar = serializers.CharField(

@@ -1,9 +1,7 @@
 from functools import lru_cache
 
-from .config import get_exchange_rate_settings
-from .contracts import RateProvider
-from .open_exchange_provider import OpenExchangeRatesProvider
-from .rate_service import ExchangeRateService
+from .application import ExchangeRateService, RateProvider
+from .infrastructure import OpenExchangeRatesProvider, get_exchange_rate_settings
 
 
 def build_provider() -> RateProvider:

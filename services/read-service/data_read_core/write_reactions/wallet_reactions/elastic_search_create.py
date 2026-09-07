@@ -10,8 +10,6 @@ from .._utilities import decode_payload
 
 
 class IndexWalletDocument(Effect):
-    """Index the full wallet document into the search index on creation."""
-
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, WalletCreated)
         document = {

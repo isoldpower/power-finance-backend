@@ -20,7 +20,10 @@ func NewRetryPublisher(publisher MessagePublisher, topic string) *RetryPublisher
 		topic = DefaultRetryTopic
 	}
 
-	return &RetryPublisher{publisher: publisher, topic: topic}
+	return &RetryPublisher{
+		publisher: publisher,
+		topic:     topic,
+	}
 }
 
 type RetryPublication struct {
@@ -85,7 +88,10 @@ func resolveFirstFailedAt(
 	if !explicitFirstFailedAt.IsZero() {
 		return explicitFirstFailedAt
 	}
-	if firstFailedAtFromHeaders, found := headers.GetTime(message.Headers, headers.FirstFailedAt); found {
+	if firstFailedAtFromHeaders, found := headers.GetTime(
+		message.Headers,
+		headers.FirstFailedAt,
+	); found {
 		return firstFailedAtFromHeaders
 	}
 
@@ -99,7 +105,11 @@ func resolveCorrelationID(
 	if explicitCorrelationID != "" {
 		return explicitCorrelationID
 	}
-	correlationIDFromHeaders, _ := headers.Get(message.Headers, headers.CorrelationID)
+
+	correlationIDFromHeaders, _ := headers.Get(
+		message.Headers,
+		headers.CorrelationID,
+	)
 
 	return correlationIDFromHeaders
 }

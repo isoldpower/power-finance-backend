@@ -10,8 +10,7 @@ import (
 	"services/webhook-service/webhook_service/services"
 )
 
-// StartWebhookService wires the service and blocks until shutdown; wiring errors
-// fail fast so the readiness probe never flips green on a half-built service.
+// StartWebhookService wires the service and blocks until shutdown, failing fast on a wiring error.
 func StartWebhookService(serviceConfig Config) error {
 	rootContext, stop := signals.NotifyContext()
 	defer stop()
@@ -64,9 +63,6 @@ func StartWebhookService(serviceConfig Config) error {
 	return nil
 }
 
-// awaitBackgroundDrainBeforeCleanup blocks until the consumer and scheduler
-// goroutines have stopped, so the deferred pool and producer cleanups in
-// StartWebhookService never run underneath an in-flight delivery.
 func awaitBackgroundDrainBeforeCleanup(consumerDone, schedulerDone <-chan struct{}) {
 	<-consumerDone
 	<-schedulerDone

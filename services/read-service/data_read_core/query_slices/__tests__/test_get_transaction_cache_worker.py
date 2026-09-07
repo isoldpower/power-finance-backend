@@ -3,9 +3,9 @@ import json
 from fakes import FakeRedis
 
 from data_read_core.query_slices.get_transaction.cache_worker import CacheWorker
+from data_read_core.query_slices.get_transaction.config import CacheSettings
 from data_read_core.query_slices.get_transaction.dtos import TransactionDTO
 from data_read_core.query_slices.get_transaction.infra import (
-    CACHE_TTL_SECONDS,
     get_single_cache_key,
 )
 
@@ -54,7 +54,7 @@ async def test_save_writes_single_key_with_ttl(fake_redis: FakeRedis):
     assert len(fake_redis.set_calls) == 1
     key, raw_value, ttl = fake_redis.set_calls[0]
     assert key == get_single_cache_key("t1")
-    assert ttl == CACHE_TTL_SECONDS
+    assert ttl == CacheSettings.TTL_SECONDS
     assert json.loads(raw_value)["id"] == "t1"
 
 

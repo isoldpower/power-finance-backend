@@ -1,6 +1,9 @@
 from contextvars import ContextVar, Token
 
-_correlation_id: ContextVar[str | None] = ContextVar("correlation_id", default=None)
+_correlation_id: ContextVar[str | None] = ContextVar(
+    "correlation_id",
+    default=None,
+)
 
 
 def get_correlation_id() -> str | None:

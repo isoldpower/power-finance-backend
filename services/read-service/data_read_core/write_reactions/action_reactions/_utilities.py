@@ -2,14 +2,8 @@ from decimal import Decimal
 
 from kafka_messages import (
     ActionSeverity as ProtoSeverity,
-)
-from kafka_messages import (
     ActionSource as ProtoSource,
-)
-from kafka_messages import (
     ActionStatus as ProtoStatus,
-)
-from kafka_messages import (
     ResolutionIntent as ProtoIntent,
 )
 

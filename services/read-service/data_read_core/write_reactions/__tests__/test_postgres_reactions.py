@@ -96,9 +96,6 @@ async def test_update_missing_wallet_is_a_noop():
 
 
 async def test_remove_wallet_closes_row_without_dropping_it():
-    """A closed wallet leaves lists and search but keeps existing — its
-    transactions stay queryable and it still resolves by id."""
-
     await _make_wallet()
 
     await RemoveWalletReadModel().apply(
@@ -150,9 +147,6 @@ async def test_update_transaction_to_same_amount_leaves_balance():
 
 
 async def test_remove_transaction_cancels_it_and_reverses_the_balance():
-    """The row survives with the amount it was FOR — that is what DELETE echoes
-    back. Only the wallet balance moves, mirroring the inverse ledger flow."""
-
     await _make_wallet(balance=Decimal("100"))
     await _make_transaction(Decimal("40"))
 
@@ -175,8 +169,6 @@ async def test_remove_transaction_cancels_it_and_reverses_the_balance():
 
 
 async def test_cancelling_twice_does_not_reverse_the_balance_twice():
-    """A redelivered TransactionDeleted must not invent money."""
-
     await _make_wallet(balance=Decimal("100"))
     await _make_transaction(Decimal("40"))
     event = make_event(

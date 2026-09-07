@@ -1,7 +1,7 @@
 from logging import Logger, getLogger
 
-LOGGER_ROOT = "ai_service"
+from .config import LoggerSettings
 
 
 def get_service_logger(*chunks: str) -> Logger:
-    return getLogger(".".join([LOGGER_ROOT, *chunks]))
+    return getLogger(".".join([LoggerSettings.ROOT, *chunks]))

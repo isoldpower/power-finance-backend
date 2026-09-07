@@ -6,8 +6,6 @@ from uuid import UUID
 
 @dataclass(frozen=True, slots=True)
 class TransactionFacts:
-    """Everything the dispatcher knows about a transaction."""
-
     id: UUID
     user_id: int
     container_id: UUID

@@ -2,9 +2,9 @@ import json
 
 from redis.asyncio import Redis
 
+from .config import CacheSettings
 from .dtos import WalletDTO
 from .infra import (
-    CACHE_TTL_SECONDS,
     get_single_cache_key,
 )
 
@@ -31,5 +31,5 @@ class CacheWorker:
         await self._redis_client.set(
             cache_key,
             json.dumps(wallet.to_cache()),
-            ex=CACHE_TTL_SECONDS,
+            ex=int(CacheSettings.TTL_SECONDS),
         )

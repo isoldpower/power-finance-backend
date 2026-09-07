@@ -6,8 +6,6 @@ from .codes import STATUS_FOR_ERROR_CODE, DetailCode, ErrorCode
 
 @dataclass(frozen=True)
 class ErrorDetail:
-    """One field-level failure inside `error.details`."""
-
     field: str | None
     code: DetailCode
     message: str
@@ -21,8 +19,6 @@ class ErrorDetail:
 
 
 class ApiError(Exception):
-    """Base class for every failure that maps onto the error envelope."""
-
     code: ErrorCode = ErrorCode.INTERNAL_ERROR
     message: str = "Unexpected server failure"
 

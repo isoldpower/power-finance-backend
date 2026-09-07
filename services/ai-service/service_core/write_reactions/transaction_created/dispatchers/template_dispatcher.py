@@ -6,8 +6,6 @@ from .template_account import TemplateAccount
 
 
 class TemplateDispatcher:
-    """Emits one leg per template account, against the user's own copies."""
-
     def __init__(
         self,
         accounts: AccountRepository,

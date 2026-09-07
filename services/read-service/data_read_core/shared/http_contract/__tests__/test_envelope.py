@@ -1,7 +1,6 @@
 import pytest
 from django.http import Http404
-from rest_framework import exceptions as drf_exceptions
-from rest_framework import serializers
+from rest_framework import exceptions as drf_exceptions, serializers
 
 from data_read_core.shared.http_contract import (
     DetailCode,
@@ -98,9 +97,6 @@ def test_missing_resources_are_not_found():
 
 
 def test_unhandled_failures_are_500_with_no_detail_and_no_exception_text(caplog):
-    """An exception string in a response body is an information leak as much as
-    a contract violation."""
-
     response = render(RuntimeError("connection string: postgres://user:hunter2@db"))
 
     assert response.status_code == 500
@@ -126,9 +122,6 @@ def test_framework_failures_map_onto_contract_codes(exc, expected_status, expect
 
 
 def test_read_at_least_507_keeps_its_status_for_the_gateway():
-    """The gateway's read-fallback plugin keys on 507 to re-issue the read
-    against the write side; a client never sees it."""
-
     from data_read_core.shared.read_at_least import ReadModelNotCaughtUp
 
     response = render(ReadModelNotCaughtUp())

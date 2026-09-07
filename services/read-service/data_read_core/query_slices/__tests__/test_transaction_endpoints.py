@@ -34,9 +34,6 @@ def body_of(response) -> dict:
 
 @pytest.fixture(autouse=True)
 async def _empty_cache():
-    """`transaction=True` resets sequences, so consecutive tests can reuse a
-    user id — and with it a cached page from the test before."""
-
     async def clear() -> None:
         get_redis.cache_clear()
         redis = get_redis()
@@ -128,9 +125,6 @@ async def test_preview_carries_the_target_shape():
 
 
 async def test_money_is_a_positive_magnitude_and_direction_is_the_type():
-    """The sign never reaches the wire — `type` carries it, so the two cannot
-    contradict each other."""
-
     await _transaction(amount="-50.00", name="Spent")
     await _transaction(amount="90.00", name="Earned")
 
@@ -153,9 +147,6 @@ async def test_cancelled_transactions_leave_the_feed():
 
 
 async def test_chain_members_arrive_contiguously():
-    """Chain legs share a commit timestamp, so ordering by chain keeps a transfer
-    together instead of interleaved with unrelated transactions."""
-
     same_instant = datetime(2026, 8, 12, 11, 51, tzinfo=UTC)
     chain = uuid.UUID("cccccccc-cccc-cccc-cccc-cccccccccccc")
     await _transaction(name="Unrelated", created_at=same_instant)
@@ -169,9 +160,6 @@ async def test_chain_members_arrive_contiguously():
 
 
 async def test_a_standalone_transaction_sorts_after_chained_ones():
-    """`chain_id ASC NULLS LAST` — the sentinel is what makes the null sort
-    last through a keyset cursor."""
-
     same_instant = datetime(2026, 8, 12, 11, 51, tzinfo=UTC)
     chain = uuid.UUID("00000000-0000-0000-0000-00000000000a")
     await _transaction(name="Standalone", created_at=same_instant)

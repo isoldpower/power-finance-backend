@@ -18,8 +18,7 @@ Three changes, one migration, because they describe one resource:
 
 from django.db import migrations, models
 from django.utils import timezone
-
-DEFAULT_SEVERITY = "info"
+from data_write_core.domain.entities.config import NotificationDefaults
 
 
 def fill_acknowledged_at(apps, schema_editor):
@@ -66,7 +65,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="notificationmodel",
             name="severity",
-            field=models.CharField(default=DEFAULT_SEVERITY, max_length=16),
+            field=models.CharField(default=NotificationDefaults.SEVERITY, max_length=16),
         ),
         migrations.AddField(
             model_name="notificationmodel",

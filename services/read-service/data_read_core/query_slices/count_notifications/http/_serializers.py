@@ -12,5 +12,4 @@ class NotificationCountsSerializer(serializers.Serializer):
 
 class EnvelopedNotificationCountsSerializer(serializers.Serializer):
     data = NotificationCountsSerializer()
-    # The target shows `"meta": {}` here — not paginated, not cached.
     meta = empty_meta_field()

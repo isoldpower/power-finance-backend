@@ -24,8 +24,6 @@ async def handle_database_errors(
     *,
     resource_id: object,
 ) -> TReturn | None:
-    """Run a read-model write, swallowing misaligned-data DB errors."""
-
     try:
         async with aatomic():
             return await effect(payload)
@@ -41,8 +39,6 @@ TPayload = TypeVar("TPayload", bound=Message)
 
 
 def decode_payload(event: EventMessage, payload_type: type[TPayload]) -> TPayload:
-    """Parse an event into the given proto message type, or raise PoisonError."""
-
     payload = payload_type()
 
     if not _parse_event_payload(event, payload):

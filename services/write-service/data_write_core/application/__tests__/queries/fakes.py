@@ -44,8 +44,6 @@ class _KeyedRow:
 
 @dataclass(frozen=True)
 class _RankedRow:
-    """The action queue leads with urgency, so its cursor carries a third key."""
-
     id: str
     created_at: datetime
     severity_rank: int
@@ -53,8 +51,6 @@ class _RankedRow:
 
 
 def make_page(limit: int = 25, cursor=None) -> PageRequest:
-    """A PageRequest as the view layer would have built it."""
-
     return PageRequest(
         limit=limit,
         order=CREATED_AT_DESC,
@@ -110,9 +106,6 @@ def make_flow(
     cancels_other: UUID | None = None,
     adjusts_other: UUID | None = None,
 ) -> MoneyFlowEntity:
-    """A ledger row. `transaction_id` defaults to the flow's own id, which is
-    what a transaction's opening flow looks like before anything corrects it."""
-
     return MoneyFlowEntity.from_persistence(
         id=UUID(flow_id),
         user_id=user_id,
@@ -157,8 +150,6 @@ def make_transaction_entity(
 
 
 class FakeTransactionRepository:
-    """The Postgres half — the mutable transaction rows."""
-
     def __init__(self, transactions: list[TransactionEntity] | None = None) -> None:
         self._transactions = {
             str(transaction.unique_id): transaction for transaction in (transactions or [])
@@ -268,8 +259,6 @@ class FakeWalletRepository:
         return len(self._wallets)
 
     def as_containers(self) -> "FakeMoneyContainerRepository":
-        """The container view of the same wallets, for handlers on the transaction
-        path that resolve rather than load."""
         return FakeMoneyContainerRepository(list(self._wallets.values()))
 
 
@@ -305,10 +294,6 @@ class FakeGoalRepository:
 
 
 class FakeMoneyContainerRepository:
-    """Resolves against the same wallet map the wallet fake serves, plus any goals
-    handed in. Nothing under test here cares which table an id came from — that is
-    the point of the abstraction — so the fake just answers with a reference."""
-
     def __init__(
         self,
         wallets: list[WalletEntity] | None = None,
@@ -415,9 +400,6 @@ class FakeMoneyFlowRepository:
 
 
 def _aware(moment):
-    """Fixture transactions are built with naive datetimes; the window the
-    handler asks for is UTC-aware."""
-
     return moment if moment.tzinfo is not None else moment.replace(tzinfo=UTC)
 
 

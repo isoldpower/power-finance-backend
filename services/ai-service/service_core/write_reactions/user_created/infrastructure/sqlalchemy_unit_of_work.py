@@ -43,7 +43,11 @@ class SqlAlchemySeedUnitOfWork(SeedUnitOfWork):
             return
 
         try:
-            await self._stack.__aexit__(exception_type, exception, traceback)
+            await self._stack.__aexit__(
+                exception_type,
+                exception,
+                traceback,
+            )
         finally:
             self._stack = None
             self._session = None

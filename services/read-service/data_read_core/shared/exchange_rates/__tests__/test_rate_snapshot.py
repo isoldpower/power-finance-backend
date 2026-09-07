@@ -38,8 +38,6 @@ def test_only_narrows_the_map_and_keeps_the_timestamp():
 
 
 def test_cache_round_trip_keeps_decimals_exact():
-    """Rates go through JSON, so they must never be serialised as floats."""
-
     restored = RateSnapshot.from_cache(snapshot().to_cache())
 
     assert restored == snapshot()

@@ -1,18 +1,14 @@
 from rest_framework import serializers
 from write_service.common.money import MoneyAmountField
 
-from data_write_core.domain.services import MAX_CHAIN_LENGTH
+from data_write_core.domain.services.config import ChainSettings
 from data_write_core.domain.value_objects import (
     CLIENT_ORIGINS,
     TransactionOrigin,
     TransactionType,
 )
 
-AMOUNT_HELP = (
-    'Decimal string, e.g. "50.00". Always a positive magnitude — direction is '
-    "`type`. Fewer fraction digits than the currency's scale are zero-padded; "
-    "more are rejected."
-)
+from .config import HelpText
 
 
 class EvidenceSerializer(serializers.Serializer):
@@ -23,12 +19,11 @@ class TransactionFieldsMixin(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     wallet_id = serializers.UUIDField()
     currency = serializers.CharField(max_length=8)
-    amount = MoneyAmountField(help_text=AMOUNT_HELP)
+    amount = MoneyAmountField(help_text=HelpText.AMOUNT)
     type = serializers.ChoiceField(
         choices=[transaction_type.value for transaction_type in TransactionType]
     )
     origin = serializers.ChoiceField(
-        # Not every member of the enum: `automation` is server-authored.
         choices=[origin.value for origin in CLIENT_ORIGINS],
         required=False,
         default=TransactionOrigin.MANUAL.value,
@@ -50,9 +45,9 @@ class CreateTransactionChainRequestSerializer(serializers.Serializer):
     transactions = serializers.ListField(
         child=ChainEntryRequestSerializer(),
         min_length=1,
-        max_length=MAX_CHAIN_LENGTH,
+        max_length=ChainSettings.MAX_CHAIN_LENGTH,
         help_text=(
-            f"At most {MAX_CHAIN_LENGTH} entries. The whole chain commits in one "
+            f"At most {ChainSettings.MAX_CHAIN_LENGTH} entries. The whole chain commits in one "
             "transaction, so the bound keeps the lock window predictable."
         ),
     )
@@ -71,4 +66,4 @@ class AdjustTransactionRequestSerializer(serializers.Serializer):
     """Restate a transaction's amount. `amount` is the NEW TOTAL, not a delta, and
     a positive magnitude like everywhere else."""
 
-    amount = MoneyAmountField(help_text=AMOUNT_HELP)
+    amount = MoneyAmountField(help_text=HelpText.AMOUNT)

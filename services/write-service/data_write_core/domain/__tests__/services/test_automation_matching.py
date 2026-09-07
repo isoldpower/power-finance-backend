@@ -1,10 +1,3 @@
-"""Which rules apply, and in what order.
-
-Pure enough to test without a database, which is the point of it being a domain
-service: evaluation order and the stale-condition rule are decisions, not
-plumbing.
-"""
-
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -54,9 +47,6 @@ def test_an_unconditional_rule_is_always_selected():
 
 
 def test_the_order_handed_in_is_the_order_handed_back():
-    """Evaluation is oldest-first so that when two rules set the same field the
-    LAST one wins. Reordering here would make that outcome incidental."""
-
     older = make_rule("rule1", None, datetime(2026, 1, 1, tzinfo=UTC))
     newer = make_rule("rule2", None, datetime(2026, 6, 1, tzinfo=UTC))
 
@@ -66,10 +56,6 @@ def test_the_order_handed_in_is_the_order_handed_back():
 
 
 def test_a_condition_its_policy_no_longer_accepts_is_set_aside_not_raised():
-    """`balance` is a wallet field, so an event rule carrying it cannot be
-    evaluated. Taking the rest of the user's rules down with it would make a
-    tightened policy an outage."""
-
     stale = make_rule("rule1", WALLET_FIELD, datetime(2026, 1, 1, tzinfo=UTC))
     working = make_rule("rule2", None, datetime(2026, 6, 1, tzinfo=UTC))
 

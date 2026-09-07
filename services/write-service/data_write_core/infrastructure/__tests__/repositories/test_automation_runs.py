@@ -1,10 +1,3 @@
-"""Round-trips for the run ledger.
-
-The engine's whole idempotence rests on one unique constraint, and a fake with a
-Python set proves nothing about it: two consumers racing is exactly the case the
-database has to settle. These go through the real ORM for that reason.
-"""
-
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -71,9 +64,6 @@ class AutomationRunLedgerTests(TransactionTestCase):
         self.assertTrue(self._claim(automation, "wallet:w1@2026-09-02"))
 
     def test_two_rules_claim_the_same_subject_independently(self):
-        """The constraint is per RULE, not per transaction: two rules both
-        matching one transaction is the ordinary case, not a collision."""
-
         first = self._rule(name="first")
         second = self._rule(name="second")
 
@@ -81,9 +71,6 @@ class AutomationRunLedgerTests(TransactionTestCase):
         self.assertTrue(self._claim(second, "transaction:abc"))
 
     def test_recording_a_run_increments_rather_than_rewrites(self):
-        """A run is concurrent with the user editing that rule, so a counter
-        must not carry a stale condition back with it."""
-
         automation = self._rule()
 
         first = async_to_sync(self.repository.record_run)(UUID(automation.unique_id), NOW)
@@ -92,8 +79,6 @@ class AutomationRunLedgerTests(TransactionTestCase):
         self.assertEqual((first, second), (1, 2))
 
     def test_scheduled_rules_are_listed_across_users(self):
-        """The sweeper has no request and no user to scope itself to."""
-
         other = User.objects.create_user(username="second-owner")
         mine = self._rule(trigger_type="schedule", event=None, schedule="daily")
         theirs = AutomationEntity(

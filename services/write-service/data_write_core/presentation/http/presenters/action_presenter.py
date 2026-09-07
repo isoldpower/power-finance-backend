@@ -48,9 +48,6 @@ class ActionHttpPresenter:
 
     @staticmethod
     def _present_money(action: ActionDTO) -> dict | None:
-        """The amount at stake, in the currency the action concerns. NOT
-        converted to any reporting currency — this is not Metrics."""
-
         if action.money_amount is None or not action.money_currency:
             return None
 

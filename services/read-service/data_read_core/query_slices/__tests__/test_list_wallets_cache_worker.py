@@ -3,12 +3,12 @@ import json
 from fakes import FakeRedis
 
 from data_read_core.query_slices.list_wallets.cache_worker import CacheWorker
+from data_read_core.query_slices.list_wallets.config import CacheSettings
 from data_read_core.query_slices.list_wallets.dtos import (
     CacheOperationData,
     WalletDTO,
 )
 from data_read_core.query_slices.list_wallets.infra import (
-    CACHE_TTL_SECONDS,
     get_filter_hash,
     get_list_cache_key,
     get_list_version_key,
@@ -83,7 +83,7 @@ async def test_save_writes_versioned_key_with_ttl(fake_redis: FakeRedis):
     assert len(fake_redis.set_calls) == 1
     key, raw_value, ttl = fake_redis.set_calls[0]
     assert key == expected_key
-    assert ttl == CACHE_TTL_SECONDS
+    assert ttl == CacheSettings.TTL_SECONDS
     payload = json.loads(raw_value)
     assert payload["total"] == 1
     assert payload["wallets"][0]["id"] == "w1"

@@ -2,8 +2,6 @@ from django.db import models
 
 
 class WalletReadModel(models.Model):
-    """Denormalised wallet projection."""
-
     id = models.UUIDField(primary_key=True)
     user_id = models.BigIntegerField()
     title = models.CharField(max_length=255)

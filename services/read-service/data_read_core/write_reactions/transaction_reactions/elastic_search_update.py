@@ -10,9 +10,6 @@ from .._utilities import decode_payload
 
 
 class UpdateTransactionDocument(Effect):
-    """Patch the amount after an adjustment; `type` is not repatched because an
-    adjustment restates a magnitude and can never cross zero."""
-
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, TransactionUpdated)
         partial = {

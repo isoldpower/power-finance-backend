@@ -3,21 +3,17 @@ from dataclasses import dataclass
 from write_service.common.http_contract import DetailCode, ErrorDetail, ValidationFailed
 
 from .config import (
-    DEFAULT_LIMIT,
-    LIMIT_PARAMETER_NAME,
-    MAXIMUM_LIMIT,
-    MINIMUM_LIMIT,
-    NON_INTEGER_LIMIT_MESSAGE,
+    LimitSettings,
+    Messages,
+    ParamsList,
 )
 
 
 @dataclass(frozen=True)
 class LimitPolicy:
-    """The page sizes a collection answers."""
-
-    default: int = DEFAULT_LIMIT
-    minimum: int = MINIMUM_LIMIT
-    maximum: int = MAXIMUM_LIMIT
+    default: int = int(LimitSettings.DEFAULT)
+    minimum: int = int(LimitSettings.MINIMUM)
+    maximum: int = int(LimitSettings.MAXIMUM)
 
     def resolve(self, raw: str | None) -> int:
         if not raw:
@@ -32,9 +28,9 @@ class LimitPolicy:
             raise ValidationFailed(
                 details=[
                     ErrorDetail(
-                        field=LIMIT_PARAMETER_NAME,
+                        field=ParamsList.LIMIT,
                         code=DetailCode.INVALID,
-                        message=NON_INTEGER_LIMIT_MESSAGE,
+                        message=Messages.NON_INTEGER_LIMIT,
                     )
                 ]
             ) from exc

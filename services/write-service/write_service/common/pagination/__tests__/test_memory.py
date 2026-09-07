@@ -1,6 +1,3 @@
-"""The in-memory keyset must page exactly like the database one: the gateway can
-reroute mid-walk, so a cursor minted by one has to mean the same to the other."""
-
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -24,8 +21,6 @@ class Row:
 
 
 def rows(count: int) -> list[Row]:
-    """Deliberately shuffled: the slice is responsible for the ordering."""
-
     unordered = [
         Row(id=f"r{index}", created_at=START - timedelta(days=index)) for index in range(count)
     ]

@@ -8,8 +8,6 @@ _ACCOUNT_GROUPS: dict[str, AccountGroup.ValueType] = {
 
 
 def account_group_of(group: str) -> AccountGroup.ValueType:
-    """The proto spelling of a stored group name."""
-
     return _ACCOUNT_GROUPS.get(
         group.lower(),
         AccountGroup.ACCOUNT_GROUP_WRONG,

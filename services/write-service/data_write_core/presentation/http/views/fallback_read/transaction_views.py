@@ -16,8 +16,8 @@ from ...serializers import (
     PaginatedTransactionResponseSerializer,
 )
 from ._presenters import present_transaction, present_transactions
-from ._schema import CURSOR_PARAMETER, LIMIT_PARAMETER, resource_id_parameter
 from .base import FallbackReadView
+from .config import CURSOR_PARAMETER, LIMIT_PARAMETER, resource_id_parameter
 
 
 class FallbackTransactionListView(FallbackReadView):

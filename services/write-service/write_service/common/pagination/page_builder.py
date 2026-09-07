@@ -6,8 +6,6 @@ from .scans import ScannedRows
 
 
 def build_page(rows: list[Any], total: int, request: PageRequest) -> Page:
-    """Trim the lookahead row, restore reading order, and mint both cursors."""
-
     scan = request.scan
     scanned = ScannedRows(
         items=scan.restore_reading_order(list(rows[: request.limit])),

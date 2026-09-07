@@ -2,8 +2,6 @@ local hmac = require "resty.openssl.hmac"
 
 
 --- Encode a binary string as lowercase hexadecimal.
--- Output length is exactly 2× input length. Used to render an HMAC
--- digest into the over-the-wire `{seq}:{hex}` form clients see.
 --
 -- @param bytes string  arbitrary binary input
 -- @return string  lowercase hex encoding
@@ -13,8 +11,6 @@ end
 
 
 --- Compute an HMAC-SHA256 digest over `payload` using `secret`.
--- Returns the raw (binary) digest; callers that need the on-the-wire
--- representation should pipe the result through `to_hex`.
 --
 -- @param secret string  shared HMAC key
 -- @param payload string  message to sign

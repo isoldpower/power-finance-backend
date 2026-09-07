@@ -1,9 +1,3 @@
-"""Domain failures become contract errors at the HTTP boundary.
-
-The domain stays free of status codes and the views stay free of `except`
-ladders; the mapping lives in one place and is asserted here.
-"""
-
 from decimal import Decimal
 from uuid import uuid4
 
@@ -32,9 +26,6 @@ def render(exc: Exception):
     ],
 )
 def test_missing_or_foreign_resources_are_404_not_403(exc):
-    """403 would confirm the id exists and turn every UUID path in the API into
-    an existence oracle."""
-
     response = render(exc)
 
     assert response.status_code == 404

@@ -28,12 +28,6 @@ class MutationMetaSerializer(serializers.Serializer):
 
 
 def empty_meta_field() -> serializers.Field:
-    """`meta` for an endpoint that has nothing to say about the response.
-
-    A field-less serializer is dropped from the generated document entirely, so
-    spelling this as an empty `Serializer` would publish a response with no
-    `meta` key at all while still sending one."""
-
     return serializers.DictField(
         help_text="Always `{}` — this endpoint is neither paginated nor cached.",
     )

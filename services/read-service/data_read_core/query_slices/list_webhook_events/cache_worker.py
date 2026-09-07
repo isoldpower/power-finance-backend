@@ -2,8 +2,9 @@ import json
 
 from redis.asyncio import Redis
 
+from .config import CacheSettings
 from .dtos import WebhookSubscriptionDTO
-from .infra import CACHE_TTL_SECONDS, get_events_cache_key
+from .infra import get_events_cache_key
 
 
 class CacheWorker:
@@ -28,5 +29,5 @@ class CacheWorker:
         await self._redis_client.set(
             get_events_cache_key(webhook_id),
             json.dumps([subscription.to_cache() for subscription in subscriptions]),
-            ex=CACHE_TTL_SECONDS,
+            ex=int(CacheSettings.TTL_SECONDS),
         )

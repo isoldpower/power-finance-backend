@@ -8,9 +8,6 @@ from ._utilities import decode_payload
 
 
 class TrackEsAppliedSeq(Effect):
-    """Wrap an Elasticsearch projection Effect so the originating outbox seq is
-    recorded in the ES applied-seq table after the document write succeeds."""
-
     def __init__(self, inner: Effect, payload_type: type[Message]) -> None:
         self._inner = inner
         self._payload_type = payload_type

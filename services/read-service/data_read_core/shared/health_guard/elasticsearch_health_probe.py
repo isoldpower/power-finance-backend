@@ -10,8 +10,6 @@ ELASTICSEARCH_CONNECTIVITY_ERRORS: tuple[type[BaseException], ...] = (
 
 
 class ElasticsearchHealthProbe(HealthProbe):
-    """`HealthProbe` backed by an Elasticsearch ping."""
-
     @property
     def name(self) -> str:
         return "elasticsearch"

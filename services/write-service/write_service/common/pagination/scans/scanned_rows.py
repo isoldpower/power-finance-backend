@@ -4,9 +4,6 @@ from typing import Any
 
 @dataclass(frozen=True)
 class ScannedRows:
-    """One scan's result: the page in reading order, plus what its neighbours
-    are."""
-
     items: list[Any]
     has_further_rows: bool
     has_preceding_page: bool

@@ -4,11 +4,13 @@ from .gateway_auth import (
     authenticated_user,
     require_gateway_user,
 )
-from .sqlalchemy_message_repository import SqlAlchemyMessageRepository
+from .references import ProjectedReferenceExtractor
+from .repositories import SqlAlchemyMessageRepository
 from .websocket_transport import WebSocketTransport
 
 __all__ = [
     "GATEWAY_USER_HEADER",
+    "ProjectedReferenceExtractor",
     "SqlAlchemyMessageRepository",
     "WebSocketTransport",
     "authenticated_user",

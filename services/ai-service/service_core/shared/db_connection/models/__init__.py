@@ -1,9 +1,6 @@
 from .account import AccountModel
 from .assistant_message import AssistantMessageModel
 from .base import (
-    ACCOUNT_GROUPS,
-    CREDIT_NORMAL_GROUPS,
-    DEBIT_NORMAL_GROUPS,
     ModelBase,
 )
 from .outbox import OutboxEntryModel
@@ -19,7 +16,4 @@ __all__ = [
     "ProjectedTransaction",
     "UserModel",
     "ModelBase",
-    "DEBIT_NORMAL_GROUPS",
-    "ACCOUNT_GROUPS",
-    "CREDIT_NORMAL_GROUPS",
 ]

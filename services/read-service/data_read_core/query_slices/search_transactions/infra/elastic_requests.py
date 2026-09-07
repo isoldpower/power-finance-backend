@@ -9,9 +9,6 @@ async def search_owned_transactions(
     filter_query: dict[str, Any],
     page: PageRequest,
 ) -> tuple[list[dict[str, Any]], int]:
-    """Run the resolved filter against the transactions index, fenced to the
-    requesting user. Returns (hit sources, total)."""
-
     response = await get_elasticsearch().search(
         index=TRANSACTIONS_INDEX,
         query={

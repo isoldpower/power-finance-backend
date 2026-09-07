@@ -37,9 +37,6 @@ def test_boundaries_are_local_midnight_not_utc_midnight():
 
 
 def test_two_zones_straddling_a_month_boundary_see_different_months():
-    """The first of the month in Warsaw is still the last of the previous month
-    in Chicago, so the two ask for windows a month apart. That is the point."""
-
     instant = datetime(2026, 8, 1, 3, tzinfo=UTC)
 
     warsaw_since, _ = period_bounds(Period.LAST_MONTH, WARSAW, instant)
@@ -57,9 +54,6 @@ def test_defaults_to_now_when_no_instant_is_given():
 
 
 def test_last_week_is_the_previous_whole_iso_week():
-    """Monday-to-Monday, not the seven days before now."""
-
-    # 2026-08-21 is a Friday; the week before it runs Mon 10th to Mon 17th.
     since, until = period_bounds(Period.LAST_WEEK, UTC_ZONE, datetime(2026, 8, 21, tzinfo=UTC))
 
     assert since == datetime(2026, 8, 10, tzinfo=UTC)
@@ -81,9 +75,6 @@ def test_last_year_is_the_previous_whole_calendar_year():
 
 
 def test_all_time_has_no_bounds():
-    """Not a very old epoch — genuinely unbounded, so the caller's filter is
-    dropped rather than widened."""
-
     assert period_bounds(Period.ALL_TIME, UTC_ZONE) == (None, None)
 
 
@@ -96,9 +87,6 @@ def test_every_period_resolves_in_the_callers_zone():
 
 
 def test_consecutive_windows_tile_without_overlapping():
-    """Half-open: the end of one period is the start of the next, so a
-    transaction on the boundary is counted once."""
-
     _, july_end = period_bounds(Period.LAST_MONTH, UTC_ZONE, datetime(2026, 8, 15, tzinfo=UTC))
     august_start, _ = period_bounds(Period.LAST_MONTH, UTC_ZONE, datetime(2026, 9, 15, tzinfo=UTC))
 

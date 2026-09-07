@@ -1,10 +1,3 @@
-"""The ledger ai-service publishes, landing in the read models.
-
-These five events come from a different service and a different outbox than
-everything else this consumer handles, so the assertions here are as much about
-where they must *not* reach as about what they project.
-"""
-
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
@@ -115,9 +108,6 @@ async def test_the_proto_group_becomes_its_stored_spelling():
 
 
 async def test_an_account_with_no_usable_group_is_stored_ungrouped():
-    """`ACCOUNT_GROUP_WRONG` is the proto zero value. Filing it under a real
-    group would put it on the wrong side of the ledger; blank says unknown."""
-
     await CreateAccountReadModel().apply(
         make_event(
             _account_created(group=AccountGroup.ACCOUNT_GROUP_WRONG, name="mystery"),
@@ -161,10 +151,6 @@ async def test_an_update_restates_the_balance():
 
 
 async def test_an_update_for_an_unseen_account_still_lands():
-    """`AccountUpdated` carries the whole row, so a projection that started
-    after the account was created heals instead of leaving postings pointing at
-    an account missing from the chart."""
-
     await UpdateAccountReadModel().apply(
         make_event(
             AccountUpdated(
@@ -275,11 +261,6 @@ async def test_a_re_dispatch_replaces_the_verdict_rather_than_adding_one():
 
 
 async def test_account_events_never_advance_read_your_writes():
-    """The whole reason these are not wrapped in `TrackAppliedSeq`. That table
-    holds one high-water mark per user of the *write-service* outbox sequence;
-    ai-service numbers its outbox independently, so letting these through would
-    tell a client its own pending write had already landed."""
-
     router = KafkaEventRouter()
     _subscribe_all_events(router)
 

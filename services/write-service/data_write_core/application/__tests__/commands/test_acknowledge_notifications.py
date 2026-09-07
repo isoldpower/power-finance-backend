@@ -51,9 +51,6 @@ class FakeOutboxRepository:
 
 
 async def test_ack_of_an_already_read_notification_returns_it_unchanged():
-    """Idempotent by nature: the caller's intent is already satisfied, so this
-    is a 200 carrying the original `acknowledged_at`, never a conflict."""
-
     handler = AcknowledgeNotificationsCommandHandler(
         notification_repository=FakeNotificationRepository(
             [make_notification(NOTIFICATION_A, acknowledged_at=FIRST_SEEN_AT)],

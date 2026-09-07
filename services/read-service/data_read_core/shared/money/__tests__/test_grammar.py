@@ -36,9 +36,6 @@ def test_requests_may_send_fewer_fraction_digits_than_the_scale(raw, decimals):
 
 
 def test_more_fraction_digits_than_the_currency_allows_is_rejected():
-    """The server does not silently round money: which of 50.00 and 50.01 is
-    right is the user's decision."""
-
     with pytest.raises(ValidationFailed) as failure:
         parse_amount("50.005", USD, "amount")
 
@@ -47,9 +44,6 @@ def test_more_fraction_digits_than_the_currency_allows_is_rejected():
 
 @pytest.mark.parametrize("raw", [50.00, 50, True, None])
 def test_json_numbers_are_rejected_rather_than_coerced(raw):
-    """A client that regresses to numbers is caught at the boundary instead of
-    losing precision quietly."""
-
     with pytest.raises(ValidationFailed) as failure:
         parse_amount(raw, USD, "amount")
 

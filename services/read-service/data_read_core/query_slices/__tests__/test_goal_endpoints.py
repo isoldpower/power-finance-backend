@@ -126,9 +126,6 @@ async def test_listing_returns_goals_newest_first():
 
 
 async def test_a_nearer_deadline_does_not_move_a_goal_up_the_list():
-    """Ordering is `created_at DESC` and nothing else. The target is explicit that
-    a goal does not move because its deadline approaches."""
-
     await _goal(
         title="Distant deadline", created_at=AUGUST, finish_at=datetime(2027, 1, 1, tzinfo=UTC)
     )
@@ -161,9 +158,6 @@ async def test_money_is_reported_at_the_currency_scale():
 
 
 async def test_a_closed_goal_still_resolves_by_id():
-    """DELETE removes a goal from lists, not from existence — the transactions that
-    funded it still have to render a name."""
-
     goal = await _goal(title="Closed", deleted_at=AUGUST)
 
     response = await as_user(f"/api/v1/goals/{goal.id}")
@@ -213,9 +207,6 @@ async def test_money_leaving_the_goal_is_a_credit():
 
 
 async def test_history_ignores_a_wallet_that_shares_the_id():
-    """`wallet_id` holds a container id of either kind, so the history query has to
-    filter on the kind as well or it would inherit a wallet's transactions."""
-
     goal = await _goal()
     await _transaction(goal.id, amount="30.00", name="Into the goal")
     await _transaction(goal.id, amount="99.00", name="Into a wallet", kind=MoneyContainers.WALLET)
@@ -273,9 +264,6 @@ async def test_the_history_cursor_round_trips():
 
 
 async def test_goals_are_not_wallets():
-    """The two live in separate collections. A goal must not surface under
-    /wallets, whatever it shares structurally."""
-
     goal = await _goal(title="New bike")
     await WalletReadModel.objects.acreate(
         id=uuid.uuid4(),

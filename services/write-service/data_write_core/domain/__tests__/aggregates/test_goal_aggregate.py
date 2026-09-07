@@ -83,9 +83,6 @@ class GoalProgressTests(SimpleTestCase):
         assert _aggregate("50", "-20").progress == Decimal("30")
 
     def test_balance_is_the_container_name_for_progress(self) -> None:
-        """`MoneyContainerAggregate` reads `balance`; the goal endpoints read
-        `progress`. They must never disagree."""
-
         aggregate = _aggregate("30")
 
         assert aggregate.balance == aggregate.progress
@@ -113,9 +110,6 @@ class GoalReachedTests(SimpleTestCase):
         assert _aggregate("600").is_reached is True
 
     def test_reaching_a_target_does_not_close_the_goal(self) -> None:
-        """A reached goal keeps taking flows. Completion is a display fact, not a
-        state change."""
-
         aggregate = _aggregate("600")
 
         aggregate.record(_flow("10"))
@@ -176,8 +170,6 @@ class GoalCloseTests(SimpleTestCase):
         assert raised.value.progress == Decimal("30")
 
     def test_a_drained_goal_closes(self) -> None:
-        """The refusal is about the balance, not about having had one."""
-
         aggregate = _aggregate("30", "-30")
 
         aggregate.soft_delete(now=datetime(2026, 2, 1))
@@ -230,9 +222,6 @@ class GoalMetadataTests(SimpleTestCase):
         assert aggregate.progress == Decimal("30")
 
     def test_the_currency_is_not_restorable_through_a_snapshot(self) -> None:
-        """`apply` deliberately leaves `currency_code` alone: it never changes, so
-        writing it back would be the only path by which a bug could move it."""
-
         aggregate = _aggregate()
         snapshot = aggregate.root.snapshot()
         snapshot.currency_code = "JPY"

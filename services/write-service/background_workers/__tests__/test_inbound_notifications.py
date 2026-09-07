@@ -44,9 +44,6 @@ def test_parse_valid_notification_request():
 
 
 def test_an_unrecognised_severity_degrades_rather_than_poisoning():
-    """The producer got the urgency wrong, not the request. Dropping the whole
-    notification would cost the user the message itself."""
-
     record = FakeRecord(
         value=json.dumps(
             {

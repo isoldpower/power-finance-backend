@@ -1,11 +1,11 @@
 import secrets
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
+
+from data_write_core.domain.entities.config import SECRET_GRACE_PERIOD
 
 from ..events import EventCollector
 from ._entity_root import EntityRoot
-
-SECRET_GRACE_PERIOD = timedelta(hours=24)
 
 
 def generate_webhook_secret() -> str:

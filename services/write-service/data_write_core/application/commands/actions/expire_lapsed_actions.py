@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from data_write_core.application.commands.config import SweepSettings
 from data_write_core.domain.entities import ActionEntity
 from data_write_core.infrastructure.outbox_saga import (
     FinalizedSagaCoordinator,
@@ -12,12 +13,10 @@ from ...bootstrap import get_repository_registry
 from ...interfaces import ActionRepository, OutboxRepository
 from ._events import action_resolved
 
-DEFAULT_SWEEP_LIMIT = 200
-
 
 @dataclass(frozen=True)
 class ExpireLapsedActionsCommand:
-    limit: int = DEFAULT_SWEEP_LIMIT
+    limit: int = SweepSettings.DEFAULT_LIMIT
     now: datetime | None = None
 
 

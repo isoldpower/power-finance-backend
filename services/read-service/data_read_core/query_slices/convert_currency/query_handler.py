@@ -3,17 +3,12 @@ from decimal import ROUND_HALF_UP, Decimal
 from data_read_core.shared.exchange_rates import ExchangeRateService, get_rate_service
 from data_read_core.shared.money import CURRENCY_CATALOG, CurrencyCatalog, parse_amount
 
+from .config import ParamsList
 from .dtos import ConversionDTO, ConvertCurrencyQuery
 from .logger_shortcuts import log_conversion_served
 
-AMOUNT_FIELD = "amount"
-
 
 class ConvertCurrencyQueryHandler:
-    """The rounding happens here, once. Clients render `to` rather than
-    multiplying `rate` themselves, so two clients cannot disagree about the
-    last digit."""
-
     def __init__(
         self,
         rate_service: ExchangeRateService | None = None,
@@ -26,7 +21,7 @@ class ConvertCurrencyQueryHandler:
         source = await self._catalog.require(query.from_code)
         target = await self._catalog.require(query.to_code)
 
-        amount = parse_amount(query.raw_amount, source.digits, AMOUNT_FIELD)
+        amount = parse_amount(query.raw_amount, source.digits, ParamsList.AMOUNT)
         rate, fetched_at = await self._rate_service.rate_between(source.code, target.code)
         converted = self._at_scale(amount * rate, target.digits)
 

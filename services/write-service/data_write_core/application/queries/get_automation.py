@@ -13,10 +13,6 @@ class GetFallbackAutomationQuery:
 
 
 class GetFallbackAutomationQueryHandler:
-    """A soft-deleted rule still answers here, carrying its `deleted_at` — the
-    read projection keeps the row too, and the fallback must not disagree with
-    the read it stands in for."""
-
     def __init__(self, automation_repository: AutomationRepository | None = None) -> None:
         self._automation_repository = (
             automation_repository or get_repository_registry().automation_repository

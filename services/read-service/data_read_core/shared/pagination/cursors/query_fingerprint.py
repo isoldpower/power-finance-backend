@@ -7,8 +7,6 @@ from .config import FINGERPRINT_LENGTH, ORDER_KEY, QUERY_KEY
 
 
 def query_fingerprint(order: SortOrder, query_material: Any = None) -> str:
-    """Bind a cursor to the query that produced it."""
-
     canonical = dump_compact(
         {ORDER_KEY: order.signature, QUERY_KEY: query_material},
         sort_keys=True,

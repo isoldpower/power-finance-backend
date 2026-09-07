@@ -11,9 +11,6 @@ from .._utilities import decode_payload, handle_database_errors
 
 
 class RemoveGoalReadModel(Effect):
-    """Close the goal projection rather than dropping the row: it leaves lists but
-    stays queryable by id, so the transactions that funded it still resolve a name."""
-
     async def apply(self, event: EventMessage) -> None:
         event_payload = decode_payload(event, GoalDeleted)
         await handle_database_errors(

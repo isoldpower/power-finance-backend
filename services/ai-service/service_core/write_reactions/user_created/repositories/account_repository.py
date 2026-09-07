@@ -13,6 +13,4 @@ class AccountRepository(ABC):
         accounts: Sequence[AccountSpec],
         now: datetime,
     ) -> list[AccountRecord]:
-        """Create the accounts that do not exist yet; report the ones created."""
-
         raise NotImplementedError()

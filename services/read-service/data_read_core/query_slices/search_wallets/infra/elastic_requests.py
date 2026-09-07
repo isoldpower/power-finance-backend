@@ -9,9 +9,6 @@ async def search_owned_wallets(
     filter_query: dict[str, Any],
     page: PageRequest,
 ) -> tuple[list[dict[str, Any]], int]:
-    """Run the resolved filter against the wallets index, fenced to the
-    requesting user. Returns (hit sources, total)."""
-
     response = await get_elasticsearch().search(
         index=WALLETS_INDEX,
         query={

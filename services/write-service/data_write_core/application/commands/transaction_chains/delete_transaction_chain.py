@@ -4,6 +4,7 @@ from uuid import UUID
 
 from kafka_messages import TransactionDeleted
 
+from data_write_core.application.commands.config import AggregateType
 from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.exceptions import TransactionChainNotFoundError
 from data_write_core.domain.services import CancelledTransaction, cancel_chain
@@ -25,8 +26,6 @@ from ..command_base import CommandHandlerBase
 from ..loaded_containers import LoadedContainers
 from ..loader_mixins import LoadContainerMixin
 from ..transactions.transaction_saga import run_transaction_saga
-
-TRANSACTION_AGGREGATE_TYPE = "transaction"
 
 
 @dataclass(frozen=True)
@@ -174,7 +173,7 @@ class DeleteTransactionChainCommandHandler(
                 created_at=datetime_to_timestamp(root.created_at),
                 deleted_at=datetime_to_timestamp(cancelled_at),
             ),
-            aggregate_type=TRANSACTION_AGGREGATE_TYPE,
+            aggregate_type=AggregateType.TRANSACTION,
             aggregate_id=cancellation.transaction.unique_id,
             partition_key=partition_key,
         )

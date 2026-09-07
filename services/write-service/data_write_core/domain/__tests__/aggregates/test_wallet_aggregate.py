@@ -52,7 +52,6 @@ def _wallet(
 
 
 def _persisted_transaction(amount: Decimal, wallet_id: UUID) -> MoneyFlowEntity:
-    """Transaction reconstituted from storage (no creation event)."""
     return MoneyFlowEntity.from_persistence(
         id=uuid4(),
         user_id=9,
@@ -145,9 +144,6 @@ class WalletAggregateBalanceTests(SimpleTestCase):
 
 
 class WalletAggregateRecordTests(SimpleTestCase):
-    """The wallet folds flows, it does not create them — a flow belongs to a
-    transaction, and only the transaction factory mints one."""
-
     def test_recording_a_flow_moves_the_balance(self) -> None:
         wallet = _wallet()
         aggregate = WalletAggregate(wallet, unsettled_transactions=[], balance_checkpoint=None)
@@ -165,9 +161,6 @@ class WalletAggregateRecordTests(SimpleTestCase):
         self.assertEqual(aggregate.balance, Decimal("-7"))
 
     def test_recording_emits_nothing(self) -> None:
-        """Folding a pending flow is a read-model concern; the event that
-        matters was already collected by the transaction."""
-
         collector = EventCollector()
         wallet = _wallet(collector=collector)
         aggregate = WalletAggregate(wallet, [], None)
@@ -248,9 +241,6 @@ class WalletAggregateSoftDeleteTests(SimpleTestCase):
 
 
 class WalletAggregateOwnedTests(SimpleTestCase):
-    """`zero_balance` is the datum the balance is measured from, so a credit
-    line is spendable but not owned."""
-
     def _aggregate(self, balance: str, zero_balance: str) -> WalletAggregate:
         wallet = _wallet(zero_balance=Decimal(zero_balance))
         return WalletAggregate(
@@ -279,9 +269,6 @@ class WalletAggregateOwnedTests(SimpleTestCase):
 
 
 class WalletAggregateCloseGuardTests(SimpleTestCase):
-    """Closing is settled in both directions: money still in the wallet blocks
-    it, and so does debt still owed on it."""
-
     def _aggregate(self, balance: str, zero_balance: str) -> WalletAggregate:
         wallet = _wallet(collector=EventCollector(), zero_balance=Decimal(zero_balance))
         return WalletAggregate(
@@ -318,9 +305,6 @@ class WalletAggregateCloseGuardTests(SimpleTestCase):
             aggregate.soft_delete(datetime(2026, 3, 1))
 
     def test_already_closed_wallet_never_reaches_the_guard(self) -> None:
-        """Repeating DELETE answers 200 with the same body, so a wallet that
-        drifted off its datum after closing must not start failing."""
-
         wallet = _wallet(
             collector=EventCollector(),
             deleted_at=datetime(2026, 1, 5),

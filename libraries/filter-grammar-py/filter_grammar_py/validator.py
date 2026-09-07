@@ -7,7 +7,11 @@ from .shapes import FIELD_NAME_KEY, OPERATOR_KEY, GroupShape, LeafShape, shape_o
 KNOWN_OPERATORS = frozenset(member.value for member in ComparisonOperator)
 
 
-def validate_filter_body(raw: Any, policy: FilterPolicy, path: str = ROOT_PATH) -> None:
+def validate_filter_body(
+    raw: Any,
+    policy: FilterPolicy,
+    path: str = ROOT_PATH,
+) -> None:
     match shape_of(raw, path):
         case GroupShape(operator=operator, children=children):
             for index, child in enumerate(children):
@@ -16,7 +20,11 @@ def validate_filter_body(raw: Any, policy: FilterPolicy, path: str = ROOT_PATH) 
             validate_leaf(leaf, policy, path)
 
 
-def validate_leaf(leaf: LeafShape, policy: FilterPolicy, path: str) -> None:
+def validate_leaf(
+    leaf: LeafShape,
+    policy: FilterPolicy,
+    path: str,
+) -> None:
     field_policy = policy.get(leaf.field_name)
     if field_policy is None:
         raise PolicyViolationError(

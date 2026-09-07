@@ -26,11 +26,20 @@ func TestDispatchNonDeliverableEventIsNoOp(t *testing.T) {
 }
 
 func TestDispatchEnqueuesAndWakesForEverySubscribedEndpoint(t *testing.T) {
-	payload := []byte(`{"event_id":"evt-1","occurred_at":"2026-08-12T11:51:00Z","schema_version":1,"user_id":7,"name":"Coffee"}`)
+	payload := []byte(
+		`{"event_id":"evt-1","occurred_at":"2026-08-12T11:51:00Z",` +
+			`"schema_version":1,"user_id":7,"name":"Coffee"}`,
+	)
 	endpoints := &fakeEndpointResolver{
 		endpoints: []types.WebhookEndpoint{
-			{ID: "wh-1", UserID: 7, UserExternalID: "clerk_7", URL: "https://a", Secret: "s1", SecretVersion: 3},
-			{ID: "wh-2", UserID: 7, UserExternalID: "clerk_7", URL: "https://b", Secret: "s2", SecretVersion: 1},
+			{
+				ID: "wh-1", UserID: 7, UserExternalID: "clerk_7",
+				URL: "https://a", Secret: "s1", SecretVersion: 3,
+			},
+			{
+				ID: "wh-2", UserID: 7, UserExternalID: "clerk_7",
+				URL: "https://b", Secret: "s2", SecretVersion: 1,
+			},
 		},
 	}
 	store := &fakeDeliveryStore{}

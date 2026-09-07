@@ -2,11 +2,6 @@ from immudb import ImmudbClient
 from immudb.datatypesv2 import DatabaseSettingsV2
 from immudb.handler.useDatabase import dbUseResponse
 
-# Columns added after this table first shipped. `CREATE TABLE IF NOT EXISTS`
-# leaves an existing table alone, so a volume older than the column keeps
-# answering "column does not exist" until it is added explicitly. They are
-# nullable here even where the CREATE says NOT NULL: immudb refuses to add a
-# NOT NULL column to a table that already holds rows.
 _TRANSACTIONS_ADDED_COLUMNS: tuple[tuple[str, str], ...] = (("transaction_id", "VARCHAR[36]"),)
 
 

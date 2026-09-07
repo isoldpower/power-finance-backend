@@ -18,10 +18,12 @@ import (
 	"services/webhook-service/webhook_service/types"
 )
 
+// EventHandler is what the consumer hands each decoded outbox event to.
 type EventHandler interface {
 	Handle(ctx context.Context, event types.OutboxEvent) error
 }
 
+// Consumer drains the outbox topics into an EventHandler.
 type Consumer struct {
 	client            *kgo.Client
 	messageHandler    *consumer.MessageHandler
@@ -29,8 +31,7 @@ type Consumer struct {
 	readinessProbe    *health.Probe
 }
 
-// NewConsumer wires a consumer-group client, dedupe store and retry/DLQ
-// publishers around the supplied event handler.
+// NewConsumer wires a consumer-group client, dedupe store and retry/DLQ publishers around the supplied event handler.
 func NewConsumer(
 	ctx context.Context,
 	kafkaConfig Config,
@@ -87,18 +88,16 @@ func NewConsumer(
 	}, nil
 }
 
-// Run drains the consumer group, committing each record only after it has been
-// handled (or terminally routed). Resources are released by Close once Run has
-// returned.
+// Run drains the consumer group, committing each record only after it has been handled (or terminally routed).
 func (c *Consumer) Run(ctx context.Context) {
 	c.readinessProbe.MarkReady()
 	defer c.readinessProbe.MarkUnready()
-	slog.Info("kafka consumer started")
+	logConsumerStarted()
 
 	for {
 		fetches := c.client.PollFetches(ctx)
 		if ctx.Err() != nil || fetches.IsClientClosed() {
-			slog.Info("kafka consumer stopped")
+			logConsumerStopped()
 			return
 		}
 
@@ -112,8 +111,7 @@ func (c *Consumer) Run(ctx context.Context) {
 	}
 }
 
-// Close releases the consumer-group client and the retry/DLQ publisher, flushing
-// any buffered retry/DLQ records. Call it after Run has returned.
+// Close releases the consumer-group client and the retry/DLQ publisher, flushing any buffered retry/DLQ records.
 func (c *Consumer) Close() {
 	c.retryDLQPublisher.Stop()
 	c.client.Close()
@@ -126,18 +124,12 @@ func (c *Consumer) processRecord(ctx context.Context, record *kgo.Record) {
 		if errors.Is(handleErr, context.Canceled) {
 			return
 		}
-		slog.Error("kafka handler failed, leaving offset uncommitted", "error", handleErr)
+		logHandlerFailed(handleErr)
 		return
 	}
 
 	if commitErr := c.client.CommitRecords(ctx, record); commitErr != nil && ctx.Err() == nil {
-		slog.Error(
-			"kafka commit failed",
-			"topic", record.Topic,
-			"partition", record.Partition,
-			"offset", record.Offset,
-			"error", commitErr,
-		)
+		logCommitFailed(record.Topic, record.Partition, record.Offset, commitErr)
 	}
 }
 
@@ -147,12 +139,7 @@ func (c *Consumer) logFetchErrors(fetches kgo.Fetches) {
 			return
 		}
 
-		slog.Error(
-			"kafka fetch error",
-			"topic", topic,
-			"partition", partition,
-			"error", fetchErr,
-		)
+		logFetchFailed(topic, partition, fetchErr)
 	})
 }
 

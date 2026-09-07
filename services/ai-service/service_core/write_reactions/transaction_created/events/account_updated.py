@@ -2,7 +2,8 @@ from datetime import datetime
 
 from kafka_messages import AccountUpdated
 
-from ....shared.kafka_outbox import OutboxEntry, build_outbox_entry
+from service_core.shared.kafka_outbox import OutboxEntry, build_outbox_entry
+
 from ..contracts import BalanceChange
 from ._account_groups import account_group_of
 from ._aggregates import ACCOUNT_AGGREGATE

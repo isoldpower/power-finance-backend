@@ -1,16 +1,25 @@
-DEFAULT_LIMIT = 25
-MINIMUM_LIMIT = 1
-MAXIMUM_LIMIT = 100
+from enum import IntEnum, StrEnum
 
-LIMIT_PARAMETER_NAME = "limit"
-CURSOR_PARAMETER_NAME = "cursor"
 
-LIMIT_KEY = "limit"
-TOTAL_KEY = "total"
-NEXT_CURSOR_KEY = "next_cursor"
-PREVIOUS_CURSOR_KEY = "prev_cursor"
-CACHED_KEY = "cached"
+class LimitSettings(IntEnum):
+    DEFAULT = 25
+    MINIMUM = 1
+    MAXIMUM = 100
+    LOOKAHEAD_ROWS = 1
 
-NON_INTEGER_LIMIT_MESSAGE = "limit must be an integer"
 
-LOOKAHEAD_ROW_COUNT = 1
+class ParamsList(StrEnum):
+    LIMIT = "limit"
+    CURSOR = "cursor"
+
+
+class MetaKey(StrEnum):
+    LIMIT = "limit"
+    TOTAL = "total"
+    NEXT_CURSOR = "next_cursor"
+    PREVIOUS_CURSOR = "prev_cursor"
+    CACHED = "cached"
+
+
+class Messages(StrEnum):
+    NON_INTEGER_LIMIT = "limit must be an integer"

@@ -67,10 +67,6 @@ class DjangoNotificationRepository(NotificationRepository):
         return await NotificationModel.objects.filter(user_id=user_id).acount()
 
     async def count_notification_badge(self, user_id: int) -> tuple[int, int]:
-        """One aggregate rather than two counts: across two queries an
-        acknowledgement landing between them could report a badge larger than
-        the total it is a subset of."""
-
         counted = await NotificationModel.objects.filter(user_id=user_id).aaggregate(
             total=Count("id"),
             unacknowledged=Count("id", filter=Q(acknowledged_at__isnull=True)),

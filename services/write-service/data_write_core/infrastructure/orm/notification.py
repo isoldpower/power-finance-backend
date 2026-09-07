@@ -4,8 +4,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 
-SEVERITY_MAX_LENGTH = 16
-SUBJECT_TYPE_MAX_LENGTH = 32
+from data_write_core.infrastructure.orm.config import NotificationSettings
 
 
 class NotificationModel(models.Model):
@@ -14,8 +13,10 @@ class NotificationModel(models.Model):
     body = models.TextField()
     payload = models.JSONField(blank=True, null=True)
 
-    severity = models.CharField(max_length=SEVERITY_MAX_LENGTH, default="info")
-    subject_type = models.CharField(max_length=SUBJECT_TYPE_MAX_LENGTH, blank=True, default="")
+    severity = models.CharField(max_length=NotificationSettings.SEVERITY_MAX_LENGTH, default="info")
+    subject_type = models.CharField(
+        max_length=NotificationSettings.SUBJECT_TYPE_MAX_LENGTH, blank=True, default=""
+    )
     subject_id = models.CharField(max_length=64, blank=True, default="")
 
     acknowledged_at = models.DateTimeField(null=True, blank=True)

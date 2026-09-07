@@ -1,5 +1,3 @@
-"""WalletEntity: lifecycle (rename, soft-delete, restore) and event-collector wiring."""
-
 from __future__ import annotations
 
 from datetime import datetime, timedelta

@@ -5,8 +5,7 @@ import (
 	"strings"
 )
 
-// GatewayUserHeader carries the Clerk subject the gateway verified. A request
-// that reaches this service without it did not traverse the gateway.
+// GatewayUserHeader carries the Clerk subject the gateway verified.
 const GatewayUserHeader = "X-User-Id"
 
 func authenticatedUserID(request *http.Request) (string, bool) {

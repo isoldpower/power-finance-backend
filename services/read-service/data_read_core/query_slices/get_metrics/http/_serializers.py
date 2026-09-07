@@ -3,7 +3,8 @@ from rest_framework import serializers
 from data_read_core.shared.metrics import PointsCount
 from data_read_core.shared.rest_framework import MoneySerializer
 
-from ..dtos import ALL_SECTIONS, Direction
+from ..config import ALL_SECTIONS
+from ..dtos import Direction
 
 
 class BalanceSheetSerializer(serializers.Serializer):

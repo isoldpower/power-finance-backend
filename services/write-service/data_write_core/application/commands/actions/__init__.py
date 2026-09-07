@@ -1,5 +1,6 @@
+from data_write_core.application.commands.config import SweepSettings
+
 from .expire_lapsed_actions import (
-    DEFAULT_SWEEP_LIMIT,
     ExpireLapsedActionsCommand,
     ExpireLapsedActionsCommandHandler,
 )
@@ -15,7 +16,7 @@ from .resolve_action import (
 )
 
 __all__ = [
-    "DEFAULT_SWEEP_LIMIT",
+    "SweepSettings.DEFAULT_LIMIT",
     "EmptyResolutionsError",
     "ExpireLapsedActionsCommand",
     "ExpireLapsedActionsCommandHandler",

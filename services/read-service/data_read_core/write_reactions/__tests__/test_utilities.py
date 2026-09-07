@@ -1,5 +1,3 @@
-"""Shared write-reaction helpers: payload decoding and DB-error swallowing."""
-
 import pytest
 from django.db import DataError, IntegrityError
 from fakes import make_event

@@ -7,9 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 class SagaCoordinator:
-    """Generic linear SAGA orchestrator. Runs `steps` forward in order.
-    If any `forward()` raises, the already completed steps are compensated"""
-
     def __init__(self, steps: list[SagaStep[Any]]) -> None:
         if not steps:
             raise ValueError("SagaCoordinator requires at least one step")

@@ -9,8 +9,6 @@ DEFAULT_DECIMALS = 2
 
 @dataclass(frozen=True)
 class CurrencyRecord:
-    """One row of the ISO-4217 reference table."""
-
     code: str
     name: str
     symbol: str
@@ -27,9 +25,6 @@ class CurrencyRecord:
 
 
 class CurrencyCatalog:
-    """Static reference data, so the table is read once per process and held in
-    memory."""
-
     def __init__(self) -> None:
         self._records: dict[str, CurrencyRecord] = {}
 
@@ -43,11 +38,9 @@ class CurrencyCatalog:
         return self._records
 
     async def listing(self) -> list[CurrencyRecord]:
-        """Every currency, by code — the whole table, in one page."""
         return [record for _, record in sorted((await self.records()).items())]
 
     async def require(self, currency_code: str) -> CurrencyRecord:
-        """The record a request named, refusing one the table does not carry."""
         record = (await self.records()).get(currency_code.strip().upper())
         if record is None:
             raise UnsupportedCurrency(f"Currency {currency_code!r} is not supported")

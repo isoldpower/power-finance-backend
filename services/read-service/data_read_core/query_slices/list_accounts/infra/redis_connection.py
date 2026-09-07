@@ -5,8 +5,7 @@ from redis.asyncio import Redis
 
 from data_read_core.shared.redis_cache import get_redis
 
-CACHE_TTL_SECONDS = 300
-ACCOUNT_CACHE_SCHEMA = "s2"
+from ..config import CacheSchema
 
 
 def get_filter_hash(filters: dict) -> str:
@@ -27,7 +26,7 @@ def get_list_cache_key(
     cursor: str,
 ) -> str:
     return (
-        f"read:accounts:{ACCOUNT_CACHE_SCHEMA}:{user_id}"
+        f"read:accounts:{CacheSchema.VERSION}:{user_id}"
         f":v{version}:f{filter_hash}:l{limit}:c{cursor}"
     )
 

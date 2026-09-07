@@ -5,11 +5,11 @@ from write_service.common.http_contract import ErrorCode
 
 
 class StoreUnavailable(RuntimeError):
-    """Raised when Redis is unreachable; the caller decides fail-open vs fail-closed."""
+    pass
 
 
 class IdempotencyError(APIException):
-    """Base class for all idempotency-related failures."""
+    pass
 
 
 class IdempotencyKeyRequired(IdempotencyError):

@@ -1,10 +1,3 @@
-"""The needs-action queue.
-
-Every action is a different decision but they are NOT different resources: the
-envelope is identical and what varies is `resolutions`. These tests hold that
-line — nothing here branches on `kind`.
-"""
-
 import json
 import uuid
 from datetime import UTC, datetime
@@ -144,9 +137,6 @@ async def _dispatch(message, seq: int) -> None:
     await router.dispatch(make_event(message, outbox_seq=seq))
 
 
-# --- shape ------------------------------------------------------------------
-
-
 async def test_an_action_carries_the_documented_shape():
     await _action(
         source="scheduler",
@@ -180,9 +170,6 @@ async def test_an_action_carries_the_documented_shape():
 
 
 async def test_an_action_about_no_amount_carries_no_money():
-    """Absent rather than zero: an action not about an amount has no money,
-    which is a different thing from one about nothing."""
-
     await _action()
 
     assert body_of(await as_user(ACTIONS))["data"][0]["money"] is None
@@ -223,9 +210,6 @@ async def test_resolutions_carry_their_rendering_hint_and_effect():
 
 
 async def test_the_dismissal_flag_never_reaches_the_client():
-    """It decides which status the write side produces. A client renders
-    buttons; it does not need to know which one the server calls dismissal."""
-
     await _action(
         resolutions=[
             {
@@ -243,13 +227,7 @@ async def test_the_dismissal_flag_never_reaches_the_client():
     assert "dismissal" not in resolution
 
 
-# --- ordering and filters ---------------------------------------------------
-
-
 async def test_the_queue_leads_with_urgency():
-    """Unlike the notification feed this IS a list to be worked through, so a
-    critical action outranks an older informational one."""
-
     await _action(title="old critical", severity="critical", created_at=JANUARY)
     await _action(title="new info", severity="info", created_at=MARCH)
     await _action(title="mid warning", severity="warning", created_at=FEBRUARY)
@@ -294,9 +272,6 @@ async def test_status_selects_another_slice_of_the_queue():
 
 
 async def test_both_producers_share_one_collection():
-    """Splitting them would force the client to merge two independently ordered
-    lists, which cannot be paginated by keyset."""
-
     await _action(title="from assistant", source="assistant")
     await _action(title="from scheduler", source="scheduler")
 
@@ -321,9 +296,6 @@ async def test_severity_narrows_the_queue():
     [("status", "archived"), ("source", "cron"), ("severity", "apocalyptic")],
 )
 async def test_an_unknown_filter_value_is_rejected(parameter: str, value: str):
-    """Quietly answering about a different slice than the caller asked for is
-    worse than refusing."""
-
     response = await as_user(f"{ACTIONS}?{parameter}={value}")
 
     assert response.status_code == 422
@@ -353,9 +325,6 @@ async def test_the_queue_pages_by_urgency_then_recency():
 
     assert [row["title"] for row in first["data"]] == ["critical-2", "critical-1"]
     assert [row["title"] for row in second["data"]] == ["critical-0", "info"]
-
-
-# --- projection -------------------------------------------------------------
 
 
 def _raised(action_id: str, user_id: int, **overrides) -> ActionRaised:
@@ -397,9 +366,6 @@ def _raised(action_id: str, user_id: int, **overrides) -> ActionRaised:
 
 
 async def test_a_raised_event_projects_the_whole_action():
-    """The event carries the resolutions because the read side has no way to
-    know what the producer decided to offer."""
-
     await _dispatch(_raised(str(uuid.uuid4()), await _user_id()), seq=1)
 
     row = body_of(await as_user(ACTIONS))["data"][0]
@@ -412,9 +378,6 @@ async def test_a_raised_event_projects_the_whole_action():
 
 
 async def test_a_recurring_condition_updates_one_row_rather_than_appending():
-    """A daily check until payday bumps `occurrences` on ONE action instead of
-    burying the queue it is trying to surface."""
-
     action_id = str(uuid.uuid4())
     user_id = await _user_id()
 
@@ -496,9 +459,6 @@ async def test_dismissal_projects_as_dismissed_not_resolved():
 
 
 async def test_a_redelivered_answer_cannot_restate_the_first_one():
-    """Only a PENDING row is answered, so a replay cannot turn a dismissal into
-    a resolution or move `resolved_at`."""
-
     action = await _action()
     common = dict(
         action_id=str(action.id),

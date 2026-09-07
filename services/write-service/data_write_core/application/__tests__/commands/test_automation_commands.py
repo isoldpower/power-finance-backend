@@ -1,10 +1,3 @@
-"""Authoring a rule, and everything a rule is refused for.
-
-Refusing at CREATE time is the point: a rule that cannot work is one the user
-should hear about while they are still looking at the form, not one that quietly
-never fires.
-"""
-
 import pytest
 
 from data_write_core.domain.automations import (
@@ -29,9 +22,6 @@ def refusal_of(call) -> AutomationRefusal:
     return failure.value
 
 
-# --- triggers ---------------------------------------------------------------
-
-
 def test_an_event_trigger_with_a_condition_is_accepted():
     validate_trigger(
         {"type": "event", "event": "transaction.created", "filter_body": {"and": [COFFEE]}}
@@ -39,14 +29,10 @@ def test_an_event_trigger_with_a_condition_is_accepted():
 
 
 def test_a_schedule_trigger_without_a_condition_is_accepted():
-    """`filter_body: null` means "always"."""
-
     validate_trigger({"type": "schedule", "schedule": "monthly", "filter_body": None})
 
 
 def test_sending_the_selector_that_does_not_belong_is_a_conflict():
-    """Requests supply ONE of `event` / `schedule`; responses carry both."""
-
     refusal = refusal_of(
         lambda: validate_trigger(
             {"type": "event", "event": "transaction.created", "schedule": "daily"}
@@ -69,9 +55,6 @@ def test_an_unknown_trigger_type_is_refused():
 
 
 def test_the_condition_is_checked_against_the_trigger_s_subject():
-    """An event trigger validates against transactions. `zero_balance` is a
-    wallet field, so it cannot appear on one."""
-
     refusal = refusal_of(
         lambda: validate_trigger(
             {
@@ -104,13 +87,7 @@ def test_a_malformed_condition_names_the_offending_node():
     assert refusal.path == "trigger.filter_body.and[1]"
 
 
-# --- effects ----------------------------------------------------------------
-
-
 def test_a_rule_needs_at_least_one_effect():
-    """A rule with no effects matches and does nothing, which is never what the
-    user meant."""
-
     assert refusal_of(lambda: validate_effects([], "event")).path == "effects"
 
 
@@ -121,8 +98,6 @@ def test_an_unknown_effect_type_is_refused():
 
 
 def test_set_category_cannot_apply_to_a_scheduled_rule():
-    """A scheduled rule scans wallets and has no transaction to categorise."""
-
     refusal = refusal_of(lambda: validate_effects([CATEGORISE], "schedule"))
 
     assert refusal.detail_code == "effect_subject_mismatch"
@@ -135,9 +110,6 @@ def test_notify_applies_to_either_subject():
 
 
 def test_params_must_be_exactly_what_the_effect_documents():
-    """No other keys are accepted inside `params`: an unknown key is a typo the
-    user should hear about, not a silently ignored setting."""
-
     refusal = refusal_of(
         lambda: validate_effects(
             [{"type": "set_category", "params": {"category": "D", "colour": "red"}}],
@@ -169,9 +141,6 @@ def test_an_unknown_severity_is_refused():
 
 
 def test_a_transfer_takes_money_as_a_decimal_string():
-    """The same money grammar the rest of the API takes: a JSON number here
-    means a client regressed to floats."""
-
     refusal = refusal_of(
         lambda: validate_effects(
             [
@@ -228,13 +197,7 @@ def test_a_well_formed_transfer_is_accepted():
     )
 
 
-# --- the rule registry ------------------------------------------------------
-
-
 def test_every_effect_type_has_a_rule():
-    """A type with no rule would save unvalidated and fail at run time, so the
-    gap is caught here rather than in a user's automation."""
-
     from data_write_core.domain.automations import EFFECT_RULES, EffectType
 
     assert set(EFFECT_RULES) == {member.value for member in EffectType}
@@ -247,9 +210,6 @@ def test_each_rule_answers_for_its_own_type():
 
 
 def test_only_set_category_is_tied_to_a_subject():
-    """Every other effect applies to a transaction and a wallet alike; tying one
-    down is what `effect_subject_mismatch` reports."""
-
     from data_write_core.domain.automations import EFFECT_RULES
 
     tied = {effect_type for effect_type, rule in EFFECT_RULES.items() if rule.subject is not None}
@@ -278,9 +238,6 @@ def test_an_effect_without_a_type_is_refused_as_an_unknown_type():
 
 
 def test_a_string_is_not_a_list_of_effects():
-    """`effects` is an array; a bare string is not one effect, it is a client
-    that got the shape wrong."""
-
     assert refusal_of(lambda: validate_effects("notify", "event")).path == "effects"
 
 

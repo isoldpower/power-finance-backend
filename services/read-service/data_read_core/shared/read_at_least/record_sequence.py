@@ -7,8 +7,6 @@ from .models import AppliedOutboxSeq
 
 
 async def record_applied_seq(user_id: int, outbox_seq: int) -> None:
-    """Bump the user's applied outbox seq to ``max(current, outbox_seq)``."""
-
     updated_record = await AppliedOutboxSeq.objects.filter(user_id=user_id).aupdate(
         applied_seq=Greatest("applied_seq", Value(outbox_seq))
     )

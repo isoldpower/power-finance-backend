@@ -1,5 +1,4 @@
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from write_service.common.idempotency import idempotent
 
@@ -17,13 +16,7 @@ from ...serializers import (
 )
 from ..mixins import CommandResponseMixin
 from .base import WebhookView
-
-WEBHOOK_ID_PARAMETER = OpenApiParameter(
-    "id",
-    type=OpenApiTypes.UUID,
-    location=OpenApiParameter.PATH,
-    description="Webhook ID",
-)
+from .config import WEBHOOK_ID_PARAMETER
 
 
 class WebhookEventListView(WebhookView, CommandResponseMixin):

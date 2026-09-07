@@ -9,8 +9,6 @@ from ..page_request import PageRequest
 
 
 def keyset_predicate(read_order: SortOrder, anchor: list[Any]) -> Q:
-    """Rows lying past the anchor in the order the store walks in."""
-
     comparisons: list[Q] = []
     preceding_equal = Q()
 
@@ -22,8 +20,6 @@ def keyset_predicate(read_order: SortOrder, anchor: list[Any]) -> Q:
 
 
 def apply_keyset(queryset: QuerySet, request: PageRequest) -> QuerySet:
-    """Anchor, order and slice a queryset for one page (plus the lookahead row)."""
-
     read_order = request.read_order
     anchor = request.anchor
 

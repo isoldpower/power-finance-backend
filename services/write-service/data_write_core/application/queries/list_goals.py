@@ -36,9 +36,6 @@ class ListFallbackGoalsQueryHandler:
             user_id=query.user_id,
             page=query.page,
         )
-        # Gathered positionally rather than from a splatted list: the splat makes
-        # both results one joined type, which is how `total, *goal_dtos` came to
-        # unpack the page into a list holding a list.
         total, goal_dtos = await asyncio.gather(
             self._goal_repository.count_user_goals(query.user_id),
             asyncio.gather(*(self._load_goal_dto(goal) for goal in goals)),

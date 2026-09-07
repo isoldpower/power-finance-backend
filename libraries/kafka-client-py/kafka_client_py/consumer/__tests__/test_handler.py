@@ -13,8 +13,8 @@ from kafka_client_py import (
     RetryPolicy,
     RetryPublisher,
     TransientError,
+    headers as H,
 )
-from kafka_client_py import headers as H
 
 
 def _wire(policy: RetryPolicy, user_handler):

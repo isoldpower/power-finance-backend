@@ -1,5 +1,4 @@
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 
 from data_read_core.shared.http_contract import ok
 from data_read_core.shared.logging import (
@@ -8,7 +7,6 @@ from data_read_core.shared.logging import (
     log_request_served,
 )
 from data_read_core.shared.pagination import ACTION_QUEUE, PageRequest, build_page
-from data_read_core.shared.postgres_orm import ActionSeverity, ActionSource, ActionStatus
 from data_read_core.shared.read_at_least import read_at_least_gate
 from data_read_core.shared.rest_framework import (
     CURSOR_PARAMETER,
@@ -17,35 +15,16 @@ from data_read_core.shared.rest_framework import (
     async_api_view,
 )
 
+from ..config import (
+    SEVERITY_PARAMETER,
+    SOURCE_PARAMETER,
+    STATUS_PARAMETER,
+)
 from ..dtos import ListActionsQuery
 from ..query_handler import ListActionsQueryHandler
 from ._filters import read_filters
 from ._presenters import present_many
 from ._serializers import PaginatedActionPreviewSerializer
-
-STATUS_PARAMETER = OpenApiParameter(
-    "status",
-    type=OpenApiTypes.STR,
-    location=OpenApiParameter.QUERY,
-    enum=[member.value for member in ActionStatus],
-    description="Which queue state to list. Defaults to `pending`.",
-)
-
-SOURCE_PARAMETER = OpenApiParameter(
-    "source",
-    type=OpenApiTypes.STR,
-    location=OpenApiParameter.QUERY,
-    enum=[member.value for member in ActionSource],
-    description="Restrict to one producer. Absent means both.",
-)
-
-SEVERITY_PARAMETER = OpenApiParameter(
-    "severity",
-    type=OpenApiTypes.STR,
-    location=OpenApiParameter.QUERY,
-    enum=[member.value for member in ActionSeverity],
-    description="Restrict to one severity. Absent means all of them.",
-)
 
 
 @extend_schema(

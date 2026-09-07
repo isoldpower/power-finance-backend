@@ -7,8 +7,7 @@ import (
 	"services/webhook-service/webhook_service/types"
 )
 
-// ErrWebhookNotFound is returned when the endpoint is neither one the caller
-// owns nor one they ever had deliveries for.
+// ErrWebhookNotFound is returned when the endpoint is neither one the caller owns nor one they ever had deliveries for.
 var ErrWebhookNotFound = errors.New("delivery log: webhook not found")
 
 type deliveryLogStore interface {
@@ -21,17 +20,18 @@ type endpointOwnerResolver interface {
 	EndpointOwner(ctx context.Context, webhookID string) (string, error)
 }
 
+// DeliveryLogService answers the delivery log for endpoints a caller owns.
 type DeliveryLogService struct {
 	log       deliveryLogStore
 	endpoints endpointOwnerResolver
 }
 
+// NewDeliveryLogService wires the service over its log and ownership stores.
 func NewDeliveryLogService(log deliveryLogStore, endpoints endpointOwnerResolver) *DeliveryLogService {
 	return &DeliveryLogService{log: log, endpoints: endpoints}
 }
 
-// List answers the delivery log for one endpoint, refusing endpoints the caller
-// has no claim on.
+// List answers the delivery log for one endpoint, refusing endpoints the caller has no claim on.
 func (s *DeliveryLogService) List(
 	ctx context.Context,
 	query types.DeliveryLogQuery,
@@ -57,8 +57,6 @@ func (s *DeliveryLogService) List(
 	return types.DeliveryLogPage{Rows: rows, Total: total}, nil
 }
 
-// owns accepts either a live endpoint the caller registered or a log they
-// already have rows in — deleting a webhook must not delete its history.
 func (s *DeliveryLogService) owns(ctx context.Context, userExternalID, webhookID string) (bool, error) {
 	owner, ownerErr := s.endpoints.EndpointOwner(ctx, webhookID)
 	if ownerErr != nil {

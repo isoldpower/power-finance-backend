@@ -1,6 +1,3 @@
-"""Test settings: a real Postgres test DB (migrations include Postgres-only DDL),
-with ImmuDB/Redis/Kafka patched out."""
-
 import os
 
 from .base import *  # noqa: F401,F403

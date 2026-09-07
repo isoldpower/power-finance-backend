@@ -7,7 +7,6 @@ CURRENCY_KEY = "currency"
 
 
 def format_amount(amount: Decimal, decimals: int) -> str:
-    """Render at exactly `decimals` fraction digits, with no negative zero."""
     quantized = amount.quantize(Decimal(1).scaleb(-decimals))
     if quantized == 0:
         quantized = abs(quantized)
@@ -23,7 +22,6 @@ def money(amount: Decimal, currency: str, decimals: int) -> dict[str, str]:
 
 
 async def amount_at_scale(amount: Decimal | str, currency: str | None) -> str:
-    """Render a stored amount at its own currency's scale."""
     decimals = await CURRENCY_CATALOG.decimals_or_default(currency)
 
     return format_amount(Decimal(str(amount)), decimals)

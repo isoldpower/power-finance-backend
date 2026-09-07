@@ -1,10 +1,6 @@
 from kafka_client_py import (
     ConsumedMessage,
-)
-from kafka_client_py import (
     envelope as KafkaEnvelope,
-)
-from kafka_client_py import (
     headers as KafkaHeaders,
 )
 

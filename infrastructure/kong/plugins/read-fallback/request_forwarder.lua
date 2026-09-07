@@ -1,12 +1,8 @@
--- HTTP forwarding helpers for the read-fallback plugin.
-
 local http   = require "resty.http"
 local config = require "kong.plugins.read-fallback.config"
 
 
 --- Collect the headers to forward upstream.
--- Reads the *current* request headers, which already include everything
--- earlier plugins injected
 local collect_request_headers = function()
     local forwarded = {}
     for name, value in pairs(ngx.req.get_headers()) do
@@ -61,7 +57,6 @@ end
 
 
 --- Return a forwarded upstream response to the client verbatim.
--- Terminates the request — callers should `return forward.respond(...)`.
 local respond = function(response)
     return kong.response.exit(
         response.status,

@@ -1,5 +1,3 @@
-"""`GET /assistant/overview` — the cached, pollable half of the panel."""
-
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
@@ -16,9 +14,10 @@ from service_core.shared.db_connection import (
 )
 from service_core.shared.http_contract import ApiError, error_response
 
-from .. import OverviewCache, OverviewService, SqlAlchemyActivitySource
-from ..contracts import ActivitySource, ConversationActivity
-from ..http import build_overview_router
+from .. import InMemoryOverviewCache, OverviewService, SqlAlchemyActivitySource
+from ..application.contracts import ActivitySource
+from ..application.dtos import ConversationActivityDTO
+from ..presentation.http import build_overview_router
 
 AUTHENTICATED = {"X-User-Id": "clerk_7"}
 OVERVIEW = "/api/v1/assistant/overview"
@@ -30,10 +29,10 @@ class CountingActivitySource(ActivitySource):
     def __init__(self) -> None:
         self.reads = 0
 
-    async def read(self, external_id: str) -> ConversationActivity:
+    async def read(self, external_id: str) -> ConversationActivityDTO:
         self.reads += 1
 
-        return ConversationActivity(
+        return ConversationActivityDTO(
             spend_currency="USD",
             spend_this_month=Decimal(0),
             spend_last_month=Decimal(0),
@@ -57,7 +56,7 @@ def _client(service: OverviewService) -> TestClient:
 def _live_service() -> OverviewService:
     return OverviewService(
         activity=SqlAlchemyActivitySource(get_session_factory()),
-        cache=OverviewCache(),
+        cache=InMemoryOverviewCache(),
     )
 
 
@@ -94,9 +93,6 @@ async def test_the_panel_is_signals_and_prompts():
 
 
 async def test_signal_values_are_strings_not_numbers():
-    """The one deliberate formatting exception in the API. A client renders
-    them verbatim and must never parse one back into a number."""
-
     await _user()
 
     signals = (
@@ -121,8 +117,6 @@ async def test_uncategorised_transactions_are_counted():
 
 
 async def test_a_user_with_no_ledger_still_gets_a_panel():
-    """The conversation can start before `UserSynced` has arrived."""
-
     response = _client(_live_service()).get(OVERVIEW, headers=AUTHENTICATED)
 
     assert response.status_code == 200
@@ -131,7 +125,7 @@ async def test_a_user_with_no_ledger_still_gets_a_panel():
 
 async def test_the_read_is_cached_and_says_so():
     activity = CountingActivitySource()
-    client = _client(OverviewService(activity=activity, cache=OverviewCache()))
+    client = _client(OverviewService(activity=activity, cache=InMemoryOverviewCache()))
 
     first = client.get(OVERVIEW, headers=AUTHENTICATED).json()
     second = client.get(OVERVIEW, headers=AUTHENTICATED).json()
@@ -143,7 +137,7 @@ async def test_the_read_is_cached_and_says_so():
 
 async def test_the_cache_is_per_user():
     activity = CountingActivitySource()
-    client = _client(OverviewService(activity=activity, cache=OverviewCache()))
+    client = _client(OverviewService(activity=activity, cache=InMemoryOverviewCache()))
 
     client.get(OVERVIEW, headers=AUTHENTICATED)
     other = client.get(OVERVIEW, headers={"X-User-Id": "clerk_9"}).json()
@@ -154,7 +148,7 @@ async def test_the_cache_is_per_user():
 
 async def test_an_expired_entry_is_recomputed():
     activity = CountingActivitySource()
-    client = _client(OverviewService(activity=activity, cache=OverviewCache(ttl_seconds=0)))
+    client = _client(OverviewService(activity=activity, cache=InMemoryOverviewCache(ttl_seconds=0)))
 
     client.get(OVERVIEW, headers=AUTHENTICATED)
     second = client.get(OVERVIEW, headers=AUTHENTICATED).json()

@@ -14,6 +14,4 @@ class CurrencyRepository(ABC):
 
     @abstractmethod
     async def get_decimals_by_code(self) -> dict[str, int]:
-        """Fraction digits per currency code — the contract's `decimals`."""
-
         raise NotImplementedError()

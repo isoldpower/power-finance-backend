@@ -1,8 +1,4 @@
 -- Centralised error response builders for the read-at-least plugin.
---
--- Each helper calls `kong.response.exit`, which terminates the
--- request immediately — callers should `return messages.X()` so the
--- access phase short-circuits cleanly without further processing.
 
 
 --- 400 response for a structurally invalid Read-At-Least header.

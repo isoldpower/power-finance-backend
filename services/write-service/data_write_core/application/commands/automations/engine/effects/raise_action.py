@@ -1,5 +1,6 @@
 from typing import Any
 
+from data_write_core.application.commands.config import ActionKind
 from data_write_core.domain.automations import RunContext
 from data_write_core.domain.entities import ActionSource
 from data_write_core.domain.value_objects import (
@@ -12,8 +13,6 @@ from ....actions.raise_action import (
     RaiseActionCommand,
     RaiseActionCommandHandler,
 )
-
-AUTOMATION_KIND = "automation"
 
 AUTOMATION_RESOLUTIONS: tuple[ActionResolution, ...] = (
     ActionResolution(
@@ -41,7 +40,7 @@ class RaiseActionEffect(EffectExecutor):
                 user_id=context.user_id,
                 user_external_id=context.user_external_id,
                 source=ActionSource.SCHEDULER,
-                kind=AUTOMATION_KIND,
+                kind=ActionKind.AUTOMATION,
                 severity=str(params["severity"]),
                 title=str(params["title"]),
                 body=str(params["body"]),

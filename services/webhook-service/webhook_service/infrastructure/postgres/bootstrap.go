@@ -6,6 +6,7 @@ import (
 	"github.com/power-finance/kafka-client-go/consumer/dedupe"
 )
 
+// Stores is every Postgres-backed store the services layer depends on.
 type Stores struct {
 	ConfigStore      *ConfigStore
 	DeliveryStore    *DeliveryStore
@@ -13,8 +14,7 @@ type Stores struct {
 	DedupeStore      *dedupe.PostgresStore
 }
 
-// Bootstrap opens the pool and builds the stores; the returned cleanup closes
-// the pool and must be called on shutdown.
+// Bootstrap opens the pool and builds the stores; the returned cleanup closes the pool and must be called on shutdown.
 func Bootstrap(
 	rootContext context.Context,
 	config Config,

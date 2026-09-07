@@ -5,7 +5,7 @@ from data_read_core.shared.money import CurrencyRecord
 
 @dataclass(frozen=True)
 class ListCurrenciesQuery:
-    """No user, no filters, no page. The table is the same for everyone."""
+    pass
 
 
 @dataclass(frozen=True)

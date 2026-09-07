@@ -9,9 +9,6 @@ from .value_codecs import TEXT_CODEC, ValueCodec
 
 @dataclass(frozen=True)
 class SortKey:
-    """One component of an ordering: the field, the direction it runs in, and
-    how its values survive a round trip through a cursor."""
-
     field: str
     direction: SortDirection = SortDirection.DESCENDING
     codec: ValueCodec = TEXT_CODEC

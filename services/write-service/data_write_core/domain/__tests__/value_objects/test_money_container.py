@@ -41,19 +41,11 @@ class MoneyContainerRefTests(SimpleTestCase):
         assert _reference(MoneyContainerKind.WALLET).is_closed is False
 
     def test_the_kind_serialises_as_its_wire_value(self) -> None:
-        """The proto field and the read-side column both carry the bare string."""
-
         assert str(MoneyContainerKind.WALLET) == "wallet"
         assert str(MoneyContainerKind.GOAL) == "goal"
 
 
 class ContainerProtocolTests(SimpleTestCase):
-    """Both aggregates have to satisfy the protocol the transaction path depends on.
-
-    A structural check rather than a nominal one: nothing inherits from the protocol,
-    so only this asserts the two stay interchangeable.
-    """
-
     def test_the_wallet_aggregate_is_a_money_container(self) -> None:
         from datetime import datetime
 

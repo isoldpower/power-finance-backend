@@ -124,8 +124,6 @@ async def test_list_wallets_returns_dtos_with_balances_and_total():
 
 
 async def test_list_wallets_pages_forward_from_a_cursor():
-    """The second page starts after the first page's last row, not at an offset."""
-
     wallets = [
         make_wallet(WALLET_A, created_at=datetime(2026, 1, 2)),
         make_wallet(WALLET_B, created_at=datetime(2026, 1, 1)),
@@ -152,9 +150,6 @@ async def test_list_wallets_pages_forward_from_a_cursor():
 
 
 async def test_get_transaction_folds_its_flows_into_one_amount():
-    """The amount is the fold of the ledger, not a stored column — an
-    adjustment moves it without anything being rewritten."""
-
     wallet_repo = FakeWalletRepository([make_wallet(WALLET_A, currency="GBP")])
     flow_repo = FakeMoneyFlowRepository(
         unsettled={
@@ -208,9 +203,6 @@ async def test_get_transaction_missing_raises():
 
 
 async def test_get_transaction_still_resolves_a_cancelled_one():
-    """DELETE removes a transaction from lists and search, not from existence,
-    and the amount it reports is the one it was FOR."""
-
     wallet_repo = FakeWalletRepository([make_wallet(WALLET_A, currency="USD")])
     flow_repo = FakeMoneyFlowRepository(
         unsettled={
@@ -308,8 +300,6 @@ async def test_list_transactions_carries_the_wallet_label():
 
 
 async def test_list_goals_returns_the_goals_themselves_not_a_list_holding_them():
-    """The page is flat. Gathering the count alongside the goals used to unpack the
-    whole page into the first slot, which typed as a list either way."""
     goal_repository = FakeGoalRepository(
         [
             make_goal(GOAL_A, title="Laptop", created_at=datetime(2026, 3, 1)),
@@ -381,9 +371,6 @@ def _action_page(limit: int = 25, cursor=None) -> PageRequest:
 
 
 async def test_the_action_queue_leads_with_urgency_not_recency():
-    """The whole reason actions need their own sort order: a critical action
-    raised yesterday outranks an informational one raised a minute ago."""
-
     repository = FakeActionRepository(
         [
             make_action(ACTION_INFO, severity="info", created_at=datetime(2026, 3, 1)),
@@ -405,9 +392,6 @@ async def test_the_action_queue_leads_with_urgency_not_recency():
 
 
 async def test_an_action_carries_the_rank_its_cursor_sorts_on():
-    """`severity_rank` never reaches the client, but the page builder reads it
-    off the DTO to mint the cursor — so it has to survive the mapping."""
-
     repository = FakeActionRepository([make_action(ACTION_CRITICAL, severity="critical")])
     handler = ListFallbackActionsQueryHandler(repository)
 
@@ -484,9 +468,6 @@ async def test_the_action_cursor_survives_a_page_turn():
 
 
 async def test_a_soft_deleted_rule_is_gone_from_the_automation_list():
-    """The read projection keeps the row but the list hides it. The fallback has
-    to hide it too, or a stale read would resurrect a rule the user deleted."""
-
     repository = FakeAutomationRepository(
         [
             make_automation(AUTOMATION_A),

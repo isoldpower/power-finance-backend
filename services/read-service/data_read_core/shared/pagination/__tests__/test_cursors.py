@@ -34,9 +34,6 @@ def test_cursor_is_opaque_and_url_safe():
 
 
 def test_cursor_minted_for_another_query_is_rejected():
-    """A cursor is bound to the order and filter tree that produced it, so an
-    edited filter fails instead of walking a different result set."""
-
     token = CURSOR_CODEC.encode(PageDirection.NEXT, ["a", "b"], FINGERPRINT)
     other_query = query_fingerprint(CREATED_AT_DESC, {"field_name": "amount"})
 

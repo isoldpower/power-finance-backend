@@ -1,5 +1,3 @@
-"""The caller a handler sees: identity and preferences bound together."""
-
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -8,9 +6,9 @@ from rest_framework.exceptions import AuthenticationFailed
 
 from data_write_core.domain.entities import InternalUserEntity
 from data_write_core.presentation.http.auth import (
-    GATEWAY_USER_HEADER,
     GatewayUser,
     GatewayUserHeaderAuthentication,
+    HeaderName,
     IsGatewayAuthenticated,
     UserPreferences,
 )
@@ -46,8 +44,6 @@ def authentication():
             "data_write_core.presentation.http.auth.gateway_authentication.get_repository_registry",
             return_value=registry,
         ),
-        # `preferences` binds the function at import time, so the patch has to
-        # land on its module, not on the one that defines it.
         patch(
             "data_write_core.presentation.http.auth.preferences.load_scales",
             return_value=SCALES,
@@ -70,9 +66,6 @@ def test_permission_allows_a_caller_the_gateway_resolved():
 
 
 def test_permission_denies_a_bare_domain_entity():
-    """The wrapper is the check. An entity loaded outside a request has no
-    preferences and never came through the gateway."""
-
     request = SimpleNamespace(user=internal_user())
 
     assert IsGatewayAuthenticated().has_permission(request, view=None) is False
@@ -89,7 +82,7 @@ async def test_authenticate_binds_preferences_to_the_caller(authentication):
     caller, auth = await authentication.authenticate(
         request_with(
             **{
-                GATEWAY_USER_HEADER: "ext-1",
+                HeaderName.GATEWAY_USER: "ext-1",
                 "X-User-Currency": "EUR",
                 "X-User-Timezone": "Europe/Berlin",
             }
@@ -103,24 +96,23 @@ async def test_authenticate_binds_preferences_to_the_caller(authentication):
 
 
 async def test_a_caller_without_preferences_gets_the_documented_defaults(authentication):
-    caller, _ = await authentication.authenticate(request_with(**{GATEWAY_USER_HEADER: "ext-1"}))
+    caller, _ = await authentication.authenticate(
+        request_with(**{HeaderName.GATEWAY_USER: "ext-1"})
+    )
 
     assert caller.preferences == DEFAULTS
 
 
 async def test_a_forged_currency_cannot_pick_its_own_reporting_currency(authentication):
-    """`unsafeMetadata` is client-writable, so a bad preference degrades
-    presentation rather than failing the request."""
-
     caller, _ = await authentication.authenticate(
-        request_with(**{GATEWAY_USER_HEADER: "ext-1", "X-User-Currency": "XYZ"})
+        request_with(**{HeaderName.GATEWAY_USER: "ext-1", "X-User-Currency": "XYZ"})
     )
 
     assert caller.preferences.currency == "USD"
 
 
 async def test_a_request_that_skipped_the_gateway_is_rejected(authentication):
-    with pytest.raises(AuthenticationFailed, match=GATEWAY_USER_HEADER):
+    with pytest.raises(AuthenticationFailed, match=HeaderName.GATEWAY_USER):
         await authentication.authenticate(request_with())
 
 

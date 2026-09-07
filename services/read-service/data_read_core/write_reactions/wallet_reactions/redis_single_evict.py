@@ -11,8 +11,6 @@ from .._utilities import decode_payload
 
 
 class EvictWalletCache(Effect):
-    """Evict the single-wallet cache entry keyed by wallet id."""
-
     def __init__(self, payload_type: type[Message] = WalletDeleted) -> None:
         self._payload_type = payload_type
 

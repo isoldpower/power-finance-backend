@@ -9,9 +9,6 @@ from .._utilities import decode_payload
 
 
 class BumpWebhookListVersion(Effect):
-    """Invalidate every cached webhook-list page for the user by bumping the
-    per-user list version counter."""
-
     def __init__(self, payload_type: type[Message]) -> None:
         self._payload_type = payload_type
 

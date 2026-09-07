@@ -8,8 +8,6 @@ from .rate_snapshot import RateSnapshot
 
 
 class ExchangeRateService:
-    """Cache in front of a feed, with an age limit the cache TTL cannot express."""
-
     def __init__(
         self,
         provider: RateProvider,
@@ -35,8 +33,6 @@ class ExchangeRateService:
         return usable
 
     async def rate_between(self, base_code: str, quote_code: str):
-        """The multiplier taking one unit of `base_code` to `quote_code`."""
-
         snapshot = await self.snapshot_for(base_code)
         rate = snapshot.rate_to(quote_code)
         if rate is None:

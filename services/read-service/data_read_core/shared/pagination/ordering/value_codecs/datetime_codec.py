@@ -11,8 +11,6 @@ UTC_OFFSET = "+00:00"
 
 @dataclass(frozen=True)
 class DateTimeCodec(ValueCodec):
-    """Timestamps travel as ISO-8601 text."""
-
     def _encode(self, value: Any) -> Any:
         return value.isoformat() if isinstance(value, datetime) else str(value)
 

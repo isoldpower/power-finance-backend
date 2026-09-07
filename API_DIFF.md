@@ -71,10 +71,13 @@ what a "transaction" actually is underneath, and where amount adjustments went.
   balance is the separate question, and it does return to where it stood;
 - cancelled transactions leave `GET /transactions` and `POST /transactions/search`
   but still resolve by id. There is no `include_deleted` flag;
-- **`occurred_at` is ours, not the target's.** It records when the money moved,
-  as distinct from when the row was written, and it is filterable on
-  `POST /transactions/search`. The target orders and reports on `created_at`
-  alone, and so do we — `occurred_at` is additive;
+- **`occurred_at` is ours, but it is filter-only and currently a COPY of
+  `created_at`.** The projection writes `occurred_at = created_at` in both
+  Postgres and Elasticsearch, no presenter emits it, and no request body accepts
+  it. It is filterable on `POST /transactions/search` and returns exactly what
+  filtering `created_at` returns. The column is there for the day recording time
+  and value date diverge; that day has not come, so a client has nothing to
+  build on it yet;
 - `GET /transactions/{id}` returns `postings: []` and `analysis: null` rather
   than omitting them, so a client never has to branch on the keys existing. Both
   are filled by the Accounts slice, which dispatches AFTER the write returns —
@@ -736,9 +739,11 @@ What differs beyond the transport:
   (`#RGB` / `#RRGGBB` / `#RRGGBBAA`) — the target shows one but names no format;
 - `zero_balance` and `opening_balance` are flat decimal strings validated
   against the wallet currency's scale, as the target describes;
-- `POST /webhooks` takes `{title, url}`; `PATCH /webhooks/{id}` takes
-  `{title?, url?}`. Neither accepts `enabled`;
-- `POST /webhooks/{id}/events` takes `{event_type}`, not `{event}`.
+- `POST /webhooks` takes `{title, url, enabled?}` (defaulting to `true`);
+  `PATCH /webhooks/{id}` takes `{title?, url?, enabled?}`. Both accept `enabled`
+  — that is how an endpoint is paused without deleting it;
+- `POST /webhooks/{id}/events` takes `{event}`, matching the field name the
+  subscription resource carries. It is NOT `event_type`.
 
 ## Behaviour
 
@@ -757,7 +762,9 @@ What differs beyond the transport:
   no error code covers staleness; in practice a search sent immediately after a
   write (with `Read-At-Least` in play) may answer `507` with an error envelope.
   Treat it as "retry shortly", not as a failure to show the user. Every other
-  read is re-routed and never shows it;
+  read is re-routed and never shows it. **Discriminate on the status, not the
+  code**: the envelope renderer has no 507 mapping, so `error.code` is the
+  generic `internal_error` rather than anything staleness-specific;
 - **Three error codes exist that the target's table does not list.** Clients must
   tolerate unknown codes anyway, but these are the ones we actually emit:
   `service_unavailable` (503, a dependency is down — retrying is correct),
@@ -765,32 +772,34 @@ What differs beyond the transport:
   conflict the contract names no specific code for). There is also one extra
   `details[].code`: `invalid`, for a field of the wrong shape, since the Detail
   Codes table has no generic member for that;
-- **Filterable fields are narrower than documented.** `POST /transactions/search`
-  accepts `wallet_id`, `amount`, `currency`, `created_at` and `occurred_at`
-  (ours, not in the target). It does NOT yet accept `chain_id`, `name`,
-  `category`, `type` or `origin` — those columns do not exist, and sending them
-  fails with 422 / `filter_unknown_field`. `POST /wallets/search` accepts the
-  documented set (`name`, `currency`, `balance`, `created_at`) in full;
-- **No `order` param anywhere.** Every collection is `created_at DESC, id DESC`.
-  Transactions do not group by `chain_id` and wallets do not lead with
-  `favorite`, both because those columns do not exist yet;
+- **Filterable fields are wider than the target, not narrower.**
+  `POST /transactions/search` accepts `wallet_id`, `chain_id`, `amount`,
+  `currency`, `name`, `category`, `type`, `origin`, `created_at` and
+  `occurred_at` — the last is ours, not in the target. All ten are indexed and
+  live. `POST /wallets/search` accepts the documented set (`name`, `currency`,
+  `balance`, `created_at`) in full; `POST /webhooks/search` accepts `title`,
+  `url`, `enabled`, `created_at`;
+- **No `order` param anywhere.** Sort order is fixed per collection: transactions
+  are `created_at DESC, chain_sort ASC, id DESC` so a chain's legs group
+  together, wallets are `favorite DESC, created_at DESC, id DESC`, actions are
+  `severity DESC, created_at DESC, id DESC`, and everything else is
+  `created_at DESC, id DESC`;
 - **`meta.cached` is present on reads served by the read side.** Reads answered
   by the write-side fallback always report `cached: false`;
 - **Mutations carry `Idempotent-Replayed: true` as well as
   `meta.idempotent_replay`.** The header is a convenience; the meta key is the
   contract, as documented;
-- **The SSE stream is a general event feed, not a notification feed.** It is
-  wired to the user's outbox, so it emits EVERY domain event for that user —
-  `TransactionCreated`, `WalletUpdated`, and so on — with the domain event name
-  in `event:` and the raw outbox payload in `data:`. The target's
-  `notification.created` / `notification.acknowledged` names and their
-  notification-resource payloads do not exist. A client must ignore event names
-  it does not recognise, and cannot treat `data:` as a notification resource;
-- **The stream does not resume.** `id:` is the outbox event id, but
-  `Last-Event-ID` is not read on reconnect and the consumer starts from the
-  live end of the topic. Anything produced while disconnected is lost — refetch
-  `GET /notifications` after every reconnect, which the target already
-  recommends as the safe path;
+- **The SSE stream carries exactly two events**, `notification.created` (the
+  full notification resource) and `notification.acknowledged` (`{id,
+  acknowledged_at}`). It used to relay every outbox frame for the user —
+  `TransactionCreated`, `WalletUpdated` and the rest — and those are gone. The
+  SSE `id:` is the notification id. Ignore event names you do not recognise, as
+  the target requires, but do not expect domain events among them;
+- **The stream does not resume.** `Last-Event-ID` is not read on reconnect and
+  push-service keeps no backlog — it is a stateless broadcast consumer reading
+  from the live end of the topic. Anything produced while disconnected is lost:
+  refetch `GET /notifications` after every reconnect, which the target already
+  names as the safe path;
 - **The OpenAPI documents now generate cleanly**, at `/api/schema` on each
   service. If you generate a client from them, the response component names
   changed: a list item is `<Resource>Preview`, a detail item is

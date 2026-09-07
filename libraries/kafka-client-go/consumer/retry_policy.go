@@ -73,5 +73,6 @@ func (p RetryPolicy) ComputeRetryAt(retryTopicAttempt int, now time.Time) time.T
 	if now.IsZero() {
 		now = time.Now().UTC()
 	}
+
 	return now.Add(p.ComputeBackoff(retryTopicAttempt))
 }

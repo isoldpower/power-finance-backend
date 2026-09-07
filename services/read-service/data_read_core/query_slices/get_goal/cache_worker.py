@@ -2,8 +2,9 @@ import json
 
 from redis.asyncio import Redis
 
+from .config import CacheSettings
 from .dtos import GoalDTO
-from .infra import CACHE_TTL_SECONDS, get_single_cache_key
+from .infra import get_single_cache_key
 
 
 class CacheWorker:
@@ -35,5 +36,5 @@ class CacheWorker:
         await self._redis_client.set(
             cache_key,
             json.dumps(goal.to_cache()),
-            ex=CACHE_TTL_SECONDS,
+            ex=int(CacheSettings.TTL_SECONDS),
         )

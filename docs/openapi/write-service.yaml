@@ -1,0 +1,3296 @@
+openapi: 3.0.3
+info:
+  title: Power Finance — Write Service API
+  version: 0.1.0
+  description: Command side of the CQRS architecture. Synchronous, consistency-oriented
+    writes.
+paths:
+  /api/v1/actions/{action_id}/resolve:
+    post:
+      operationId: actions_resolve
+      description: |-
+        Choose one of the action's offered resolutions.
+
+        Choosing one whose `applies` was true performs the described change to other resources as part of the same request, and the response then carries `X-Write-Version` so you can send `Read-At-Least` on the follow-up read. When `applies` was false nothing outside the action changes and no write version is emitted.
+
+        `resolutions` comes back EMPTY: a resolved action offers no further choices, and an empty array rather than a stale list is what stops a client re-rendering buttons that no longer work.
+
+        Answering is terminal — a second answer is 409 `action_already_resolved`. `Idempotency-Key` is optional but recommended for resolutions that apply, since those move real data.
+      summary: Answer an action
+      parameters:
+      - in: path
+        name: action_id
+        schema:
+          type: string
+          format: uuid
+        description: Action ID
+        required: true
+      tags:
+      - actions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveActionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResolveActionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResolveActionRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedActionResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/automations:
+    post:
+      operationId: automations_create
+      description: |-
+        WHEN something matches, DO something.
+
+        `trigger.filter_body` is the SAME filter tree the `/search` endpoints take, validated against the policy of the trigger's subject: an `event` trigger against transactions, a `schedule` trigger against wallets. `null` means the rule is unconditional.
+      summary: Create an automation rule
+      tags:
+      - automations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAutomationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateAutomationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateAutomationRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAutomationResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/automations/{automation_id}:
+    patch:
+      operationId: automations_update
+      description: |-
+        Partial update, including enabling and disabling.
+
+        There is deliberately no `/toggle`: enabling is SETTING a field, and an endpoint that flips a boolean is not idempotent — two retries leave the rule where it started.
+      summary: Update an automation rule
+      parameters:
+      - in: path
+        name: automation_id
+        schema:
+          type: string
+          format: uuid
+        description: Automation ID
+        required: true
+      tags:
+      - automations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateAutomationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateAutomationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateAutomationRequest'
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAutomationResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+    delete:
+      operationId: automations_destroy
+      description: Soft delete. The rule stops evaluating immediately and comes back
+        with `deleted_at` set.
+      summary: Delete an automation rule
+      parameters:
+      - in: path
+        name: automation_id
+        schema:
+          type: string
+          format: uuid
+        description: Automation ID
+        required: true
+      tags:
+      - automations
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAutomationResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/actions:
+    get:
+      operationId: fallback_actions_list
+      description: |-
+        Always-consistent action queue served from the write side. The gateway routes here when the Read Service is not caught up.
+
+        Ordered `severity_rank DESC, created_at DESC, id DESC`, the same as the read side — a cursor minted there has to keep working here.
+      summary: List the needs-action queue (consistent fallback)
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100.
+      - in: query
+        name: severity
+        schema:
+          type: string
+          enum:
+          - critical
+          - info
+          - warning
+        description: Restrict to one severity. Absent means all of them.
+      - in: query
+        name: source
+        schema:
+          type: string
+          enum:
+          - assistant
+          - scheduler
+        description: Restrict to one producer. Absent means both.
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - dismissed
+          - expired
+          - pending
+          - resolved
+        description: Which queue state to list. Defaults to `pending`.
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedActionResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/automations:
+    get:
+      operationId: fallback_automations_list
+      description: Always-consistent automation list served from the write side. The
+        gateway routes here when the Read Service is not caught up.
+      summary: List automation rules (consistent fallback)
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`.
+      - in: query
+        name: enabled
+        schema:
+          type: boolean
+        description: Restrict to enabled or disabled endpoints. ABSENT means both
+          — it is a tristate, not a boolean defaulting to either value.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100.
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAutomationResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/automations/{automation_id}:
+    get:
+      operationId: fallback_automations_retrieve
+      summary: Get one automation rule (consistent fallback)
+      parameters:
+      - in: path
+        name: automation_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Automation ID
+        required: true
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAutomationResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/goals:
+    get:
+      operationId: fallback_goals_list
+      description: Always-consistent goal list served from the write side. The gateway
+        routes here when the Read Service is not caught up.
+      summary: List goals (consistent fallback)
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100.
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGoalResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/goals/{goal_id}:
+    get:
+      operationId: fallback_goals_retrieve
+      description: The write side has no projected history collection, so this returns
+        the goal without `history`. The read side is the only place that paginates
+        it.
+      summary: Get goal details (consistent fallback)
+      parameters:
+      - in: path
+        name: goal_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Goal ID
+        required: true
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedGoalResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/notifications:
+    get:
+      operationId: fallback_notifications_list
+      description: Always-consistent notification list served from the write side.
+        The gateway routes here when the Read Service is not caught up.
+      summary: List notifications (consistent fallback)
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100.
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/notifications/{notification_id}:
+    get:
+      operationId: fallback_notifications_retrieve
+      summary: Get notification details (consistent fallback)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Notification ID
+        required: true
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedNotificationResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/notifications/count:
+    get:
+      operationId: fallback_notifications_count
+      description: Always-consistent badge counts served from the write side. The
+        gateway routes here when the Read Service is not caught up.
+      summary: Count unacknowledged notifications (consistent fallback)
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedNotificationCountsResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/transactions:
+    get:
+      operationId: fallback_transactions_list
+      description: Always-consistent transaction list served from the immutable ledger.
+        The gateway routes here when the Read Service is not caught up.
+      summary: List transactions (consistent fallback)
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100.
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTransactionResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/transactions/{transaction_id}:
+    get:
+      operationId: fallback_transactions_retrieve
+      summary: Get transaction details (consistent fallback)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Transaction ID
+        required: true
+      - in: path
+        name: transaction_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedTransactionResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/wallets:
+    get:
+      operationId: fallback_wallets_list
+      description: Always-consistent wallet list served from the write side. The gateway
+        routes here when the Read Service is not caught up.
+      summary: List wallets (consistent fallback)
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100.
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWalletResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/wallets/{wallet_id}:
+    get:
+      operationId: fallback_wallets_retrieve
+      summary: Get wallet details (consistent fallback)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Wallet ID
+        required: true
+      - in: query
+        name: period
+        schema:
+          type: string
+          enum:
+          - all_time
+          - last_month
+          - last_week
+          - last_year
+          default: last_month
+        description: Window for the `period` inflow/outflow figures. Every value is
+          a CALENDAR window resolved in your timezone preference, not a rolling count
+          of days.
+      - in: path
+        name: wallet_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWalletDetailResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/webhooks:
+    get:
+      operationId: fallback_webhooks_list
+      description: Always-consistent webhook list served from the write side. The
+        gateway routes here when the Read Service is not caught up.
+      summary: List webhooks (consistent fallback)
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`.
+      - in: query
+        name: enabled
+        schema:
+          type: boolean
+        description: Restrict to enabled or disabled endpoints. ABSENT means both
+          — it is a tristate, not a boolean defaulting to either value.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100.
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWebhookResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/webhooks/{webhook_id}:
+    get:
+      operationId: fallback_webhooks_retrieve
+      summary: Get webhook details (consistent fallback)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      - in: path
+        name: webhook_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWebhookResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/webhooks/{webhook_id}/events:
+    get:
+      operationId: fallback_webhooks_subscriptions_list
+      description: Every event type the webhook is subscribed to. Bounded by the event
+        catalogue, so this endpoint is not paginated.
+      summary: List webhook event subscriptions (consistent fallback)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      - in: path
+        name: webhook_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWebhookSubscriptionResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/goals:
+    post:
+      operationId: goals_create
+      description: Create a savings goal. The goal opens empty — `progress` is derived
+        from the transactions that touch it, so a fresh goal is always at zero. Fund
+        it with POST /transactions/chains.
+      summary: Create a new goal
+      tags:
+      - goals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGoalRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateGoalRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateGoalRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedGoalResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/goals/{goal_id}:
+    patch:
+      operationId: goals_partial_update
+      description: Partial update of a goal's client-managed metadata. An omitted
+        field is left alone. `currency` is fixed at creation and is not accepted;
+        `progress` is derived and is ignored if sent.
+      summary: Update a goal
+      parameters:
+      - in: path
+        name: goal_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Goal ID
+        required: true
+      tags:
+      - goals
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateGoalRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateGoalRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateGoalRequest'
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedGoalResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+    delete:
+      operationId: goals_delete
+      description: 'Closes the goal (sets deleted_at). The row is preserved so the
+        transactions that touched it remain queryable, but the goal leaves lists.
+        Only an empty goal closes: `progress` must be zero, otherwise 409 `goal_not_empty`
+        — drain it with a transfer chain first. Repeating the call is a no-op that
+        returns the same body.'
+      summary: Close a goal
+      parameters:
+      - in: path
+        name: goal_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Goal ID
+        required: true
+      tags:
+      - goals
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedGoalResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/notifications/{notification_id}:
+    delete:
+      operationId: notifications_delete
+      description: Permanently remove a notification from the user's inbox.
+      summary: Delete a notification
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Notification ID
+        required: true
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - notifications
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedNotificationResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/notifications/{notification_id}/ack:
+    post:
+      operationId: notifications_acknowledge
+      description: |-
+        Mark a notification as read and return it.
+
+        Idempotent by nature, so it needs no `Idempotency-Key`: acknowledging an already-read notification succeeds and returns it unchanged, keeping the original `acknowledged_at`. It is not a 409 - the caller's intent is already satisfied. There is no un-acknowledge.
+      summary: Acknowledge a notification
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        description: Notification ID
+        required: true
+      tags:
+      - notifications
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedNotificationResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/notifications/ack:
+    post:
+      operationId: notifications_batch_acknowledge
+      description: |-
+        Mark several notifications as read at once. Not in the target document; kept because a bell with twenty unread items needs it.
+
+        Unknown ids are skipped silently rather than failing the batch, and an already-read one keeps its original `acknowledged_at`. The response carries every notification named in the request, in the same shape as `GET /notifications`.
+      summary: Acknowledge notifications in batch
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchAcknowledgeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BatchAcknowledgeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BatchAcknowledgeRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/transactions:
+    post:
+      operationId: transactions_create
+      description: 'Record one money flow against a wallet. `amount` is a positive
+        magnitude and `type` states the direction. Requires an Idempotency-Key header:
+        without one, a dropped response or a double-tapped button creates a duplicate
+        the API has no way to detect after the fact.'
+      summary: Create a new transaction
+      tags:
+      - transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedTransactionResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/transactions/{transaction_id}:
+    patch:
+      operationId: transactions_partial_update
+      description: 'Edits `name`, `category` and `evidence`. It never touches money:
+        the amount lives in an append-only ledger this endpoint has no reach into.
+        The response is the PREVIEW shape, so it carries no `evidence` even when the
+        request just set one — re-read the detail endpoint for that.'
+      summary: Update a transaction's metadata
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Transaction ID
+        required: true
+      - in: path
+        name: transaction_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPatchTransactionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPatchTransactionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPatchTransactionRequest'
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedTransactionResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+    delete:
+      operationId: transactions_delete
+      description: 'Soft-cancels a transaction: an inverse flow is appended to the
+        ledger, returning the money to the wallet, and the transaction is stamped
+        `deleted_at`. Nothing is erased — the original flow stays in the ledger. The
+        response reports the amount the transaction was FOR, not the zero its flows
+        now sum to. Repeating the call returns 200 with the same body.'
+      summary: Cancel a transaction
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Transaction ID
+        required: true
+      - in: path
+        name: transaction_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - transactions
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedTransactionResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/transactions/{transaction_id}/adjust:
+    post:
+      operationId: transactions_adjust
+      description: 'Restates what a transaction was for. The original is NOT rewritten
+        and NOT cancelled: the difference is appended to the ledger as an adjusting
+        flow linked back to the opening one, and the transaction''s amount becomes
+        the new fold. The id, the creation time and the audit trail all survive.'
+      summary: Correct a transaction's amount
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Transaction ID
+        required: true
+      - in: path
+        name: transaction_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdjustTransactionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdjustTransactionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdjustTransactionRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedTransactionResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/transactions/chains:
+    post:
+      operationId: transaction_chains_create
+      description: 'Commit several transactions atomically. This is how transfers
+        are expressed: a transaction carries one money flow, so moving money between
+        wallets is an expense on one and an income on the other, submitted together.
+        Because the chain is all-or-nothing, money is never observed as having left
+        one wallet without arriving in the other.'
+      summary: Create a chain of transactions
+      tags:
+      - transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionChainRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionChainRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionChainRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedTransactionChainResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/transactions/chains/{chain_id}:
+    delete:
+      operationId: transaction_chains_delete
+      description: Cancels every transaction in the chain. Each one is soft-cancelled
+        exactly as a single DELETE would do it, so the ledger keeps the original flows
+        and gains their inverses. Cancelling an already-cancelled chain returns 200
+        with the same body.
+      summary: Cancel a whole chain
+      parameters:
+      - in: path
+        name: chain_id
+        schema:
+          type: string
+          format: uuid
+        description: Chain ID
+        required: true
+      tags:
+      - transactions
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedTransactionChainResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/wallets:
+    post:
+      operationId: wallets_create
+      description: Create a new wallet for tracking funds.
+      summary: Create a new wallet
+      tags:
+      - wallets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWalletRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateWalletRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateWalletRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWalletResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/wallets/{wallet_id}:
+    put:
+      operationId: wallets_replace
+      description: Full replacement of the wallet's client-managed representation.
+        Balance is derived from the transaction history and the currency is fixed
+        at creation — sending a different currency is rejected.
+      summary: Replace a wallet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Wallet ID
+        required: true
+      - in: path
+        name: wallet_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - wallets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceWalletRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReplaceWalletRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReplaceWalletRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWalletResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+    patch:
+      operationId: wallets_partial_update
+      description: Partial update of a wallet's client-managed metadata. An omitted
+        field is left alone. Balance and currency are derived and cannot be patched.
+      summary: Update a wallet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Wallet ID
+        required: true
+      - in: path
+        name: wallet_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - wallets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWalletRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWalletRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWalletRequest'
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWalletResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+    delete:
+      operationId: wallets_delete
+      description: 'Closes the wallet (sets deleted_at). The row is preserved so transaction
+        history remains queryable, but the wallet leaves lists and search. Only a
+        settled wallet closes: its balance must sit exactly on `zero_balance`, otherwise
+        409 `wallet_not_empty`. Repeating the call is a no-op that returns the same
+        body.'
+      summary: Soft-delete a wallet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Wallet ID
+        required: true
+      - in: path
+        name: wallet_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - wallets
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWalletResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/webhooks:
+    post:
+      operationId: webhooks_create
+      description: Register an outbound webhook endpoint. The signing secret is returned
+        only once — store it on receipt.
+      summary: Create a webhook endpoint
+      tags:
+      - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWebhookWithSecretResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/webhooks/{webhook_id}:
+    patch:
+      operationId: webhooks_partial_update
+      description: Update the webhook's title and/or target URL.
+      summary: Update a webhook endpoint
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      - in: path
+        name: webhook_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWebhookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWebhookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWebhookRequest'
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWebhookResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+    delete:
+      operationId: webhooks_delete
+      description: Remove the webhook endpoint and all of its event subscriptions.
+      summary: Delete a webhook endpoint
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      - in: path
+        name: webhook_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - webhooks
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWebhookResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/webhooks/{webhook_id}/events:
+    post:
+      operationId: webhooks_subscribe_event
+      description: Register the webhook for deliveries of the given event type.
+      summary: Subscribe a webhook to an event type
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      - in: path
+        name: webhook_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscribeWebhookToEventRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscribeWebhookToEventRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscribeWebhookToEventRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWebhookSubscriptionResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/webhooks/{webhook_id}/events/{subscription_id}:
+    delete:
+      operationId: webhooks_unsubscribe_event
+      description: Stop deliveries of the subscribed event type to this webhook.
+      summary: Remove a webhook event subscription
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      - in: path
+        name: subscription_id
+        schema:
+          type: string
+          format: uuid
+        description: Subscription ID
+        required: true
+      - in: path
+        name: webhook_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - webhooks
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWebhookSubscriptionResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/webhooks/{webhook_id}/secret:
+    post:
+      operationId: webhooks_rotate_secret
+      description: Generate a fresh signing secret for the webhook. The new secret
+        is returned only once; the previous secret stops working immediately.
+      summary: Rotate a webhook's signing secret
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Webhook ID
+        required: true
+      - in: path
+        name: webhook_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - webhooks
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedWebhookWithSecretResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /health/live:
+    get:
+      operationId: health_live_retrieve
+      description: |-
+        Liveness probe: always 200 while the worker can answer; performs no
+        dependency checks (failures here restart the pod).
+      tags:
+      - health
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessResponse'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessDegradedResponse'
+          description: ''
+  /health/ready:
+    get:
+      operationId: health_ready_retrieve
+      description: |-
+        Readiness probe: 200 when every dependency is reachable, 503 otherwise;
+        gates traffic without restarting the pod.
+      tags:
+      - health
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessDegradedResponse'
+          description: ''
+  /health/startup:
+    get:
+      operationId: health_startup_retrieve
+      description: |-
+        Startup probe: 200 once initialization finishes (DB reachable, migrations
+        applied), 503 while still bootstrapping.
+      tags:
+      - health
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartupResponse'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartupDegradedResponse'
+          description: ''
+components:
+  schemas:
+    ActionMoney:
+      type: object
+      properties:
+        amount:
+          type: string
+        currency:
+          type: string
+      required:
+      - amount
+      - currency
+    ActionResolution:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        intent:
+          allOf:
+          - $ref: '#/components/schemas/IntentEnum'
+          description: |-
+            A rendering hint, not behaviour. A client may style all of them identically.
+
+            * `primary` - primary
+            * `secondary` - secondary
+            * `danger` - danger
+        applies:
+          type: boolean
+          description: Whether choosing it changes OTHER resources.
+      required:
+      - applies
+      - id
+      - intent
+      - label
+    ActionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        source:
+          $ref: '#/components/schemas/SourceEnum'
+        kind:
+          type: string
+          description: An OPEN vocabulary. Use it to pick an icon and fall back to
+            a generic one for values you do not know. Never derive labels, button
+            counts or behaviour from it — that is what `resolutions` is.
+        severity:
+          $ref: '#/components/schemas/SeverityEnum'
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        title:
+          type: string
+        body:
+          type: string
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/ActionSubject'
+          nullable: true
+        money:
+          allOf:
+          - $ref: '#/components/schemas/ActionMoney'
+          nullable: true
+        group_key:
+          type: string
+          nullable: true
+          description: Collapses recurring conditions onto one row. Null when it does
+            not recur.
+        occurrences:
+          type: integer
+          description: 1 for a non-recurring action, never 0.
+        last_seen_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+        resolutions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActionResolution'
+          description: Never empty while pending; always empty once answered.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - body
+      - created_at
+      - deleted_at
+      - expires_at
+      - group_key
+      - id
+      - kind
+      - last_seen_at
+      - money
+      - occurrences
+      - resolutions
+      - resolved_at
+      - severity
+      - source
+      - status
+      - subject
+      - title
+      - updated_at
+    ActionSubject:
+      type: object
+      properties:
+        type:
+          type: string
+          description: A resource name in this API.
+        id:
+          type: string
+      required:
+      - id
+      - type
+    AdjustTransactionRequest:
+      type: object
+      description: |-
+        Restate a transaction's amount. `amount` is the NEW TOTAL, not a delta, and
+        a positive magnitude like everywhere else.
+      properties:
+        amount:
+          type: string
+          description: Decimal string, e.g. "50.00". Always a positive magnitude —
+            direction is `type`. Fewer fraction digits than the currency's scale are
+            zero-padded; more are rejected.
+      required:
+      - amount
+    AutomationEffect:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/AutomationEffectType'
+        params:
+          type: object
+          additionalProperties: {}
+          description: Exactly the params that effect type documents — no other keys.
+      required:
+      - params
+      - type
+    AutomationEffectType:
+      enum:
+      - set_category
+      - notify
+      - raise_action
+      - transfer
+      type: string
+      description: |-
+        * `set_category` - set_category
+        * `notify` - notify
+        * `raise_action` - raise_action
+        * `transfer` - transfer
+    AutomationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        icon:
+          type: string
+        enabled:
+          type: boolean
+        trigger:
+          $ref: '#/components/schemas/AutomationTrigger'
+        effects:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationEffect'
+        last_run_at:
+          type: string
+          format: date-time
+          nullable: true
+        runs:
+          type: integer
+          description: MATCHES that applied effects, not evaluations. A rule checked
+            a thousand times that never matched reports 0.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - deleted_at
+      - effects
+      - enabled
+      - icon
+      - id
+      - last_run_at
+      - name
+      - runs
+      - trigger
+      - updated_at
+    AutomationTrigger:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/AutomationTriggerType'
+        event:
+          nullable: true
+          description: |-
+            Null unless `type` is `event`. Always present.
+
+            * `transaction.created` - transaction.created
+            * `transaction.updated` - transaction.updated
+          oneOf:
+          - $ref: '#/components/schemas/EventEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        schedule:
+          nullable: true
+          description: |-
+            Null unless `type` is `schedule`. Always present.
+
+            * `daily` - daily
+            * `weekly` - weekly
+            * `monthly` - monthly
+          oneOf:
+          - $ref: '#/components/schemas/ScheduleEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        filter_body:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          description: The same filter tree the `/search` endpoints take, validated
+            against the policy of the trigger's SUBJECT resource. Null means the rule
+            is unconditional.
+      required:
+      - event
+      - filter_body
+      - schedule
+      - type
+    AutomationTriggerType:
+      enum:
+      - event
+      - schedule
+      type: string
+      description: |-
+        * `event` - event
+        * `schedule` - schedule
+    BatchAcknowledgeRequest:
+      type: object
+      properties:
+        batch:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Notification IDs to mark as read
+      required:
+      - batch
+    ChainEntryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        wallet_id:
+          type: string
+          format: uuid
+        currency:
+          type: string
+          maxLength: 8
+        amount:
+          type: string
+          description: Decimal string, e.g. "50.00". Always a positive magnitude —
+            direction is `type`. Fewer fraction digits than the currency's scale are
+            zero-padded; more are rejected.
+        type:
+          $ref: '#/components/schemas/TransactionType'
+        origin:
+          allOf:
+          - $ref: '#/components/schemas/OriginEnum'
+          default: manual
+        category:
+          type: string
+          nullable: true
+          maxLength: 255
+        evidence:
+          allOf:
+          - $ref: '#/components/schemas/Evidence'
+          nullable: true
+        temporary_id:
+          type: string
+          maxLength: 64
+        after:
+          type: string
+          nullable: true
+          maxLength: 64
+      required:
+      - amount
+      - currency
+      - name
+      - temporary_id
+      - type
+      - wallet_id
+    CollectionMeta:
+      type: object
+      properties:
+        limit:
+          type: integer
+          nullable: true
+          description: Effective page size. Null on non-paginated endpoints.
+        total:
+          type: integer
+          description: Total items matching the request, ignoring pagination.
+        next_cursor:
+          type: string
+          nullable: true
+          description: Opaque token for the page after this one. Null when exhausted.
+        prev_cursor:
+          type: string
+          nullable: true
+          description: Opaque token for the page before this one. Null on the first
+            page.
+        cached:
+          type: boolean
+      required:
+      - limit
+      - next_cursor
+      - prev_cursor
+      - total
+    CreateAutomationRequest:
+      type: object
+      description: |-
+        Shape only. The trigger and the effects are validated by the domain,
+        which owns the vocabularies and the filter grammar — a serializer would be a
+        second, weaker copy of both.
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        icon:
+          type: string
+          default: ''
+          description: Free-form, with a client-side registry. Never validated against
+            a list.
+          maxLength: 64
+        enabled:
+          type: boolean
+          default: true
+        trigger:
+          type: object
+          additionalProperties: {}
+        effects:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - effects
+      - name
+      - trigger
+    CreateGoalRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        currency:
+          type: string
+          maxLength: 8
+        target:
+          type: string
+          description: The amount the goal is saving towards, as a flat decimal string
+            taking its currency from the goal. A money object in the response, a bare
+            string here — the same asymmetry POST /transactions uses.
+        finish_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - currency
+      - name
+      - target
+    CreateTransactionChainRequest:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChainEntryRequest'
+          description: At most 100 entries. The whole chain commits in one transaction,
+            so the bound keeps the lock window predictable.
+          maxItems: 100
+          minItems: 1
+      required:
+      - transactions
+    CreateTransactionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        wallet_id:
+          type: string
+          format: uuid
+        currency:
+          type: string
+          maxLength: 8
+        amount:
+          type: string
+          description: Decimal string, e.g. "50.00". Always a positive magnitude —
+            direction is `type`. Fewer fraction digits than the currency's scale are
+            zero-padded; more are rejected.
+        type:
+          $ref: '#/components/schemas/TransactionType'
+        origin:
+          allOf:
+          - $ref: '#/components/schemas/OriginEnum'
+          default: manual
+        category:
+          type: string
+          nullable: true
+          maxLength: 255
+        evidence:
+          allOf:
+          - $ref: '#/components/schemas/Evidence'
+          nullable: true
+      required:
+      - amount
+      - currency
+      - name
+      - type
+      - wallet_id
+    CreateWalletRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        currency:
+          type: string
+          maxLength: 8
+        category:
+          type: string
+          maxLength: 120
+        color:
+          type: string
+          description: 'CSS hex colour, #RGB / #RRGGBB / #RRGGBBAA.'
+          pattern: ^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$
+        zero_balance:
+          type: string
+          description: 'The point the balance is measured from, as a flat decimal
+            string taking its currency from the wallet. Not a floor: the balance may
+            go below it, and what the user owns is the difference.'
+        opening_balance:
+          type: string
+          description: What the wallet already held, as a flat decimal string. Recorded
+            as an opening transaction, not stored on the wallet, so it is never echoed
+            back. Defaults to `zero_balance`, which opens the wallet owning nothing.
+      required:
+      - currency
+      - name
+    CreateWebhookRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 120
+        url:
+          type: string
+          format: uri
+        enabled:
+          type: boolean
+          default: true
+      required:
+      - title
+      - url
+    EnvelopedActionResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ActionResponse'
+        meta:
+          $ref: '#/components/schemas/MutationMeta'
+      required:
+      - data
+      - meta
+    EnvelopedAutomationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AutomationResponse'
+        meta:
+          $ref: '#/components/schemas/MutationMeta'
+      required:
+      - data
+      - meta
+    EnvelopedGoalResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GoalResponse'
+        meta:
+          $ref: '#/components/schemas/MutationMeta'
+      required:
+      - data
+      - meta
+    EnvelopedNotificationCountsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/NotificationCountsResponse'
+        meta:
+          type: object
+          additionalProperties: {}
+          description: Always `{}` — this endpoint is neither paginated nor cached.
+      required:
+      - data
+      - meta
+    EnvelopedNotificationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/NotificationResponse'
+        meta:
+          $ref: '#/components/schemas/MutationMeta'
+      required:
+      - data
+      - meta
+    EnvelopedTransactionChainResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/TransactionChainResponse'
+        meta:
+          $ref: '#/components/schemas/MutationMeta'
+      required:
+      - data
+      - meta
+    EnvelopedTransactionResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/TransactionResponse'
+        meta:
+          $ref: '#/components/schemas/MutationMeta'
+      required:
+      - data
+      - meta
+    EnvelopedWalletDetailResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WalletDetailResponse'
+        meta:
+          $ref: '#/components/schemas/MutationMeta'
+      required:
+      - data
+      - meta
+    EnvelopedWalletResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WalletResponse'
+        meta:
+          $ref: '#/components/schemas/MutationMeta'
+      required:
+      - data
+      - meta
+    EnvelopedWebhookResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WebhookResponse'
+        meta:
+          $ref: '#/components/schemas/MutationMeta'
+      required:
+      - data
+      - meta
+    EnvelopedWebhookSubscriptionResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WebhookSubscriptionResponse'
+        meta:
+          $ref: '#/components/schemas/MutationMeta'
+      required:
+      - data
+      - meta
+    EnvelopedWebhookWithSecretResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WebhookWithSecretResponse'
+        meta:
+          $ref: '#/components/schemas/MutationMeta'
+      required:
+      - data
+      - meta
+    ErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+      required:
+      - code
+      - message
+    ErrorDetail:
+      type: object
+      properties:
+        field:
+          type: string
+          nullable: true
+        code:
+          type: string
+        message:
+          type: string
+      required:
+      - code
+      - field
+      - message
+    ErrorMeta:
+      type: object
+      properties:
+        request_id:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+      required:
+      - request_id
+      - timestamp
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+        meta:
+          $ref: '#/components/schemas/ErrorMeta'
+      required:
+      - error
+      - meta
+    EventEnum:
+      enum:
+      - transaction.created
+      - transaction.updated
+      type: string
+      description: |-
+        * `transaction.created` - transaction.created
+        * `transaction.updated` - transaction.updated
+    Evidence:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+      required:
+      - url
+    GoalResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Goal ID
+        name:
+          type: string
+        url:
+          type: string
+          nullable: true
+          description: Always null for now. Reserved for attaching an e-commerce link.
+        currency:
+          type: string
+          description: Fixed at creation; target and progress use it.
+        finish_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        target:
+          $ref: '#/components/schemas/Money'
+        progress:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: Derived from the goal's transactions, never written.
+      required:
+      - created_at
+      - currency
+      - deleted_at
+      - finish_at
+      - id
+      - name
+      - progress
+      - target
+      - updated_at
+      - url
+    IntentEnum:
+      enum:
+      - primary
+      - secondary
+      - danger
+      type: string
+      description: |-
+        * `primary` - primary
+        * `secondary` - secondary
+        * `danger` - danger
+    LivenessDegradedResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        error:
+          type: string
+      required:
+      - error
+      - status
+    LivenessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
+    Money:
+      type: object
+      properties:
+        amount:
+          type: string
+          description: Decimal string at the currency's scale.
+        currency:
+          type: string
+      required:
+      - amount
+      - currency
+    MutationMeta:
+      type: object
+      properties:
+        idempotent_replay:
+          type: boolean
+          description: True when this response replays an earlier request under the
+            same key.
+    NotificationCountsResponse:
+      type: object
+      properties:
+        unacknowledged:
+          type: integer
+          description: The badge.
+        total:
+          type: integer
+          description: Every notification the user has, acknowledged or not.
+      required:
+      - total
+      - unacknowledged
+    NotificationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Notification ID
+        severity:
+          allOf:
+          - $ref: '#/components/schemas/SeverityEnum'
+          description: |-
+            Shares its vocabulary with action severity on purpose.
+
+            * `info` - info
+            * `warning` - warning
+            * `critical` - critical
+        title:
+          type: string
+        body:
+          type: string
+          description: Already-rendered prose. Money inside it is part of the sentence
+            the backend generated; there is no money object to substitute.
+        subject:
+          allOf:
+          - $ref: '#/components/schemas/NotificationSubject'
+          nullable: true
+          description: What the client deep-links to when the notification is tapped.
+        acknowledged_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Null means unread. A timestamp, not a boolean.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - acknowledged_at
+      - body
+      - created_at
+      - deleted_at
+      - id
+      - severity
+      - subject
+      - title
+      - updated_at
+    NotificationSubject:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          description: Open vocabulary — `wallet`, `transaction`, and whatever comes
+            next.
+      required:
+      - id
+      - type
+    NullEnum:
+      enum:
+      - null
+    OriginEnum:
+      enum:
+      - manual
+      - scanned
+      type: string
+      description: |-
+        * `manual` - manual
+        * `scanned` - scanned
+    PaginatedActionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActionResponse'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedAutomationResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationResponse'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedGoalResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GoalResponse'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedNotificationResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationResponse'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedTransactionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionResponse'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedWalletResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WalletResponse'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedWebhookResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookResponse'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedWebhookSubscriptionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookSubscriptionResponse'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PatchedPatchTransactionRequest:
+      type: object
+      description: |-
+        Metadata only. The money lives in an append-only ledger no request body
+        in this API can reach.
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        category:
+          type: string
+          nullable: true
+          maxLength: 255
+        evidence:
+          allOf:
+          - $ref: '#/components/schemas/Evidence'
+          nullable: true
+    PatchedUpdateAutomationRequest:
+      type: object
+      description: |-
+        `trigger` and `effects` are replaced WHOLE when supplied, never merged:
+        deep-merging a condition tree has no sane definition.
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        icon:
+          type: string
+          maxLength: 64
+        enabled:
+          type: boolean
+        trigger:
+          type: object
+          additionalProperties: {}
+        effects:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+    PatchedUpdateGoalRequest:
+      type: object
+      description: |-
+        Every field optional: an absent one is left alone, not cleared.
+
+        `currency` is absent on purpose — it is fixed at creation, and both `target` and
+        `progress` are denominated in it. `progress` is accepted and discarded rather
+        than rejected, which is what the target specifies.
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        target:
+          type: string
+          description: The amount the goal is saving towards, as a flat decimal string
+            taking its currency from the goal. A money object in the response, a bare
+            string here — the same asymmetry POST /transactions uses.
+        finish_at:
+          type: string
+          format: date-time
+          nullable: true
+        progress:
+          type: string
+          description: Ignored if sent. Progress is derived from the transactions
+            touching the goal, the same way a wallet's balance is, and no endpoint
+            writes it.
+    PatchedUpdateWalletRequest:
+      type: object
+      description: 'Every field optional: an absent one is left alone, not cleared.'
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        category:
+          type: string
+          maxLength: 120
+        color:
+          type: string
+          description: 'CSS hex colour, #RGB / #RRGGBB / #RRGGBBAA.'
+          pattern: ^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$
+        favorite:
+          type: boolean
+        zero_balance:
+          type: string
+          description: 'The point the balance is measured from, as a flat decimal
+            string taking its currency from the wallet. Not a floor: the balance may
+            go below it, and what the user owns is the difference.'
+    PatchedUpdateWebhookRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 120
+        url:
+          type: string
+          format: uri
+        enabled:
+          type: boolean
+    ReadinessChecks:
+      type: object
+      properties:
+        postgres:
+          type: string
+      required:
+      - postgres
+    ReadinessDegradedResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        error:
+          type: string
+      required:
+      - error
+      - status
+    ReadinessResponse:
+      type: object
+      properties:
+        checks:
+          $ref: '#/components/schemas/ReadinessChecks'
+        status:
+          type: string
+      required:
+      - checks
+      - status
+    ReplaceWalletRequest:
+      type: object
+      description: |-
+        PUT replaces the whole editable representation, so an omitted field
+        resets to its default rather than being left alone.
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        currency:
+          type: string
+          maxLength: 8
+        category:
+          type: string
+          default: ''
+          maxLength: 120
+        color:
+          type: string
+          default: ''
+          description: 'CSS hex colour, #RGB / #RRGGBB / #RRGGBBAA.'
+          pattern: ^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$
+        favorite:
+          type: boolean
+          default: false
+        zero_balance:
+          type: string
+          description: 'The point the balance is measured from, as a flat decimal
+            string taking its currency from the wallet. Not a floor: the balance may
+            go below it, and what the user owns is the difference.'
+      required:
+      - currency
+      - name
+    ResolveActionRequest:
+      type: object
+      properties:
+        resolution_id:
+          type: string
+          description: One of the ids offered on THIS action. Anything else fails
+            with 422 `unknown_resolution` — including an id that is valid on a different
+            action.
+      required:
+      - resolution_id
+    ScheduleEnum:
+      enum:
+      - daily
+      - weekly
+      - monthly
+      type: string
+      description: |-
+        * `daily` - daily
+        * `weekly` - weekly
+        * `monthly` - monthly
+    SeverityEnum:
+      enum:
+      - info
+      - warning
+      - critical
+      type: string
+      description: |-
+        * `info` - info
+        * `warning` - warning
+        * `critical` - critical
+    SourceEnum:
+      enum:
+      - assistant
+      - scheduler
+      type: string
+      description: |-
+        * `assistant` - assistant
+        * `scheduler` - scheduler
+    StartupChecks:
+      type: object
+      properties:
+        postgres:
+          type: string
+        migrations:
+          type: string
+      required:
+      - migrations
+      - postgres
+    StartupDegradedResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        error:
+          type: string
+      required:
+      - error
+      - status
+    StartupResponse:
+      type: object
+      properties:
+        checks:
+          $ref: '#/components/schemas/StartupChecks'
+        status:
+          type: string
+      required:
+      - checks
+      - status
+    StatusEnum:
+      enum:
+      - pending
+      - resolved
+      - dismissed
+      - expired
+      type: string
+      description: |-
+        * `pending` - pending
+        * `resolved` - resolved
+        * `dismissed` - dismissed
+        * `expired` - expired
+    SubscribeWebhookToEventRequest:
+      type: object
+      properties:
+        event:
+          type: string
+          maxLength: 50
+      required:
+      - event
+    TransactionChainResponse:
+      type: object
+      properties:
+        chain_id:
+          type: string
+          format: uuid
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionResponse'
+      required:
+      - chain_id
+      - transactions
+    TransactionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Transaction ID
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: A positive magnitude; direction is `type`.
+        type:
+          type: string
+          description: expense or income, derived from the money's sign.
+        origin:
+          type: string
+        wallet:
+          $ref: '#/components/schemas/TransactionWallet'
+        category:
+          type: string
+          nullable: true
+        chain_id:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - category
+      - chain_id
+      - created_at
+      - deleted_at
+      - id
+      - money
+      - name
+      - origin
+      - type
+      - updated_at
+      - wallet
+    TransactionType:
+      enum:
+      - expense
+      - income
+      type: string
+      description: |-
+        * `expense` - expense
+        * `income` - income
+    TransactionWallet:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+      - id
+      - name
+    WalletDetailResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Wallet ID
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        category:
+          type: string
+        currency:
+          type: string
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: The spendable balance, not what the user owns.
+        zero_balance:
+          $ref: '#/components/schemas/Money'
+        favorite:
+          type: boolean
+        color:
+          type: string
+        period:
+          allOf:
+          - $ref: '#/components/schemas/WalletPeriodFlows'
+          description: Money in and out over the window `?period=` asked for, resolved
+            in the caller's timezone preference and reported in the wallet's own currency.
+            Echoed in `meta.period`.
+      required:
+      - category
+      - color
+      - created_at
+      - currency
+      - deleted_at
+      - favorite
+      - id
+      - money
+      - name
+      - period
+      - updated_at
+      - zero_balance
+    WalletPeriodFlows:
+      type: object
+      properties:
+        inflow:
+          $ref: '#/components/schemas/Money'
+        outflow:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: A positive magnitude, not a negative balance change.
+      required:
+      - inflow
+      - outflow
+    WalletResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Wallet ID
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        category:
+          type: string
+        currency:
+          type: string
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: The spendable balance, not what the user owns.
+        zero_balance:
+          $ref: '#/components/schemas/Money'
+        favorite:
+          type: boolean
+        color:
+          type: string
+      required:
+      - category
+      - color
+      - created_at
+      - currency
+      - deleted_at
+      - favorite
+      - id
+      - money
+      - name
+      - updated_at
+      - zero_balance
+    WebhookResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Webhook ID
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        enabled:
+          type: boolean
+          description: The pause switch. A disabled endpoint keeps its subscriptions
+            and receives nothing.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - enabled
+      - id
+      - title
+      - updated_at
+      - url
+    WebhookSubscriptionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Subscription ID
+        webhook_id:
+          type: string
+          format: uuid
+        event:
+          type: string
+          description: An `event` from GET /webhooks/event-types.
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - event
+      - id
+      - webhook_id
+    WebhookWithSecretResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Webhook ID
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        enabled:
+          type: boolean
+          description: The pause switch. A disabled endpoint keeps its subscriptions
+            and receives nothing.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        secret:
+          type: string
+          description: The signing secret (only shown on creation or rotation)
+      required:
+      - created_at
+      - enabled
+      - id
+      - secret
+      - title
+      - updated_at
+      - url
+  securitySchemes:
+    clerkBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Clerk session token. The gateway verifies it and forwards the resolved
+        user to this service; requests that do not traverse the gateway are rejected
+        with 401.

@@ -3,7 +3,7 @@ from rest_framework import serializers
 from data_read_core.shared.postgres_orm import ActionSeverity, ActionSource, ActionStatus
 from data_read_core.shared.rest_framework import collection_response
 
-RESOLUTION_INTENTS = ("primary", "secondary", "danger")
+from ..config import RESOLUTION_INTENTS
 
 
 class ActionSubjectSerializer(serializers.Serializer):

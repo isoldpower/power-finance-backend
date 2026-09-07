@@ -1,6 +1,7 @@
+from .config import LoggerChannel
 from .registry import get_service_logger
 
-_logger = get_service_logger("projection")
+_logger = get_service_logger(LoggerChannel.PROJECTION)
 
 
 def log_transaction_projected(transaction_id: str) -> None:

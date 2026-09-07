@@ -8,8 +8,6 @@ from .._utilities import decode_payload, handle_database_errors
 
 
 class RenameGoalInTransactions(Effect):
-    """Carry a goal rename into the transactions that reference it."""
-
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, GoalUpdated)
         await handle_database_errors(

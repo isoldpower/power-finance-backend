@@ -6,9 +6,6 @@ from .logger_shortcuts import log_served_from_catalog
 
 
 class ListCurrenciesQueryHandler:
-    """No Redis cache worker here: the catalog already holds the table in
-    process memory, so a network hop to Redis would be the slower path."""
-
     def __init__(self, catalog: CurrencyCatalog | None = None) -> None:
         self._catalog = catalog or CURRENCY_CATALOG
 

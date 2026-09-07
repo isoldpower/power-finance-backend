@@ -7,6 +7,7 @@ from write_service.common.pagination import (
     build_page,
 )
 
+from data_write_core.application.config import ParamsList
 from data_write_core.application.queries import (
     GetFallbackWebhookQuery,
     GetFallbackWebhookQueryHandler,
@@ -25,11 +26,13 @@ from ...serializers import (
 )
 from ._presenters import present_webhook, present_webhook_subscriptions, present_webhooks
 from ._query_params import resolve_tristate_flag
-from ._schema import CURSOR_PARAMETER, ENABLED_PARAMETER, LIMIT_PARAMETER, resource_id_parameter
 from .base import FallbackReadView
-
-WEBHOOK_ID_PARAMETER = resource_id_parameter("id", "Webhook ID")
-ENABLED_PARAM = "enabled"
+from .config import (
+    CURSOR_PARAMETER,
+    ENABLED_PARAMETER,
+    LIMIT_PARAMETER,
+    WEBHOOK_ID_PARAMETER,
+)
 
 
 class FallbackWebhookListView(FallbackReadView):
@@ -53,7 +56,7 @@ class FallbackWebhookListView(FallbackReadView):
             ListFallbackWebhooksQuery(
                 user_id=int(request.user.unique_id),
                 page=page_request,
-                enabled=resolve_tristate_flag(request, ENABLED_PARAM),
+                enabled=resolve_tristate_flag(request, ParamsList.ENABLED),
             )
         )
 

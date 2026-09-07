@@ -1,7 +1,5 @@
-"""The signals a conversation can be ended by."""
-
-from ..contracts import Termination, TerminationReason
-from ..signals import NeverTerminates, ProcessShutdownSignal
+from ..application import NeverTerminates, ProcessShutdownSignal
+from ..application.contracts import Termination, TerminationReason
 
 
 async def test_a_fresh_shutdown_signal_has_not_fired():

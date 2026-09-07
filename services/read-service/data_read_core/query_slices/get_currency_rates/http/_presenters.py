@@ -14,9 +14,6 @@ def present_rates(rates: CurrencyRatesDTO) -> dict[str, Any]:
 
 
 def present_meta(rates: CurrencyRatesDTO) -> dict[str, Any]:
-    """`fetched_at` describes the rates' freshness, not this response, so it
-    belongs beside the data rather than in it."""
-
     return {
         "fetched_at": to_iso(rates.fetched_at),
         "target": rates.requested_targets,

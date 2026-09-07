@@ -1,9 +1,3 @@
-"""The consumer callback: decode the envelope, find the handler, delegate.
-
-Every outbox event lands on this topic, so an event no handler serves is
-ordinary traffic rather than a broken message.
-"""
-
 import logging
 
 from kafka_client_py import ConsumedMessage, PoisonError
@@ -12,7 +6,6 @@ from kafka_consumer_py import MalformedEnvelope, OutboxEnvelopeDecoder
 from .event_handlers import EVENT_AUTOMATION_HANDLERS
 
 logger = logging.getLogger("background_workers.automation_engine")
-
 _DECODER = OutboxEnvelopeDecoder()
 
 

@@ -1,13 +1,3 @@
-"""The envelope as published schema, not just as a runtime dict.
-
-Without these the generated document says `object` and declares no failures,
-so a client generated from it gets an untyped dictionary and no idea that a
-request can be refused. read-service and write-service publish precise
-envelopes; this is the same contract, spelled for FastAPI.
-"""
-
-from typing import Any
-
 from pydantic import BaseModel, Field
 
 
@@ -56,11 +46,3 @@ class CachedMetaSchema(BaseModel):
 
 class EmptyMetaSchema(BaseModel):
     """`meta` is `{}` rather than absent when there is nothing to say."""
-
-
-# The failures every endpoint here can produce. Declared per-router so a
-# generated client knows a call can be refused.
-ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
-    401: {"model": ErrorResponseSchema, "description": "Did not traverse the API gateway."},
-    422: {"model": ErrorResponseSchema, "description": "A parameter was refused."},
-}

@@ -85,16 +85,11 @@ class TransactionAmountTests(SimpleTestCase):
         self.assertEqual(aggregate.amount, Decimal("-70"))
 
     def test_a_cancelling_flow_is_excluded_from_the_stated_amount(self) -> None:
-        """A cancelled transaction still reports the figure it was for — that is
-        what DELETE echoes back and what detail shows beside `deleted_at`."""
-
         aggregate = _aggregate(_flow("-50"), _flow("50", cancels_other=uuid4()))
 
         self.assertEqual(aggregate.amount, Decimal("-50"))
 
     def test_ledger_effect_counts_every_flow(self) -> None:
-        """The wallet balance is a different question, and it nets to zero."""
-
         aggregate = _aggregate(_flow("-50"), _flow("50", cancels_other=uuid4()))
 
         self.assertEqual(aggregate.ledger_effect, Decimal("0"))
@@ -156,9 +151,6 @@ class TransactionAdjustTests(SimpleTestCase):
         self.assertEqual(aggregate.pull_events(), [])
 
     def test_adjusting_across_zero_is_refused(self) -> None:
-        """Type is the sign of the money, so this would silently turn an
-        expense into an income."""
-
         aggregate = _aggregate(_flow("-50"))
 
         with self.assertRaises(TransactionDirectionChangeError):
@@ -215,9 +207,6 @@ class TransactionCancelTests(SimpleTestCase):
         self.assertEqual(events[0].amount, Decimal("-50"))
 
     def test_cancelling_twice_is_a_no_op(self) -> None:
-        """DELETE answers 200 with the same body on a repeat, so the second
-        call must not append a second inverse."""
-
         aggregate = _aggregate(_flow("-50"))
         aggregate.cancel(datetime(2026, 3, 1))
         aggregate.pull_events()

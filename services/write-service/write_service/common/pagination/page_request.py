@@ -3,7 +3,7 @@ from typing import Any
 
 from rest_framework.request import Request
 
-from .config import CURSOR_PARAMETER_NAME, LIMIT_PARAMETER_NAME, LOOKAHEAD_ROW_COUNT
+from .config import LimitSettings, ParamsList
 from .cursors import CURSOR_CODEC, Cursor, CursorMinter, PageDirection, query_fingerprint
 from .limit_policy import DEFAULT_LIMIT_POLICY, LimitPolicy
 from .ordering import SortOrder
@@ -44,7 +44,7 @@ class PageRequest:
 
     @property
     def fetch_size(self) -> int:
-        return self.limit + LOOKAHEAD_ROW_COUNT
+        return self.limit + int(LimitSettings.LOOKAHEAD_ROWS)
 
     @classmethod
     def from_request(
@@ -55,10 +55,10 @@ class PageRequest:
         limit_policy: LimitPolicy = DEFAULT_LIMIT_POLICY,
     ) -> "PageRequest":
         fingerprint = query_fingerprint(order, query_material)
-        raw_cursor = request.query_params.get(CURSOR_PARAMETER_NAME)
+        raw_cursor = request.query_params.get(ParamsList.CURSOR)
 
         return cls(
-            limit=limit_policy.resolve(request.query_params.get(LIMIT_PARAMETER_NAME)),
+            limit=limit_policy.resolve(request.query_params.get(ParamsList.LIMIT)),
             order=order,
             fingerprint=fingerprint,
             cursor=CURSOR_CODEC.decode(raw_cursor, fingerprint) if raw_cursor else None,

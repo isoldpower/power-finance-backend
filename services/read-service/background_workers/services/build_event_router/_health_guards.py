@@ -13,8 +13,6 @@ from ._types import ProbesDictionary
 
 
 def guard_all(plan: ExecutionPlan, probes: ProbesDictionary) -> Handler:
-    """Block consumption on any downstream outage instead of losing the event.
-    Each store's connectivity errors pause the loop until that store recovers."""
     guarded: Handler = HealthGuardedHandler(
         plan,
         probes.postgres_probe,

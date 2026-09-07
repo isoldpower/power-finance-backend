@@ -9,9 +9,6 @@ from ._utilities import decode_payload
 
 
 class TrackAppliedSeq(Effect):
-    """Wrap a projection Effect so the originating outbox seq is recorded in the
-    same transaction as the projection write."""
-
     def __init__(self, inner: Effect, payload_type: type[Message]) -> None:
         self._inner = inner
         self._payload_type = payload_type

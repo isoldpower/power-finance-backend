@@ -1,6 +1,3 @@
-"""The provider is exercised against a stubbed transport rather than the live
-feed: the point is how a payload is read, not whether the internet is up."""
-
 from datetime import timedelta
 from decimal import Decimal
 
@@ -52,9 +49,6 @@ async def test_a_successful_payload_becomes_a_snapshot():
 
 
 async def test_rates_never_pass_through_a_float():
-    """Binary rounding on a rate would show up in the last digits of every
-    conversion, so the payload is parsed straight into Decimal."""
-
     snapshot = await provider_returning(
         httpx.Response(200, text='{"result":"success","rates":{"RUB":81.10}}')
     ).fetch("USD")

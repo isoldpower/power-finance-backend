@@ -1,7 +1,6 @@
 from decimal import Decimal
 
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from write_service.common.idempotency import idempotent
 
@@ -25,13 +24,7 @@ from ...serializers import (
 )
 from ..mixins import CommandResponseMixin
 from .base import WalletView
-
-WALLET_ID_PARAMETER = OpenApiParameter(
-    "id",
-    type=OpenApiTypes.UUID,
-    location=OpenApiParameter.PATH,
-    description="Wallet ID",
-)
+from .config import WALLET_ID_PARAMETER
 
 
 class WalletResourceView(WalletView, CommandResponseMixin):

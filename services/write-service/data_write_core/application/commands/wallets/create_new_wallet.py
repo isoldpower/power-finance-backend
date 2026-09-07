@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 from kafka_messages import WalletCreated
 from saga_pattern_py import SagaStep
 
+from data_write_core.application.commands.config import WalletDefaults
 from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import TransactionEntity, WalletEntity
 from data_write_core.domain.exceptions import UnsupportedCurrencyError
@@ -46,7 +47,6 @@ from ..transactions import (
     transaction_created_entry,
 )
 
-OPENING_BALANCE_NAME = "Opening balance"
 UNSET = object()
 
 
@@ -119,7 +119,7 @@ class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
                 user_id=command.user_id,
                 container=wallet_container,
                 metadata=TransactionMetadata(
-                    name=OPENING_BALANCE_NAME,
+                    name=WalletDefaults.OPENING_BALANCE_NAME,
                     origin=TransactionOrigin.MANUAL,
                 ),
                 amount=abs(opening_balance),

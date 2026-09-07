@@ -27,8 +27,6 @@ DETAIL_CODE_BY_NAME: dict[str, DetailCode] = {code.value: code for code in Detai
 
 @dataclass(frozen=True)
 class DetailPath:
-    """A JSON path into the request body: `filter_body.and[1].or[0].field_name`."""
-
     segments: tuple[str, ...] = ()
 
     def child(self, key: str) -> "DetailPath":

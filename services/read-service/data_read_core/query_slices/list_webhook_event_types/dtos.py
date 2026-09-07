@@ -5,7 +5,7 @@ from webhook_catalog_py import WebhookEventType
 
 @dataclass(frozen=True)
 class ListWebhookEventTypesQuery:
-    """No user, no filters, no page. The catalog is the same for everyone."""
+    pass
 
 
 @dataclass(frozen=True)

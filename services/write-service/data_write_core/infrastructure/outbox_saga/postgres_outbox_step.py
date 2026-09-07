@@ -9,9 +9,6 @@ from data_write_core.domain.value_objects import OutboxEntry
 
 
 class OutboxSagaStep(SagaStep[int]):
-    """SAGA step whose forward() appends outbox entries; `last_appended_sequence`
-    exposes the latest (surfaced as X-Write-Version)."""
-
     def __init__(self) -> None:
         self._appended_sequences: list[int] = []
 
@@ -30,9 +27,6 @@ class OutboxSagaStep(SagaStep[int]):
 
 
 class PostgresOutboxEmissionStep(OutboxSagaStep):
-    """Final saga step. Appends outbox entries; last_appended_sequence
-    is returned as X-Write-Version."""
-
     def __init__(
         self,
         outbox_repository: OutboxRepository,

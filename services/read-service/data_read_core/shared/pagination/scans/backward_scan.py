@@ -7,8 +7,6 @@ from .scanned_rows import ScannedRows
 
 
 class BackwardScan(PageScan):
-    """Reads back toward the head of the collection."""
-
     @property
     def direction(self) -> PageDirection:
         return PageDirection.PREVIOUS
@@ -20,7 +18,6 @@ class BackwardScan(PageScan):
         return list(reversed(items))
 
     def _boundary_cursors(self, scanned: ScannedRows, minter: CursorMinter) -> BoundaryCursors:
-        # We arrived from a later page, so a next page always exists.
         next_cursor = minter.toward_next(scanned.last_item)
         previous_cursor = (
             minter.toward_previous(scanned.first_item) if scanned.has_further_rows else None

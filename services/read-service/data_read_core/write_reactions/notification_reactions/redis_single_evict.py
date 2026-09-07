@@ -10,8 +10,6 @@ from .._utilities import decode_payload
 
 
 class EvictNotificationCache(Effect):
-    """Evict the single-notification cache entry keyed by notification id."""
-
     def __init__(self, payload_type: type[Message] = NotificationDeleted) -> None:
         self._payload_type = payload_type
 
@@ -24,8 +22,6 @@ class EvictNotificationCache(Effect):
 
 
 class EvictAcknowledgedNotificationsCache(Effect):
-    """Evict the single-notification cache entry of every acknowledged id."""
-
     async def apply(self, event: EventMessage) -> None:
         event_payload = decode_payload(event, NotificationsAcknowledged)
         for notification_id in event_payload.notification_ids:

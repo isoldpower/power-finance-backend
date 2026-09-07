@@ -40,9 +40,6 @@ WALLET_CACHE_PREFIXES = ("read:wallets:*", "read:wallet:*", "ver:wallets:*")
 
 @pytest.fixture(autouse=True)
 async def _empty_wallet_cache():
-    """Redis is not rolled back with the database, and its client is a per-loop
-    singleton, so both are dropped between tests."""
-
     async def clear() -> None:
         get_redis.cache_clear()
         redis = get_redis()
@@ -131,9 +128,6 @@ async def test_preview_carries_the_target_shape():
 
 
 async def test_favorites_lead_regardless_of_age():
-    """`favorite DESC` is the leading key, so an old favourite outranks a new
-    ordinary wallet."""
-
     await _wallet(title="New ordinary", created_at=datetime(2026, 8, 1, tzinfo=UTC))
     await _wallet(title="Old favourite", favorite=True, created_at=datetime(2026, 1, 1, tzinfo=UTC))
 
@@ -157,8 +151,6 @@ async def test_closed_wallets_leave_the_list():
 
 
 async def test_a_closed_wallet_still_resolves_by_id():
-    """DELETE removes a wallet from lists and search, not from existence."""
-
     wallet = await _wallet(title="Closed", deleted_at=AUGUST)
 
     response = await as_user(f"/api/v1/wallets/{wallet.id}")
@@ -168,24 +160,12 @@ async def test_a_closed_wallet_still_resolves_by_id():
 
 
 async def test_detail_reports_period_flows_as_positive_magnitudes():
-    """Dates are derived from the window rather than written down.
-
-    `last_month` is resolved against the wall clock, and the endpoint gives a
-    test no way to pin it — so fixed dates only sit inside the window during the
-    month they were written in, and the test starts failing on its own the
-    moment the calendar moves past it. `period_bounds` is unit-tested against a
-    pinned `now` elsewhere; what this test is for is that the ENDPOINT filters
-    to whatever that window is and reports both directions as positive.
-    """
-
     since, until = period_bounds(Period.LAST_MONTH, UTC_ZONE)
     wallet = await _wallet(balance="30.00")
     user_id = await _user_id()
     for amount, occurred_at in (
         (Decimal("50.00"), since + timedelta(days=9)),
         (Decimal("-20.00"), since + timedelta(days=19)),
-        # Decoys either side of the window. `until` is the first instant of the
-        # CURRENT period, so it is outside `last_month` by one instant.
         (Decimal("999.00"), until),
         (Decimal("777.00"), since - timedelta(days=1)),
     ):
@@ -230,9 +210,6 @@ async def test_the_window_defaults_to_last_month_and_is_echoed():
 
 
 async def test_a_wider_period_picks_up_what_last_month_excludes():
-    """The transaction sits outside last month but inside last year, so the
-    same wallet reports different figures for the two windows."""
-
     wallet = await _wallet()
     user_id = await _user_id()
     await TransactionReadModel.objects.acreate(
@@ -254,9 +231,6 @@ async def test_a_wider_period_picks_up_what_last_month_excludes():
 
 
 async def test_all_time_has_no_boundaries_at_all():
-    """Every other window is a calendar range; `all_time` drops both bounds
-    rather than reaching for an arbitrary epoch."""
-
     wallet = await _wallet()
     user_id = await _user_id()
     for occurred_at in (datetime(2019, 1, 1, tzinfo=UTC), datetime(2031, 1, 1, tzinfo=UTC)):
@@ -276,9 +250,6 @@ async def test_all_time_has_no_boundaries_at_all():
 
 
 async def test_an_unknown_period_is_refused_rather_than_quietly_defaulted():
-    """Answering about a different window than the one asked for would be worse
-    than refusing."""
-
     wallet = await _wallet()
 
     response = await as_user(f"/api/v1/wallets/{wallet.id}?period=last_fortnight")

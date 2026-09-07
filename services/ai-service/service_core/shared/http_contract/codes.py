@@ -3,10 +3,6 @@ from http import HTTPStatus
 
 
 class ErrorCode(StrEnum):
-    """The top-level `error.code`, each member carrying the status it is served
-    with — the same table the Django services keep, narrowed to what this
-    service can actually emit."""
-
     _status_code: int
 
     def __new__(cls, wire_code: str, status_code: int) -> "ErrorCode":
@@ -31,8 +27,6 @@ class ErrorCode(StrEnum):
 
 
 class DetailCode(StrEnum):
-    """`details[].code` — why one field was refused."""
-
     INVALID = "invalid"
     REQUIRED = "required"
     OUT_OF_BOUNDS = "out_of_bounds"

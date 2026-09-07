@@ -2,7 +2,7 @@ from typing import Any
 
 from write_service.common.pagination import DEFAULT_LIMIT_POLICY, Page
 
-TRANSACTIONS_NAMESPACE = "transactions"
+from .config import TRANSACTIONS_NAMESPACE
 
 
 def chain_meta(total: int, **extra: Any) -> dict[str, Any]:

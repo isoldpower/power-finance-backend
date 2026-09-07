@@ -5,7 +5,8 @@ from django.db.models import Count, Q
 from data_read_core.shared.pagination import PageRequest, apply_keyset
 from data_read_core.shared.postgres_orm import AccountGroups, AccountReadModel
 
-from ..dtos import ALL_GROUPS, ChartFilters
+from ..config import GroupFilter
+from ..dtos import ChartFilters
 
 Thresholds = dict[str, Decimal]
 
@@ -62,7 +63,7 @@ async def count_accounts_by_group(
     thresholds: Thresholds | None,
 ) -> dict[str, int]:
     across_every_group = ChartFilters(
-        group=ALL_GROUPS,
+        group=GroupFilter.ALL,
         lowbar=filters.lowbar,
         currency=filters.currency,
     )

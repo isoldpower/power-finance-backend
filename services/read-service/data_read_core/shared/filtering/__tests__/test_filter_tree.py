@@ -185,9 +185,6 @@ def test_garbage_node_raises():
 
 
 def _rendered(node) -> RenderedError:
-    """What the client would actually receive. The grammar is framework-free, so
-    the envelope is produced by the translator rather than by the error."""
-
     with pytest.raises(FilterParseError) as failure:
         make_tree().resolve_es(node)
 
@@ -195,9 +192,6 @@ def _rendered(node) -> RenderedError:
 
 
 def test_filter_failures_render_as_validation_failures_with_detail_codes():
-    """Every filter problem is a 422 `validation_failed`; what distinguishes
-    them is `error.details[].code`."""
-
     rendered = _rendered({"field_name": "secret", "operator": "eq", "value": "x"})
 
     assert rendered.response_status == 422
@@ -232,9 +226,6 @@ def test_each_kind_of_filter_failure_has_its_own_detail_code(node, expected):
 
 
 def test_failure_names_the_offending_node_by_json_path():
-    """A client has to be able to highlight the condition that failed, which
-    means the path points into the tree rather than at the whole body."""
-
     tree = {
         "and": [
             {"field_name": "name", "operator": "eq", "value": "A"},

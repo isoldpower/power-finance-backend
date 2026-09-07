@@ -4,20 +4,14 @@ from data_read_core.shared.metrics import MetricsWindow
 from data_read_core.shared.money import money_at_scale
 from data_read_core.shared.timestamps import to_iso
 
-from ..dtos import (
+from ..config import (
     ALL_SECTIONS,
-    BalanceSheetDTO,
-    MetricsDTO,
+    COMMENT_SEPARATOR,
+    PERCENTAGE_EXPONENT,
+    Messages,
     Section,
 )
-
-PERCENTAGE_EXPONENT = Decimal("0.01")
-IDENTITY_DRIFT_COMMENT = "Assets do not equal liabilities plus equity; the chart is off by {drift}."
-UNBALANCED_DISPATCH_COMMENT = (
-    "{count} transaction(s) were posted with legs that did not agree, most often "
-    "because the two sides landed in different currencies."
-)
-COMMENT_SEPARATOR = " "
+from ..dtos import BalanceSheetDTO, MetricsDTO
 
 
 async def present_metrics(metrics: MetricsDTO) -> dict:
@@ -114,9 +108,11 @@ async def _present_cash_flow(metrics: MetricsDTO) -> dict | None:
 def _comments_for(balance: BalanceSheetDTO) -> str | None:
     reasons_list = []
     if not balance.identity_holds:
-        reasons_list.append(IDENTITY_DRIFT_COMMENT.format(drift=balance.drift))
+        reasons_list.append(Messages.IDENTITY_DRIFT.format(drift=balance.drift))
     if balance.unbalanced_dispatches:
-        reasons_list.append(UNBALANCED_DISPATCH_COMMENT.format(count=balance.unbalanced_dispatches))
+        reasons_list.append(
+            Messages.UNBALANCED_DISPATCH.format(count=balance.unbalanced_dispatches)
+        )
 
     return COMMENT_SEPARATOR.join(reasons_list) or None
 

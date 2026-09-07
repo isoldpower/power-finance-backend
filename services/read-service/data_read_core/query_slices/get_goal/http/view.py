@@ -16,12 +16,11 @@ from data_read_core.shared.rest_framework import (
     async_api_view,
 )
 
+from ..config import CacheNamespace
 from ..dtos import GetGoalQuery
 from ..query_handler import GetGoalQueryHandler
 from ._presenters import present_history_meta, present_one
 from ._serializers import EnvelopedGoalDetailSerializer
-
-HISTORY_NAMESPACE = "history"
 
 
 @extend_schema(
@@ -81,5 +80,5 @@ async def get_goal(request, goal_id=None):
 
     return ok(
         await present_one(detail, history_page.items),
-        present_history_meta(HISTORY_NAMESPACE, history_page, fetched.cached),
+        present_history_meta(CacheNamespace.HISTORY, history_page, fetched.cached),
     )

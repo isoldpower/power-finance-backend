@@ -1,15 +1,10 @@
 from dataclasses import asdict, dataclass, field
-from enum import StrEnum
 
 from data_read_core.shared.pagination import PageRequest
 from data_read_core.shared.postgres_orm import ActionReadModel, ActionStatus
 from data_read_core.shared.timestamps import to_iso
 
-
-class Param(StrEnum):
-    STATUS_PARAM = "status"
-    SOURCE_PARAM = "source"
-    SEVERITY_PARAM = "severity"
+from .config import ParamsList
 
 
 @dataclass(frozen=True)
@@ -20,9 +15,9 @@ class ActionFilters:
 
     def as_cache_material(self) -> dict:
         return {
-            Param.STATUS_PARAM: self.status,
-            Param.SOURCE_PARAM: self.source,
-            Param.SEVERITY_PARAM: self.severity,
+            ParamsList.STATUS: self.status,
+            ParamsList.SOURCE: self.source,
+            ParamsList.SEVERITY: self.severity,
         }
 
 

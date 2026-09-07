@@ -3,7 +3,6 @@ from .entities import (
     FieldFilter,
     FilterFieldPolicy,
     FilterPolicy,
-    GroupOperator,
     TypeVariant,
 )
 from .exceptions import (
@@ -38,6 +37,7 @@ from .value_types import (
     ValueType,
     value_type_for,
 )
+from .vocabulary import GroupOperator
 
 __all__ = [
     "FILTER_MALFORMED_GROUP",

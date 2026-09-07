@@ -9,10 +9,11 @@ from data_read_core.shared.logging import (
 )
 from data_read_core.shared.rest_framework import ErrorResponseSerializer, async_api_view
 
+from ..config import ParamsList
 from ..dtos import GetCurrencyRatesQuery
 from ..query_handler import GetCurrencyRatesQueryHandler
 from ._presenters import present_meta, present_rates
-from ._query_params import TARGET_PARAMETER, read_target_codes
+from ._query_params import read_target_codes
 from ._serializers import EnvelopedCurrencyRatesSerializer
 
 
@@ -35,7 +36,7 @@ from ._serializers import EnvelopedCurrencyRatesSerializer
             description="ISO-4217 code the rates are expressed against.",
         ),
         OpenApiParameter(
-            TARGET_PARAMETER,
+            ParamsList.TARGET,
             type=OpenApiTypes.STR,
             location=OpenApiParameter.QUERY,
             many=True,

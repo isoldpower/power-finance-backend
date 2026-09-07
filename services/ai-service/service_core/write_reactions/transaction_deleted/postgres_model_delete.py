@@ -12,9 +12,10 @@ from .repositories import UnitOfWorkFactory
 
 
 class SoftDeleteProjectedTransaction(Effect):
-    """Marks a transaction deleted rather than removing the row."""
-
-    def __init__(self, unit_of_work: UnitOfWorkFactory = SqlAlchemyRemovalUnitOfWork) -> None:
+    def __init__(
+        self,
+        unit_of_work: UnitOfWorkFactory = SqlAlchemyRemovalUnitOfWork,
+    ) -> None:
         self._unit_of_work = unit_of_work
 
     async def apply(self, event: EventMessage) -> None:

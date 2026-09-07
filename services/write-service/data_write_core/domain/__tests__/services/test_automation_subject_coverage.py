@@ -1,11 +1,3 @@
-"""Every field a condition may name must be a field the matcher can see.
-
-This is the silent failure the shared grammar exists to prevent, in its last
-remaining form: adding a field to a policy without adding it to the subject
-builder leaves a rule that VALIDATES when it is saved and never matches when it
-runs. Nothing else in the system notices.
-"""
-
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
@@ -29,9 +21,6 @@ CHAIN_ID = UUID("cccccccc-cccc-cccc-cccc-cccccccccccc")
 
 
 def fully_populated_transaction() -> TransactionAggregate:
-    """Every optional field set: a subject built from a sparse transaction would
-    hide a missing key behind an absent value."""
-
     transaction = TransactionEntity(
         id=TRANSACTION_ID,
         user_id="7",

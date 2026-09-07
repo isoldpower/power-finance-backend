@@ -16,9 +16,6 @@ class WebhookDTO:
 
 @dataclass(frozen=True)
 class WebhookWithSecretDTO(WebhookDTO):
-    """Returned only on creation and secret rotation — the only moments the
-    plaintext secret is shown to the client."""
-
     secret: str = ""
 
 

@@ -1,14 +1,3 @@
-"""The three derived views over accounts and transactions, on one endpoint.
-
-Every figure here is reported in the caller's PREFERRED currency, which arrives
-as a gateway header. The tests lean on that rather than on a query param
-because there deliberately is no query param — a per-request override would be
-a second way to choose the reporting currency.
-
-The sections live behind boolean selectors on a single `GET /metrics` rather
-than behind three paths: they read the same rows and differ only in the fold.
-"""
-
 import json
 import uuid
 from datetime import UTC, datetime
@@ -142,9 +131,6 @@ async def _transaction(
     )
 
 
-# --- the balance section ----------------------------------------------------
-
-
 async def test_the_sheet_folds_the_chart_into_three_groups():
     await _account(group="assets", name="cash", balance="100.00")
     await _account(group="assets", name="savings", balance="50.00")
@@ -159,9 +145,6 @@ async def test_the_sheet_folds_the_chart_into_three_groups():
 
 
 async def test_a_sheet_that_satisfies_the_identity_balances_with_no_comment():
-    """Amounts are normal-balance positive, so the identity to check is
-    `assets == liabilities + equity`, not a sum against zero."""
-
     await _account(group="assets", name="cash", balance="150.00")
     await _account(group="liabilities", name="card", balance="20.00")
     await _account(group="equity", name="retained", balance="130.00")
@@ -185,9 +168,6 @@ async def test_a_drifting_sheet_reports_the_gap_rather_than_failing():
 
 
 async def test_a_dispatch_whose_legs_disagreed_unbalances_the_sheet():
-    """The totals can satisfy the identity and still be built on a posting that
-    did not, so the two are asked about separately."""
-
     await _account(group="assets", name="cash", balance="150.00")
     await _account(group="liabilities", name="card", balance="20.00")
     await _account(group="equity", name="retained", balance="130.00")
@@ -210,8 +190,6 @@ async def test_a_dispatch_whose_legs_disagreed_unbalances_the_sheet():
 
 
 async def test_the_sheet_converts_into_the_preferred_currency():
-    """The static rate table puts JPY at 150 to the dollar."""
-
     await _account(group="assets", name="cash", balance="100.00", currency="USD")
 
     payload = body_of(await as_user(METRICS, **{"X-User-Currency": "JPY"}))
@@ -239,19 +217,12 @@ async def test_the_sheet_reports_whether_it_was_cached():
 
 
 async def test_two_preferred_currencies_do_not_share_a_cache_entry():
-    """A preference is not a write, so nothing evicts when one changes. The
-    currency has to be part of the key or the second caller reads the first
-    caller's denomination."""
-
     await _account(group="assets", name="cash", balance="100.00")
 
     await as_user(METRICS)
     payload = body_of(await as_user(METRICS, **{"X-User-Currency": "JPY"}))
 
     assert payload["data"]["balance"]["assets"] == {"amount": "15000", "currency": "JPY"}
-
-
-# --- the net_worth section --------------------------------------------------
 
 
 async def test_net_worth_is_the_running_total_of_every_transaction():
@@ -273,9 +244,6 @@ async def test_a_cancelled_transaction_never_counted_as_held():
 
 
 async def test_a_transfer_leaves_net_worth_untouched():
-    """Both legs of a chain belong to the same user, so they cancel without
-    anything having to know a chain is a transfer."""
-
     chain = uuid.uuid4()
     await _transaction(amount="100.00", created_at=JANUARY)
     await _transaction(amount="-40.00", created_at=FEBRUARY, chain_id=chain)
@@ -297,9 +265,6 @@ async def test_the_series_is_exactly_points_long_and_is_not_paginated():
 
 
 async def test_the_series_ends_where_the_reported_total_does():
-    """Each point is the running total at the END of its slice, so the curve
-    reads as net worth over time rather than as activity per slice."""
-
     await _transaction(amount="100.00", created_at=JANUARY)
     await _transaction(amount="-30.00", created_at=FEBRUARY)
 
@@ -346,10 +311,6 @@ async def test_since_is_echoed_and_null_means_all_time():
 
 
 async def test_the_window_opens_on_what_was_already_held():
-    """`since` selects the window, not the balance. Money held before it still
-    counts toward net worth — otherwise the curve would describe the window's
-    activity rather than the user's worth."""
-
     await _transaction(amount="100.00", created_at=JANUARY)
     await _transaction(amount="20.00", created_at=MARCH)
 
@@ -360,8 +321,6 @@ async def test_the_window_opens_on_what_was_already_held():
 
 
 async def test_a_window_in_which_nothing_moved_is_flat():
-    """`flat` is a real direction, not the absence of one."""
-
     await _transaction(amount="100.00", created_at=JANUARY)
 
     payload = body_of(await as_user(f"{METRICS}?since=2026-03-01T00:00:00Z"))
@@ -381,9 +340,6 @@ async def test_losing_money_over_the_window_reads_as_down():
 
 
 async def test_growth_from_nothing_reports_no_percentage():
-    """Every gain from zero is infinite growth. `direction` still says which
-    way it went, so the client is not left guessing."""
-
     await _transaction(amount="100.00", created_at=MARCH)
 
     payload = body_of(await as_user(f"{METRICS}?since=2026-03-01T00:00:00Z"))
@@ -399,9 +355,6 @@ async def test_net_worth_folds_currencies_before_it_totals():
     payload = body_of(await as_user(METRICS))
 
     assert payload["data"]["net_worth"]["money"] == {"amount": "101.00", "currency": "USD"}
-
-
-# --- the cash_flow section --------------------------------------------------
 
 
 async def test_cash_flow_reports_both_directions_as_positive_magnitudes():
@@ -425,9 +378,6 @@ async def test_the_savings_rate_is_a_bare_number_not_money():
 
 
 async def test_a_period_with_no_income_reports_no_savings_rate():
-    """A rate against no income is undefined. Zero would claim the user saved
-    nothing, when in fact there was nothing to save."""
-
     await _transaction(amount="-50.00", created_at=FEBRUARY)
 
     payload = body_of(await as_user(METRICS))
@@ -437,11 +387,6 @@ async def test_a_period_with_no_income_reports_no_savings_rate():
 
 
 async def test_transfers_are_excluded_from_both_halves():
-    """A chain moves money between two containers the user already owns.
-    Counting it would report the same money as income and as spending, which
-    nets out of `total_net` but inflates the two figures above it — and makes
-    `savings_rate` describe nothing."""
-
     chain = uuid.uuid4()
     await _transaction(amount="100.00", created_at=JANUARY)
     await _transaction(amount="-40.00", created_at=FEBRUARY, chain_id=chain)
@@ -501,9 +446,6 @@ async def test_cash_flow_reports_whether_it_was_cached():
 
 
 async def test_a_new_transaction_invalidates_every_cached_metric():
-    """Metrics are keyed on the transaction AND account version counters the
-    write reactions already bump, so neither needs a counter of its own."""
-
     await _transaction(amount="10.00")
     assert body_of(await as_user(METRICS))["data"]["cash_flow"]["inflow"]["amount"] == "10.00"
 
@@ -516,14 +458,7 @@ async def test_a_new_transaction_invalidates_every_cached_metric():
     assert payload["meta"]["cached"] is False
 
 
-# --- edges ------------------------------------------------------------------
-
-
 async def test_a_user_with_nothing_gets_zeroes_rather_than_an_error():
-    """With no transactions there is no first one to open the window on, so
-    `since` and `until` collapse onto the same instant. The series still has to
-    come back the documented length rather than divide by a zero-width slice."""
-
     net_worth = body_of(await as_user(f"{METRICS}?points=3"))
     cash_flow = body_of(await as_user(METRICS))
     balance = body_of(await as_user(METRICS))
@@ -538,9 +473,6 @@ async def test_a_user_with_nothing_gets_zeroes_rather_than_an_error():
 
 
 async def test_a_zero_scale_currency_is_never_padded_with_a_minor_unit():
-    """JPY has no minor unit, so rendering the fold at two decimals would
-    invent one."""
-
     await _transaction(amount="100.00", created_at=JANUARY, currency="USD")
 
     payload = body_of(await as_user(METRICS, **{"X-User-Currency": "JPY"}))
@@ -549,13 +481,7 @@ async def test_a_zero_scale_currency_is_never_padded_with_a_minor_unit():
     assert payload["data"]["net_worth"]["series"][-1]["money"]["amount"] == "15000"
 
 
-# --- section selection ------------------------------------------------------
-
-
 async def test_a_bare_request_returns_every_section():
-    """The reason this is one endpoint: the dashboard call asks for nothing and
-    gets all three."""
-
     await _transaction(amount="10.00")
 
     payload = body_of(await as_user(METRICS))
@@ -567,9 +493,6 @@ async def test_a_bare_request_returns_every_section():
 
 
 async def test_an_excluded_section_is_null_rather_than_missing():
-    """A client reads the same three keys on every response instead of
-    branching on whether one exists."""
-
     await _transaction(amount="10.00")
 
     payload = body_of(await as_user(f"{METRICS}?cash-flow=false"))
@@ -591,9 +514,6 @@ async def test_sections_can_be_dropped_independently():
 
 
 async def test_asking_for_nothing_is_a_well_formed_empty_response():
-    """Not an error: it is a valid request for no sections, and the envelope
-    has a shape for it."""
-
     response = await as_user(f"{METRICS}?balance=false&net-worth=false&cash-flow=false")
     payload = body_of(response)
 
@@ -623,9 +543,6 @@ async def test_a_selector_that_is_not_a_boolean_names_itself():
 
 
 async def test_two_section_sets_do_not_share_a_cache_entry():
-    """Sections decide what the payload contains, so they belong in the key
-    exactly as `since` and `points` do."""
-
     await _transaction(amount="10.00")
 
     await as_user(f"{METRICS}?cash-flow=false")
@@ -636,10 +553,6 @@ async def test_two_section_sets_do_not_share_a_cache_entry():
 
 
 async def test_a_dropped_section_costs_none_of_its_queries(monkeypatch):
-    """The saving is the point of the merge, so it is asserted rather than
-    assumed: asking for cash flow alone must not read the chart of accounts,
-    and must not bucket a series nobody will look at."""
-
     await _transaction(amount="10.00")
     await _account(group="assets", name="cash", balance="10.00")
 
@@ -656,10 +569,6 @@ async def test_a_dropped_section_costs_none_of_its_queries(monkeypatch):
 
 
 async def test_the_sections_share_one_pass_over_the_transactions(monkeypatch):
-    """Net worth's opening balance, its all-time total and cash flow's two
-    directional figures are conditional aggregates in ONE query — which is what
-    a single endpoint buys over three."""
-
     await _transaction(amount="10.00")
 
     calls: list[str] = []

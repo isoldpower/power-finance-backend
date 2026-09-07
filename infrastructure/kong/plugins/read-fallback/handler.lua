@@ -1,16 +1,3 @@
--- Custom Kong plugin: read-fallback
---
--- Transparent read-your-writes fallback. Attached to the Read Service
--- route, it proxies each read itself and, when the Read Service answers
--- `fallback_status` (507 — its projection is behind the client's
--- Read-At-Least), re-issues the request against the Write Service's
--- always-consistent fallback-read endpoint and returns that instead. The
--- client sees one response and never the 507.
---
--- PRIORITY 650 keeps this BELOW clerk-jwt (801) and read-at-least (700)
--- so the verified `X-User-Id` and the resolved `Read-At-Least` header are
--- already on the request before we forward it.
-
 local forwarder = require "kong.plugins.read-fallback.request_forwarder"
 local messages  = require "kong.plugins.read-fallback.messages"
 local utilities = require "kong.plugins.read-fallback.utilities"

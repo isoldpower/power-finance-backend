@@ -14,8 +14,6 @@ DECIMAL_POINT = "."
 
 @dataclass(frozen=True)
 class AmountCandidate:
-    """A raw request value being read as an amount at a known currency scale."""
-
     raw: object
     decimals: int
 
@@ -43,8 +41,6 @@ class AmountCandidate:
 
 
 class AmountRule(ABC):
-    """One reason a request amount is rejected."""
-
     code: DetailCode = DetailCode.AMOUNT_MALFORMED
 
     @abstractmethod
@@ -57,8 +53,6 @@ class AmountRule(ABC):
 
 
 class TextOnlyRule(AmountRule):
-    """A JSON number here means a client regressed to floats."""
-
     def is_satisfied_by(self, candidate: AmountCandidate) -> bool:
         return candidate.is_text
 
@@ -88,9 +82,6 @@ class IntegerDigitsRule(AmountRule):
 
 
 class CurrencyScaleRule(AmountRule):
-    """Fewer fraction digits than the scale are zero-padded; more are rejected
-    rather than rounded."""
-
     code = DetailCode.AMOUNT_PRECISION
 
     def is_satisfied_by(self, candidate: AmountCandidate) -> bool:
@@ -103,7 +94,6 @@ class CurrencyScaleRule(AmountRule):
         )
 
 
-# Order matters: every later rule reads a string the earlier ones vouched for.
 AMOUNT_RULES: tuple[AmountRule, ...] = (
     TextOnlyRule(),
     CanonicalFormRule(),
@@ -114,8 +104,6 @@ AMOUNT_RULES: tuple[AmountRule, ...] = (
 
 @dataclass(frozen=True)
 class AmountParser:
-    """Reads a request amount, rejecting at the first rule it breaks."""
-
     rules: tuple[AmountRule, ...] = AMOUNT_RULES
 
     def parse(self, raw: object, decimals: int, field: str) -> Decimal:

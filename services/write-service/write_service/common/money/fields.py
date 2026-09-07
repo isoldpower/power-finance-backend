@@ -4,7 +4,9 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from .parsing import CURRENCY_AGNOSTIC_RULES, MAX_INTEGER_DIGITS, AmountCandidate, AmountRule
+from write_service.common.money.config import MoneySettings
+
+from .parsing import CURRENCY_AGNOSTIC_RULES, AmountCandidate, AmountRule
 
 
 @extend_schema_field(OpenApiTypes.STR)
@@ -16,7 +18,7 @@ class MoneyAmountField(serializers.Field):
             "Amount must be a canonical decimal string with no separators, "
             "exponent, or leading zeros."
         ),
-        "amount_out_of_range": f"Integer part exceeds {MAX_INTEGER_DIGITS} digits.",
+        "amount_out_of_range": f"Integer part exceeds {MoneySettings.MAX_INTEGER_DIGITS} digits.",
     }
 
     def to_internal_value(self, data) -> Decimal:

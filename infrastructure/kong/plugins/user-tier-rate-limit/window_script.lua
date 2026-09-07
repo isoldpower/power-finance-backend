@@ -1,13 +1,4 @@
--- The sliding-window decision, as a script Redis runs atomically.
---
--- It lives in its own module because it is a different language from the rest
--- of the plugin: this text is executed by Redis, not by Kong.
---
--- Why a script at all: the decision is read-then-write. Reading the counters in
--- one round trip and incrementing them in another lets two concurrent requests
--- both read a count below the limit and both pass. Redis runs a script to
--- completion before serving anything else, so the check and the increment
--- cannot interleave.
+-- The sliding-window redis script
 
 local REDIS_SCRIPT = [==[
 -- KEYS  per window: current bucket key, previous bucket key

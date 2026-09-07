@@ -1220,7 +1220,7 @@ Last, because a useful assistant cites resources from every other slice.
 
 ## Closing steps
 
-**STATUS: done.** All four became one suite — `contract_tests/`, a workspace member with no
+**STATUS: done.** All four became one suite — `infrastructure/tests/contract/`, a workspace member with no
 infrastructure dependency, run by `make test-contract` and included in `make test`. It reads the
 three OpenAPI documents, API_TARGET.md, API_DIFF.md and `kong.yml`, so an endpoint added tomorrow is
 covered without the suite being edited. That is the point: an audit passes once, a test keeps

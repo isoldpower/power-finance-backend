@@ -6,8 +6,6 @@ from .config import KEYS
 
 @dataclass(frozen=True)
 class Page:
-    """A materialized page plus the two cursors that navigate away from it."""
-
     items: list[Any]
     total: int
     limit: int | None = None
@@ -30,7 +28,5 @@ class Page:
 
 
 class CompletePage(Page):
-    """For the handful of endpoints that return a fixed, complete set."""
-
     def __init__(self, items: list[Any], *, total: int | None = None) -> None:
         super().__init__(items=items, total=total if total is not None else len(items))

@@ -1,6 +1,3 @@
--- Error responses for the read-fallback plugin, in the API's standard
--- error envelope.
-
 local envelope = require "power_finance.envelope"
 
 

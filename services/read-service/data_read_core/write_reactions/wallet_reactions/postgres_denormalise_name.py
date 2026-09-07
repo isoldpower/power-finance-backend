@@ -8,9 +8,6 @@ from .._utilities import decode_payload, handle_database_errors
 
 
 class RenameWalletInTransactions(Effect):
-    """Carry a wallet rename into the transaction projection, which denormalises
-    `wallet.name` onto every row to avoid a join."""
-
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, WalletUpdated)
         if payload.new_title == payload.previous_title:

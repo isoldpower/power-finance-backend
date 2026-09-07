@@ -2,8 +2,6 @@ local hmac = require "resty.openssl.hmac"
 
 
 --- Encode a binary string as lowercase hexadecimal.
--- Pairs every input byte with its two-character hex representation;
--- output length is exactly 2× input length.
 --
 -- @param bytes string  arbitrary binary input
 -- @return string  lowercase hex encoding
@@ -13,9 +11,6 @@ end
 
 
 --- Compute an HMAC-SHA256 digest over `payload` using `secret`.
--- Returns the raw (binary) digest, not hex-encoded; callers that
--- compare against an over-the-wire hex string should pass the result
--- through `to_hex` first.
 --
 -- @param secret string  shared HMAC key
 -- @param payload string  message to sign
@@ -37,13 +32,6 @@ end
 
 
 --- Compare two strings in constant time relative to their length.
--- Length mismatch or non-string input short-circuits to false; equal
--- lengths fold all byte differences via XOR so the loop never
--- terminates early. Use whenever comparing a user-supplied signature
--- against an expected one to avoid timing side channels.
---
--- LuaJIT only — depends on the bundled `bit` library; this plugin
--- runs under Kong's OpenResty so that constraint is always met.
 --
 -- @param first string
 -- @param second string

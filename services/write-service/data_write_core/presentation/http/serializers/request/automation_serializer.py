@@ -1,7 +1,6 @@
 from rest_framework import serializers
 
-MAX_NAME_LENGTH = 120
-MAX_ICON_LENGTH = 64
+from .config import FieldSettings
 
 
 class CreateAutomationRequestSerializer(serializers.Serializer):
@@ -9,9 +8,9 @@ class CreateAutomationRequestSerializer(serializers.Serializer):
     which owns the vocabularies and the filter grammar — a serializer would be a
     second, weaker copy of both."""
 
-    name = serializers.CharField(max_length=MAX_NAME_LENGTH)
+    name = serializers.CharField(max_length=FieldSettings.MAX_NAME_LENGTH)
     icon = serializers.CharField(
-        max_length=MAX_ICON_LENGTH,
+        max_length=FieldSettings.MAX_ICON_LENGTH,
         required=False,
         allow_blank=True,
         default="",
@@ -26,8 +25,10 @@ class UpdateAutomationRequestSerializer(serializers.Serializer):
     """`trigger` and `effects` are replaced WHOLE when supplied, never merged:
     deep-merging a condition tree has no sane definition."""
 
-    name = serializers.CharField(max_length=MAX_NAME_LENGTH, required=False)
-    icon = serializers.CharField(max_length=MAX_ICON_LENGTH, required=False, allow_blank=True)
+    name = serializers.CharField(max_length=FieldSettings.MAX_NAME_LENGTH, required=False)
+    icon = serializers.CharField(
+        max_length=FieldSettings.MAX_ICON_LENGTH, required=False, allow_blank=True
+    )
     enabled = serializers.BooleanField(required=False)
     trigger = serializers.DictField(required=False)
     effects = serializers.ListField(child=serializers.DictField(), required=False)

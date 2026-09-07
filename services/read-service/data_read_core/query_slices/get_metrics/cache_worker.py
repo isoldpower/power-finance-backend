@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from redis.asyncio import Redis
 
+from .config import CacheSettings
 from .dtos import (
     BalanceSheetDTO,
     CashFlowDTO,
@@ -12,7 +13,7 @@ from .dtos import (
     NetWorthDTO,
     SeriesPointDTO,
 )
-from .infra import CACHE_TTL_SECONDS, get_metrics_cache_key
+from .infra import get_metrics_cache_key
 
 
 class CacheWorker:
@@ -53,7 +54,7 @@ class CacheWorker:
                     "cash_flow": _cash_flow_to(metrics.cash_flow),
                 }
             ),
-            ex=CACHE_TTL_SECONDS,
+            ex=int(CacheSettings.TTL_SECONDS),
         )
 
 

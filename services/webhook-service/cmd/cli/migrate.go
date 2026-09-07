@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	_ "github.com/jackc/pgx/v5/stdlib" // database/sql driver named "pgx"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 	"github.com/spf13/cobra"
 
@@ -18,8 +18,7 @@ const (
 	defaultMigrateVerb = "status"
 )
 
-// MigrateCommand runs the embedded Goose migrations against the configured
-// Postgres database.
+// MigrateCommand runs the embedded Goose migrations against the configured Postgres database.
 type MigrateCommand struct {
 	commandInstance *cobra.Command
 }
@@ -31,7 +30,8 @@ func NewMigrateCommand() *MigrateCommand {
 	command.commandInstance = &cobra.Command{
 		Use:   "migrate [up | down | status | up-by-one | reset | version]",
 		Short: "Run Goose database migrations",
-		Long:  "Applies the embedded Goose migrations against the configured Postgres database. Defaults to 'status' when no verb is given.",
+		Long: "Applies the embedded Goose migrations against the configured Postgres " +
+			"database. Defaults to 'status' when no verb is given.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			verb := defaultMigrateVerb
 			if len(args) > 0 {

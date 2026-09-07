@@ -2,34 +2,24 @@ from dataclasses import asdict, dataclass
 from decimal import Decimal
 
 from data_read_core.shared.pagination import PageRequest
-from data_read_core.shared.postgres_orm import AccountGroups, AccountReadModel
+from data_read_core.shared.postgres_orm import AccountReadModel
 from data_read_core.shared.timestamps import to_iso
 
-ALL_GROUPS = "all"
-GROUP_CHOICES = (ALL_GROUPS, *(group.value for group in AccountGroups))
+from .config import GroupFilter
 
 
 @dataclass(frozen=True)
 class ChartFilters:
-    """The three query params that narrow the chart, already validated.
-
-    `lowbar` is expressed in `currency`, which is the CALLER's currency and has
-    nothing to do with the book currency an account is denominated in — the
-    handler converts before it compares."""
-
     group: str
     lowbar: Decimal
     currency: str
 
     @property
     def narrows_by_group(self) -> bool:
-        return self.group != ALL_GROUPS
+        return self.group != GroupFilter.ALL
 
     @property
     def narrows_by_balance(self) -> bool:
-        """A `lowbar` of zero excludes nothing, so it is not worth a conversion
-        or an extra predicate."""
-
         return self.lowbar > 0
 
     def as_cache_material(self) -> dict:
@@ -89,12 +79,6 @@ class AccountDTO:
 
 @dataclass(frozen=True)
 class FetchedChart:
-    """A page of the chart plus the per-group counts beside it.
-
-    `groups` deliberately ignores the `group` filter — it describes the whole
-    chart so the UI can label its tabs — but it DOES honour `lowbar`, so a tab's
-    count matches what clicking it returns."""
-
     rows: list[AccountDTO]
     total: int
     groups: dict[str, int]

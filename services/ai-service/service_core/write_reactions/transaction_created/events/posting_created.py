@@ -3,7 +3,8 @@ from uuid import UUID
 
 from kafka_messages import AccountPostingCreated
 
-from ....shared.kafka_outbox import OutboxEntry, build_outbox_entry
+from service_core.shared.kafka_outbox import OutboxEntry, build_outbox_entry
+
 from ..contracts import StoredPosting
 from ._aggregates import POSTING_AGGREGATE
 from ._money import money

@@ -165,9 +165,6 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "0.1.0",
     "SCHEMA_PATH_PREFIX": r"/api/v[0-9]+/",
     "SERVE_INCLUDE_SCHEMA": False,
-    # Several resources carry a field literally called `type`, so the generator
-    # cannot name their enums from the field alone and falls back to something
-    # like `Type00fEnum`. Naming them here keeps the generated client readable.
     "ENUM_NAME_OVERRIDES": {
         "AutomationTriggerType": "data_write_core.domain.automations.TRIGGER_TYPE_CHOICES",
         "AutomationEffectType": "data_write_core.domain.automations.EFFECT_TYPE_CHOICES",

@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
+from data_write_core.domain.services.config import ChainSettings
+
 from ..aggregates import TransactionAggregate
 from ..entities import MoneyFlowEntity
 from ..exceptions import (
@@ -9,8 +11,6 @@ from ..exceptions import (
     TransactionChainTooLongError,
     TransactionChainUnknownReferenceError,
 )
-
-MAX_CHAIN_LENGTH = 100
 
 
 @dataclass(frozen=True)
@@ -20,8 +20,10 @@ class ChainNode:
 
 
 def order_chain(nodes: list[ChainNode]) -> list[int]:
-    if len(nodes) > MAX_CHAIN_LENGTH:
-        raise TransactionChainTooLongError(length=len(nodes), maximum=MAX_CHAIN_LENGTH)
+    if len(nodes) > ChainSettings.MAX_CHAIN_LENGTH:
+        raise TransactionChainTooLongError(
+            length=len(nodes), maximum=ChainSettings.MAX_CHAIN_LENGTH
+        )
 
     return _CommitOrderResolver(nodes).resolve()
 

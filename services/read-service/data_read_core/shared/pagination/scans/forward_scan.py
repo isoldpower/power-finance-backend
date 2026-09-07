@@ -7,8 +7,6 @@ from .scanned_rows import ScannedRows
 
 
 class ForwardScan(PageScan):
-    """Reads on from the anchor in the collection's own order."""
-
     @property
     def direction(self) -> PageDirection:
         return PageDirection.NEXT

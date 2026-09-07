@@ -3,9 +3,10 @@ from decimal import Decimal
 from write_service.common.http_contract import UnsupportedCurrency
 from write_service.common.money import format_amount, money
 
+from data_write_core.application.config import MoneySettings
+
 from .bootstrap import get_repository_registry
 
-DEFAULT_DECIMALS = 2
 _cache: dict[str, int] = {}
 
 
@@ -33,11 +34,11 @@ async def decimals_for(currency_code: str) -> int:
 
 async def decimals_or_default(currency_code: str | None) -> int:
     if not currency_code:
-        return DEFAULT_DECIMALS
+        return MoneySettings.DEFAULT_DECIMALS
 
     return (await load_scales()).get(
         currency_code.upper(),
-        DEFAULT_DECIMALS,
+        MoneySettings.DEFAULT_DECIMALS,
     )
 
 

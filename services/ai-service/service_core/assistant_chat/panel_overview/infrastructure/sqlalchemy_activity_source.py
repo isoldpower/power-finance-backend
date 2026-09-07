@@ -4,11 +4,15 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from service_core.shared.db_connection import ProjectedTransaction, UserModel
+from service_core.shared.db_connection import (
+    ProjectedTransaction,
+    UserModel,
+)
 
-from ..contracts import ActivitySource, ConversationActivity
+from ..application.contracts import ActivitySource
+from ..application.dtos import ConversationActivityDTO
 
-EMPTY = ConversationActivity(
+EMPTY = ConversationActivityDTO(
     spend_currency="",
     spend_this_month=Decimal(0),
     spend_last_month=Decimal(0),
@@ -21,7 +25,7 @@ class SqlAlchemyActivitySource(ActivitySource):
     def __init__(self, session_factory: async_sessionmaker) -> None:
         self._session_factory = session_factory
 
-    async def read(self, external_id: str) -> ConversationActivity:
+    async def read(self, external_id: str) -> ConversationActivityDTO:
         async with self._session_factory() as session:
             user_id = await session.scalar(
                 select(UserModel.user_id).where(UserModel.external_id == external_id)
@@ -32,7 +36,7 @@ class SqlAlchemyActivitySource(ActivitySource):
             this_month, last_month = month_bounds(datetime.now(UTC))
             currency = await self._dominant_currency(session, user_id, last_month)
 
-            return ConversationActivity(
+            return ConversationActivityDTO(
                 spend_currency=currency,
                 spend_this_month=await self._spend(
                     session,

@@ -553,7 +553,7 @@ wheels = [
 [[package]]
 name = "contract-tests"
 version = "0.0.0"
-source = { editable = "contract_tests" }
+source = { editable = "infrastructure/tests/contract" }
 dependencies = [
     { name = "pyyaml" },
 ]

@@ -1,9 +1,3 @@
-"""The cursor wire format, which is shared with the Django services.
-
-A client stores one kind of opaque token whichever service answered it, so the
-encoding is pinned here rather than left to whatever `json.dumps` does today.
-"""
-
 import base64
 import json
 from datetime import UTC, datetime
@@ -13,10 +7,8 @@ import pytest
 
 from service_core.shared.http_contract import ApiError
 from service_core.shared.pagination import (
-    DEFAULT_LIMIT,
-    MAXIMUM_LIMIT,
-    MESSAGE_FEED_ORDER,
-    MINIMUM_LIMIT,
+    LimitSettings,
+    OrderSettings,
     PageDirection,
     build_page,
     decode_cursor,
@@ -27,7 +19,7 @@ from service_core.shared.pagination import (
 )
 
 NOON = datetime(2026, 8, 12, 12, 0, tzinfo=UTC)
-FINGERPRINT = query_fingerprint(MESSAGE_FEED_ORDER)
+FINGERPRINT = query_fingerprint(OrderSettings.MESSAGE_FEED)
 
 
 def _row(minute: int) -> tuple:
@@ -54,8 +46,6 @@ def test_a_cursor_carries_its_direction():
 
 
 def test_the_payload_is_the_shape_the_other_services_mint():
-    """`{v, d, k, f}`, base64url, unpadded."""
-
     raw = encode_cursor(PageDirection.NEXT, (NOON, UUID(int=1)), FINGERPRINT)
 
     assert "=" not in raw
@@ -69,8 +59,6 @@ def test_the_payload_is_the_shape_the_other_services_mint():
 
 
 def test_a_cursor_from_another_query_is_refused():
-    """Carrying one across a filter change would silently skip or repeat rows."""
-
     cursor = encode_cursor(PageDirection.NEXT, (NOON, uuid4()), FINGERPRINT)
 
     with pytest.raises(ApiError) as refusal:
@@ -100,9 +88,9 @@ def test_a_cursor_from_a_future_version_is_refused():
 
 
 def test_the_limit_is_clamped_rather_than_refused():
-    assert resolve_limit(None) == DEFAULT_LIMIT
-    assert resolve_limit(5000) == MAXIMUM_LIMIT
-    assert resolve_limit(0) == MINIMUM_LIMIT
+    assert resolve_limit(None) == LimitSettings.DEFAULT
+    assert resolve_limit(5000) == LimitSettings.MAXIMUM
+    assert resolve_limit(0) == LimitSettings.MINIMUM
     assert resolve_limit(10) == 10
 
 
@@ -147,9 +135,6 @@ def test_an_empty_page_mints_no_cursors():
 
 
 def test_a_non_integer_limit_leaves_through_the_error_envelope():
-    """FastAPI's own validation would answer with `{"detail": [...]}`, which is
-    not the error shape this API promises."""
-
     with pytest.raises(ApiError) as refusal:
         resolve_limit("plenty")
 
@@ -158,5 +143,5 @@ def test_a_non_integer_limit_leaves_through_the_error_envelope():
 
 
 def test_a_blank_limit_reads_as_absent():
-    assert resolve_limit("") == DEFAULT_LIMIT
+    assert resolve_limit("") == LimitSettings.DEFAULT
     assert resolve_limit("7") == 7

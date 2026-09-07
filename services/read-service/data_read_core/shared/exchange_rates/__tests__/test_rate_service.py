@@ -86,9 +86,6 @@ async def test_a_provider_that_cannot_answer_surfaces_as_rate_unavailable(
 
 
 async def test_a_stalled_feed_is_refused_rather_than_served_silently(fake_redis: FakeRedis):
-    """The reading is cached and readable — it is its own timestamp that
-    disqualifies it, which a Redis TTL cannot express."""
-
     stalled = snapshot(datetime.now(UTC) - timedelta(seconds=MAX_AGE_SECONDS + 60))
     service = build_service(RecordingProvider(stalled), fake_redis)
 
@@ -118,9 +115,6 @@ async def test_rate_between_returns_the_multiplier_and_its_timestamp(fake_redis:
 
 
 async def test_a_supported_currency_the_feed_omits_is_rate_unavailable(fake_redis: FakeRedis):
-    """Our table decides what is SUPPORTED; the feed decides what is QUOTED.
-    A gap between the two is a 409, not a 422."""
-
     service = build_service(RecordingProvider(snapshot()), fake_redis)
 
     with pytest.raises(RateUnavailable):

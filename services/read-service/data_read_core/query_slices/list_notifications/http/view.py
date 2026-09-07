@@ -1,5 +1,4 @@
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 
 from data_read_core.shared.http_contract import ok
 from data_read_core.shared.logging import (
@@ -8,7 +7,6 @@ from data_read_core.shared.logging import (
     log_request_served,
 )
 from data_read_core.shared.pagination import CREATED_AT_DESC, PageRequest, build_page
-from data_read_core.shared.postgres_orm import Severity
 from data_read_core.shared.read_at_least import read_at_least_gate
 from data_read_core.shared.rest_framework import (
     CURSOR_PARAMETER,
@@ -17,29 +15,12 @@ from data_read_core.shared.rest_framework import (
     async_api_view,
 )
 
+from ..config import ACKNOWLEDGED_PARAMETER, SEVERITY_PARAMETER
 from ..dtos import ListNotificationsQuery
 from ..query_handler import ListNotificationsQueryHandler
 from ._filters import read_filters
 from ._presenters import present_many
 from ._serializers import PaginatedNotificationPreviewSerializer
-
-ACKNOWLEDGED_PARAMETER = OpenApiParameter(
-    "acknowledged",
-    type=OpenApiTypes.BOOL,
-    location=OpenApiParameter.QUERY,
-    description=(
-        "Restrict to read or unread. ABSENT means both — it is a tristate, not "
-        "a boolean defaulting to either value."
-    ),
-)
-
-SEVERITY_PARAMETER = OpenApiParameter(
-    "severity",
-    type=OpenApiTypes.STR,
-    location=OpenApiParameter.QUERY,
-    enum=list(Severity),
-    description="Restrict to one severity. Absent means all of them.",
-)
 
 
 @extend_schema(

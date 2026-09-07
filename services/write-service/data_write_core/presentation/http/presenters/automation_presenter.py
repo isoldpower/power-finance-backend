@@ -28,10 +28,6 @@ class AutomationHttpPresenter:
 
     @staticmethod
     def _present_trigger(automation: AutomationDTO) -> dict:
-        """Both `event` and `schedule` are always present, the inapplicable one
-        `null` — so a client reads `trigger.schedule` without guarding. Requests
-        supply one; responses carry both."""
-
         return {
             "type": automation.trigger.type,
             "event": automation.trigger.event,

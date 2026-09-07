@@ -1,9 +1,9 @@
 from datetime import datetime
 
+from data_write_core.domain.entities.config import NotificationDefaults
+
 from ..events import EventCollector
 from ._entity_root import EntityRoot
-
-DEFAULT_SEVERITY = "info"
 
 
 class NotificationEntity(EntityRoot):
@@ -26,7 +26,7 @@ class NotificationEntity(EntityRoot):
         user_id: str,
         created_at: datetime,
         payload: dict | None = None,
-        severity: str = DEFAULT_SEVERITY,
+        severity: str = NotificationDefaults.SEVERITY,
         subject_type: str | None = None,
         subject_id: str | None = None,
         acknowledged_at: datetime | None = None,
@@ -76,9 +76,6 @@ class NotificationEntity(EntityRoot):
 
     @property
     def is_acknowledged(self) -> bool:
-        """The fact and its time are one field, so "read" is derived rather than
-        stored beside the timestamp where the two could disagree."""
-
         return self._acknowledged_at is not None
 
     @property
@@ -94,12 +91,6 @@ class NotificationEntity(EntityRoot):
         return self._updated_at
 
     def acknowledge(self, at: datetime) -> None:
-        """Idempotent: a second acknowledgement keeps the FIRST timestamp.
-
-        `acknowledged_at` records when the user saw it, and re-tapping a bell
-        does not move that moment.
-        """
-
         if self.is_acknowledged:
             return
 
@@ -107,7 +98,4 @@ class NotificationEntity(EntityRoot):
         self._updated_at = at
 
     def unacknowledge(self) -> None:
-        """Inverse of acknowledge. Compensation hook only — used by SAGA
-        rollback when an outbox emission fails after the ack commit."""
-
         self._acknowledged_at = None

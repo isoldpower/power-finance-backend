@@ -2,28 +2,19 @@ from datetime import datetime
 
 from kafka_messages import (
     ActionRaised,
+    ActionResolution as ActionResolutionMessage,
+    ActionResolved as ActionResolvedMessage,
     ActionSeverity,
     ActionSource,
     ActionStatus,
     ResolutionIntent,
 )
-from kafka_messages import (
-    ActionResolution as ActionResolutionMessage,
-)
-from kafka_messages import (
-    ActionResolved as ActionResolvedMessage,
-)
 
+from data_write_core.application.commands.config import AggregateType
 from data_write_core.domain.entities import (
     ActionEntity,
-)
-from data_write_core.domain.entities import (
     ActionSeverity as DomainSeverity,
-)
-from data_write_core.domain.entities import (
     ActionSource as DomainSource,
-)
-from data_write_core.domain.entities import (
     ActionStatus as DomainStatus,
 )
 from data_write_core.domain.value_objects import ResolutionIntent as DomainIntent
@@ -31,8 +22,6 @@ from data_write_core.infrastructure.messaging import (
     build_outbox_entry,
     datetime_to_timestamp,
 )
-
-ACTION_AGGREGATE = "action"
 
 _SOURCES: dict[str, int] = {
     DomainSource.ASSISTANT: ActionSource.ACTION_SOURCE_ASSISTANT,
@@ -100,7 +89,7 @@ def action_raised(action: ActionEntity):
 
     return build_outbox_entry(
         message,
-        aggregate_type=ACTION_AGGREGATE,
+        aggregate_type=AggregateType.ACTION,
         aggregate_id=action.unique_id,
         partition_key=action.user_external_id,
     )
@@ -122,7 +111,7 @@ def action_resolved(action: ActionEntity, *, at: datetime):
 
     return build_outbox_entry(
         message,
-        aggregate_type=ACTION_AGGREGATE,
+        aggregate_type=AggregateType.ACTION,
         aggregate_id=action.unique_id,
         partition_key=action.user_external_id,
     )

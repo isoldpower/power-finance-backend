@@ -1,9 +1,3 @@
-"""Turning a finished reply into the chips beside it.
-
-Against a real Postgres because the whole job is a lookup: an extractor that
-resolved ids without asking the database would cite things that do not exist.
-"""
-
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
@@ -16,8 +10,8 @@ from service_core.shared.db_connection import (
     session_scope,
 )
 
-from ..contracts import ConnectionContext
-from ..references import ProjectedReferenceExtractor
+from ..application.contracts import ConnectionContext
+from ..infrastructure import ProjectedReferenceExtractor
 
 OWNER = ConnectionContext(path="/api/v1/chat/advice", external_id="clerk_7")
 STRANGER_EXTERNAL_ID = "clerk_9"
@@ -97,9 +91,6 @@ async def test_an_account_the_user_owns_is_cited():
 
 
 async def test_another_users_records_are_never_cited():
-    """A reply cannot be talked into citing someone else's records — the id is
-    dropped rather than resolved."""
-
     await _user(1, OWNER.external_id)
     stranger_id = await _user(2, STRANGER_EXTERNAL_ID)
     transaction_id = await _transaction(stranger_id)
@@ -108,8 +99,6 @@ async def test_another_users_records_are_never_cited():
 
 
 async def test_an_unknown_id_is_dropped_rather_than_guessed_at():
-    """A chip that deep-links nowhere is worse than no chip."""
-
     await _user(1, OWNER.external_id)
 
     assert await _extractor().extract(f"See {uuid4()}.", OWNER) == ()
@@ -142,7 +131,4 @@ async def test_references_keep_the_order_they_are_mentioned_in():
 
 
 async def test_a_user_who_has_not_synced_yet_cites_nothing():
-    """The conversation can start before `UserSynced` arrives. Nothing is
-    resolvable yet, which is not an error."""
-
     assert await _extractor().extract(f"See {uuid4()}.", OWNER) == ()

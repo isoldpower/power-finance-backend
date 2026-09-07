@@ -9,19 +9,6 @@ TFinal = TypeVar("TFinal")
 
 
 class FinalizedSagaCoordinator(Generic[TFinal]):
-    """Linear SAGA orchestrator with a distinguished final step.
-
-    Two-phase run:
-      1. `transaction_steps` execute in order (the business writes).
-      2. `final_step` executes last (e.g. the broadcast / "announce it"),
-         and its forward result is returned from `run_transaction()`.
-
-    If any forward fails, the already-completed steps — final step included
-    if it had succeeded — are compensated in reverse order and the original
-    exception is re-raised. A compensation that itself fails is logged at
-    CRITICAL (orphan state) but does not stop the remaining compensations.
-    """
-
     def __init__(
         self,
         *,

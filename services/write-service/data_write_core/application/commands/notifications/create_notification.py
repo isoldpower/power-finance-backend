@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 from kafka_messages import NotificationCreated
 
 from data_write_core.domain.entities import NotificationEntity
-from data_write_core.domain.entities.notification import DEFAULT_SEVERITY
+from data_write_core.domain.entities.config import NotificationDefaults
 from data_write_core.infrastructure.messaging import (
     build_outbox_entry,
     datetime_to_timestamp,
@@ -26,15 +26,12 @@ from ..command_base import CommandHandlerBase
 
 @dataclass(frozen=True)
 class CreateNotificationCommand:
-    """System-authored notifications: issued by event consumers (e.g. the
-    inbound notifications worker), never directly by HTTP clients."""
-
     user_id: int
     user_external_id: str
     title: str
     body: str
     payload: dict | None = None
-    severity: str = DEFAULT_SEVERITY
+    severity: str = NotificationDefaults.SEVERITY
     subject_type: str | None = None
     subject_id: str | None = None
 

@@ -72,10 +72,6 @@ class TransactionDTO:
 
 
 def _posting_of(posting: AccountPostingReadModel) -> dict:
-    """Kept as raw strings, not rendered money: the DTO is what gets cached,
-    and currency scales are a presentation concern that can change under a
-    cache entry."""
-
     return {
         "id": str(posting.id),
         "account_id": str(posting.account_id),

@@ -6,17 +6,13 @@ from data_read_core.shared.http_contract import (
     ValidationFailed,
 )
 
+from ..config import FALSE_STATEMENTS, TRUTH_STATEMENTS, Messages, ParamsList
 from ..dtos import WebhookFilters
-
-ENABLED_PARAM = "enabled"
-TRUTH_STATEMENTS = {"1", "true", "yes", "on"}
-FALSE_STATEMENTS = {"0", "false", "no", "off"}
-NOT_A_BOOLEAN_MESSAGE = "{parameter} must be a boolean ({legal})."
 
 
 def read_filters(request: Request) -> WebhookFilters:
     return WebhookFilters(
-        enabled=_read_enabled(request.query_params.get(ENABLED_PARAM)),
+        enabled=_read_enabled(request.query_params.get(ParamsList.ENABLED)),
     )
 
 
@@ -33,10 +29,10 @@ def _read_enabled(raw_enabled: str | None) -> bool | None:
     raise ValidationFailed(
         details=[
             ErrorDetail(
-                field=ENABLED_PARAM,
+                field=ParamsList.ENABLED,
                 code=DetailCode.INVALID,
-                message=NOT_A_BOOLEAN_MESSAGE.format(
-                    parameter=ENABLED_PARAM,
+                message=Messages.NOT_A_BOOLEAN.format(
+                    parameter=ParamsList.ENABLED,
                     legal=", ".join(sorted(TRUTH_STATEMENTS | FALSE_STATEMENTS)),
                 ),
             )

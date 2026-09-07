@@ -16,8 +16,8 @@ from ...serializers import (
     ErrorResponseSerializer,
     PaginatedGoalResponseSerializer,
 )
-from ._schema import CURSOR_PARAMETER, LIMIT_PARAMETER, resource_id_parameter
 from .base import FallbackReadView
+from .config import CURSOR_PARAMETER, LIMIT_PARAMETER, resource_id_parameter
 
 
 class FallbackGoalListView(FallbackReadView):

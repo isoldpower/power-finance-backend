@@ -4,20 +4,8 @@ from decimal import Decimal
 from enum import StrEnum
 
 from data_read_core.shared.metrics import MetricsWindow
-from data_read_core.shared.postgres_orm import AccountGroups
 
-
-class Section(StrEnum):
-    BALANCE = "balance"
-    NET_WORTH = "net-worth"
-    CASH_FLOW = "cash-flow"
-
-    @property
-    def key(self) -> str:
-        return self.value.replace("-", "_")
-
-
-ALL_SECTIONS = tuple(Section)
+from .config import Section
 
 
 class Direction(StrEnum):
@@ -118,6 +106,3 @@ class MetricsDTO:
     balance: BalanceSheetDTO | None
     net_worth: NetWorthDTO | None
     cash_flow: CashFlowDTO | None
-
-
-EMPTY_GROUPS: dict[str, Decimal] = {group.value: Decimal(0) for group in AccountGroups}

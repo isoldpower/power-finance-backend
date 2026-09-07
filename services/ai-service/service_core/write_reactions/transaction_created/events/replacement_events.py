@@ -2,7 +2,8 @@ from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
-from ....shared.kafka_outbox import OutboxEntry
+from service_core.shared.kafka_outbox import OutboxEntry
+
 from ..contracts import BalanceChange, RemovedPosting, StoredPosting
 from .account_updated import account_updated
 from .posting_created import posting_created

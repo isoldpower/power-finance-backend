@@ -1,8 +1,6 @@
-"""How the gateway's authentication appears in the OpenAPI document."""
-
 from drf_spectacular.extensions import OpenApiAuthenticationExtension
 
-SECURITY_SCHEME_NAME = "clerkBearer"
+from .config import SchemaName
 
 
 class GatewayUserHeaderAuthenticationScheme(OpenApiAuthenticationExtension):
@@ -10,7 +8,7 @@ class GatewayUserHeaderAuthenticationScheme(OpenApiAuthenticationExtension):
         "data_write_core.presentation.http.auth.gateway_authentication."
         "GatewayUserHeaderAuthentication"
     )
-    name = SECURITY_SCHEME_NAME
+    name = str(SchemaName.SECURITY)
 
     def get_security_definition(self, auto_schema) -> dict:
         return {

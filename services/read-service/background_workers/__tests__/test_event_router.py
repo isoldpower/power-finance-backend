@@ -1,10 +1,3 @@
-"""What the consumer is subscribed to.
-
-Registration is pure wiring: nothing fails at import time when a handler is
-left out of `_KNOWN_HANDLERS`, the events simply stop being projected. These
-assertions are the only thing standing between that and silence.
-"""
-
 import pytest
 from kafka_consumer_py import KafkaEventRouter
 

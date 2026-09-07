@@ -13,14 +13,6 @@ def build_page(
     key_of: Callable[[Any], tuple[Any, ...]],
     cursor: Cursor | None = None,
 ) -> Page:
-    """Trims the lookahead row and mints the cursors that navigate away from
-    this page.
-
-    `rows` is expected to hold up to `limit + 1` entries and to already be in
-    the order it will be served in — a backward scan is reversed by whatever
-    fetched it, so this only ever sees newest-first.
-    """
-
     backwards = cursor is not None and cursor.backwards
     has_more = len(rows) > limit
     if has_more:

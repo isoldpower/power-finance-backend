@@ -1,5 +1,3 @@
-"""DomainEvent base: every event auto-stamps event_id and occurred_at."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

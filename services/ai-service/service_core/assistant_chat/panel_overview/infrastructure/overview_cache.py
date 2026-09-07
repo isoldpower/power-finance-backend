@@ -1,23 +1,24 @@
 import time
 from dataclasses import dataclass
 
-from ..contracts import Overview
+from ..application.contracts import OverviewCache
+from ..application.dtos import OverviewDTO
 
 DEFAULT_TTL_SECONDS = 60.0
 
 
 @dataclass(frozen=True, slots=True)
 class _Entry:
-    overview: Overview
+    overview: OverviewDTO
     expires_at: float
 
 
-class OverviewCache:
+class InMemoryOverviewCache(OverviewCache):
     def __init__(self, ttl_seconds: float = DEFAULT_TTL_SECONDS) -> None:
         self._ttl = ttl_seconds
         self._entries: dict[str, _Entry] = {}
 
-    def get(self, external_id: str) -> Overview | None:
+    def get(self, external_id: str) -> OverviewDTO | None:
         entry = self._entries.get(external_id)
         if entry is None:
             return None
@@ -27,7 +28,7 @@ class OverviewCache:
 
         return entry.overview
 
-    def put(self, external_id: str, overview: Overview) -> None:
+    def put(self, external_id: str, overview: OverviewDTO) -> None:
         self._entries[external_id] = _Entry(
             overview=overview,
             expires_at=time.monotonic() + self._ttl,

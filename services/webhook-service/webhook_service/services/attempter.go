@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"log/slog"
 	"strconv"
 	"time"
 
@@ -15,7 +14,14 @@ type deliveryStore interface {
 	ClaimDue(ctx context.Context, now time.Time, lease time.Duration, limit int) ([]types.Delivery, error)
 	MarkSucceeded(ctx context.Context, deliveryID string, attempts int, at time.Time) error
 	MarkFailed(ctx context.Context, deliveryID string, attempts int, lastError string, at time.Time) error
-	Reschedule(ctx context.Context, deliveryID string, attempts int, lastError string, nextAttemptAt time.Time, at time.Time) error
+	Reschedule(
+		ctx context.Context,
+		deliveryID string,
+		attempts int,
+		lastError string,
+		nextAttemptAt time.Time,
+		at time.Time,
+	) error
 }
 
 type secretResolver interface {
@@ -30,6 +36,7 @@ type notifier interface {
 	RequestNotification(ctx context.Context, delivery types.Delivery, short, message string) error
 }
 
+// DeliveryAttempter performs one delivery try and books the outcome.
 type DeliveryAttempter struct {
 	deliveries   deliveryStore
 	secrets      secretResolver
@@ -39,6 +46,7 @@ type DeliveryAttempter struct {
 	retryBackoff time.Duration
 }
 
+// NewDeliveryAttempter wires the attempter over its sender, stores and retry policy.
 func NewDeliveryAttempter(
 	deliveries deliveryStore,
 	secrets secretResolver,
@@ -57,8 +65,7 @@ func NewDeliveryAttempter(
 	}
 }
 
-// Attempt performs one delivery try; an empty secret is resolved from the
-// store (e.g. a scheduler-claimed redelivery).
+// Attempt performs one delivery try; an empty secret is resolved from the store (e.g.
 func (a *DeliveryAttempter) Attempt(ctx context.Context, delivery types.Delivery, secret string) error {
 	now := time.Now().UTC()
 	attemptNumber := delivery.Attempts + 1
@@ -85,24 +92,23 @@ func (a *DeliveryAttempter) Attempt(ctx context.Context, delivery types.Delivery
 
 	metrics.DeliveryOutcome(metrics.OutcomeRetry)
 	nextAttemptAt := now.Add(a.retryBackoff * time.Duration(attemptNumber))
-	slog.Warn(
-		"webhook delivery failed, rescheduling",
-		"delivery_id", delivery.ID,
-		"attempt", attemptNumber,
-		"next_attempt_at", nextAttemptAt,
-		"error", sendErr,
-	)
+	logDeliveryRescheduled(delivery.ID, attemptNumber, nextAttemptAt, sendErr)
 
 	return a.deliveries.Reschedule(ctx, delivery.ID, attemptNumber, sendErr.Error(), nextAttemptAt, now)
 }
 
-func (a *DeliveryAttempter) recordSuccess(ctx context.Context, delivery types.Delivery, attempts int, now time.Time) error {
+func (a *DeliveryAttempter) recordSuccess(
+	ctx context.Context,
+	delivery types.Delivery,
+	attempts int,
+	now time.Time,
+) error {
 	if markErr := a.deliveries.MarkSucceeded(ctx, delivery.ID, attempts, now); markErr != nil {
 		return markErr
 	}
 
 	metrics.DeliveryOutcome(metrics.OutcomeSuccess)
-	slog.Info("webhook delivered", "delivery_id", delivery.ID, "attempts", attempts)
+	logDeliverySucceeded(delivery.ID, attempts)
 	a.requestNotification(
 		ctx,
 		delivery,
@@ -113,13 +119,19 @@ func (a *DeliveryAttempter) recordSuccess(ctx context.Context, delivery types.De
 	return nil
 }
 
-func (a *DeliveryAttempter) recordFailure(ctx context.Context, delivery types.Delivery, attempts int, lastError string, now time.Time) error {
+func (a *DeliveryAttempter) recordFailure(
+	ctx context.Context,
+	delivery types.Delivery,
+	attempts int,
+	lastError string,
+	now time.Time,
+) error {
 	if markErr := a.deliveries.MarkFailed(ctx, delivery.ID, attempts, lastError, now); markErr != nil {
 		return markErr
 	}
 
 	metrics.DeliveryOutcome(metrics.OutcomeExhausted)
-	slog.Error("webhook delivery exhausted retries", "delivery_id", delivery.ID, "attempts", attempts)
+	logDeliveryExhausted(delivery.ID, attempts)
 	a.requestNotification(
 		ctx,
 		delivery,
@@ -133,6 +145,6 @@ func (a *DeliveryAttempter) recordFailure(ctx context.Context, delivery types.De
 
 func (a *DeliveryAttempter) requestNotification(ctx context.Context, delivery types.Delivery, short, message string) {
 	if notifyErr := a.notifier.RequestNotification(ctx, delivery, short, message); notifyErr != nil {
-		slog.Error("failed to request delivery notification", "delivery_id", delivery.ID, "error", notifyErr)
+		logNotificationRequestFailed(delivery.ID, notifyErr)
 	}
 }

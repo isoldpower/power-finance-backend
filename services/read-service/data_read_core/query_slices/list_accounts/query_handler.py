@@ -6,6 +6,7 @@ from redis.asyncio import Redis
 from data_read_core.shared.exchange_rates import ExchangeRateService, get_rate_service
 
 from .cache_worker import CacheWorker
+from .config import BOOK_EXPONENT
 from .dtos import (
     AccountDTO,
     CacheOperationData,
@@ -25,8 +26,6 @@ from .logger_shortcuts import (
     log_served_from_cache,
     log_served_from_store,
 )
-
-BOOK_EXPONENT = Decimal("0.01")
 
 
 class ListAccountsQueryHandler:
@@ -78,10 +77,6 @@ class ListAccountsQueryHandler:
         user_id: int,
         filters: ChartFilters,
     ) -> Thresholds | None:
-        """`lowbar` arrives in the caller's currency; balances are held in each
-        account's book currency. Convert the threshold once per book currency
-        rather than converting every balance, which no index could then serve."""
-
         if not filters.narrows_by_balance:
             return None
 
@@ -99,9 +94,6 @@ class ListAccountsQueryHandler:
         return (amount * rate).quantize(BOOK_EXPONENT, rounding=ROUND_HALF_UP)
 
     def _rates(self) -> ExchangeRateService:
-        """Resolved on demand: the overwhelming majority of chart requests set
-        no threshold, and those have no business reaching for a rate feed."""
-
         return self._rate_service or get_rate_service()
 
     def _build_cache_operation(self, query: ListAccountsQuery) -> CacheOperationData:

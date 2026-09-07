@@ -15,7 +15,6 @@ class TransactionAutomationHandler(EventAutomationHandler):
     triggers = {
         "TransactionCreated": TriggerEvent.TRANSACTION_CREATED,
         "TransactionUpdated": TriggerEvent.TRANSACTION_UPDATED,
-        # An amount edit and a metadata edit are one trigger to a rule.
         "TransactionMetadataUpdated": TriggerEvent.TRANSACTION_UPDATED,
     }
 

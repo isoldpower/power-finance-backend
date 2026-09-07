@@ -9,9 +9,6 @@ pytestmark = pytest.mark.django_db(transaction=True)
 
 @pytest.fixture(autouse=True)
 async def _reference_currencies():
-    """Seed the rows this test needs: `transaction=True` truncates between tests
-    without replaying the data migration that seeds them."""
-
     CURRENCY_CATALOG.reset()
     await CurrencyReadModel.objects.abulk_create(
         [
@@ -39,9 +36,6 @@ async def test_unknown_currency_in_a_request_is_rejected():
 
 
 async def test_unknown_currency_already_in_the_store_degrades_to_the_default():
-    """Unreadable reference data must not make an otherwise valid row
-    unreadable."""
-
     assert await CURRENCY_CATALOG.decimals_or_default("XYZ") == 2
     assert await CURRENCY_CATALOG.decimals_or_default(None) == 2
 

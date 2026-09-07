@@ -71,9 +71,6 @@ class LoadTransactionMixin:
         transaction_id: UUID,
         user_id: int,
     ) -> TransactionAggregate:
-        """Cancelled transactions load too — DELETE has to be able to answer 200
-        on a repeat, and detail still resolves them."""
-
         transaction, flows = await asyncio.gather(
             self._transaction_repository.get_user_transaction_by_id(
                 transaction_id=transaction_id,

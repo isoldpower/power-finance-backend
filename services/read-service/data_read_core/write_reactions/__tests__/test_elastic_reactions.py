@@ -22,21 +22,13 @@ from data_read_core.write_reactions import (
 )
 from data_read_core.write_reactions.transaction_reactions import (
     elastic_search_create as tx_create,
-)
-from data_read_core.write_reactions.transaction_reactions import (
     elastic_search_delete as tx_delete,
-)
-from data_read_core.write_reactions.transaction_reactions import (
     elastic_search_update as tx_update,
 )
 from data_read_core.write_reactions.transaction_reactions._utilities import ContainerLabel
 from data_read_core.write_reactions.wallet_reactions import (
     elastic_search_create as wl_create,
-)
-from data_read_core.write_reactions.wallet_reactions import (
     elastic_search_delete as wl_delete,
-)
-from data_read_core.write_reactions.wallet_reactions import (
     elastic_search_update as wl_update,
 )
 
@@ -92,9 +84,6 @@ async def test_index_transaction_writes_full_document(monkeypatch):
 
 
 async def test_indexed_type_is_read_off_the_sign(monkeypatch):
-    """`type` is stored so search can filter on it, but it is never a second
-    source of truth — it is derived from the amount at index time."""
-
     fake = _use_fake_es(monkeypatch, tx_create)
 
     async def _label(_container_id: str, _kind: str | None = None) -> ContainerLabel:
@@ -144,9 +133,6 @@ async def test_a_chained_transaction_carries_its_chain_into_the_sort_column(monk
 
 
 async def test_indexed_amount_survives_an_adjustment_in_the_same_type(monkeypatch):
-    """Create and update must agree on how the amount is spelled, or the two
-    reactions write different types into the same scaled_float field."""
-
     created = _use_fake_es(monkeypatch, tx_create)
 
     async def _label(_container_id: str, _kind: str | None = None) -> ContainerLabel:
@@ -199,9 +185,6 @@ async def test_update_transaction_patches_amount_with_upsert(monkeypatch):
 
 
 async def test_remove_transaction_stamps_cancelled_ignoring_404(monkeypatch):
-    """Cancelling keeps the document. Search hides it by filtering on
-    `deleted_at`, so dropping it would lose the field that hides it."""
-
     fake = _use_fake_es(monkeypatch, tx_delete)
 
     await RemoveTransactionDocument().apply(
@@ -258,9 +241,6 @@ async def test_update_wallet_patches_title_with_upsert(monkeypatch):
 
 
 async def test_remove_wallet_stamps_closed_ignoring_404(monkeypatch):
-    """Closing keeps the document. Search excludes closed wallets by filtering
-    on `deleted_at`, so dropping it would lose the very field that hides it."""
-
     fake = _use_fake_es(monkeypatch, wl_delete)
 
     await RemoveWalletDocument().apply(

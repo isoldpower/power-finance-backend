@@ -6,8 +6,6 @@ from data_write_core.domain.events import EventCollector
 
 
 class ImmudbMoneyFlowStep(SagaStep[None]):
-    """ImmuDB side of the transactions SAGA."""
-
     def __init__(
         self,
         repository: MoneyFlowRepository,

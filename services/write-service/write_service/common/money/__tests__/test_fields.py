@@ -19,9 +19,6 @@ def errors_for(value) -> list[str]:
 
 @pytest.mark.parametrize("raw", ["50", "50.00", "50.005", "-12.30", "0"])
 def test_canonical_decimal_strings_are_accepted(raw):
-    """Grammar and range are the serializer's job; the per-currency scale check
-    happens once the wallet is loaded and its currency is known."""
-
     body = Body(data={"amount": raw})
 
     assert body.is_valid(), body.errors
@@ -30,16 +27,10 @@ def test_canonical_decimal_strings_are_accepted(raw):
 
 @pytest.mark.parametrize("raw", [50, 50.0, True, ["50"], {"amount": "50"}])
 def test_json_numbers_and_non_strings_are_rejected(raw):
-    """A client that regresses to numbers is caught at the boundary rather than
-    losing precision quietly."""
-
     assert "amount_malformed" in errors_for(raw)
 
 
 def test_a_null_amount_is_a_missing_amount():
-    """`null` is never a valid amount: an unknown or inapplicable value omits
-    the whole field."""
-
     assert errors_for(None) == ["null"]
 
 

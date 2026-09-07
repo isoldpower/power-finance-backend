@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"services/webhook-service/webhook_service/presentation/http/contract"
 	"time"
@@ -13,12 +12,14 @@ import (
 	"services/webhook-service/internal/metrics"
 )
 
+// Server is the HTTP listener serving the delivery log.
 type Server struct {
 	server         *http.Server
 	readinessProbe *health.Probe
 	deliveryLog    deliveryLogReader
 }
 
+// NewServer builds the listener and mounts its routes.
 func NewServer(
 	serverConfig contract.Config,
 	readinessProbe *health.Probe,
@@ -49,9 +50,10 @@ func NewServer(
 // Run serves until the context is cancelled, then shuts down gracefully.
 func (s *Server) Run(ctx context.Context) {
 	go func() {
-		slog.Info("http server listening", "addr", s.server.Addr)
-		if serveErr := s.server.ListenAndServe(); serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
-			slog.Error("http listener serve failed", "error", serveErr)
+		logServerListening(s.server.Addr)
+		serveErr := s.server.ListenAndServe()
+		if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
+			logListenerServeFailed(serveErr)
 		}
 	}()
 
@@ -59,7 +61,7 @@ func (s *Server) Run(ctx context.Context) {
 	shutdownContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if shutdownErr := s.server.Shutdown(shutdownContext); shutdownErr != nil {
-		slog.Error("http server shutdown failed", "error", shutdownErr)
+		logServerShutdownFailed(shutdownErr)
 	}
 }
 

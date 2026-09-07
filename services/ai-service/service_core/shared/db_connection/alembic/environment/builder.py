@@ -9,6 +9,14 @@ from .online_env import OnlineAlembicEnvironment
 
 def build_environment(config: Config, target_metadata: MetaData) -> AlembicEnvironment:
     if context.is_offline_mode():
-        return OfflineAlembicEnvironment(config, target_metadata)
+        return _build_offline_environment(config, target_metadata)
 
+    return _build_online_environment(config, target_metadata)
+
+
+def _build_offline_environment(config: Config, target_metadata: MetaData) -> AlembicEnvironment:
+    return OfflineAlembicEnvironment(config, target_metadata)
+
+
+def _build_online_environment(config: Config, target_metadata: MetaData) -> AlembicEnvironment:
     return OnlineAlembicEnvironment(config, target_metadata)

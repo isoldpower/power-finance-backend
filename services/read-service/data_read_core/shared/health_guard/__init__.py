@@ -1,9 +1,3 @@
-"""This service's health probes, plus the shared guard they plug into.
-
-The guard and the `HealthProbe` contract live in `kafka_consumer_py`; what is
-local is which stores this service actually blocks consumption on.
-"""
-
 from kafka_consumer_py.health import HealthGuardedHandler, HealthProbe
 
 from .elasticsearch_health_probe import (

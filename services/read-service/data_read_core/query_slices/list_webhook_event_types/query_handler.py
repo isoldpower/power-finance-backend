@@ -7,10 +7,6 @@ from .logger_shortcuts import log_served_from_catalog
 
 
 class ListWebhookEventTypesQueryHandler:
-    """No store and no cache: the catalog is a shared library table read from
-    process memory, and it is the same table the publisher maps outbox events
-    through, so serving it from anywhere else would let the two drift."""
-
     async def handle(self, query: ListWebhookEventTypesQuery) -> FetchedRows:
         catalog = [WebhookEventTypeDTO.from_catalog(entry) for entry in event_types()]
 
