@@ -44,6 +44,25 @@ Failure modes return 401 with no body leak. The only things that cross the
 gateway are `X-User-Id` (the `sub` claim) and the unchanged `Authorization`
 header, kept so a downstream service can re-introspect if it needs to.
 
+### WebSocket upgrades
+
+A browser cannot put an `Authorization` header on an upgrade, so when that
+header is absent the plugin falls back to `Sec-WebSocket-Protocol`. The client
+offers exactly two protocols — the marker `clerk` and the raw JWT — which is
+legal because RFC 6455 protocol names are tokens and a JWT's alphabet already
+fits. Anything else (one entry, three entries, a different marker) is treated as
+no token at all.
+
+On success the forwarded header is rewritten to just `clerk`, so the upstream
+never receives the JWT. The service must echo that name back when it accepts,
+because a browser closes a socket whose server selected a protocol it did not
+offer. A query parameter would have worked too and was rejected: it puts a live
+session token in the proxy access log.
+
+The fallback is deliberately WebSocket-only. The SSE stream needs nothing
+equivalent — a fetch-based reader sets `Authorization` normally — so this path
+exists purely because the `WebSocket` constructor exposes no header channel.
+
 User preferences (`X-User-Currency`, `X-User-Timezone`, `X-User-Language`) are
 forwarded off the same verified token. They live on the Clerk user record in
 `unsafeMetadata`, which is **client-writable** — forwarding them off the token
@@ -100,6 +119,15 @@ returns that instead. The client sees one response and never the 507.
 
 Self-proxying in the access phase is the only way to do this: it is the one
 phase that both sees the upstream status and still permits an HTTP call.
+
+Not every gated read has a counterpart — accounts live in ai-service's database,
+metrics needs the whole aggregate — so some reroutes land on a path Write Service
+does not route. Those are detected by the answer being a 404 that is **not** JSON:
+every API response, success or failure, is JSON in the shared envelope, while an
+unrouted path gets Django's own HTML 404. On that signal the plugin returns Read
+Service's 507 instead, so the client gets a retryable staleness error rather than
+a resource reported missing. A genuine 404 from a fallback endpoint that does
+exist is JSON, and passes through untouched.
 
 ## user-tier-rate-limit
 

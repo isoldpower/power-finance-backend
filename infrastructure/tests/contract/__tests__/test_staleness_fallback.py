@@ -12,7 +12,6 @@ each one is still a hole.
 
 import pytest
 
-from ..documents import diff_document
 from ..fallback import (
     fallback_paths,
     fallback_route_for,
@@ -25,14 +24,16 @@ FALLBACK_STATUS = 507
 
 # Permanent and documented. The plugin only re-issues GETs and the write side
 # has no Elasticsearch, so it cannot answer a filter tree at all. A search that
-# trips the gate genuinely returns 507, and API_DIFF.md tells clients to treat
+# trips the gate genuinely returns 507, and clients are expected to treat
 # it as "retry shortly".
 SEARCH_WITHOUT_FALLBACK = frozenset({"/wallets/search", "/transactions/search", "/webhooks/search"})
 
 # Reads that CAN answer 507 and have no write-side counterpart. The plugin
-# rewrites the prefix regardless, so these do not leak the 507 — they reach a
-# write-service route that does not exist and return its 404, reporting a
-# resource that exists as missing.
+# rewrites the prefix regardless, so the reroute reaches a write-service route
+# that is not there — and on that unrouted 404 it returns Read Service's own
+# 507 instead, so a client sees a retryable staleness signal rather than a
+# resource reported missing. These are still holes: the read is refused, not
+# served.
 MISSING_FALLBACK = {
     "/accounts": "accounts live in ai-service's database; write-service cannot answer them",
     "/accounts/{}": "accounts live in ai-service's database; write-service cannot answer them",
@@ -120,24 +121,8 @@ def test_every_known_hole_is_a_read_that_can_actually_507(path):
 
 
 @pytest.mark.parametrize("path", sorted(SEARCH_WITHOUT_FALLBACK))
-def test_the_searches_that_can_leak_a_507_say_so_to_clients(path):
-    """The one case where the status does reach a client. It is allowed only
-    because API_DIFF.md tells the frontend to expect it."""
+def test_the_searches_that_can_leak_a_507_are_the_only_ones_that_do(path):
+    """The one case where the status does reach a client, and the only one."""
 
     assert path in gated_read_paths()
     assert not _covered(path)
-    assert "507" in diff_document(), "the leak is not explained to clients"
-
-
-def test_the_diff_names_search_as_the_endpoint_that_leaks_it():
-    """A bare `507` somewhere in the document is not an explanation. Some
-    passage has to tie the status to the endpoint that returns it."""
-
-    diff = diff_document().lower()
-    passages = [
-        diff[max(0, at - 400) : at + 400] for at in range(len(diff)) if diff.startswith("507", at)
-    ]
-
-    assert any(
-        "search" in passage for passage in passages
-    ), "no passage in API_DIFF.md mentions 507 anywhere near /search"

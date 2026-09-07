@@ -9,6 +9,10 @@ class HeaderName(StrEnum):
     CORRELATION = "X-Correlation-ID"
 
 
+class SchemaName(StrEnum):
+    SECURITY = "clerkBearer"
+
+
 ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     ErrorCode.UNAUTHORIZED.status_code: {
         "model": ErrorResponseSchema,

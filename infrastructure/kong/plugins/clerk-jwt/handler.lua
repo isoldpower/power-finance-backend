@@ -3,6 +3,8 @@ local messages     = require "kong.plugins.clerk-jwt.messages"
 local jwks_fetcher = require "kong.plugins.clerk-jwt.fetch_jwks"
 
 local AUTH_HEADER = "Authorization"
+local WEBSOCKET_PROTOCOL_HEADER = "Sec-WebSocket-Protocol"
+local WEBSOCKET_TOKEN_MARKER = "clerk"
 
 local PREFERENCE_HEADERS = {
     { header = "X-User-Currency", claim = "currency" },
@@ -37,6 +39,20 @@ end
 function ClerkJwtHandler:access(config)
     local auth_header = kong.request.get_header(AUTH_HEADER)
     local token = utilities.extract_bearer(auth_header)
+
+    -- A browser cannot set Authorization on a WebSocket upgrade, so the token
+    -- may arrive as the second offered subprotocol instead. Forward only the
+    -- marker upstream: the service never needs to see the JWT.
+    if not token then
+        token = utilities.extract_subprotocol_token(
+            kong.request.get_header(WEBSOCKET_PROTOCOL_HEADER),
+            WEBSOCKET_TOKEN_MARKER
+        )
+        if token then
+            kong.service.request.set_header(WEBSOCKET_PROTOCOL_HEADER, WEBSOCKET_TOKEN_MARKER)
+        end
+    end
+
     if not token then
         kong.log.info("clerk-jwt: no token found attached")
         return messages.no_token_response()

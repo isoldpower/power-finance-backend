@@ -1,6 +1,6 @@
 """Walking a generated OpenAPI document.
 
-The conventions in API_TARGET.md are statements about EVERY endpoint, so the
+The response conventions are statements about EVERY endpoint, so the
 tests for them are written against whatever the services publish rather than
 against a list of endpoints somebody has to remember to extend.
 """

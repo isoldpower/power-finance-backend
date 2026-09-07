@@ -170,11 +170,21 @@ costs far more than a notification. Being long-lived in the same way, it gets
 the same 1-hour proxy timeouts rather than the request-shaped ones the read
 and write routes use.
 
-The socket carries no token of its own. The browser WebSocket API cannot set
-request headers, so a client that cannot send `Authorization` on the handshake
-cannot open this route — the same constraint the SSE stream already lives with,
-and the same one that would have to be solved (subprotocol or query parameter)
-before a plain `new WebSocket(...)` works from a page.
+The browser WebSocket API cannot set request headers, so the token reaches
+`clerk-jwt` as a **subprotocol** instead: a client opens the socket with
+`new WebSocket(url, ["clerk", token])`, and the plugin reads the second offered
+protocol when `Authorization` is absent. Kong forwards only `clerk` upstream, so
+AI Service never sees the JWT, and it echoes that name back on accept — a
+browser drops a socket whose server selected a protocol it did not offer.
+
+`/api/v1/notifications/stream` needs no such fallback and does not have one. A
+stream is only unreachable to a client that cannot set headers, and that is a
+property of `EventSource`, not of SSE: a fetch-based reader sends
+`Authorization` like any other request and works against the gateway as it
+stands. The constraint the WebSocket hits is narrower than it looks — the
+`WebSocket` constructor exposes no header channel at all and has no
+fetch-shaped alternative, which is why only that route needed the gateway to
+change.
 
 There is one public surface, `/api/v1`, and the read/write split lives in the
 router rather than in the paths a client types: reads and writes of the same

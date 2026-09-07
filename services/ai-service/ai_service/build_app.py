@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Security
 from fastapi.responses import JSONResponse
 from health_probes.build_router import build_router as build_health_router
 from service_core.assistant_chat import (
@@ -12,7 +12,11 @@ from service_core.assistant_chat import (
     build_overview_router,
 )
 from service_core.shared.db_connection import get_engine
-from service_core.shared.http_contract import ApiError, error_response
+from service_core.shared.http_contract import (
+    CLERK_BEARER,
+    ApiError,
+    error_response,
+)
 
 from ._config import API_VERSION
 
@@ -33,11 +37,16 @@ def build_app() -> FastAPI:
         return error_response(request, failure)
 
     app.include_router(build_health_router(get_engine))
-    for router in (
+    app.include_router(
         build_chat_router(termination_signal=shutting_down),
-        build_assistant_router(),
-        build_overview_router(),
-    ):
-        app.include_router(router, prefix=f"/api/{API_VERSION}")
+        prefix=f"/api/{API_VERSION}",
+    )
+
+    for router in (build_assistant_router(), build_overview_router()):
+        app.include_router(
+            router,
+            prefix=f"/api/{API_VERSION}",
+            dependencies=[Security(CLERK_BEARER)],
+        )
 
     return app

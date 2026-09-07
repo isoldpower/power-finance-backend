@@ -150,8 +150,32 @@ local check_authorized_party = function(verified_jwt, allowed_azp_parties)
 end
 
 
+--- Extract the bearer token offered as a WebSocket subprotocol.
+--
+-- @param protocol_header string|nil  raw `Sec-WebSocket-Protocol` value
+-- @param marker string  subprotocol name that flags the pair as a token offer
+-- @return string|nil  the token portion, or nil if absent / malformed
+local extract_subprotocol_token = function(protocol_header, marker)
+    if not protocol_header or protocol_header == "" then
+        return nil
+    end
+
+    local offered = {}
+    for entry in protocol_header:gmatch("[^,]+") do
+        offered[#offered + 1] = entry:match("^%s*(.-)%s*$")
+    end
+
+    if #offered ~= 2 or offered[1] ~= marker or offered[2] == "" then
+        return nil
+    end
+
+    return offered[2]
+end
+
+
 local exports = {
     extract_bearer         = extract_bearer,
+    extract_subprotocol_token = extract_subprotocol_token,
     load_unverified_jwt    = load_unverified_jwt,
     get_kid_from_jwt       = get_kid_from_jwt,
     find_key_for_kid       = find_key_for_kid,

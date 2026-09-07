@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from .. import GATEWAY_USER_HEADER, TerminationReason, build_chat_router
+from ..config import WEBSOCKET_PROTOCOL_HEADER, WEBSOCKET_SUBPROTOCOL
 from .fakes import InMemoryMessageRepository
 
 AUTHENTICATED = {GATEWAY_USER_HEADER: "clerk_7"}
@@ -128,3 +129,15 @@ def test_a_message_no_handler_claims_closes_the_socket_with_a_readable_code():
     assert _close_code_after({"nothing": "claims this"}) == (
         TerminationReason.UNSUPPORTED_DATA.value
     )
+
+
+def test_the_offered_subprotocol_is_echoed_so_a_browser_keeps_the_socket():
+    offered = {**AUTHENTICATED, WEBSOCKET_PROTOCOL_HEADER: WEBSOCKET_SUBPROTOCOL}
+
+    with _client().websocket_connect("/api/v1/chat/advice", headers=offered) as socket:
+        assert socket.accepted_subprotocol == WEBSOCKET_SUBPROTOCOL
+
+
+def test_no_subprotocol_is_selected_when_the_client_offered_none():
+    with _client().websocket_connect("/api/v1/chat/advice", headers=AUTHENTICATED) as socket:
+        assert socket.accepted_subprotocol is None

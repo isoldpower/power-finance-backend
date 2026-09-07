@@ -50,6 +50,13 @@ function ReadFallbackHandler:access(config)
         return messages.upstream_unreachable("Write Service fallback")
     end
 
+    if fallback.status == 404 and not utilities.is_api_response(fallback) then
+        kong.log.info("read-fallback: no fallback route for ", fallback_path,
+            "; returning Read Service ", config.fallback_status)
+
+        return forwarder.respond(primary)
+    end
+
     return forwarder.respond(fallback)
 end
 
