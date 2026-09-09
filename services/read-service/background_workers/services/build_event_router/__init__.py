@@ -1,5 +1,6 @@
 from collections.abc import Callable
 
+from data_read_core.shared.kafka_dedupe import DjangoDedupeStore
 from django.conf import settings
 from kafka_client_py import (
     AsyncPublisher,
@@ -108,6 +109,7 @@ async def build_event_router(config: ConsumerConfig) -> None:
             retry_policy=RetryPolicy(),
             retry_publisher=RetryPublisher(publisher, topic=settings.KAFKA["RETRY_TOPIC"]),
             dlq_publisher=DLQPublisher(publisher, topic=settings.KAFKA["DLQ_TOPIC"]),
+            dedupe_store=DjangoDedupeStore(consumer_group=settings.KAFKA["READ_GROUP_ID"]),
         )
         await consumer_loop.run()
     finally:

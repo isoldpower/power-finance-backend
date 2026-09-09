@@ -4,7 +4,11 @@ from decimal import Decimal
 from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import TransactionCreated
 
-from data_read_core.shared.elasticsearch import TRANSACTIONS_INDEX, get_elasticsearch
+from data_read_core.shared.elasticsearch import (
+    SEARCHABLE_REFRESH,
+    TRANSACTIONS_INDEX,
+    get_elasticsearch,
+)
 from data_read_core.shared.postgres_orm import NO_CHAIN_SENTINEL
 
 from .._logger_shortcuts import log_transaction_elastic_created
@@ -46,6 +50,7 @@ class IndexTransactionDocument(Effect):
             index=TRANSACTIONS_INDEX,
             id=payload.transaction_id,
             document=document,
+            refresh=SEARCHABLE_REFRESH,
         )
         log_transaction_elastic_created(
             payload.transaction_id,

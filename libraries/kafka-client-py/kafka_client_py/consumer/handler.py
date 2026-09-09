@@ -95,6 +95,7 @@ class MessageHandler:
     async def _invoke_user_handler_once(self, message: ConsumedMessage) -> AttemptOutcome:
         try:
             await self._user_handler(message)
+            await self._dedupe_gate.record_processed(message)
             return HandlerSucceeded()
         except asyncio.CancelledError:
             raise

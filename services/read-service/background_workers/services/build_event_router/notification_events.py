@@ -32,7 +32,8 @@ def subscribe_notification_created(
                 [
                     TrackAppliedSeq(CreateNotificationReadModel(), NotificationCreated),
                     BumpNotificationListVersion(NotificationCreated),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -57,7 +58,8 @@ def subscribe_notifications_acknowledged(
                     ),
                     EvictAcknowledgedNotificationsCache(),
                     BumpNotificationListVersion(NotificationsAcknowledged),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -79,7 +81,8 @@ def subscribe_notification_deleted(
                     TrackAppliedSeq(RemoveNotificationReadModel(), NotificationDeleted),
                     EvictNotificationCache(),
                     BumpNotificationListVersion(NotificationDeleted),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )

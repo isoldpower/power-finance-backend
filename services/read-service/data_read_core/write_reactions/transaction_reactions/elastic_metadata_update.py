@@ -3,7 +3,11 @@ from datetime import UTC
 from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import TransactionMetadataUpdated
 
-from data_read_core.shared.elasticsearch import TRANSACTIONS_INDEX, get_elasticsearch
+from data_read_core.shared.elasticsearch import (
+    SEARCHABLE_REFRESH,
+    TRANSACTIONS_INDEX,
+    get_elasticsearch,
+)
 
 from .._logger_shortcuts import log_transaction_elastic_updated
 from .._utilities import decode_payload
@@ -26,6 +30,7 @@ class UpdateTransactionMetadataDocument(Effect):
             id=payload.transaction_id,
             doc=partial,
             doc_as_upsert=True,
+            refresh=SEARCHABLE_REFRESH,
         )
         log_transaction_elastic_updated(
             payload.transaction_id,

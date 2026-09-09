@@ -3,7 +3,11 @@ from datetime import UTC
 from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import TransactionDeleted
 
-from data_read_core.shared.elasticsearch import TRANSACTIONS_INDEX, get_elasticsearch
+from data_read_core.shared.elasticsearch import (
+    SEARCHABLE_REFRESH,
+    TRANSACTIONS_INDEX,
+    get_elasticsearch,
+)
 
 from .._logger_shortcuts import log_transaction_elastic_removed
 from .._utilities import decode_payload
@@ -24,6 +28,7 @@ class RemoveTransactionDocument(Effect):
                     "deleted_at": deleted_at,
                     "updated_at": deleted_at,
                 },
+                refresh=SEARCHABLE_REFRESH,
             )
         )
         log_transaction_elastic_removed(

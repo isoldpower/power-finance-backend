@@ -6,7 +6,7 @@ import pytest
 from background_workers.services.build_event_router import _subscribe_all_events
 from django.contrib.auth import get_user_model
 from django.test import AsyncClient
-from fakes import make_event
+from fakes import FakeElasticsearch, make_event
 from google.protobuf.timestamp_pb2 import Timestamp
 from kafka_consumer_py import KafkaEventRouter
 from kafka_messages import (
@@ -19,7 +19,15 @@ from kafka_messages import (
 )
 
 from data_read_core.shared.postgres_orm import AutomationReadModel
+from data_read_core.shared.read_at_least import (
+    DjangoAppliedSeqReader,
+    DjangoEsAppliedSeqReader,
+)
 from data_read_core.shared.redis_cache import get_redis
+from data_read_core.write_reactions.automation_reactions import (
+    elastic_search_delete,
+    elastic_search_write,
+)
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -60,6 +68,15 @@ async def _empty_cache():
     await clear()
     await get_redis().aclose()
     get_redis.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def _indexed_in_a_fake_elasticsearch(monkeypatch) -> FakeElasticsearch:
+    indexed_documents = FakeElasticsearch()
+    for module in (elastic_search_write, elastic_search_delete):
+        monkeypatch.setattr(module, "get_elasticsearch", lambda: indexed_documents)
+
+    return indexed_documents
 
 
 @pytest.fixture(autouse=True)
@@ -312,3 +329,44 @@ async def test_the_engine_s_counters_are_projected_not_derived():
 
     assert row["runs"] == 14
     assert row["last_run_at"] == "2026-03-10T00:00:00+00:00"
+
+
+async def test_a_created_event_advances_the_read_your_writes_progress():
+    """The list and the detail are both gated. Without this the gate can only
+    be satisfied by some unrelated write of the same user."""
+
+    user_id = await _user_id()
+
+    await _dispatch(_created(str(uuid.uuid4()), user_id), seq=41)
+
+    assert await DjangoAppliedSeqReader().applied_seq(str(user_id)) == 41
+    assert await DjangoEsAppliedSeqReader().applied_seq(str(user_id)) == 41
+
+
+async def test_every_automation_event_advances_the_progress():
+    automation = await _automation()
+    user_id = automation.user_id
+
+    await _dispatch(
+        AutomationRan(
+            event_id="evt-r2",
+            automation_id=str(automation.id),
+            user_external_id=EXTERNAL_USER_ID,
+            user_id=user_id,
+            runs=2,
+            last_run_at=_timestamp(MARCH),
+        ),
+        seq=42,
+    )
+    await _dispatch(
+        AutomationDeleted(
+            event_id="evt-d2",
+            automation_id=str(automation.id),
+            user_external_id=EXTERNAL_USER_ID,
+            user_id=user_id,
+            deleted_at=_timestamp(MARCH),
+        ),
+        seq=43,
+    )
+
+    assert await DjangoAppliedSeqReader().applied_seq(str(user_id)) == 43

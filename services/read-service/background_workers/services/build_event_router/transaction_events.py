@@ -1,7 +1,12 @@
 from data_read_core.write_reactions import (
+    AdjustContainerAmountOnCreate,
+    AdjustContainerAmountOnDelete,
+    AdjustContainerAmountOnUpdate,
+    BumpGoalListVersion,
     BumpTransactionListVersion,
     BumpWalletListVersion,
     CreateTransactionReadModel,
+    EvictGoalCacheForContainer,
     EvictTransactionCache,
     EvictWalletCache,
     IndexTransactionDocument,
@@ -42,9 +47,15 @@ def subscribe_transaction_created(
                     EvictWalletCache(TransactionCreated),
                     BumpTransactionListVersion(TransactionCreated),
                     BumpWalletListVersion(TransactionCreated),
-                ]
+                    EvictGoalCacheForContainer(TransactionCreated),
+                    BumpGoalListVersion(TransactionCreated),
+                    AdjustContainerAmountOnCreate(),
+                ],
+                atomic=True,
             ),
-            SyncProcessGroup([TrackEsAppliedSeq(IndexTransactionDocument(), TransactionCreated)]),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(IndexTransactionDocument(), TransactionCreated)], atomic=True
+            ),
         ]
     )
 
@@ -67,9 +78,15 @@ def subscribe_transaction_deleted(
                     EvictTransactionCache(TransactionDeleted),
                     BumpTransactionListVersion(TransactionDeleted),
                     BumpWalletListVersion(TransactionDeleted),
-                ]
+                    EvictGoalCacheForContainer(TransactionDeleted),
+                    BumpGoalListVersion(TransactionDeleted),
+                    AdjustContainerAmountOnDelete(),
+                ],
+                atomic=True,
             ),
-            SyncProcessGroup([TrackEsAppliedSeq(RemoveTransactionDocument(), TransactionDeleted)]),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(RemoveTransactionDocument(), TransactionDeleted)], atomic=True
+            ),
         ]
     )
 
@@ -92,9 +109,15 @@ def subscribe_transaction_updated(
                     EvictTransactionCache(TransactionUpdated),
                     BumpTransactionListVersion(TransactionUpdated),
                     BumpWalletListVersion(TransactionUpdated),
-                ]
+                    EvictGoalCacheForContainer(TransactionUpdated),
+                    BumpGoalListVersion(TransactionUpdated),
+                    AdjustContainerAmountOnUpdate(),
+                ],
+                atomic=True,
             ),
-            SyncProcessGroup([TrackEsAppliedSeq(UpdateTransactionDocument(), TransactionUpdated)]),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(UpdateTransactionDocument(), TransactionUpdated)], atomic=True
+            ),
         ]
     )
 
@@ -118,7 +141,8 @@ def subscribe_transaction_metadata_updated(
                     ),
                     EvictTransactionCache(TransactionMetadataUpdated),
                     BumpTransactionListVersion(TransactionMetadataUpdated),
-                ]
+                ],
+                atomic=True,
             ),
             SyncProcessGroup(
                 [
@@ -126,7 +150,8 @@ def subscribe_transaction_metadata_updated(
                         UpdateTransactionMetadataDocument(),
                         TransactionMetadataUpdated,
                     )
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )

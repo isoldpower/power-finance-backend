@@ -436,6 +436,58 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/v1/automations/search:
+    post:
+      operationId: automations_search
+      description: Retrieve automation rules matching a filter tree passed in the
+        request body. POST carries the tree; this is a read in every other respect
+        — it honours Read-At-Least and emits no write version. Served from the Elasticsearch
+        projection. The tree filters the RULES themselves, not the resources a rule's
+        own trigger matches.
+      summary: Search automations with filters
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterAutomationsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FilterAutomationsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FilterAutomationsRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAutomationSearchResult'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/v1/currencies:
     get:
       operationId: currencies_list
@@ -645,6 +697,56 @@ paths:
                 $ref: '#/components/schemas/EnvelopedGoalDetail'
           description: ''
         '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/goals/search:
+    post:
+      operationId: goals_search
+      description: Retrieve goals matching a filter tree passed in the request body.
+        POST carries the tree; this is a read in every other respect — it honours
+        Read-At-Least and emits no write version. Served from the Elasticsearch projection.
+      summary: Search goals with filters
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterGoalsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FilterGoalsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FilterGoalsRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGoalSearchResult'
+          description: ''
+        '422':
           content:
             application/json:
               schema:
@@ -1033,9 +1135,10 @@ paths:
           - last_week
           - last_year
           default: last_month
-        description: Window for the `period` inflow/outflow figures. Every value is
-          a CALENDAR window resolved in your timezone preference, not a rolling count
-          of days.
+        description: 'Window for the `period` inflow/outflow figures. Every value
+          is a ROLLING window of whole days ending with today, resolved in your timezone
+          preference: `last_week` is the last 7 days, `last_month` the last 30, `last_year`
+          the last 365. Today is included.'
       - in: path
         name: wallet_id
         schema:
@@ -1717,6 +1820,55 @@ components:
         * `notify` - notify
         * `raise_action` - raise_action
         * `transfer` - transfer
+    AutomationSearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        icon:
+          type: string
+        enabled:
+          type: boolean
+        trigger:
+          $ref: '#/components/schemas/AutomationTrigger'
+        effects:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationEffect'
+        last_run_at:
+          type: string
+          format: date-time
+          nullable: true
+        runs:
+          type: integer
+          description: MATCHES that applied effects, not evaluations. A rule checked
+            a thousand times that never matched reports 0.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - deleted_at
+      - effects
+      - enabled
+      - icon
+      - id
+      - last_run_at
+      - name
+      - runs
+      - trigger
+      - updated_at
     AutomationTrigger:
       type: object
       properties:
@@ -2157,6 +2309,18 @@ components:
       description: |-
         * `transaction.created` - transaction.created
         * `transaction.updated` - transaction.updated
+    FilterAutomationsRequest:
+      type: object
+      properties:
+        filter_body: {}
+      required:
+      - filter_body
+    FilterGoalsRequest:
+      type: object
+      properties:
+        filter_body: {}
+      required:
+      - filter_body
     FilterTransactionsRequest:
       type: object
       properties:
@@ -2224,6 +2388,53 @@ components:
       - updated_at
       - url
     GoalPreview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        url:
+          type: string
+          nullable: true
+          description: Always null for now. Reserved for attaching an e-commerce link.
+        currency:
+          type: string
+          description: Fixed at creation; target and progress use it.
+        finish_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        target:
+          $ref: '#/components/schemas/Money'
+        progress:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: Derived from the goal's transactions, never written.
+      required:
+      - created_at
+      - currency
+      - deleted_at
+      - finish_at
+      - id
+      - name
+      - progress
+      - target
+      - updated_at
+      - url
+    GoalSearchResult:
       type: object
       properties:
         id:
@@ -2613,6 +2824,18 @@ components:
       required:
       - data
       - meta
+    PaginatedAutomationSearchResult:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationSearchResult'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
     PaginatedGoalPreview:
       type: object
       properties:
@@ -2620,6 +2843,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GoalPreview'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedGoalSearchResult:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GoalSearchResult'
         meta:
           $ref: '#/components/schemas/CollectionMeta'
       required:

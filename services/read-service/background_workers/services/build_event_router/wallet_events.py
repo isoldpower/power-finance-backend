@@ -38,9 +38,12 @@ def subscribe_wallet_deleted(
                     TrackAppliedSeq(RemoveWalletReadModel(), WalletDeleted),
                     EvictWalletCache(),
                     BumpWalletListVersion(WalletDeleted),
-                ]
+                ],
+                atomic=True,
             ),
-            SyncProcessGroup([TrackEsAppliedSeq(RemoveWalletDocument(), WalletDeleted)]),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(RemoveWalletDocument(), WalletDeleted)], atomic=True
+            ),
         ]
     )
 
@@ -63,9 +66,12 @@ def subscribe_wallet_updated(
                     EvictWalletCache(WalletUpdated),
                     BumpWalletListVersion(WalletUpdated),
                     BumpTransactionListVersion(WalletUpdated),
-                ]
+                ],
+                atomic=True,
             ),
-            SyncProcessGroup([TrackEsAppliedSeq(UpdateWalletDocument(), WalletUpdated)]),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(UpdateWalletDocument(), WalletUpdated)], atomic=True
+            ),
         ]
     )
 
@@ -85,9 +91,12 @@ def subscribe_wallet_created(
                 [
                     TrackAppliedSeq(CreateWalletReadModel(), WalletCreated),
                     BumpWalletListVersion(WalletCreated),
-                ]
+                ],
+                atomic=True,
             ),
-            SyncProcessGroup([TrackEsAppliedSeq(IndexWalletDocument(), WalletCreated)]),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(IndexWalletDocument(), WalletCreated)], atomic=True
+            ),
         ]
     )
 

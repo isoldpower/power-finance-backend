@@ -11,13 +11,13 @@ from .logger_shortcuts import log_search_served
 class SearchWalletsQueryHandler:
     async def handle(self, query: SearchWalletsQuery) -> FetchedRows:
         filter_query = FilterTree(WALLET_FILTER_POLICY).resolve_es(query.filter_body)
-        sources, total = await search_owned_wallets(
+        matched_documents, total = await search_owned_wallets(
             user_id=query.user_id,
             filter_query=filter_query,
             page=query.page,
         )
 
-        wallets = [WalletDTO.from_es_hit(source) for source in sources]
+        wallets = [WalletDTO.from_es_hit(document) for document in matched_documents]
         log_search_served(query.user_id, len(wallets), total)
 
         return FetchedRows(

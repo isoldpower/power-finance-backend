@@ -120,3 +120,52 @@ async def test_guarded_handler_passes_through_on_success():
     await HealthGuardedHandler(handler, _Probe(), guarded_errors=(ConnectionError,))(event="e")
 
     assert calls == ["e"]
+
+
+class _OutageError(Exception):
+    pass
+
+
+@pytest.mark.asyncio
+async def test_a_guarded_error_wrapped_in_an_exception_group_still_blocks_consumption():
+    attempts = 0
+
+    async def handler(_event):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise BaseExceptionGroup(
+                "ExecutionPlan: one or more groups failed",
+                [_OutageError("es down"), _OutageError("es down")],
+            )
+
+    probe = _ScriptedProbe([True])
+    guarded = HealthGuardedHandler(handler, probe, (_OutageError,))
+
+    await guarded(_event())
+
+    assert attempts == 2
+
+
+@pytest.mark.asyncio
+async def test_an_exception_group_with_no_guarded_error_is_reraised():
+    async def handler(_event):
+        raise BaseExceptionGroup("boom", [ValueError("nope"), ValueError("nope")])
+
+    probe = _ScriptedProbe([True])
+    guarded = HealthGuardedHandler(handler, probe, (_OutageError,))
+
+    with pytest.raises(BaseExceptionGroup):
+        await guarded(_event())
+
+
+@pytest.mark.asyncio
+async def test_cancellation_is_never_swallowed_by_the_guard():
+    async def handler(_event):
+        raise asyncio.CancelledError()
+
+    probe = _ScriptedProbe([True])
+    guarded = HealthGuardedHandler(handler, probe, (_OutageError,))
+
+    with pytest.raises(asyncio.CancelledError):
+        await guarded(_event())

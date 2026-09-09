@@ -81,8 +81,9 @@ PERIOD_PARAMETER = OpenApiParameter(
     default=DEFAULT_PERIOD.value,
     description=(
         "Window for the `period` inflow/outflow figures. Every value is a "
-        "CALENDAR window resolved in your timezone preference, not a rolling "
-        "count of days."
+        "ROLLING window of whole days ending with today, resolved in your "
+        "timezone preference: `last_week` is the last 7 days, `last_month` "
+        "the last 30, `last_year` the last 365. Today is included."
     ),
 )
 

@@ -253,3 +253,62 @@ async def test_remove_wallet_stamps_closed_ignoring_404(monkeypatch):
     index, doc_id, doc, _ = fake.updated[0]
     assert (index, doc_id) == (WALLETS_INDEX, WALLET_ID)
     assert doc["deleted_at"] == "2026-01-02T03:04:05+00:00"
+
+
+async def test_every_wallet_write_waits_until_the_change_is_searchable(monkeypatch):
+    from data_read_core.shared.elasticsearch import SEARCHABLE_REFRESH
+
+    created = _use_fake_es(monkeypatch, wl_create)
+    await IndexWalletDocument().apply(
+        make_event(
+            WalletCreated(
+                wallet_id=WALLET_ID,
+                user_id=7,
+                title="Vacation",
+                currency_code="USD",
+                created_at=_ts(),
+            )
+        )
+    )
+
+    updated = _use_fake_es(monkeypatch, wl_update)
+    await UpdateWalletDocument().apply(
+        make_event(
+            WalletUpdated(wallet_id=WALLET_ID, user_id=7, new_title="Renamed", updated_at=_ts())
+        )
+    )
+
+    removed = _use_fake_es(monkeypatch, wl_delete)
+    await RemoveWalletDocument().apply(
+        make_event(WalletDeleted(wallet_id=WALLET_ID, user_id=7, deleted_at=_ts()))
+    )
+
+    for client in (created, updated, removed):
+        assert client.refreshes == [SEARCHABLE_REFRESH]
+
+
+async def test_every_transaction_write_waits_until_the_change_is_searchable(monkeypatch):
+    from data_read_core.shared.elasticsearch import SEARCHABLE_REFRESH
+
+    indexed = _use_fake_es(monkeypatch, tx_create)
+
+    async def _label(_container_id: str, _kind: str | None = None) -> ContainerLabel:
+        return ContainerLabel(currency_code="EUR", name="Card", kind="wallet")
+
+    monkeypatch.setattr(tx_create, "_container_label", _label)
+
+    await IndexTransactionDocument().apply(
+        make_event(
+            TransactionCreated(
+                transaction_id=TX_ID,
+                wallet_id=WALLET_ID,
+                user_id=7,
+                amount="-25.50",
+                created_at=_ts(),
+                name="Groceries store",
+                origin="manual",
+            )
+        )
+    )
+
+    assert indexed.refreshes == [SEARCHABLE_REFRESH]

@@ -15,7 +15,13 @@ MUTATING_METHODS = ("POST", "PATCH", "PUT", "DELETE")
 
 # Reads that are POSTs. They need their own longer-prefix routes, or the write
 # route claims them by method.
-SEARCH_ENDPOINTS = ("/wallets/search", "/transactions/search", "/webhooks/search")
+SEARCH_ENDPOINTS = (
+    "/wallets/search",
+    "/transactions/search",
+    "/webhooks/search",
+    "/automations/search",
+    "/goals/search",
+)
 
 # A mutation reaches the service that OWNS the resource, which is write-service
 # for everything it holds the ledger for — and is not, for the slices whose

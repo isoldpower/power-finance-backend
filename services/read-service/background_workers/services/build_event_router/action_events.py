@@ -24,7 +24,8 @@ def subscribe_action_raised(router: EventRouter, probes: ProbesDictionary):
                 [
                     RaiseActionReadModel(),
                     BumpActionListVersion(ActionRaised),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -42,7 +43,8 @@ def subscribe_action_resolved(router: EventRouter, probes: ProbesDictionary):
                 [
                     ResolveActionReadModel(),
                     BumpActionListVersion(ActionResolved),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )

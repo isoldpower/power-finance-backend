@@ -26,7 +26,7 @@ def build_consumer_loop(
     retry_policy: RetryPolicy,
     retry_publisher: RetryPublisher,
     dlq_publisher: DLQPublisher,
-    dedupe_store: DedupeStore | None = None,
+    dedupe_store: DedupeStore | None,
     decoder: EnvelopeDecoder | None = None,
     shutdown: ShutdownSignal | None = None,
     install_signal_handlers: bool = True,

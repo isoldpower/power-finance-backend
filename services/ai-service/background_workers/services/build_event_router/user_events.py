@@ -12,7 +12,8 @@ def subscribe_user_synced(router: EventRouter, probes: ProbesDictionary) -> None
             SyncProcessGroup(
                 [
                     user_created.SeedTemplateAccounts(SEED_TEMPLATE_ACCOUNTS),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )

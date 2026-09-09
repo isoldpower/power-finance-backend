@@ -35,7 +35,8 @@ def subscribe_account_created(
                 [
                     CreateAccountReadModel(),
                     BumpAccountListVersion(AccountCreated),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -57,7 +58,8 @@ def subscribe_account_updated(
                     UpdateAccountReadModel(),
                     BumpAccountListVersion(AccountUpdated),
                     EvictAccountCache(AccountUpdated),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -78,7 +80,8 @@ def subscribe_account_posting_created(
                 [
                     CreateAccountPostingReadModel(),
                     EvictTransactionCache(AccountPostingCreated),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -99,7 +102,8 @@ def subscribe_account_posting_deleted(
                 [
                     RemoveAccountPostingReadModel(),
                     EvictTransactionCache(AccountPostingDeleted),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -120,7 +124,8 @@ def subscribe_account_postings_dispatched(
                 [
                     RecordAccountDispatch(),
                     EvictTransactionCache(AccountPostingsDispatched),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )

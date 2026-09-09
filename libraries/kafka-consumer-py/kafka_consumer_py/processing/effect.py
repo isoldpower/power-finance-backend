@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 
+from ..logger_shortcuts import warn_compensation_undefined
 from ..types import EventMessage
 
 EffectFn = Callable[[EventMessage], Awaitable[None]]
@@ -18,7 +19,7 @@ class Effect(ABC):
     async def apply(self, event: EventMessage) -> None: ...
 
     async def compensate(self, event: EventMessage) -> None:
-        return None
+        warn_compensation_undefined(self.name, event.event_id, event.event_type)
 
 
 class _FunctionEffect(Effect):

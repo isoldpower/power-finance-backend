@@ -81,6 +81,8 @@ services:
           - /api/v1/wallets/search
           - /api/v1/transactions/search
           - /api/v1/webhooks/search
+          - /api/v1/automations/search
+          - /api/v1/goals/search
         strip_path: false
         preserve_host: false
         methods: [POST, OPTIONS]

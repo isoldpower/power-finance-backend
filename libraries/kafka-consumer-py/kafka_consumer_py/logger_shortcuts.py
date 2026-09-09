@@ -86,3 +86,14 @@ def log_partition_held_for_retry(record: ConsumerRecord, until: datetime) -> Non
 def debug_partition_resumed(partition: object) -> None:
     logger = get_consumer_logger("consumer")
     logger.debug("retry due; resuming %s", partition)
+
+
+def warn_compensation_undefined(effect_name: str, event_id: str, event_type: str) -> None:
+    logger = get_consumer_logger("processing")
+    logger.warning(
+        "Compensation requested for effect %s on %s event %s, but the effect "
+        "defines none — whatever it applied is still applied.",
+        effect_name,
+        event_type,
+        event_id,
+    )

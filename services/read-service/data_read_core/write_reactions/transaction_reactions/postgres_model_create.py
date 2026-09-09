@@ -95,11 +95,12 @@ class CreateTransactionReadModel(Effect):
             log_transaction_postgres_duplication(
                 payload.transaction_id,
             )
-        else:
-            log_transaction_postgres_created(
-                new_resource.id,
-                new_resource.amount,
-            )
+            return None
+
+        log_transaction_postgres_created(
+            new_resource.id,
+            new_resource.amount,
+        )
         return new_resource
 
     async def _apply_wallet_update(

@@ -36,7 +36,8 @@ def subscribe_webhook_created(
                 [
                     TrackAppliedSeq(CreateWebhookReadModel(), WebhookEndpointCreated),
                     BumpWebhookListVersion(WebhookEndpointCreated),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -58,7 +59,8 @@ def subscribe_webhook_updated(
                     TrackAppliedSeq(UpdateWebhookReadModel(), WebhookEndpointUpdated),
                     EvictWebhookCache(WebhookEndpointUpdated),
                     BumpWebhookListVersion(WebhookEndpointUpdated),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -81,7 +83,8 @@ def subscribe_webhook_deleted(
                     EvictWebhookCache(WebhookEndpointDeleted),
                     EvictWebhookEventsCache(WebhookEndpointDeleted),
                     BumpWebhookListVersion(WebhookEndpointDeleted),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -105,7 +108,8 @@ def subscribe_webhook_subscription_added(
                         WebhookSubscriptionAdded,
                     ),
                     EvictWebhookEventsCache(WebhookSubscriptionAdded),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -129,7 +133,8 @@ def subscribe_webhook_subscription_removed(
                         WebhookSubscriptionRemoved,
                     ),
                     EvictWebhookEventsCache(WebhookSubscriptionRemoved),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )

@@ -23,6 +23,22 @@ class HealthGuardedHandler:
                 await self._handler(event)
 
                 return
-            except self._guarded_errors as error:
-                warn_projection_unavailable(self._health_probe.name, event.event_id, error)
+            except BaseException as raised_error:
+                if not self._is_guarded(raised_error):
+                    raise
+
+                warn_projection_unavailable(
+                    self._health_probe.name,
+                    event.event_id,
+                    raised_error,
+                )
                 await self._health_probe.wait_until_healthy()
+
+    def _is_guarded(self, raised_error: BaseException) -> bool:
+        if isinstance(raised_error, self._guarded_errors):
+            return True
+
+        if isinstance(raised_error, BaseExceptionGroup):
+            return raised_error.subgroup(self._guarded_errors) is not None
+
+        return False

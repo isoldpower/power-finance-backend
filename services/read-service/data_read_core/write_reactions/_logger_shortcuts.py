@@ -520,3 +520,86 @@ def log_automation_postgres_ran(automation_id: str, runs: int) -> None:
 def log_automation_list_version_bumped(user_id: int, version: int) -> None:
     logger = get_workers_logger("write_message_consumer")
     logger.info("Bumped automation list version for user %s to %s.", user_id, version)
+
+
+def log_container_amount_elastic_adjusted(
+    container_id: str,
+    index: str,
+    delta: Decimal,
+) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Adjusted indexed amount of container %s in %s by %s.",
+        container_id,
+        index,
+        delta,
+    )
+
+
+def log_container_amount_elastic_absent(container_id: str, index: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.debug(
+        "No container document %s in %s to adjust.",
+        container_id,
+        index,
+    )
+
+
+def log_automation_elastic_projected(
+    automation_id: str,
+    index: str,
+    created: bool,
+) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "%s automation %s in %s.",
+        "Indexed" if created else "Updated",
+        automation_id,
+        index,
+    )
+
+
+def log_automation_elastic_ran(automation_id: str, index: str, runs: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Recorded run %s of automation %s in %s.",
+        runs,
+        automation_id,
+        index,
+    )
+
+
+def log_automation_elastic_removed(automation_id: str, index: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Removed automation %s from %s.",
+        automation_id,
+        index,
+    )
+
+
+def log_goal_elastic_created(goal_id: str, index: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Indexed goal %s into %s.",
+        goal_id,
+        index,
+    )
+
+
+def log_goal_elastic_updated(goal_id: str, index: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Updated goal %s in %s.",
+        goal_id,
+        index,
+    )
+
+
+def log_goal_elastic_removed(goal_id: str, index: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Removed goal %s from %s.",
+        goal_id,
+        index,
+    )

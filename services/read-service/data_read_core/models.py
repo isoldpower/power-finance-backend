@@ -1,3 +1,6 @@
+from data_read_core.shared.kafka_dedupe import (  # noqa: F401
+    KafkaConsumedEvent,
+)
 from data_read_core.shared.postgres_orm import (  # noqa: F401
     AccountDispatchReadModel,
     AccountPostingReadModel,

@@ -20,3 +20,15 @@ class EvictGoalCache(Effect):
         removed_resource = await get_redis().delete(key)
 
         log_goal_cache_evicted(key, removed_resource)
+
+
+class EvictGoalCacheForContainer(Effect):
+    def __init__(self, payload_type: type[Message]) -> None:
+        self._payload_type = payload_type
+
+    async def apply(self, event: EventMessage) -> None:
+        event_payload = decode_payload(event, self._payload_type)
+        key = get_single_goal_key(event_payload.wallet_id)
+        removed_resource = await get_redis().delete(key)
+
+        log_goal_cache_evicted(key, removed_resource)

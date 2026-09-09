@@ -13,6 +13,7 @@ from kafka_consumer_py import (
     KafkaEventRouter,
     build_consumer_loop,
 )
+from service_core.shared.kafka_dedupe import SqlAlchemyDedupeStore
 
 from ...config import get_worker_settings
 from ._types import ProbesDictionary
@@ -46,6 +47,7 @@ async def build_event_router(config: ConsumerConfig) -> None:
             retry_policy=RetryPolicy(),
             retry_publisher=RetryPublisher(publisher, topic=settings.kafka_retry_topic),
             dlq_publisher=DLQPublisher(publisher, topic=settings.kafka_dlq_topic),
+            dedupe_store=SqlAlchemyDedupeStore(consumer_group=settings.kafka_group_id),
         )
         await consumer_loop.run()
     finally:

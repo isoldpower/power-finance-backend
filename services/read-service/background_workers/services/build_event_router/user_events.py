@@ -21,7 +21,8 @@ def subscribe_user_synced(
             SyncProcessGroup(
                 [
                     ProjectUserReadModel(),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )

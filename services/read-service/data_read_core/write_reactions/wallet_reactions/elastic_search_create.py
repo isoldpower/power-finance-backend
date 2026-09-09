@@ -3,7 +3,11 @@ from datetime import UTC
 from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import WalletCreated
 
-from data_read_core.shared.elasticsearch import WALLETS_INDEX, get_elasticsearch
+from data_read_core.shared.elasticsearch import (
+    SEARCHABLE_REFRESH,
+    WALLETS_INDEX,
+    get_elasticsearch,
+)
 
 from .._logger_shortcuts import log_wallet_elastic_created
 from .._utilities import decode_payload
@@ -31,6 +35,7 @@ class IndexWalletDocument(Effect):
             index=WALLETS_INDEX,
             id=payload.wallet_id,
             document=document,
+            refresh=SEARCHABLE_REFRESH,
         )
         log_wallet_elastic_created(
             payload.wallet_id,

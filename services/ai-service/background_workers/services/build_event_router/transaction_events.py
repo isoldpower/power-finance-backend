@@ -17,7 +17,8 @@ def subscribe_transaction_created(router: EventRouter, probes: ProbesDictionary)
                 [
                     transaction_created.ProjectTransaction(),
                     transaction_created.DispatchPostings(build_created_dispatcher),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -35,7 +36,8 @@ def subscribe_transaction_updated(router: EventRouter, probes: ProbesDictionary)
                 [
                     transaction_updated.UpdateProjectedTransactionAmount(),
                     transaction_updated.DispatchPostings(build_updated_dispatcher),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -53,7 +55,8 @@ def subscribe_transaction_deleted(router: EventRouter, probes: ProbesDictionary)
                 [
                     transaction_deleted.RemovePostings(),
                     transaction_deleted.SoftDeleteProjectedTransaction(),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )

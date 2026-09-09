@@ -31,3 +31,14 @@ class DedupeGate:
             logger.debug("kafka.dedupe.skip", extra={"event_id": event_id})
             return True
         return False
+
+    async def record_processed(self, message: ConsumedMessage) -> None:
+        if self._dedupe_store is None or self._event_id_extractor is None:
+            return
+
+        event_id = self._event_id_extractor(message)
+        if event_id is None:
+            return
+
+        await self._dedupe_store.mark(event_id)
+        logger.debug("kafka.dedupe.mark", extra={"event_id": event_id})

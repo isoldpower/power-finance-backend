@@ -22,6 +22,8 @@ from .list_wallets import list_wallets
 from .list_webhook_event_types import list_webhook_event_types
 from .list_webhook_events import list_webhook_events
 from .list_webhooks import list_webhooks
+from .search_automations import search_automations
+from .search_goals import search_goals
 from .search_transactions import search_transactions
 from .search_wallets import search_wallets
 from .search_webhooks import search_webhooks
@@ -29,6 +31,7 @@ from .search_webhooks import search_webhooks
 urlpatterns = [
     path("actions", list_actions),
     path("automations", list_automations),
+    path("automations/search", search_automations),
     path("automations/<uuid:automation_id>", get_automation),
     path("accounts", list_accounts),
     path("accounts/<uuid:account_id>", get_account),
@@ -37,6 +40,7 @@ urlpatterns = [
     path("currencies/rates/<str:code>", get_currency_rates),
     path("metrics", get_metrics),
     path("goals", list_goals),
+    path("goals/search", search_goals),
     path("goals/<uuid:goal_id>", get_goal),
     path("wallets", list_wallets),
     path("wallets/search", search_wallets),

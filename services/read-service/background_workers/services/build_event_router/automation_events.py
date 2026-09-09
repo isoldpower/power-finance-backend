@@ -1,8 +1,13 @@
 from data_read_core.write_reactions import (
     BumpAutomationListVersion,
+    IndexAutomationDocument,
     ProjectAutomationReadModel,
     RecordAutomationRun,
+    RecordAutomationRunDocument,
+    RemoveAutomationDocument,
     RemoveAutomationReadModel,
+    TrackAppliedSeq,
+    TrackEsAppliedSeq,
 )
 from kafka_consumer_py import EventRouter, ExecutionPlan, SyncProcessGroup
 from kafka_messages import (
@@ -21,9 +26,22 @@ def subscribe_automation_created(router: EventRouter, probes: ProbesDictionary):
         [
             SyncProcessGroup(
                 [
-                    ProjectAutomationReadModel(AutomationCreated),
+                    TrackAppliedSeq(
+                        ProjectAutomationReadModel(AutomationCreated),
+                        AutomationCreated,
+                    ),
                     BumpAutomationListVersion(AutomationCreated),
-                ]
+                ],
+                atomic=True,
+            ),
+            SyncProcessGroup(
+                [
+                    TrackEsAppliedSeq(
+                        IndexAutomationDocument(AutomationCreated),
+                        AutomationCreated,
+                    )
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -36,9 +54,22 @@ def subscribe_automation_updated(router: EventRouter, probes: ProbesDictionary):
         [
             SyncProcessGroup(
                 [
-                    ProjectAutomationReadModel(AutomationUpdated),
+                    TrackAppliedSeq(
+                        ProjectAutomationReadModel(AutomationUpdated),
+                        AutomationUpdated,
+                    ),
                     BumpAutomationListVersion(AutomationUpdated),
-                ]
+                ],
+                atomic=True,
+            ),
+            SyncProcessGroup(
+                [
+                    TrackEsAppliedSeq(
+                        IndexAutomationDocument(AutomationUpdated),
+                        AutomationUpdated,
+                    )
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -51,9 +82,14 @@ def subscribe_automation_deleted(router: EventRouter, probes: ProbesDictionary):
         [
             SyncProcessGroup(
                 [
-                    RemoveAutomationReadModel(),
+                    TrackAppliedSeq(RemoveAutomationReadModel(), AutomationDeleted),
                     BumpAutomationListVersion(AutomationDeleted),
-                ]
+                ],
+                atomic=True,
+            ),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(RemoveAutomationDocument(), AutomationDeleted)],
+                atomic=True,
             ),
         ]
     )
@@ -66,9 +102,14 @@ def subscribe_automation_ran(router: EventRouter, probes: ProbesDictionary):
         [
             SyncProcessGroup(
                 [
-                    RecordAutomationRun(),
+                    TrackAppliedSeq(RecordAutomationRun(), AutomationRan),
                     BumpAutomationListVersion(AutomationRan),
-                ]
+                ],
+                atomic=True,
+            ),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(RecordAutomationRunDocument(), AutomationRan)],
+                atomic=True,
             ),
         ]
     )

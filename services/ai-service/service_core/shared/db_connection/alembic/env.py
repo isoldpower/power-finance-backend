@@ -2,9 +2,9 @@ from logging.config import fileConfig
 
 from alembic import context
 
-from ..config import get_database_settings
-from ..models import ModelBase
-from .environment import build_environment
+from service_core.shared.db_connection.alembic.environment import build_environment
+from service_core.shared.db_connection.config import get_database_settings
+from service_core.shared.db_connection.models import ModelBase
 
 config = context.config
 config.set_main_option("sqlalchemy.url", get_database_settings().database_url)

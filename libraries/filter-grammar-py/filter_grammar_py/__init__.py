@@ -23,7 +23,9 @@ from .exceptions import (
 )
 from .matcher import Record, matches
 from .policies import (
+    AUTOMATION_FILTER_POLICY,
     FILTER_POLICIES,
+    GOAL_FILTER_POLICY,
     TRANSACTION_FILTER_POLICY,
     WALLET_FILTER_POLICY,
     WEBHOOK_FILTER_POLICY,
@@ -40,12 +42,14 @@ from .value_types import (
 from .vocabulary import GroupOperator
 
 __all__ = [
+    "AUTOMATION_FILTER_POLICY",
     "FILTER_MALFORMED_GROUP",
     "FILTER_MALFORMED_NODE",
     "FILTER_OPERATOR_NOT_ALLOWED",
     "FILTER_POLICIES",
     "FILTER_UNKNOWN_FIELD",
     "FILTER_VALUE_TYPE",
+    "GOAL_FILTER_POLICY",
     "ROOT_PATH",
     "TRANSACTION_FILTER_POLICY",
     "VALUE_TYPES",

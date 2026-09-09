@@ -3,7 +3,6 @@ from enum import StrEnum
 from zoneinfo import ZoneInfo
 
 DAY = timedelta(days=1)
-WEEK = timedelta(days=7)
 
 
 class Period(StrEnum):
@@ -14,6 +13,12 @@ class Period(StrEnum):
 
 
 DEFAULT_PERIOD = Period.LAST_MONTH
+
+ROLLING_DAYS: dict[Period, int] = {
+    Period.LAST_WEEK: 7,
+    Period.LAST_MONTH: 30,
+    Period.LAST_YEAR: 365,
+}
 
 
 def period_bounds(
@@ -27,14 +32,10 @@ def period_bounds(
     local_now = (now or datetime.now(UTC)).astimezone(zone)
     midnight = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    if period is Period.LAST_WEEK:
-        current_start = midnight - timedelta(days=midnight.weekday())
-        previous_start = current_start - WEEK
-    elif period is Period.LAST_MONTH:
-        current_start = midnight.replace(day=1)
-        previous_start = (current_start - DAY).replace(day=1)
-    else:
-        current_start = midnight.replace(month=1, day=1)
-        previous_start = current_start.replace(year=current_start.year - 1)
+    window_end = midnight + DAY
+    window_start = window_end - timedelta(days=ROLLING_DAYS[period])
 
-    return previous_start.astimezone(UTC), current_start.astimezone(UTC)
+    return (
+        window_start.astimezone(UTC),
+        window_end.astimezone(UTC),
+    )

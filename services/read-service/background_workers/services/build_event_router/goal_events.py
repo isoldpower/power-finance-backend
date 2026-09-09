@@ -3,9 +3,13 @@ from data_read_core.write_reactions import (
     BumpTransactionListVersion,
     CreateGoalReadModel,
     EvictGoalCache,
+    IndexGoalDocument,
+    RemoveGoalDocument,
     RemoveGoalReadModel,
     RenameGoalInTransactions,
     TrackAppliedSeq,
+    TrackEsAppliedSeq,
+    UpdateGoalDocument,
     UpdateGoalReadModel,
 )
 from kafka_consumer_py import (
@@ -33,7 +37,12 @@ def subscribe_goal_created(
                 [
                     TrackAppliedSeq(CreateGoalReadModel(), GoalCreated),
                     BumpGoalListVersion(GoalCreated),
-                ]
+                ],
+                atomic=True,
+            ),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(IndexGoalDocument(), GoalCreated)],
+                atomic=True,
             ),
         ]
     )
@@ -57,7 +66,12 @@ def subscribe_goal_updated(
                     EvictGoalCache(GoalUpdated),
                     BumpGoalListVersion(GoalUpdated),
                     BumpTransactionListVersion(GoalUpdated),
-                ]
+                ],
+                atomic=True,
+            ),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(UpdateGoalDocument(), GoalUpdated)],
+                atomic=True,
             ),
         ]
     )
@@ -79,7 +93,12 @@ def subscribe_goal_deleted(
                     TrackAppliedSeq(RemoveGoalReadModel(), GoalDeleted),
                     EvictGoalCache(),
                     BumpGoalListVersion(GoalDeleted),
-                ]
+                ],
+                atomic=True,
+            ),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(RemoveGoalDocument(), GoalDeleted)],
+                atomic=True,
             ),
         ]
     )

@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from fakes import make_event
 from google.protobuf.timestamp_pb2 import Timestamp
 from kafka_messages import (
+    TransactionCreated,
     TransactionDeleted,
     TransactionUpdated,
     UserSynced,
@@ -16,6 +17,7 @@ from kafka_messages import (
 
 from data_read_core.shared.postgres_orm import TransactionReadModel, WalletReadModel
 from data_read_core.write_reactions import (
+    CreateTransactionReadModel,
     CreateWalletReadModel,
     ProjectUserReadModel,
     RemoveTransactionReadModel,
@@ -185,6 +187,27 @@ async def test_cancelling_twice_does_not_reverse_the_balance_twice():
 
     wallet = await WalletReadModel.objects.aget(id=WALLET_ID)
     assert wallet.balance == Decimal("60")
+
+
+async def test_creating_twice_does_not_apply_the_balance_twice():
+    await _make_wallet(balance=Decimal("100"))
+    event = make_event(
+        TransactionCreated(
+            transaction_id=TX_ID,
+            wallet_id=WALLET_ID,
+            user_id=7,
+            amount="40",
+            name="Groceries",
+            created_at=_ts(datetime(2026, 2, 1, tzinfo=UTC)),
+        )
+    )
+
+    await CreateTransactionReadModel().apply(event)
+    await CreateTransactionReadModel().apply(event)
+
+    wallet = await WalletReadModel.objects.aget(id=WALLET_ID)
+    assert wallet.balance == Decimal("140")
+    assert await TransactionReadModel.objects.filter(id=TX_ID).acount() == 1
 
 
 async def test_remove_missing_transaction_is_a_noop():

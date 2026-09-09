@@ -16,6 +16,8 @@ from filter_grammar_py import (
 
 def test_every_named_resource_has_a_policy():
     for resource in (
+        FilterResource.AUTOMATIONS,
+        FilterResource.GOALS,
         FilterResource.TRANSACTIONS,
         FilterResource.WALLETS,
         FilterResource.WEBHOOKS,

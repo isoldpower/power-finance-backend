@@ -129,3 +129,46 @@ async def test_plan_aggregates_multiple_group_failures():
         await plan(_event())
 
     assert len(excinfo.value.exceptions) == 2
+
+
+class UncompensatedEffect(Effect):
+    async def apply(self, event: EventMessage) -> None:
+        return None
+
+
+async def test_an_effect_without_compensation_warns_when_it_is_asked_to_compensate(caplog):
+    with caplog.at_level("WARNING", logger="kafka_consumer_py.processing"):
+        await UncompensatedEffect().compensate(_event())
+
+    assert "UncompensatedEffect" in caplog.text
+    assert "WalletCreated" in caplog.text
+    assert "e1" in caplog.text
+
+
+async def test_an_atomic_group_warns_for_each_uncompensated_effect_it_unwinds(caplog):
+    log: list[str] = []
+    group = SyncProcessGroup(
+        [
+            UncompensatedEffect(),
+            RecordingEffect("b", log, fail=True),
+        ],
+        atomic=True,
+    )
+
+    with (
+        caplog.at_level("WARNING", logger="kafka_consumer_py.processing"),
+        pytest.raises(RuntimeError),
+    ):
+        await group.run(_event())
+
+    assert "UncompensatedEffect" in caplog.text
+
+
+async def test_a_bare_function_effect_warns_because_it_cannot_compensate(caplog):
+    async def evict_cache(event: EventMessage) -> None:
+        return None
+
+    with caplog.at_level("WARNING", logger="kafka_consumer_py.processing"):
+        await as_effect(evict_cache).compensate(_event())
+
+    assert "evict_cache" in caplog.text

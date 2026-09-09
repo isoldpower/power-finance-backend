@@ -26,7 +26,15 @@ FALLBACK_STATUS = 507
 # has no Elasticsearch, so it cannot answer a filter tree at all. A search that
 # trips the gate genuinely returns 507, and clients are expected to treat
 # it as "retry shortly".
-SEARCH_WITHOUT_FALLBACK = frozenset({"/wallets/search", "/transactions/search", "/webhooks/search"})
+SEARCH_WITHOUT_FALLBACK = frozenset(
+    {
+        "/wallets/search",
+        "/transactions/search",
+        "/webhooks/search",
+        "/automations/search",
+        "/goals/search",
+    }
+)
 
 # Reads that CAN answer 507 and have no write-side counterpart. The plugin
 # rewrites the prefix regardless, so the reroute reaches a write-service route

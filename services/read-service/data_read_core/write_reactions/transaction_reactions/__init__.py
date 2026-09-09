@@ -1,3 +1,8 @@
+from .elastic_container_amount import (
+    AdjustContainerAmountOnCreate,
+    AdjustContainerAmountOnDelete,
+    AdjustContainerAmountOnUpdate,
+)
 from .elastic_metadata_update import UpdateTransactionMetadataDocument
 from .elastic_search_create import IndexTransactionDocument
 from .elastic_search_delete import RemoveTransactionDocument
@@ -13,6 +18,9 @@ __all__ = [
     "BumpTransactionListVersion",
     "CreateTransactionReadModel",
     "EvictTransactionCache",
+    "AdjustContainerAmountOnCreate",
+    "AdjustContainerAmountOnDelete",
+    "AdjustContainerAmountOnUpdate",
     "IndexTransactionDocument",
     "RemoveTransactionDocument",
     "RemoveTransactionReadModel",

@@ -49,3 +49,57 @@ async def test_wallet_evict_leaves_unrelated_keys(monkeypatch):
     await EvictWalletCache().apply(make_event(WalletDeleted(wallet_id=WALLET_ID)))
 
     assert get_single_wallet_key("other") in fake_redis.store
+
+
+async def test_a_transaction_against_a_goal_evicts_that_goal_key(monkeypatch):
+    from kafka_messages import TransactionCreated
+
+    from data_read_core.write_reactions import EvictGoalCacheForContainer
+    from data_read_core.write_reactions._cache_keys import get_single_goal_key
+    from data_read_core.write_reactions.goal_reactions import redis_single_evict as goal_evict
+
+    goal_id = "9b65ffd3-3c69-407c-8e82-56a73cf6ffd3"
+    fake_redis = FakeRedis(
+        {get_single_goal_key(goal_id): "stale", get_single_goal_key("other"): "keep"}
+    )
+    monkeypatch.setattr(goal_evict, "get_redis", lambda: fake_redis)
+
+    await EvictGoalCacheForContainer(TransactionCreated).apply(
+        make_event(
+            TransactionCreated(
+                transaction_id=TX_ID,
+                wallet_id=goal_id,
+                user_id=7,
+                amount="3.76",
+                container_kind="goal",
+            )
+        )
+    )
+
+    assert get_single_goal_key(goal_id) not in fake_redis.store
+    assert get_single_goal_key("other") in fake_redis.store
+
+
+async def test_a_transaction_bumps_the_goal_list_version(monkeypatch):
+    from kafka_messages import TransactionCreated
+
+    from data_read_core.write_reactions import BumpGoalListVersion
+    from data_read_core.write_reactions._cache_keys import get_goal_list_version_key
+    from data_read_core.write_reactions.goal_reactions import redis_increase_version as goal_version
+
+    fake_redis = FakeRedis()
+    monkeypatch.setattr(goal_version, "get_redis", lambda: fake_redis)
+
+    await BumpGoalListVersion(TransactionCreated).apply(
+        make_event(
+            TransactionCreated(
+                transaction_id=TX_ID,
+                wallet_id="9b65ffd3-3c69-407c-8e82-56a73cf6ffd3",
+                user_id=7,
+                amount="3.76",
+                container_kind="goal",
+            )
+        )
+    )
+
+    assert fake_redis.store[get_goal_list_version_key(7)] == "1"

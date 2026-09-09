@@ -1,8 +1,9 @@
-from .shared_config import MONEY_SCALING_FACTOR
+from .shared_config import MONEY_SCALING_FACTOR, SINGLE_NODE_REPLICA_COUNT
 
 TRANSACTIONS_INDEX = "read_transactions"
 
 TRANSACTIONS_MAPPING: dict = {
+    "settings": {"number_of_replicas": SINGLE_NODE_REPLICA_COUNT},
     "mappings": {
         "properties": {
             "id": {"type": "keyword"},

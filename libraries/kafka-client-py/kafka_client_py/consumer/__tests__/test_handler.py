@@ -164,3 +164,57 @@ async def test_dedupe_skips_seen_event():
 
     assert calls == 0
     assert pub.published == []
+
+
+@pytest.mark.asyncio
+async def test_redelivery_is_skipped_after_a_successful_handle():
+    calls = 0
+
+    async def user_handler(_msg):
+        nonlocal calls
+        calls += 1
+
+    dedupe = InMemoryDedupeStore()
+    pub = FakePublisher()
+    handler = MessageHandler(
+        user_handler,
+        policy=RetryPolicy(),
+        retry_publisher=RetryPublisher(pub, topic="events.retry"),  # type: ignore[arg-type]
+        dlq_publisher=DLQPublisher(pub, topic="events.dlq"),  # type: ignore[arg-type]
+        dedupe=dedupe,
+        event_id=lambda _m: "evt-1",
+    )
+
+    await handler.handle(FakeMessage())
+    await handler.handle(FakeMessage())
+    await handler.handle(FakeMessage())
+
+    assert calls == 1
+    assert pub.published == []
+
+
+@pytest.mark.asyncio
+async def test_a_failed_handle_is_not_marked_and_runs_again():
+    calls = 0
+
+    async def user_handler(_msg):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("first delivery fails")
+
+    dedupe = InMemoryDedupeStore()
+    pub = FakePublisher()
+    handler = MessageHandler(
+        user_handler,
+        policy=RetryPolicy(),
+        retry_publisher=RetryPublisher(pub, topic="events.retry"),  # type: ignore[arg-type]
+        dlq_publisher=DLQPublisher(pub, topic="events.dlq"),  # type: ignore[arg-type]
+        dedupe=dedupe,
+        event_id=lambda _m: "evt-1",
+    )
+
+    await handler.handle(FakeMessage())
+    await handler.handle(FakeMessage())
+
+    assert calls == 2
