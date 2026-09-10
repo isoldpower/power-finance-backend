@@ -7,9 +7,9 @@ x-write-database-env: &write-database-env
   SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
   DATABASE_HOST: postgres-write
   DATABASE_PORT: 5432
-  DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
-  DATABASE_USER: ${DATABASE_USER:-postgres}
-  DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+  DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+  DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+  DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
 
 services:
   write-migrate:
@@ -41,9 +41,9 @@ services:
 
       DATABASE_HOST: postgres-write
       DATABASE_PORT: 5432
-      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
-      DATABASE_USER: ${DATABASE_USER:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
 
       IMMUDB_HOST: immudb
       IMMUDB_PORT: 3322
@@ -83,9 +83,9 @@ services:
 
       DATABASE_HOST: postgres-write
       DATABASE_PORT: 5432
-      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
-      DATABASE_USER: ${DATABASE_USER:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
 
       IMMUDB_HOST: immudb
       IMMUDB_PORT: 3322
@@ -127,9 +127,9 @@ services:
 
       DATABASE_HOST: postgres-write
       DATABASE_PORT: 5432
-      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
-      DATABASE_USER: ${DATABASE_USER:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
 
       IMMUDB_HOST: immudb
       IMMUDB_PORT: 3322
@@ -170,9 +170,9 @@ services:
 
       DATABASE_HOST: postgres-write
       DATABASE_PORT: 5432
-      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
-      DATABASE_USER: ${DATABASE_USER:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
 
       IMMUDB_HOST: immudb
       IMMUDB_PORT: 3322
@@ -210,9 +210,9 @@ services:
 
       DATABASE_HOST: postgres-write
       DATABASE_PORT: 5432
-      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
-      DATABASE_USER: ${DATABASE_USER:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
 
       IMMUDB_HOST: immudb
       IMMUDB_PORT: 3322
@@ -253,9 +253,9 @@ services:
 
       DATABASE_HOST: postgres-write
       DATABASE_PORT: 5432
-      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
-      DATABASE_USER: ${DATABASE_USER:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
 
       IMMUDB_HOST: immudb
       IMMUDB_PORT: 3322
@@ -288,11 +288,11 @@ services:
     image: postgres:18.3
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${DATABASE_PORT:-5433}:5432"
+      - "127.0.0.1:${WRITE_DATABASE_PORT:-5433}:5432"
     environment:
-      POSTGRES_DB: ${DATABASE_NAME:-power_finance_write}
-      POSTGRES_USER: ${DATABASE_USER:-postgres}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${WRITE_DATABASE_NAME:-power_finance_write}
+      POSTGRES_USER: ${WRITE_DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_write_data:/var/lib/postgresql/data
@@ -303,7 +303,7 @@ services:
       - "-c"
       - "config_file=/etc/postgresql/postgresql.conf"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-power_finance_write}"]
+      test: ["CMD-SHELL", "pg_isready -U ${WRITE_DATABASE_USER:-postgres} -d ${WRITE_DATABASE_NAME:-power_finance_write}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -327,14 +327,22 @@ services:
         condition: service_healthy
     volumes:
       - ../../infrastructure/debezium/connectors:/connectors:ro
+    environment:
+      WRITE_DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      WRITE_DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
+      WRITE_DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
     entrypoint: ["sh", "-c"]
     command:
       - |
         set -eu
         echo "Registering outbox-connector"
+        sed -e "s|__WRITE_DATABASE_USER__|$$WRITE_DATABASE_USER|g" \
+            -e "s|__WRITE_DATABASE_PASSWORD__|$$WRITE_DATABASE_PASSWORD|g" \
+            -e "s|__WRITE_DATABASE_NAME__|$$WRITE_DATABASE_NAME|g" \
+            /connectors/outbox-connector.json > /tmp/outbox-connector.json
         curl -fsS -X PUT \
           -H "Content-Type: application/json" \
-          --data @/connectors/outbox-connector.json \
+          --data @/tmp/outbox-connector.json \
           http://kafka-connect:8083/connectors/outbox-connector/config
         echo
         echo "OK"

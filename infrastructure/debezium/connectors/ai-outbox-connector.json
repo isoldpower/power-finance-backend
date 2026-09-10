@@ -4,9 +4,9 @@
 
   "database.hostname": "postgres-ai",
   "database.port": "5432",
-  "database.user": "postgres",
-  "database.password": "postgres",
-  "database.dbname": "power_finance_ai",
+  "database.user": "__AI_DATABASE_USER__",
+  "database.password": "__AI_DATABASE_PASSWORD__",
+  "database.dbname": "__AI_DATABASE_NAME__",
 
   "plugin.name": "pgoutput",
   "publication.autocreate.mode": "filtered",

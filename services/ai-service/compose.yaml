@@ -91,14 +91,22 @@ services:
         condition: service_completed_successfully
     volumes:
       - ../../infrastructure/debezium/connectors:/connectors:ro
+    environment:
+      AI_DATABASE_USER: ${AI_DATABASE_USER:-postgres}
+      AI_DATABASE_PASSWORD: ${AI_DATABASE_PASSWORD:-postgres}
+      AI_DATABASE_NAME: ${AI_DATABASE_NAME:-power_finance_ai}
     entrypoint: ["sh", "-c"]
     command:
       - |
         set -eu
         echo "Registering ai-outbox-connector"
+        sed -e "s|__AI_DATABASE_USER__|$$AI_DATABASE_USER|g" \
+            -e "s|__AI_DATABASE_PASSWORD__|$$AI_DATABASE_PASSWORD|g" \
+            -e "s|__AI_DATABASE_NAME__|$$AI_DATABASE_NAME|g" \
+            /connectors/ai-outbox-connector.json > /tmp/ai-outbox-connector.json
         curl -fsS -X PUT \
           -H "Content-Type: application/json" \
-          --data @/connectors/ai-outbox-connector.json \
+          --data @/tmp/ai-outbox-connector.json \
           http://kafka-connect:8083/connectors/ai-outbox-connector/config
         echo
         echo "OK"

@@ -184,3 +184,28 @@ docker-push: docker-auth-check docker-build ## Build + push every service + the 
 	@docker push "$(GATEWAY_IMAGE):$(IMAGE_TAG)"
 
 endif
+
+# See README.md → "Environment"
+COMPOSE_ENV_LAYERS := $(wildcard .env) $(wildcard services/*/.env.compose)
+COMPOSE_ENV_FLAGS  := $(foreach layer,$(COMPOSE_ENV_LAYERS),--env-file $(layer))
+COMPOSE            := docker compose $(COMPOSE_ENV_FLAGS)
+
+.PHONY: env-layers
+env-layers: ## Show which env files the compose targets will stack, in order
+	@echo "$(COMPOSE_ENV_LAYERS)" | tr ' ' '\n' | cat -n
+
+.PHONY: env-resolve
+env-resolve: ## Print the fully resolved compose config after layering
+	@$(COMPOSE) config
+
+.PHONY: up
+up: ## Start the whole stack with the layered environment
+	$(COMPOSE) up -d
+
+.PHONY: down
+down: ## Stop the whole stack
+	$(COMPOSE) down
+
+.PHONY: logs
+logs: ## Follow logs for the whole stack
+	$(COMPOSE) logs -f

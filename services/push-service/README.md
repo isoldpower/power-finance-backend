@@ -36,6 +36,11 @@ taking precedence over file keys.
   re-applied from the resolved file+env config when `run-api` starts.
 - `PUSH_SERVICE_CONFIG_FILE` is environment-only — it points at the config file
   itself, so it cannot live inside it.
+- `push_service.heartbeat_interval_seconds` (default 15) sets how often the SSE
+  keepalive frame goes out. Behind a CDN this is what holds an idle stream open:
+  Cloudflare cuts a connection that sends nothing for ~100s, and the Kong route
+  keeps streams open for an hour, so raising this past ~60 makes streams die at
+  100s with no obvious cause.
 
 ## Build & Docker
 

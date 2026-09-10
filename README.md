@@ -124,6 +124,77 @@ Gateway specifics (plugins, rate-limit tiers, the Read-At-Least mechanism) are i
 - `gateway-redis` backs Kong's rate-limit counters (keeping the gateway
   stateless); persistence is intentionally off — the counters are ephemeral.
 
+## Environment
+
+`docker compose` reads **one** env file by default, but the Make targets stack
+several so a value can be set once and overridden where it matters.
+`make env-layers` prints what will be stacked, in order; `make env-resolve`
+prints the fully resolved config.
+
+Precedence, highest first:
+
+| | Layer | Example |
+| --- | --- | --- |
+| 1 | shell variable | `WRITE_DATABASE_PASSWORD=x make up` |
+| 2 | `services/<name>/.env.compose` | per-service override |
+| 3 | `.env` | the workspace-wide values |
+| 4 | `${VAR:-default}` in the compose file | the dev fallback |
+
+Stacked `--env-file` resolves later files over earlier ones and the shell beats
+every file, so the ordering falls out of the flag order. It is unambiguous only
+because every variable is prefixed by the service that owns it
+(`WRITE_DATABASE_*`, `READ_DATABASE_*`, `AI_DATABASE_*`, `WEBHOOK_DATABASE_*`) —
+an unprefixed variable in a service layer applies to the whole project, so
+shared knobs like `LOG_LEVEL` belong in `.env`. Only files that exist are
+passed: compose errors on a missing `--env-file`, so the Makefile globs rather
+than listing.
+
+**Three files, three jobs.** `.env` and `services/<name>/.env.compose` are read
+by compose and reach containers. `services/<name>/.env` is read by the service
+itself through `BASE_DIR / ".env"` when it runs directly on the host
+(`make read run`, `uv run pytest`) and never reaches a container — no compose
+file uses `env_file:`. Copy from the matching `.example`; both patterns are
+gitignored, the examples are committed.
+
+### What has to be set
+
+Every value has a working dev fallback, so the stack starts either way. Two fail
+loudly when missing and the rest fail silently, which makes the silent ones the
+dangerous group:
+
+- **Fail loudly.** `CLERK_ISSUER_URL` (Kong's `clerk-jwt` plugin fetches the
+  rotating JWKS from `<issuer>/.well-known/jwks.json`; use the *production*
+  Clerk instance, the dev one issues a different issuer) and
+  `READ_AT_LEAST_HMAC_SECRET` (shared between the gateway's `read-at-least`
+  plugin and the write side that signs `X-Write-Version` — both must hold the
+  same value and rotate together).
+- **Fail silently.** Four database passwords defaulting to `postgres`,
+  `IMMUDB_PASSWORD` to the vendor's `immudb`, `ELASTIC_PASSWORD` and
+  `KIBANA_PASSWORD` to `changeme`, and both Django `SECRET_KEY`s to
+  `dev-only-secret-key-change-me`.
+
+`docker compose config | grep -iE "changeme|dev-only-secret|PASSWORD: postgres"`
+before starting anything real.
+
+### Debezium credentials
+
+The two connector configs under `infrastructure/debezium/connectors/` are JSON
+posted to Kafka Connect's REST API, so they get no compose interpolation. They
+carry `__WRITE_DATABASE_USER__` style placeholders that the
+`write-outbox-connector` / `ai-outbox-connector` one-shots substitute at
+registration, which is why the `WRITE_`/`AI_` values reach them and no
+credential is committed. The placeholders deliberately contain no `$`: a
+`${VAR}` inside a compose `command:` is interpolated by compose before the
+container shell sees it, which would collapse both sides of the substitution to
+the same value.
+
+Changing a database password without that wiring is a quiet failure worth
+knowing: the connector cannot connect, writes still land in the outbox table,
+nothing reaches Kafka, and the read side goes stale with no error at the API.
+
+Redis is the one store with no authentication, on any of its three instances.
+That is safe only while they stay bound to loopback.
+
 ## Tooling notes
 
 - **uv workspace** (`pyproject.toml`): `services/push-service` and

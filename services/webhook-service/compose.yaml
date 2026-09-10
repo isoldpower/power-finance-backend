@@ -21,7 +21,7 @@ services:
       KAFKA_RETRY_TOPIC: ${WEBHOOK_KAFKA_RETRY_TOPIC:-webhooks.retry}
       KAFKA_DLQ_TOPIC: ${WEBHOOK_KAFKA_DLQ_TOPIC:-webhooks.dlq}
       KAFKA_NOTIFICATIONS_INBOUND_TOPIC: ${KAFKA_NOTIFICATIONS_INBOUND_TOPIC:-notifications.inbound}
-      POSTGRES_DSN: postgres://postgres:postgres@webhook-postgres:5432/power_finance_webhooks
+      POSTGRES_DSN: postgres://${WEBHOOK_DATABASE_USER:-postgres}:${WEBHOOK_DATABASE_PASSWORD:-postgres}@webhook-postgres:5432/${WEBHOOK_DATABASE_NAME:-power_finance_webhooks}
       DELIVERY_TIMEOUT_SECONDS: ${WEBHOOK_DELIVERY_TIMEOUT_SECONDS:-10}
       DELIVERY_MAX_ATTEMPTS: ${WEBHOOK_DELIVERY_MAX_ATTEMPTS:-5}
       DELIVERY_RETRY_BACKOFF_SECONDS: ${WEBHOOK_DELIVERY_RETRY_BACKOFF_SECONDS:-30}
@@ -50,7 +50,7 @@ services:
     command: ["migrate", "up"]
     restart: "no"
     environment:
-      POSTGRES_DSN: postgres://postgres:postgres@webhook-postgres:5432/power_finance_webhooks
+      POSTGRES_DSN: postgres://${WEBHOOK_DATABASE_USER:-postgres}:${WEBHOOK_DATABASE_PASSWORD:-postgres}@webhook-postgres:5432/${WEBHOOK_DATABASE_NAME:-power_finance_webhooks}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       webhook-postgres:
@@ -60,13 +60,13 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: power_finance_webhooks
+      POSTGRES_USER: ${WEBHOOK_DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${WEBHOOK_DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${WEBHOOK_DATABASE_NAME:-power_finance_webhooks}
     volumes:
       - webhook_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d power_finance_webhooks"]
+      test: ["CMD-SHELL", "pg_isready -U ${WEBHOOK_DATABASE_USER:-postgres} -d ${WEBHOOK_DATABASE_NAME:-power_finance_webhooks}"]
       interval: 5s
       timeout: 3s
       retries: 10
