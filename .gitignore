@@ -121,12 +121,11 @@ schema.yml
 schema.yaml
 openapi.json
 .claude
+.sandbox/
+.codegraph
 
 # =============================================================================
 # Kafka Connect / Debezium local working directories
 # =============================================================================
 infrastructure/debezium/.connect-data/
 infrastructure/kafka/.kafka-data/
-
-
-.phase-5-backup

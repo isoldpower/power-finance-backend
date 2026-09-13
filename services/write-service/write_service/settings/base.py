@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "health_probes.apps.HealthProbesConfig",
     "data_write_core.apps.DataWriteCoreConfig",
+    "write_service.observability_setup.apps.WriteServiceObservabilityConfig",
     "write_service.common.apps.WriteServiceCommonConfig",
     "background_workers.apps.BackgroundWorkersConfig",
 ]
@@ -186,10 +187,14 @@ LOGGING = {
     "disable_existing_loggers": False,
     "filters": {
         "correlation_id": {"()": "correlation.CorrelationIDFilter"},
+        "trace_context": {"()": "observability.TraceContextFilter"},
     },
     "formatters": {
         "verbose": {
-            "format": "{levelname} {asctime} cid={correlation_id} {name} {message}",
+            "format": (
+                "{levelname} {asctime} cid={correlation_id} trace={trace_id} "
+                "sandbox={sandbox_id} {name} {message}"
+            ),
             "style": "{",
         },
     },
@@ -198,7 +203,7 @@ LOGGING = {
             "level": "DEBUG",
             "class": "logging.StreamHandler",
             "formatter": "verbose",
-            "filters": ["correlation_id"],
+            "filters": ["correlation_id", "trace_context"],
         },
     },
     "loggers": {

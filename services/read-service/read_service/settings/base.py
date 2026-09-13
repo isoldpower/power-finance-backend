@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "read_service.observability_setup.apps.ReadServiceObservabilityConfig",
     "data_read_core",
     "background_workers",
 ]
@@ -155,10 +156,14 @@ LOGGING = {
     "disable_existing_loggers": False,
     "filters": {
         "correlation_id": {"()": "correlation.CorrelationIDFilter"},
+        "trace_context": {"()": "observability.TraceContextFilter"},
     },
     "formatters": {
         "standard": {
-            "format": "{levelname} {asctime} cid={correlation_id} {name} {message}",
+            "format": (
+                "{levelname} {asctime} cid={correlation_id} trace={trace_id} "
+                "sandbox={sandbox_id} {name} {message}"
+            ),
             "style": "{",
         },
     },
@@ -166,7 +171,7 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "standard",
-            "filters": ["correlation_id"],
+            "filters": ["correlation_id", "trace_context"],
         },
     },
     "loggers": {

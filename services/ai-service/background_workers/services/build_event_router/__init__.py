@@ -13,6 +13,7 @@ from kafka_consumer_py import (
     KafkaEventRouter,
     build_consumer_loop,
 )
+from observability import build_kafka_message_context_components
 from service_core.shared.kafka_dedupe import SqlAlchemyDedupeStore
 
 from ...config import get_worker_settings
@@ -37,6 +38,7 @@ async def build_event_router(config: ConsumerConfig) -> None:
     router = KafkaEventRouter()
     _subscribe_all_events(router)
 
+    message_context = build_kafka_message_context_components()
     publisher = AsyncPublisher(ProducerConfig(bootstrap_servers=config.bootstrap_servers))
     await publisher.start()
 
@@ -47,7 +49,9 @@ async def build_event_router(config: ConsumerConfig) -> None:
             retry_policy=RetryPolicy(),
             retry_publisher=RetryPublisher(publisher, topic=settings.kafka_retry_topic),
             dlq_publisher=DLQPublisher(publisher, topic=settings.kafka_dlq_topic),
-            dedupe_store=SqlAlchemyDedupeStore(consumer_group=settings.kafka_group_id),
+            context_binder=message_context.context_binder,
+            traffic_policy=message_context.traffic_policy,
+            dedupe_store=SqlAlchemyDedupeStore(consumer_group=config.group_id),
         )
         await consumer_loop.run()
     finally:

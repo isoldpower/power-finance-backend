@@ -26,6 +26,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=libraries/saga-pattern-py/pyproject.toml,target=libraries/saga-pattern-py/pyproject.toml \
     --mount=type=bind,source=libraries/read-at-least-py/pyproject.toml,target=libraries/read-at-least-py/pyproject.toml \
     --mount=type=bind,source=libraries/correlation-py/pyproject.toml,target=libraries/correlation-py/pyproject.toml \
+    --mount=type=bind,source=libraries/observability-py/pyproject.toml,target=libraries/observability-py/pyproject.toml \
     --mount=type=bind,source=libraries/filter-grammar-py/pyproject.toml,target=libraries/filter-grammar-py/pyproject.toml \
     --mount=type=bind,source=libraries/webhook-catalog-py/pyproject.toml,target=libraries/webhook-catalog-py/pyproject.toml \
     uv sync --frozen --no-install-project --no-dev --package read-service
@@ -36,6 +37,7 @@ COPY libraries/saga-pattern-py /app/libraries/saga-pattern-py
 COPY libraries/kafka-messages-proto /app/libraries/kafka-messages-proto
 COPY libraries/read-at-least-py /app/libraries/read-at-least-py
 COPY libraries/correlation-py /app/libraries/correlation-py
+COPY libraries/observability-py /app/libraries/observability-py
 COPY libraries/filter-grammar-py /app/libraries/filter-grammar-py
 COPY libraries/webhook-catalog-py /app/libraries/webhook-catalog-py
 COPY services/read-service /app/services/read-service

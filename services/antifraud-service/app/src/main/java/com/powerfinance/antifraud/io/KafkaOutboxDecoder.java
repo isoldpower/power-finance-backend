@@ -3,6 +3,8 @@ package com.powerfinance.antifraud.io;
 import java.nio.charset.StandardCharsets;
 
 import com.powerfinance.antifraud.model.OutboxEvent;
+import com.powerfinance.antifraud.sandbox.SandboxIdentity;
+import com.powerfinance.antifraud.sandbox.SandboxTrafficMatcher;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.util.Collector;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -13,9 +15,27 @@ public class KafkaOutboxDecoder implements InflowDecoder {
     private static final String HEADER_EVENT_ID = "event_id";
     private static final String HEADER_EVENT_TYPE = "event_type";
 
+    private final SandboxTrafficMatcher trafficMatcher;
+
+    public KafkaOutboxDecoder() {
+        this(SandboxTrafficMatcher.fromEnvironment());
+    }
+
+    public KafkaOutboxDecoder(SandboxTrafficMatcher trafficMatcher) {
+        this.trafficMatcher = trafficMatcher;
+    }
+
     /** Emits an outbox event built from the record key, headers and value when both headers are present. */
     @Override
     public void deserialize(ConsumerRecord<byte[], byte[]> consumerRecord, Collector<OutboxEvent> decodedEvents) {
+        String messageSandboxId = SandboxIdentity.readBaggageEntry(
+                header(consumerRecord, SandboxIdentity.BAGGAGE_HEADER_NAME),
+                SandboxIdentity.BAGGAGE_ENTRY_NAME
+        );
+        if (!this.trafficMatcher.isOwnedTraffic(messageSandboxId)) {
+            return;
+        }
+
         String eventType = header(consumerRecord, HEADER_EVENT_TYPE);
         String eventId = header(consumerRecord, HEADER_EVENT_ID);
         if (eventType == null || eventId == null) {

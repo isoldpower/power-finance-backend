@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/power-finance/kafka-client-go/sandbox"
 	"github.com/spf13/viper"
 
 	"services/webhook-service/webhook_service"
@@ -53,9 +54,12 @@ func Load() webhook_service.Config {
 			Port: viperInstance.GetInt(serverPortKey),
 		},
 		Kafka: kafka.Config{
-			BootstrapServers:          viperInstance.GetString(bootstrapServersKey),
-			OutboxTopics:              splitTopics(viperInstance.GetString(outboxTopicKey)),
-			GroupID:                   viperInstance.GetString(groupIDKey),
+			BootstrapServers: viperInstance.GetString(bootstrapServersKey),
+			OutboxTopics:     splitTopics(viperInstance.GetString(outboxTopicKey)),
+			GroupID: sandbox.ScopeGroupID(
+				viperInstance.GetString(groupIDKey),
+				sandbox.ResolveOwnID(),
+			),
 			RetryTopic:                viperInstance.GetString(retryTopicKey),
 			DLQTopic:                  viperInstance.GetString(dlqTopicKey),
 			NotificationsInboundTopic: viperInstance.GetString(notificationsInboundTopicKey),

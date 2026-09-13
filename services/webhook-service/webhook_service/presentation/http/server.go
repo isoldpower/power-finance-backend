@@ -1,6 +1,8 @@
 package http
 
 import (
+	"github.com/power-finance/observability-go/tracing"
+
 	"context"
 	"errors"
 	"fmt"
@@ -29,7 +31,7 @@ func NewServer(
 	httpServer := &Server{
 		server: &http.Server{
 			Addr:              fmt.Sprintf("%s:%d", serverConfig.Host, serverConfig.Port),
-			Handler:           router,
+			Handler:           tracing.WrapHTTPHandler(router, "webhook-service"),
 			ReadHeaderTimeout: 5 * time.Second,
 		},
 		readinessProbe: readinessProbe,

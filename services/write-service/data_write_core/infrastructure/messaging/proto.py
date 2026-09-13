@@ -7,6 +7,9 @@ from google.protobuf.timestamp_pb2 import Timestamp
 
 from data_write_core.domain.value_objects import OutboxEntry
 from data_write_core.infrastructure.messaging.config import OutboxSettings, PartitionKey
+from data_write_core.infrastructure.messaging.propagation_capture import (
+    capture_propagation_context,
+)
 
 
 def datetime_to_timestamp(value: datetime) -> Timestamp:
@@ -43,4 +46,5 @@ def build_outbox_entry(
             preserving_proto_field_name=True,
             always_print_fields_with_no_presence=True,
         ),
+        propagation_context=capture_propagation_context(),
     )

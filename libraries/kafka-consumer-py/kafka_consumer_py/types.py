@@ -20,6 +20,7 @@ class EventMessage:
 
 
 AsyncHandler = Callable[[EventMessage], Awaitable[None]]
+MessageProcessor = Callable[[ConsumedMessage], Awaitable[None]]
 
 
 class Handler(Protocol):

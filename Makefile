@@ -10,6 +10,7 @@ WEBHOOK_SERVICE_DIR   := services/webhook-service
 ANTIFRAUD_SERVICE_DIR := services/antifraud-service
 AI_SERVICE_DIR        := services/ai-service
 CORRELATION_LIB_DIR := libraries/correlation-py
+OBSERVABILITY_LIB_DIR := libraries/observability-py
 KAFKA_CLIENT_LIB_DIR := libraries/kafka-client-py
 KAFKA_CONSUMER_LIB_DIR := libraries/kafka-consumer-py
 SAGA_LIB_DIR         := libraries/saga-pattern-py
@@ -87,14 +88,15 @@ clean: | $(HOOK_SENTINEL) ## Remove __pycache__ and bytecode artefacts
 	find . -type f -name '*.pyc' -delete 2>/dev/null || true
 
 .PHONY: test
-test: test-correlation test-libraries test-write test-read test-ai test-contract ## Run every test suite
+test: test-correlation test-libraries test-write test-read test-ai test-go test-java test-contract ## Run every test suite
 
 .PHONY: test-correlation
 test-correlation: | $(HOOK_SENTINEL) ## Run correlation-py library tests (unittest)
 	uv run python -m unittest discover -s $(CORRELATION_LIB_DIR)/correlation/__tests__ -t $(CORRELATION_LIB_DIR)
 
 .PHONY: test-libraries
-test-libraries: | $(HOOK_SENTINEL) ## Run the pytest library suites (kafka-client, kafka-consumer, saga, read-at-least, filter-grammar, webhook-catalog)
+test-libraries: | $(HOOK_SENTINEL) ## Run the pytest library suites (observability, kafka-client, kafka-consumer, saga, read-at-least, filter-grammar, webhook-catalog)
+	cd $(OBSERVABILITY_LIB_DIR) && uv run pytest -q
 	cd $(KAFKA_CLIENT_LIB_DIR) && uv run pytest -q
 	cd $(KAFKA_CONSUMER_LIB_DIR) && uv run pytest -q
 	cd $(SAGA_LIB_DIR) && uv run pytest -q
@@ -113,6 +115,14 @@ test-read: | $(HOOK_SENTINEL) ## Run Read Service tests (pytest, postgres-read o
 .PHONY: test-ai
 test-ai: | $(HOOK_SENTINEL) ## Run AI Service tests (pytest, postgres-ai on host port 5436)
 	@$(MAKE) -C $(AI_SERVICE_DIR) test
+
+.PHONY: test-go
+test-go: | $(HOOK_SENTINEL) ## Run the Go module tests (kafka-client-go, push-service, webhook-service)
+	go test ./libraries/kafka-client-go/... ./libraries/observability-go/... ./services/push-service/... ./services/webhook-service/...
+
+.PHONY: test-java
+test-java: | $(HOOK_SENTINEL) ## Run the antifraud-service JVM tests
+	@$(MAKE) -C $(ANTIFRAUD_SERVICE_DIR) test
 
 .PHONY: test-contract
 test-contract: | $(HOOK_SENTINEL) ## Run the cross-service contract suite (no infrastructure needed)
@@ -209,3 +219,137 @@ down: ## Stop the whole stack
 .PHONY: logs
 logs: ## Follow logs for the whole stack
 	$(COMPOSE) logs -f
+
+# See README.md → "Shared dev environment"
+BASELINE_PROJECT         := pf-baseline
+BASELINE_NETWORK_NAME    := $(BASELINE_PROJECT)_default
+SANDBOX_PROJECT_PREFIX   := pf-sbx-
+SANDBOX_ROUTE_KEY_PREFIX := sandbox:route:
+SANDBOX_ROUTE_TTL_SECONDS ?= 604800
+SANDBOX_HTTP_PORT_write-service   := 8000
+SANDBOX_HTTP_PORT_read-service    := 8000
+SANDBOX_HTTP_PORT_ai-service      := 8000
+SANDBOX_HTTP_PORT_push-service    := 8001
+SANDBOX_HTTP_PORT_webhook-service := 8002
+SANDBOX_HTTP_PORT         = $(or $(SANDBOX_HTTP_PORT_$(SERVICE)),8000)
+SANDBOX_HTTP_SERVICES    := write-service read-service ai-service push-service webhook-service
+SANDBOX_ENV_DIR          := .sandbox
+DEV_HOST                 ?= localhost
+
+BASELINE_COMPOSE  := $(COMPOSE) -p $(BASELINE_PROJECT) -f compose.yaml -f compose.baseline.yaml --profile local-elastic
+SANDBOX_DATASTORE_FILES = $(if $(ISOLATED),-f compose.sandbox-datastores.yaml,)
+# Live source mount is the default; BAKED=1 runs the image as built instead.
+SANDBOX_LIVE_FILES      = $(if $(BAKED),,-f compose.sandbox-live.yaml)
+SANDBOX_COMPOSE    = $(COMPOSE) -p $(SANDBOX_PROJECT_PREFIX)$(NAME) -f compose.sandbox.yaml $(SANDBOX_LIVE_FILES) $(SANDBOX_DATASTORE_FILES)
+SANDBOX_SERVICE    = sbx-$(SERVICE)
+SANDBOX_CONTAINER  = $(SANDBOX_PROJECT_PREFIX)$(NAME)-$(SANDBOX_SERVICE)-1
+SANDBOX_ADDRESS_FORMAT := {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}
+REDIS_IN_BASELINE  = $(BASELINE_COMPOSE) exec -T gateway-redis redis-cli
+SANDBOX_ROUTE_KEY  = $(SANDBOX_ROUTE_KEY_PREFIX)$(NAME):$(SERVICE)
+
+guard-%:
+	@if [ -z "$($*)" ]; then \
+		echo "Missing required variable: $*"; \
+		exit 1; \
+	fi
+
+.PHONY: baseline-up
+baseline-up: ## Start the shared baseline stack on the dev host (tuned, Kibana off, Jaeger on)
+	$(BASELINE_COMPOSE) up -d
+
+.PHONY: baseline-down
+baseline-down: ## Stop the shared baseline stack
+	$(BASELINE_COMPOSE) down
+
+.PHONY: baseline-logs
+baseline-logs: ## Follow logs for the shared baseline stack
+	$(BASELINE_COMPOSE) logs -f
+
+.PHONY: baseline-kibana
+baseline-kibana: ## Bring Kibana up alongside the baseline (it is scaled to 0 by default)
+	$(BASELINE_COMPOSE) up -d --scale kibana=1 kibana
+
+.PHONY: sandbox-up
+sandbox-up: guard-NAME guard-SERVICE ## Run one service as a sandbox with your source live-mounted: NAME=<dev> SERVICE=<compose service> [ISOLATED=1 own Postgres + prefixed ES] [BAKED=1 run the built image]
+ifdef ISOLATED
+	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
+		$(SANDBOX_COMPOSE) up -d --wait sbx-postgres
+	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
+		$(SANDBOX_COMPOSE) run --rm --no-deps sbx-write-migrate
+	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
+		$(SANDBOX_COMPOSE) run --rm --no-deps sbx-read-migrate
+	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
+		$(SANDBOX_COMPOSE) run --rm --no-deps sbx-read-es-init
+	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
+		$(SANDBOX_COMPOSE) run --rm --no-deps sbx-ai-migrate
+	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
+		$(SANDBOX_COMPOSE) run --rm --no-deps sbx-webhook-migrate
+endif
+	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
+		$(SANDBOX_COMPOSE) up -d --no-deps $(if $(BAKED),--build,) $(SANDBOX_SERVICE)
+	@if ! echo "$(SANDBOX_HTTP_SERVICES)" | tr ' ' '\n' | grep -qx "$(SERVICE)"; then \
+		echo "sandbox '$(NAME)': $(SERVICE) serves no HTTP — running it without a gateway route"; \
+		exit 0; \
+	fi; \
+	address=""; \
+	for attempt in 1 2 3 4 5 6 7 8 9 10; do \
+		address=$$(docker inspect $(SANDBOX_CONTAINER) --format '$(SANDBOX_ADDRESS_FORMAT)' 2>/dev/null | tr -d '[:space:]'); \
+		[ -n "$$address" ] && break; \
+		sleep 1; \
+	done; \
+	if [ -z "$$address" ]; then \
+		echo "Could not read the address of $(SANDBOX_CONTAINER) — is it running?"; \
+		exit 1; \
+	fi; \
+	$(MAKE) --no-print-directory sandbox-route NAME=$(NAME) SERVICE=$(SERVICE) TARGET="$$address:$(SANDBOX_HTTP_PORT)"
+
+.PHONY: sandbox-local
+sandbox-local: guard-NAME guard-SERVICE guard-TARGET ## Escape hatch — route one service of a sandbox at an off-host process: NAME= SERVICE= TARGET=<host:port>
+	@$(MAKE) --no-print-directory sandbox-route NAME=$(NAME) SERVICE=$(SERVICE) TARGET=$(TARGET)
+
+.PHONY: sandbox-env
+sandbox-env: guard-NAME guard-SERVICE ## Write an env file pointing a natively-run service at the baseline: NAME= SERVICE= [DEV_HOST=]
+	@set -a; [ -f .env ] && . ./.env; set +a; \
+	written=$$(infrastructure/dev-host/generate_sandbox_env.sh \
+		"$(NAME)" "$(SERVICE)" "$(DEV_HOST)" "$(SANDBOX_ENV_DIR)/$(NAME)-$(SERVICE).env"); \
+	echo "wrote $$written (dev host: $(DEV_HOST))"; \
+	echo "run the service with:  set -a; . $$written; set +a; <your run command>"
+
+.PHONY: sandbox-route
+sandbox-route: guard-NAME guard-SERVICE guard-TARGET ## Register the upstream one service of a sandbox routes to
+	@$(REDIS_IN_BASELINE) SET $(SANDBOX_ROUTE_KEY) "$(TARGET)" EX $(SANDBOX_ROUTE_TTL_SECONDS) >/dev/null
+	@echo "sandbox '$(NAME)' $(SERVICE) -> $(TARGET)"
+
+.PHONY: sandbox-down
+sandbox-down: guard-NAME ## Remove a sandbox's containers and its gateway route
+	-SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) $(SANDBOX_COMPOSE) down --remove-orphans --volumes
+	-@keys=$$($(REDIS_IN_BASELINE) --scan --pattern '$(SANDBOX_ROUTE_KEY_PREFIX)$(NAME):*' | tr -d '\r'); \
+	for key in $$keys; do \
+		$(REDIS_IN_BASELINE) DEL "$$key" < /dev/null >/dev/null; \
+	done
+	@echo "sandbox '$(NAME)' removed"
+
+.PHONY: sandbox-list
+sandbox-list: ## List registered sandbox routes
+	@keys=$$($(REDIS_IN_BASELINE) --scan --pattern '$(SANDBOX_ROUTE_KEY_PREFIX)*' | tr -d '\r' | sort); \
+	printf '%-14s %-30s %-24s %s\n' SANDBOX SERVICE TARGET TTL; \
+	for key in $$keys; do \
+		target=$$($(REDIS_IN_BASELINE) GET "$$key" < /dev/null | tr -d '\r'); \
+		remaining=$$($(REDIS_IN_BASELINE) TTL "$$key" < /dev/null | tr -d '\r'); \
+		identity=$${key#$(SANDBOX_ROUTE_KEY_PREFIX)}; \
+		printf '%-14s %-30s %-24s %ss\n' "$${identity%%:*}" "$${identity#*:}" "$$target" "$$remaining"; \
+	done
+
+.PHONY: sandbox-restart
+sandbox-restart: guard-NAME guard-SERVICE ## Restart a sandbox container so a worker picks up live-mounted changes
+	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
+		$(SANDBOX_COMPOSE) restart $(SANDBOX_SERVICE)
+
+.PHONY: sandbox-prune
+sandbox-prune: ## Drop gateway routes whose sandbox container is gone
+	@infrastructure/dev-host/prune_sandbox_routes.sh \
+		"$(SANDBOX_ROUTE_KEY_PREFIX)" "$(BASELINE_PROJECT)"
+
+.PHONY: sandbox-logs
+sandbox-logs: guard-NAME ## Follow logs for a sandbox's containers
+	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) $(SANDBOX_COMPOSE) logs -f

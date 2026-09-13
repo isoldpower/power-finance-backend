@@ -12,6 +12,9 @@ import (
 	"github.com/power-finance/kafka-client-go/consumer/dedupe"
 	"github.com/power-finance/kafka-client-go/envelope"
 	"github.com/power-finance/kafka-client-go/publisher"
+	"github.com/power-finance/kafka-client-go/sandbox"
+	otelpropagation "github.com/power-finance/observability-go/propagation"
+	"github.com/power-finance/observability-go/tracing"
 	"github.com/twmb/franz-go/pkg/kgo"
 
 	"services/webhook-service/internal/health"
@@ -64,7 +67,18 @@ func NewConsumer(
 		return nil, fmt.Errorf("kafka: retry/dlq publisher: %w", startErr)
 	}
 
+	trafficMatcher := sandbox.NewTrafficMatcherFromEnvironment()
 	decodeAndHandle := func(ctx context.Context, message kafkaclient.ConsumedMessage) error {
+		ctx = otelpropagation.ExtractFromKafkaHeaders(ctx, message.Headers)
+		messageSandboxID := sandbox.ReadIDFromHeaders(message.Headers)
+		if !trafficMatcher.IsOwnedTraffic(messageSandboxID) {
+			logForeignSandboxMessageSkipped(messageSandboxID, trafficMatcher.OwnSandboxID())
+			return nil
+		}
+
+		ctx, endSpan := tracing.StartConsumerSpan(ctx, "webhook deliveries consume", message.Topic)
+		defer endSpan()
+
 		return eventHandler.Handle(ctx, OutboxEventFromMessage(message))
 	}
 

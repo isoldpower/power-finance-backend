@@ -29,3 +29,7 @@ class OutboxEntryModel(ModelBase):
 
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    traceparent: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tracestate: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    baggage: Mapped[str | None] = mapped_column(String(1024), nullable=True)

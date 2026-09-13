@@ -17,6 +17,7 @@ dependencies = [
     "uvicorn-worker>=0.4,<0.5",
     "gunicorn>=25.3,<26.0",
     "correlation-py",
+    "observability-py[django,datastores]",
     "saga-pattern-py",
     "kafka-messages-proto",
     "immudb-py>=1.5,<2.0",
@@ -38,6 +39,7 @@ dev = [
 filter-grammar-py = { workspace = true }
 webhook-catalog-py = { workspace = true }
 correlation-py = { workspace = true }
+observability-py = { workspace = true }
 saga-pattern-py = { workspace = true }
 kafka-messages-proto = { workspace = true }
 kafka-client-py = { workspace = true }

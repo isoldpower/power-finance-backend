@@ -1,11 +1,12 @@
 [project]
 name = "correlation-py"
 version = "0.0.0"
-description = "Correlation ID middleware + propagation helpers for HTTP, Kafka, and database query comments."
+description = "Request-scoped correlation and sandbox binding for Django services, layered over the OpenTelemetry context carried by observability-py."
 requires-python = ">=3.12"
 dependencies = [
     "django>=5.2,<6.0",
     "asgiref>=3.11,<4.0",
+    "observability-py",
 ]
 
 [build-system]
@@ -14,3 +15,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["correlation"]
+
+[tool.uv.sources]
+observability-py = { workspace = true }

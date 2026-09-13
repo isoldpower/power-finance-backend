@@ -1,6 +1,7 @@
 import argparse
 
-from kafka_consumer_py import ConsumerConfig
+from kafka_consumer_py import ConsumerConfig, resolve_sandbox_scoped_group_id
+from observability import resolve_own_sandbox_id
 
 from .settings import WorkerSettings
 
@@ -10,7 +11,10 @@ def build_consumer_config(
 ) -> ConsumerConfig:
     return ConsumerConfig(
         bootstrap_servers=arguments.bootstrap_servers,
-        group_id=arguments.group_id,
+        group_id=resolve_sandbox_scoped_group_id(
+            arguments.group_id,
+            resolve_own_sandbox_id(),
+        ),
         topics=arguments.topics
         or [
             settings.kafka_outbox_topic,

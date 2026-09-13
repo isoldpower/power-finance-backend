@@ -1,6 +1,7 @@
+from .index_naming import build_index_name
 from .shared_config import MONEY_SCALING_FACTOR, SINGLE_NODE_REPLICA_COUNT
 
-WALLETS_INDEX = "read_wallets"
+WALLETS_INDEX = build_index_name("read_wallets")
 
 WALLETS_MAPPING: dict = {
     "settings": {"number_of_replicas": SINGLE_NODE_REPLICA_COUNT},

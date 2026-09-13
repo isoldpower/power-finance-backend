@@ -1,7 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 from uuid import UUID
+
+from .propagation_context import EMPTY_PROPAGATION_CONTEXT, PropagationContext
 
 
 @dataclass(frozen=True)
@@ -14,3 +16,6 @@ class OutboxEntry:
     occurred_at: datetime
     schema_version: int
     payload: dict[str, Any]
+    propagation_context: PropagationContext = field(
+        default=EMPTY_PROPAGATION_CONTEXT,
+    )

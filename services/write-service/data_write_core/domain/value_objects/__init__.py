@@ -5,6 +5,7 @@ from .money import Money, NonNegativeMoney
 from .money_container import MoneyContainerKind, MoneyContainerRef
 from .money_flow_data import MoneyFlowData
 from .outbox_entry import OutboxEntry
+from .propagation_context import EMPTY_PROPAGATION_CONTEXT, PropagationContext
 from .transaction_metadata import (
     CLIENT_ORIGINS,
     TRANSACTION_TYPE_CHOICES,
@@ -23,7 +24,9 @@ __all__ = [
     "GoalData",
     "Money",
     "NonNegativeMoney",
+    "EMPTY_PROPAGATION_CONTEXT",
     "OutboxEntry",
+    "PropagationContext",
     "ResolutionIntent",
     "WalletData",
     "MoneyContainerKind",

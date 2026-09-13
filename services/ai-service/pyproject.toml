@@ -16,6 +16,7 @@ dependencies = [
     "kafka-consumer-py",
     "kafka-messages-proto",
     "correlation-py",
+    "observability-py[asgi,sqlalchemy,datastores]",
 ]
 
 [dependency-groups]
@@ -29,6 +30,7 @@ kafka-client-py = { workspace = true }
 kafka-consumer-py = { workspace = true }
 kafka-messages-proto = { workspace = true }
 correlation-py = { workspace = true }
+observability-py = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

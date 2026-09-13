@@ -6,6 +6,7 @@ from google.protobuf.message import Message
 
 from .config import OutboxSettings
 from .contracts import OutboxEntry
+from .propagation_capture import capture_propagation_context
 
 
 def build_outbox_entry(
@@ -35,4 +36,5 @@ def build_outbox_entry(
             preserving_proto_field_name=True,
             always_print_fields_with_no_presence=True,
         ),
+        propagation_context=capture_propagation_context(),
     )

@@ -19,6 +19,7 @@ it.
 | --- | --- | --- |
 | 901 | `rate-limiting` (bundled) | the IP floor runs before JWT verification, so spraying invalid tokens hits the cap rather than burning verification CPU |
 | 801 | `clerk-jwt` | deliberately below the IP floor, above everything that needs claims |
+| 750 | `sandbox-router` | needs nothing from the claims, but sitting under `clerk-jwt` means an unauthenticated request is never routed into a sandbox; sitting above `read-fallback` means the request that plugin forwards is already pointed at the right upstream |
 | 700 | `read-at-least` | needs `clerk_claims` |
 | 700 | `write-ral-version` | mirrors `read-at-least` so the pair sits at the same relative position |
 | 650 | `read-fallback` | below both, so `X-User-Id` and the resolved `Read-At-Least` are already on the request it forwards |
@@ -129,6 +130,15 @@ Service's 507 instead, so the client gets a retryable staleness error rather tha
 a resource reported missing. A genuine 404 from a fallback endpoint that does
 exist is JSON, and passes through untouched.
 
+### read-fallback and sandboxes
+
+`read-fallback` forwards every GET itself, so a target set by `sandbox-router` is
+never used. It therefore resolves the sandbox route for **both** of its legs —
+`read-service` for the primary request and `write-service` for the fallback — from
+the same Redis keys, and falls back to its configured URLs whenever there is no
+sandbox, no route, or Redis misbehaves. Without this, read-side sandboxing looks
+wired up and silently serves baseline data.
+
 ## user-tier-rate-limit
 
 The per-user ceiling that sits on top of the bundled IP floor. No claims means
@@ -146,3 +156,53 @@ limit in two seconds. The check and the increment run as one Redis script
 limit and both pass, and a rejected request spends no budget. `Retry-After` is
 computed from when the estimate decays back under the limit, usually well before
 the next boundary. Failure modes are fail-open.
+
+## sandbox-router
+
+Routes a request to a developer's sandbox instead of the baseline upstream. This
+is the gateway half of the shared dev environment.
+
+**Resolving the sandbox id**, in order:
+
+1. the `sandbox-id` entry of the W3C `baggage` header;
+2. the `X-Sandbox` header.
+
+No sandbox id means no routing — the request goes to the baseline upstream, which
+is what every ordinary request does.
+
+**Propagating it.** When the id arrived in `X-Sandbox` rather than in baggage, the
+plugin appends `sandbox-id=<id>` to the `baggage` header it forwards (disable with
+`propagate_baggage: false`). That is what lets Python, Go and Java consumers
+downstream see the sandbox on events the request produces, without any of them
+knowing about `X-Sandbox`.
+
+**Choosing the upstream.** The key is **per service**:
+`{redis_key_prefix}{sandbox_id}:{service}`, where `{service}` is the Kong service the
+router matched (`kong.router.get_service().name`). Its value is a plain `host:port`.
+On a hit the plugin calls `kong.service.set_target`; `make sandbox-up` writes those
+keys. Scoping by service is what lets one sandbox name override several services at
+once — `alice` can run both `write-service` and `read-service`, and a request is
+re-pointed only for the service it actually addresses.
+
+**It publishes `kong.ctx.shared.sandbox_id`** for plugins that forward requests
+themselves rather than letting Kong proxy to the target. `read-fallback` is one, and
+it must consult this or a sandboxed GET is silently served by the baseline.
+
+**It fails open.** A Redis error or timeout is logged as a warning and the request
+proceeds to the baseline; a sandbox with no override for the matched service is a
+debug line, not a warning, because running one service of a sandbox and letting the
+rest come from the baseline is the normal case. A broken sandbox route must never
+take the shared environment down with it.
+
+| config | default | meaning |
+| --- | --- | --- |
+| `redis_host` | required | same instance the `read-at-least` pair uses |
+| `redis_port` | `6379` | |
+| `redis_database` | `0` | |
+| `redis_password` | unset | optional AUTH |
+| `redis_timeout_ms` | `100` | tight on purpose; it fails open rather than blocking |
+| `redis_key_prefix` | `sandbox:route:` | must match what the Makefile writes |
+| `propagate_baggage` | `true` | add `sandbox-id` to the forwarded `baggage` header |
+
+The Redis lookup itself lives in `shared/lua/sandbox_routes.lua` so that
+`read-fallback` can resolve the same keys without duplicating it.

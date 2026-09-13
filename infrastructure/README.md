@@ -213,6 +213,57 @@ never a public path.
 Global plugins: `correlation-id` (X-Correlation-ID, echoed downstream) and
 `cors`.
 
+## Tracing
+
+`observability/compose.yaml` runs **Jaeger all-in-one** and nothing else. There is
+no OpenTelemetry Collector: Jaeger accepts OTLP natively on 4317 (gRPC) and 4318
+(HTTP), and on a single-host dev box a collector would be a second hop buying
+nothing.
+
+| Producer | Transport | Endpoint |
+| --- | --- | --- |
+| Python services (`observability-py`) | OTLP/gRPC | `OTEL_EXPORTER_OTLP_ENDPOINT`, `http://jaeger:4317` |
+| Kong (`opentelemetry` plugin) | OTLP/HTTP | `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `http://jaeger:4318/v1/traces` |
+| antifraud-service (OTel Java agent) | OTLP/gRPC | `OTEL_EXPORTER_OTLP_ENDPOINT` |
+
+The UI is on `JAEGER_UI_PORT` (default 16686). Spans live in Badger on a named
+volume with `JAEGER_SPAN_TTL` (default 72h), so restarts keep history without
+growing unbounded.
+
+**Nothing traces until an endpoint is set.** `observability-py` treats an unset
+`OTEL_EXPORTER_OTLP_ENDPOINT` as "tracing off", so a service run straight on a
+laptop emits no spans and no exporter errors. The baseline and sandbox compose
+profiles set it.
+
+### Traps this setup already hit
+
+- **Kong 3.7's `opentelemetry` plugin field is `endpoint`, not `traces_endpoint`.**
+  The later name is a newer Kong. A wrong key makes the whole declarative config
+  fail to load and the gateway will not boot. Validate changes with
+  `kong config parse /etc/kong/kong.yml` inside the **built** gateway image — the
+  plain `kong:3.7` image lacks `resty.jwt` and fails for an unrelated reason.
+- **Jaeger's Badger volume needs an owner.** Jaeger runs as uid 10001, and a fresh
+  named volume mounts root-owned, so it dies with
+  `mkdir /badger/key: permission denied`. `jaeger-storage-init` chowns it to
+  `10001:0` and Jaeger waits on that container completing.
+- **The Java agent jar must be world-traversable.** Flink's entrypoint drops
+  privileges to the `flink` user, so `ADD --chmod=644` — which also applies 644 to
+  the `/opt/otel` directory it creates — leaves the JVM unable to traverse it and
+  the container crash-loops on `Error opening zip file or JAR manifest missing`.
+  The Dockerfile uses `--chmod=755`.
+- **The Java agent defaults to `http/protobuf`.** Pointed at the gRPC port 4317 it
+  warns and exports nothing, so the Flink services set
+  `OTEL_EXPORTER_OTLP_PROTOCOL=grpc`.
+- **Rebuild the antifraud image when enabling tracing.** `FLINK_ENV_JAVA_OPTS`
+  names the agent jar, so a stale image without it crash-loops rather than starting
+  untraced.
+
+Kong needs `KONG_TRACING_INSTRUMENTATIONS=all` and `KONG_TRACING_SAMPLING_RATE`
+in addition to the plugin: the plugin exports spans, those settings decide whether
+the gateway produces any. The Java agent jar ships at
+`/opt/otel/opentelemetry-javaagent.jar` inside the antifraud image and is switched
+on with `FLINK_ENV_JAVA_OPTS`, so the image is usable with tracing off.
+
 ## Write-side Postgres
 
 `postgres/write_config/postgresql.conf` overrides the image defaults (which it
@@ -234,6 +285,27 @@ enabling one is a connector registration rather than a database recreation —
 retroactively for WAL that was never written.
 
 ## Debezium
+
+### Propagation columns
+
+Both outbox connectors copy three extra columns onto every Kafka record as
+headers of the same names, via
+`transforms.outbox.table.fields.additional.placement`:
+
+| column | header |
+| --- | --- |
+| `traceparent` | `traceparent` |
+| `tracestate` | `tracestate` |
+| `baggage` | `baggage` |
+
+This is the hop that used to lose context. Debezium publishes rows asynchronously,
+so nothing in-process survives it — the producing request writes its trace context
+into the outbox row, and the connector turns those columns into the headers the
+consumer extracts. Without them a consumer starts a brand-new trace and never sees
+`sandbox-id`.
+
+Adding a column to an outbox table is not enough on its own; the placement string
+has to name it too.
 
 `debezium/compose.yaml` runs the single Kafka Connect cluster
 (`outbox-connect-cluster`). It lives here rather than in a service stack because

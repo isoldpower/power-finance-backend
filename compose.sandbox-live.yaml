@@ -1,0 +1,104 @@
+# See README.md → "Shared dev environment"
+#
+# The default sandbox overlay: the service's source is bind-mounted from the
+# checkout on the dev host, so a change is picked up in about a second instead of
+# a ~20s image rebuild. The venv lives at /app/.venv, outside the mount, so
+# dependencies are untouched — only first-party source is live. Changing a shared
+# library under libraries/ or a dependency still needs `BAKED=1` and a rebuild.
+#
+# Long-running workers have no reloader: they pick the change up on
+# `make sandbox-restart`.
+x-live-source-env: &live-source-env
+  PYTHONDONTWRITEBYTECODE: "1"
+  WATCHFILES_FORCE_POLLING: ${WATCHFILES_FORCE_POLLING:-false}
+
+services:
+  sbx-write-service:
+    environment:
+      <<: *live-source-env
+    volumes:
+      - ./services/write-service:/app/services/write-service
+    command:
+      - uvicorn
+      - write_service.asgi:application
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app/services/write-service
+
+  sbx-write-inbound-notifications-consumer:
+    environment:
+      <<: *live-source-env
+    volumes:
+      - ./services/write-service:/app/services/write-service
+
+  sbx-write-fraud-alerts-consumer:
+    environment:
+      <<: *live-source-env
+    volumes:
+      - ./services/write-service:/app/services/write-service
+
+  sbx-write-automation-engine:
+    environment:
+      <<: *live-source-env
+    volumes:
+      - ./services/write-service:/app/services/write-service
+
+  sbx-write-automation-scheduler:
+    environment:
+      <<: *live-source-env
+    volumes:
+      - ./services/write-service:/app/services/write-service
+
+  sbx-write-action-expiry-sweeper:
+    environment:
+      <<: *live-source-env
+    volumes:
+      - ./services/write-service:/app/services/write-service
+
+  sbx-read-service:
+    environment:
+      <<: *live-source-env
+    volumes:
+      - ./services/read-service:/app/services/read-service
+    command:
+      - uvicorn
+      - read_service.asgi:application
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app/services/read-service
+
+  sbx-read-write-consumer:
+    environment:
+      <<: *live-source-env
+    volumes:
+      - ./services/read-service:/app/services/read-service
+
+  sbx-ai-service:
+    environment:
+      <<: *live-source-env
+    volumes:
+      - ./services/ai-service:/app/services/ai-service
+    command:
+      - uvicorn
+      - ai_service.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app/services/ai-service
+
+  sbx-ai-dispatcher:
+    environment:
+      <<: *live-source-env
+    volumes:
+      - ./services/ai-service:/app/services/ai-service

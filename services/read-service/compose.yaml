@@ -13,17 +13,24 @@ x-read-database-env: &read-database-env
   DATABASE_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
 
 x-elasticsearch-env: &elasticsearch-env
-  ELASTICSEARCH_HOSTS: https://es01:9200
+  ELASTICSEARCH_HOSTS: ${ELASTICSEARCH_HOSTS:-https://es01:9200}
   ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME:-elastic}
   ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD:-changeme}
-  ELASTICSEARCH_CA_CERTS: /certs/ca/ca.crt
-  ELASTICSEARCH_VERIFY_CERTS: "true"
+  ELASTICSEARCH_CA_CERTS: ${ELASTICSEARCH_CA_CERTS-/certs/ca/ca.crt}
+  ELASTICSEARCH_VERIFY_CERTS: "${ELASTICSEARCH_VERIFY_CERTS:-true}"
 
 services:
   setup:
+    profiles: ["local-elastic"]
     healthcheck:
       interval: 250ms
       start_period: 0s
+
+  es01:
+    profiles: ["local-elastic"]
+
+  kibana:
+    profiles: ["local-elastic"]
 
   read-migrate:
     build:
@@ -72,10 +79,9 @@ services:
         condition: service_completed_successfully
       read-redis:
         condition: service_healthy
-      read-es-init:
-        condition: service_completed_successfully
 
   read-es-init:
+    profiles: ["local-elastic"]
     build:
       context: ../..
       dockerfile: services/read-service/Dockerfile
@@ -123,8 +129,6 @@ services:
         condition: service_completed_successfully
       read-redis:
         condition: service_healthy
-      read-es-init:
-        condition: service_completed_successfully
     stop_grace_period: 30s
 
   postgres-read:

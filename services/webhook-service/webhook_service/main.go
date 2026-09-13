@@ -1,6 +1,10 @@
 package webhook_service
 
 import (
+	"context"
+
+	"github.com/power-finance/observability-go/tracing"
+
 	"services/webhook-service/internal/health"
 	"services/webhook-service/internal/signals"
 	"services/webhook-service/webhook_service/handlers"
@@ -10,10 +14,25 @@ import (
 	"services/webhook-service/webhook_service/services"
 )
 
+const defaultTracingServiceName = "webhook-service"
+
 // StartWebhookService wires the service and blocks until shutdown, failing fast on a wiring error.
 func StartWebhookService(serviceConfig Config) error {
 	rootContext, stop := signals.NotifyContext()
 	defer stop()
+
+	_, shutdownTracing, tracingErr := tracing.Configure(rootContext, defaultTracingServiceName)
+	if tracingErr != nil {
+		return tracingErr
+	}
+	defer func() {
+		shutdownContext, cancelShutdown := context.WithTimeout(
+			context.Background(),
+			tracing.ShutdownTimeout(),
+		)
+		defer cancelShutdown()
+		_ = shutdownTracing(shutdownContext)
+	}()
 
 	stores, closeStores, postgresErr := postgres.Bootstrap(
 		rootContext,

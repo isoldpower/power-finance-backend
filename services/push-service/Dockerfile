@@ -11,11 +11,13 @@ ENV CGO_ENABLED=0 \
 WORKDIR /src
 
 COPY libraries/kafka-client-go/go.mod libraries/kafka-client-go/go.sum libraries/kafka-client-go/
+COPY libraries/observability-go/go.mod libraries/observability-go/go.sum libraries/observability-go/
 COPY services/push-service/go.mod services/push-service/go.sum services/push-service/
 RUN --mount=type=cache,target=/go/pkg/mod \
     cd services/push-service && go mod download
 
 COPY libraries/kafka-client-go libraries/kafka-client-go
+COPY libraries/observability-go libraries/observability-go
 COPY services/push-service services/push-service
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \

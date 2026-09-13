@@ -13,6 +13,9 @@ class OutboxEntryModel(models.Model):
     event_type = models.CharField(max_length=128, db_column="type")
     payload = models.JSONField()
     occurred_at = models.DateTimeField(default=timezone.now)
+    traceparent = models.CharField(max_length=64, null=True, blank=True)
+    tracestate = models.CharField(max_length=512, null=True, blank=True)
+    baggage = models.CharField(max_length=1024, null=True, blank=True)
 
     class Meta:
         db_table = "outbox_events"

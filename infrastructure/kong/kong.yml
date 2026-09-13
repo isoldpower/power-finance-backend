@@ -112,6 +112,11 @@ services:
           fallback_status: 507
           read_timeout_ms: 10000
           fallback_timeout_ms: 30000
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 100
+          redis_key_prefix: "sandbox:route:"
       - name: rate-limiting
         config:
           minute: 1200
@@ -231,6 +236,22 @@ services:
           redis_key_prefix: "clerk:jwks:"
 
 plugins:
+  - name: sandbox-router
+    config:
+      redis_host: gateway-redis
+      redis_port: 6379
+      redis_database: 0
+      redis_timeout_ms: 100
+      redis_key_prefix: "sandbox:route:"
+      propagate_baggage: true
+
+  - name: opentelemetry
+    config:
+      endpoint: "{vault://env/otel-exporter-otlp-traces-endpoint}"
+      header_type: w3c
+      resource_attributes:
+        service.name: api-gateway
+
   - name: correlation-id
     config:
       header_name: X-Correlation-ID
@@ -249,6 +270,10 @@ plugins:
         - X-Correlation-ID
         - Read-At-Least
         - Idempotency-Key
+        - X-Sandbox
+        - baggage
+        - traceparent
+        - tracestate
       exposed_headers:
         - X-Correlation-ID
         - X-Write-Version

@@ -13,3 +13,6 @@ class OutboxColumn(StrEnum):
     EVENT_TYPE = "event_type"
     PAYLOAD = "payload"
     OCCURRED_AT = "occurred_at"
+    TRACEPARENT = "traceparent"
+    TRACESTATE = "tracestate"
+    BAGGAGE = "baggage"

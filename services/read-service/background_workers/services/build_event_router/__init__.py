@@ -15,6 +15,7 @@ from kafka_consumer_py import (
     KafkaEventRouter,
     build_consumer_loop,
 )
+from observability import build_kafka_message_context_components
 
 from ._types import ProbesDictionary
 from .account_events import (
@@ -99,6 +100,7 @@ async def build_event_router(config: ConsumerConfig) -> None:
     router = KafkaEventRouter()
     _subscribe_all_events(router)
 
+    message_context = build_kafka_message_context_components()
     publisher = AsyncPublisher(ProducerConfig(bootstrap_servers=config.bootstrap_servers))
     await publisher.start()
 
@@ -109,7 +111,9 @@ async def build_event_router(config: ConsumerConfig) -> None:
             retry_policy=RetryPolicy(),
             retry_publisher=RetryPublisher(publisher, topic=settings.KAFKA["RETRY_TOPIC"]),
             dlq_publisher=DLQPublisher(publisher, topic=settings.KAFKA["DLQ_TOPIC"]),
-            dedupe_store=DjangoDedupeStore(consumer_group=settings.KAFKA["READ_GROUP_ID"]),
+            context_binder=message_context.context_binder,
+            traffic_policy=message_context.traffic_policy,
+            dedupe_store=DjangoDedupeStore(consumer_group=config.group_id),
         )
         await consumer_loop.run()
     finally:

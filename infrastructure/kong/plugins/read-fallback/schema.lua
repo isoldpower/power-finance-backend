@@ -68,6 +68,57 @@ return {
                         },
                     },
                     {
+                        redis_host = {
+                            type = "string",
+                            description = "Redis holding sandbox routes, so a "
+                                .. "sandboxed GET is forwarded to the sandbox "
+                                .. "rather than the baseline. Omit to always use "
+                                .. "the configured service URLs.",
+                        },
+                    },
+                    {
+                        redis_port = {
+                            type = "number",
+                            default = 6379,
+                            between = { 1, 65535 },
+                            description = "Redis port.",
+                        },
+                    },
+                    {
+                        redis_database = {
+                            type = "number",
+                            default = 0,
+                            between = { 0, 15 },
+                            description = "Redis logical database index.",
+                        },
+                    },
+                    {
+                        redis_password = {
+                            type = "string",
+                            referenceable = true,
+                            description = "Optional Redis AUTH password.",
+                        },
+                    },
+                    {
+                        redis_timeout_ms = {
+                            type = "number",
+                            default = 100,
+                            between = { 1, 60000 },
+                            description = "Connect / read / send timeout for "
+                                .. "Redis. On any failure the configured service "
+                                .. "URLs are used, so a sandbox lookup never "
+                                .. "breaks a normal read.",
+                        },
+                    },
+                    {
+                        redis_key_prefix = {
+                            type = "string",
+                            default = "sandbox:route:",
+                            description = "Key namespace; must match "
+                                .. "sandbox-router and what the Makefile writes.",
+                        },
+                    },
+                    {
                         fallback_timeout_ms = {
                             type = "number",
                             default = 30000,

@@ -97,3 +97,21 @@ def warn_compensation_undefined(effect_name: str, event_id: str, event_type: str
         event_type,
         event_id,
     )
+
+
+def debug_foreign_sandbox_message_skipped(
+    message: ConsumedMessage,
+    *,
+    message_sandbox_id: str | None,
+    own_sandbox_id: str | None,
+) -> None:
+    logger = get_consumer_logger("consumer")
+    logger.debug(
+        "message belongs to another sandbox; message_sandbox=%s own_sandbox=%s "
+        "topic=%s partition=%s offset=%s — skipping",
+        message_sandbox_id or "-",
+        own_sandbox_id or "-",
+        message.topic,
+        message.partition,
+        message.offset,
+    )

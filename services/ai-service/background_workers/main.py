@@ -5,6 +5,7 @@ import sys
 from kafka_consumer_py import ConsumerConfig
 from service_core.shared.db_connection import dispose_engine
 from service_core.shared.logging import get_service_logger
+from service_core.shared.observability_setup import configure_worker_tracing
 
 from .config import (
     WorkerSettings,
@@ -55,6 +56,7 @@ async def run(config: ConsumerConfig) -> None:
 def main(argv: list[str] | None = None) -> int:
     settings = get_worker_settings()
     configure_logging(settings.log_level)
+    configure_worker_tracing()
 
     arguments = build_argument_parser(settings).parse_args(argv)
     config = build_consumer_config(settings, arguments)

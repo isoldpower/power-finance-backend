@@ -22,6 +22,7 @@ dependencies = [
     "kafka-messages-proto",
     "read-at-least-py",
     "correlation-py",
+    "observability-py[django,datastores]",
     "filter-grammar-py",
     "webhook-catalog-py",
 ]
@@ -42,6 +43,7 @@ saga-pattern-py = { workspace = true }
 kafka-messages-proto = { workspace = true }
 read-at-least-py = { workspace = true }
 correlation-py = { workspace = true }
+observability-py = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

@@ -21,6 +21,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=services/write-service/pyproject.toml,target=services/write-service/pyproject.toml \
     --mount=type=bind,source=libraries/correlation-py/pyproject.toml,target=libraries/correlation-py/pyproject.toml \
+    --mount=type=bind,source=libraries/observability-py/pyproject.toml,target=libraries/observability-py/pyproject.toml \
     --mount=type=bind,source=libraries/filter-grammar-py/pyproject.toml,target=libraries/filter-grammar-py/pyproject.toml \
     --mount=type=bind,source=libraries/webhook-catalog-py/pyproject.toml,target=libraries/webhook-catalog-py/pyproject.toml \
     --mount=type=bind,source=libraries/kafka-client-py/pyproject.toml,target=libraries/kafka-client-py/pyproject.toml \
@@ -30,6 +31,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project --no-dev --package write-service
 
 COPY libraries/correlation-py /app/libraries/correlation-py
+COPY libraries/observability-py /app/libraries/observability-py
 COPY libraries/filter-grammar-py /app/libraries/filter-grammar-py
 COPY libraries/webhook-catalog-py /app/libraries/webhook-catalog-py
 COPY libraries/kafka-client-py /app/libraries/kafka-client-py

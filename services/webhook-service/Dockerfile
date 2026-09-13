@@ -11,12 +11,14 @@ ENV CGO_ENABLED=0 \
 WORKDIR /src
 
 COPY libraries/kafka-client-go/go.mod libraries/kafka-client-go/go.sum libraries/kafka-client-go/
+COPY libraries/observability-go/go.mod libraries/observability-go/go.sum libraries/observability-go/
 COPY libraries/kafka-messages-proto/go.mod libraries/kafka-messages-proto/go.sum libraries/kafka-messages-proto/
 COPY services/webhook-service/go.mod services/webhook-service/go.sum services/webhook-service/
 RUN --mount=type=cache,target=/go/pkg/mod \
     cd services/webhook-service && go mod download
 
 COPY libraries/kafka-client-go libraries/kafka-client-go
+COPY libraries/observability-go libraries/observability-go
 COPY libraries/kafka-messages-proto libraries/kafka-messages-proto
 COPY services/webhook-service services/webhook-service
 RUN --mount=type=cache,target=/go/pkg/mod \

@@ -6,13 +6,25 @@ from kafka_client_py import (
     RetryPublisher,
 )
 
-from ..event_processor import OutboxEnvelopeDecoder, RoutedMessageProcessor
+from ..event_processor import (
+    ContextBoundMessageProcessor,
+    OutboxEnvelopeDecoder,
+    RoutedMessageProcessor,
+    SandboxFilteredMessageProcessor,
+)
 from ..kafka_consumer import KafkaConsumerLoop
+from ..message_context import (
+    MessageContextBinder,
+    NullMessageContextBinder,
+    PermissiveSandboxTrafficPolicy,
+    SandboxTrafficPolicy,
+)
 from ..shutdown_signals import SigtermShutdownSignal
 from ..types import (
     ConsumerLoop,
     EnvelopeDecoder,
     EventRouter,
+    MessageProcessor,
     ShutdownSignal,
 )
 from .build_consumer import build_aiokafka_consumer
@@ -29,6 +41,8 @@ def build_consumer_loop(
     dedupe_store: DedupeStore | None,
     decoder: EnvelopeDecoder | None = None,
     shutdown: ShutdownSignal | None = None,
+    context_binder: MessageContextBinder | None = None,
+    traffic_policy: SandboxTrafficPolicy | None = None,
     install_signal_handlers: bool = True,
 ) -> ConsumerLoop:
     """Wires every collaborator a ConsumerLoop needs"""
@@ -39,10 +53,17 @@ def build_consumer_loop(
     if install_signal_handlers and isinstance(actual_shutdown, ShutdownSignal):
         actual_shutdown.install()
 
-    processor = RoutedMessageProcessor(
-        decoder=actual_decoder,
-        router=router,
-        malformed_dlq=dlq_publisher,
+    actual_context_binder = context_binder or NullMessageContextBinder()
+    actual_traffic_policy = traffic_policy or PermissiveSandboxTrafficPolicy()
+
+    processor = _wrap_with_message_context(
+        RoutedMessageProcessor(
+            decoder=actual_decoder,
+            router=router,
+            malformed_dlq=dlq_publisher,
+        ),
+        context_binder=actual_context_binder,
+        traffic_policy=actual_traffic_policy,
     )
     message_handler = MessageHandler(
         user_handler=processor,
@@ -58,4 +79,20 @@ def build_consumer_loop(
         message_handler=message_handler,
         shutdown=actual_shutdown,
         poll_timeout_ms=config.poll_timeout_ms,
+    )
+
+
+def _wrap_with_message_context(
+    routed_processor: MessageProcessor,
+    *,
+    context_binder: MessageContextBinder,
+    traffic_policy: SandboxTrafficPolicy,
+) -> MessageProcessor:
+    return ContextBoundMessageProcessor(
+        SandboxFilteredMessageProcessor(
+            routed_processor,
+            context_binder=context_binder,
+            traffic_policy=traffic_policy,
+        ),
+        context_binder=context_binder,
     )

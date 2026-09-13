@@ -13,7 +13,14 @@ from kafka_client_py import (
     RetryPublisher,
 )
 
-from .factory import ConsumerConfig
+from .event_processor import ContextBoundMessageProcessor, SandboxFilteredMessageProcessor
+from .factory import ConsumerConfig, build_aiokafka_consumer
+from .message_context import (
+    MessageContextBinder,
+    NullMessageContextBinder,
+    PermissiveSandboxTrafficPolicy,
+    SandboxTrafficPolicy,
+)
 
 MessageCallback = Callable[[ConsumedMessage], Awaitable[None]]
 AsyncCloser = Callable[[], Awaitable[None]]
@@ -30,22 +37,28 @@ class KafkaConsumerRunner:
         logger: logging.Logger,
         name: str,
         closers: Sequence[AsyncCloser] = (),
+        context_binder: MessageContextBinder | None = None,
+        traffic_policy: SandboxTrafficPolicy | None = None,
     ) -> None:
         self._config = config
         self._handler = handler
         self._logger = logger
         self._name = name
         self._closers = closers
+        self._context_binder = context_binder or NullMessageContextBinder()
+        self._traffic_policy = traffic_policy or PermissiveSandboxTrafficPolicy()
 
     def _build_consumer(self) -> AIOKafkaConsumer:
-        config = self._config
-        return AIOKafkaConsumer(
-            *config.topics,
-            bootstrap_servers=config.bootstrap_servers,
-            group_id=config.group_id,
-            enable_auto_commit=False,
-            auto_offset_reset=config.auto_offset_reset,
-            isolation_level=config.isolation_level,
+        return build_aiokafka_consumer(self._config)
+
+    def _build_message_processor(self) -> MessageCallback:
+        return ContextBoundMessageProcessor(
+            SandboxFilteredMessageProcessor(
+                self._handler,
+                self._context_binder,
+                self._traffic_policy,
+            ),
+            self._context_binder,
         )
 
     def _build_publisher(self) -> AsyncPublisher:
@@ -58,7 +71,7 @@ class KafkaConsumerRunner:
 
         await asyncio.gather(publisher.start(), consumer.start())
         message_handler = MessageHandler(
-            self._handler,
+            self._build_message_processor(),
             policy=RetryPolicy(),
             retry_publisher=RetryPublisher(publisher),
             dlq_publisher=DLQPublisher(publisher),

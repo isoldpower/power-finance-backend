@@ -17,11 +17,14 @@ from service_core.shared.http_contract import (
     ApiError,
     error_response,
 )
+from service_core.shared.observability_setup import configure_api_tracing
 
 from ._config import API_VERSION
 
 
 def build_app() -> FastAPI:
+    configure_api_tracing()
+
     shutting_down = ProcessShutdownSignal()
 
     @asynccontextmanager

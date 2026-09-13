@@ -1,6 +1,7 @@
+from .index_naming import build_index_name
 from .shared_config import MONEY_SCALING_FACTOR, SINGLE_NODE_REPLICA_COUNT
 
-GOALS_INDEX = "read_goals"
+GOALS_INDEX = build_index_name("read_goals")
 
 GOALS_MAPPING: dict = {
     "settings": {"number_of_replicas": SINGLE_NODE_REPLICA_COUNT},

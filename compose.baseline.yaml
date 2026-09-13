@@ -1,0 +1,190 @@
+# See README.md → "Shared dev environment"
+x-observability-env: &observability-env
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+  OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
+  OTEL_DEPLOYMENT_ENVIRONMENT: ${OTEL_DEPLOYMENT_ENVIRONMENT:-shared-dev}
+  SANDBOX_ID: ""
+
+services:
+  write-service:
+    environment:
+      <<: *observability-env
+      OTEL_SERVICE_NAME: write-service
+    mem_limit: 512m
+
+  write-inbound-notifications-consumer:
+    environment:
+      <<: *observability-env
+      OTEL_SERVICE_NAME: write-inbound-notifications-consumer
+    mem_limit: 384m
+
+  write-fraud-alerts-consumer:
+    environment:
+      <<: *observability-env
+      OTEL_SERVICE_NAME: write-fraud-alerts-consumer
+    mem_limit: 384m
+
+  write-automation-engine:
+    environment:
+      <<: *observability-env
+      OTEL_SERVICE_NAME: write-automation-engine
+    mem_limit: 384m
+
+  write-automation-scheduler:
+    environment:
+      <<: *observability-env
+      OTEL_SERVICE_NAME: write-automation-scheduler
+    mem_limit: 256m
+
+  write-action-expiry-sweeper:
+    environment:
+      <<: *observability-env
+      OTEL_SERVICE_NAME: write-action-expiry-sweeper
+    mem_limit: 256m
+
+  read-service:
+    environment:
+      <<: *observability-env
+      OTEL_SERVICE_NAME: read-service
+    mem_limit: 512m
+
+  read-write-consumer:
+    environment:
+      <<: *observability-env
+      OTEL_SERVICE_NAME: read-write-consumer
+    mem_limit: 384m
+
+  ai-service:
+    environment:
+      <<: *observability-env
+      OTEL_SERVICE_NAME: ai-service
+    mem_limit: 512m
+
+  ai-dispatcher:
+    environment:
+      <<: *observability-env
+      OTEL_SERVICE_NAME: ai-dispatcher
+    mem_limit: 384m
+
+  push-service:
+    environment:
+      <<: *observability-env
+      OTEL_SERVICE_NAME: push-service
+    mem_limit: 256m
+
+  webhook-service:
+    environment:
+      <<: *observability-env
+      OTEL_SERVICE_NAME: webhook-service
+    mem_limit: 256m
+
+  kafka:
+    environment:
+      KAFKA_HEAP_OPTS: "-Xms512m -Xmx512m"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:19092,CONTROLLER://0.0.0.0:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://${KAFKA_EXTERNAL_HOST:-localhost}:19092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT"
+    ports: !override
+      - "${BIND_ADDRESS:-127.0.0.1}:${KAFKA_EXTERNAL_PORT:-19092}:19092"
+    mem_limit: 1g
+
+  kafka-connect:
+    environment:
+      KAFKA_HEAP_OPTS: "-Xms512m -Xmx768m"
+    mem_limit: 1g
+
+  es01:
+    environment:
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    mem_limit: 1g
+
+  kibana:
+    deploy:
+      replicas: 0
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=512
+    mem_limit: 768m
+
+  antifraud-jobmanager:
+    ports: !override
+      - "${ADMIN_BIND_ADDRESS:-127.0.0.1}:${ANTIFRAUD_UI_PORT:-8085}:8081"
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: antifraud-jobmanager
+        parallelism.default: 1
+        restart-strategy.type: exponential-delay
+        jobmanager.memory.process.size: 768m
+        jobmanager.memory.jvm-metaspace.size: 192m
+      - OTEL_JAVAAGENT_ENABLED=true
+      - OTEL_SERVICE_NAME=antifraud-jobmanager
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=none
+      - SANDBOX_ID=
+    mem_limit: 896m
+
+  antifraud-taskmanager:
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: antifraud-jobmanager
+        taskmanager.numberOfTaskSlots: 1
+        taskmanager.memory.process.size: 1024m
+        taskmanager.memory.managed.size: 64m
+        taskmanager.memory.jvm-metaspace.size: 192m
+      - OTEL_JAVAAGENT_ENABLED=true
+      - OTEL_SERVICE_NAME=antifraud-taskmanager
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=none
+      - SANDBOX_ID=
+    mem_limit: 1152m
+
+  postgres-write:
+    ports: !override
+      - "${BIND_ADDRESS:-127.0.0.1}:${WRITE_DATABASE_EXTERNAL_PORT:-5433}:5432"
+    mem_limit: 384m
+
+  postgres-read:
+    ports: !override
+      - "${BIND_ADDRESS:-127.0.0.1}:${READ_DATABASE_EXTERNAL_PORT:-5434}:5432"
+    mem_limit: 384m
+
+  postgres-ai:
+    ports: !override
+      - "${BIND_ADDRESS:-127.0.0.1}:${AI_DATABASE_EXTERNAL_PORT:-5436}:5432"
+    mem_limit: 256m
+
+  webhook-postgres:
+    ports: !override
+      - "${BIND_ADDRESS:-127.0.0.1}:${WEBHOOK_DATABASE_EXTERNAL_PORT:-5437}:5432"
+    mem_limit: 256m
+
+  write-redis:
+    ports: !override
+      - "${BIND_ADDRESS:-127.0.0.1}:${WRITE_REDIS_EXTERNAL_PORT:-6383}:6379"
+
+  read-redis:
+    ports: !override
+      - "${BIND_ADDRESS:-127.0.0.1}:${READ_REDIS_EXTERNAL_PORT:-6384}:6379"
+
+  immudb:
+    ports: !override
+      - "${BIND_ADDRESS:-127.0.0.1}:${IMMUDB_EXTERNAL_PORT:-3322}:3322"
+    mem_limit: 384m
+
+  api-gateway:
+    ports: !override
+      - "${BIND_ADDRESS:-127.0.0.1}:${GATEWAY_PROXY_PORT:-8080}:8000"
+      - "${ADMIN_BIND_ADDRESS:-127.0.0.1}:${GATEWAY_ADMIN_PORT:-8001}:8001"
+    mem_limit: 512m
+
+  jaeger:
+    mem_limit: 512m
+    ports: !override
+      - "${ADMIN_BIND_ADDRESS:-127.0.0.1}:${JAEGER_UI_PORT:-16686}:16686"
+      - "${BIND_ADDRESS:-127.0.0.1}:${OTLP_GRPC_PORT:-4317}:4317"
+      - "${BIND_ADDRESS:-127.0.0.1}:${OTLP_HTTP_PORT:-4318}:4318"

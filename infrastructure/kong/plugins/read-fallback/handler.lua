@@ -1,11 +1,39 @@
-local forwarder = require "kong.plugins.read-fallback.request_forwarder"
-local messages  = require "kong.plugins.read-fallback.messages"
-local utilities = require "kong.plugins.read-fallback.utilities"
+local forwarder      = require "kong.plugins.read-fallback.request_forwarder"
+local messages       = require "kong.plugins.read-fallback.messages"
+local utilities      = require "kong.plugins.read-fallback.utilities"
+local sandbox_routes = require "power_finance.sandbox_routes"
 
 local ReadFallbackHandler = {
     PRIORITY = 650,
-    VERSION  = "0.1.0",
+    VERSION  = "0.2.0",
 }
+
+
+-- This plugin forwards the request itself, so a target set by sandbox-router is
+-- never used. When the request belongs to a sandbox, both legs have to be
+-- re-pointed here or a sandboxed read would silently be served by the baseline.
+local resolve_sandbox_url = function(config, service_name, configured_url)
+    local sandbox_id = kong.ctx.shared.sandbox_id
+    if not sandbox_id or not config.redis_host then
+        return configured_url
+    end
+
+    local target, lookup_error = sandbox_routes.resolve_target(config, sandbox_id, service_name)
+    if lookup_error then
+        kong.log.warn(
+            "read-fallback: sandbox lookup failed for '",
+            service_name,
+            "' (using baseline): ",
+            lookup_error
+        )
+        return configured_url
+    end
+    if not target then
+        return configured_url
+    end
+
+    return "http://" .. target.host .. ":" .. target.port
+end
 
 
 function ReadFallbackHandler:access(config)
@@ -16,8 +44,9 @@ function ReadFallbackHandler:access(config)
     local path = kong.request.get_path()
     local query = kong.request.get_raw_query()
 
+    local read_service_url = resolve_sandbox_url(config, "read-service", config.read_service_url)
     local primary, primary_error = forwarder.send(
-        config.read_service_url, path, query, config.read_timeout_ms
+        read_service_url, path, query, config.read_timeout_ms
     )
     if not primary then
         kong.log.err("read-fallback: read-service request failed: ", primary_error)
@@ -42,8 +71,11 @@ function ReadFallbackHandler:access(config)
     kong.log.info("read-fallback: read-service returned ", config.fallback_status,
         "; falling back to write-service for ", fallback_path)
 
+    local write_service_url = resolve_sandbox_url(
+        config, "write-service", config.write_service_url
+    )
     local fallback, fallback_error = forwarder.send(
-        config.write_service_url, fallback_path, query, config.fallback_timeout_ms
+        write_service_url, fallback_path, query, config.fallback_timeout_ms
     )
     if not fallback then
         kong.log.err("read-fallback: write-service fallback failed: ", fallback_error)

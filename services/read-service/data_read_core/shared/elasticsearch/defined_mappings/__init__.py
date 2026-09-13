@@ -1,6 +1,7 @@
 from .automations_mapping import AUTOMATIONS_INDEX, AUTOMATIONS_MAPPING
 from .entrypoint import INDEX_DEFINITIONS
 from .goals_mapping import GOALS_INDEX, GOALS_MAPPING
+from .index_naming import build_index_name, resolve_index_name_prefix
 from .transactions_mapping import TRANSACTIONS_INDEX, TRANSACTIONS_MAPPING
 from .wallets_mapping import WALLETS_INDEX, WALLETS_MAPPING
 
@@ -10,6 +11,8 @@ __all__ = [
     "GOALS_INDEX",
     "GOALS_MAPPING",
     "INDEX_DEFINITIONS",
+    "build_index_name",
+    "resolve_index_name_prefix",
     "TRANSACTIONS_INDEX",
     "TRANSACTIONS_MAPPING",
     "WALLETS_INDEX",

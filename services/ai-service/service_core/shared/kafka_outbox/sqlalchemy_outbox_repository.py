@@ -28,6 +28,9 @@ class SqlAlchemyOutboxRepository(OutboxRepository):
                     OutboxColumn.EVENT_TYPE: entry.event_type,
                     OutboxColumn.PAYLOAD: entry.payload,
                     OutboxColumn.OCCURRED_AT: entry.occurred_at,
+                    OutboxColumn.TRACEPARENT: entry.propagation_context.traceparent,
+                    OutboxColumn.TRACESTATE: entry.propagation_context.tracestate,
+                    OutboxColumn.BAGGAGE: entry.propagation_context.baggage,
                 }
                 for entry in entries
             ],

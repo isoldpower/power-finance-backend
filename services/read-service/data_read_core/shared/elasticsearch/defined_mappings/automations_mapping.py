@@ -1,6 +1,7 @@
+from .index_naming import build_index_name
 from .shared_config import SINGLE_NODE_REPLICA_COUNT
 
-AUTOMATIONS_INDEX = "read_automations"
+AUTOMATIONS_INDEX = build_index_name("read_automations")
 
 AUTOMATIONS_MAPPING: dict = {
     "settings": {"number_of_replicas": SINGLE_NODE_REPLICA_COUNT},
