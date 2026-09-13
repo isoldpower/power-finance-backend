@@ -10,8 +10,7 @@ What turns a MacBook M2 Pro (16 GB) into the shared dev host. Run these on the
    than errors** when it reads from there, and Full Disk Access is granted
    per-binary, never per-user. `~/srv/power-finance-backend` is a fine home.
 
-2. **Docker runtime — colima**, not Docker Desktop (no GUI login on a headless
-   box):
+2. **Docker runtime — colima**, not Docker Desktop (no GUI login on a headless box):
 
    ```bash
    brew install colima docker docker-compose
@@ -42,21 +41,84 @@ What turns a MacBook M2 Pro (16 GB) into the shared dev host. Run these on the
 
    Take the tailnet name from `tailscale status`. That is `DEV_HOST` below.
 
-5. **Point the stack at the tailnet and start it:**
+5. **Create `.env`. This step is not optional.** Without it the stack still starts —
+   Compose falls back to the `${VAR:-default}` defaults — but the two values that
+   default to *empty* are exactly the two that break authentication:
+
+   | Variable | No default | Effect when empty |
+   | --- | --- | --- |
+   | `CLERK_ISSUER_URL` | yes | every request 401s, *"identity provider is unreachable"* |
+   | `READ_AT_LEAST_HMAC_SECRET` | yes | read-your-writes silently stops working (needs ≥ 32 chars, and the same value for the `read-at-least` and `write-ral-version` plugins) |
+
+   Everything else — ports, passwords, topics, heap sizes, the OTLP endpoint — has a
+   usable default, so a minimal `.env` is genuinely two lines plus whatever you want
+   to override:
 
    ```bash
-   # .env on the dev host
-   BIND_ADDRESS=0.0.0.0          # see the port table — 8080 is the one that matters
-   ADMIN_BIND_ADDRESS=127.0.0.1  # Kong admin, Jaeger UI, Flink UI stay local
-   KAFKA_EXTERNAL_HOST=pf-dev-host
-   OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+   cp .env.example .env      # then at minimum:
+   CLERK_ISSUER_URL=https://<your-app>.clerk.accounts.dev
+   READ_AT_LEAST_HMAC_SECRET=$(openssl rand -hex 32)
 
+   # worth setting on a shared host:
+   ELASTICSEARCH_HOSTS=https://es01:9200   # the node this stack starts
+   PROXY_BIND_ADDRESS=0.0.0.0              # the gateway — the only port devs need
+   BIND_ADDRESS=127.0.0.1                  # datastores stay on loopback
+   ADMIN_BIND_ADDRESS=127.0.0.1            # Kong admin, Jaeger UI, Flink UI
+   KAFKA_EXTERNAL_HOST=pf-dev-host          # only matters if you widen BIND_ADDRESS
+   ```
+
+6. **Start it:**
+
+   ```bash
    make baseline-up
    ```
 
-6. **Give developers a way to edit the checkout here** — VS Code Remote SSH or
-   JetBrains Gateway against this host, or a branch they push and you pull. Their
-   sandbox mounts this working tree, so this is where the code has to be.
+   **The first run builds seven images and takes 10–20 minutes** — a Gradle build
+   for the Flink job, the OpenTelemetry Java agent download, and the Python images.
+   Later runs reuse the cache and start in under a minute.
+
+   The `power-finance/*:dev` tags are built locally and exist in no registry, so
+   every service that has a `build:` section carries `pull_policy: build`. Without
+   it Compose attempts a registry pull first and logs
+   `pull access denied … repository does not exist` for each image before falling
+   back to building — noisy and slow, but never fatal. If you see those lines, the
+   `pull_policy` is missing somewhere.
+
+7. **Give developers a way to edit the checkout here.** Their sandbox mounts this
+   working tree, so this is where the code has to be — but **nothing in the edit
+   loop involves git**. In preference order:
+
+   1. **Remote editor** — VS Code Remote SSH or JetBrains Gateway pointed at this
+      host. The editor UI runs locally, the files are the host's. Save and the
+      sandbox reloads; no commit, no push.
+   2. **File sync** — mutagen or `rsync`/`unison` in watch mode from a laptop
+      checkout to this one. Same loop, plus a sync hop of a few milliseconds. Do
+      not also edit the host copy by hand, or the two trees diverge.
+   3. **Push and pull** — only if neither of the above is available. It puts a
+      commit in every iteration, which is a bad loop; use it to *move* work here,
+      not to test it.
+
+   Sandbox images build from this working tree, so uncommitted changes are picked
+   up. Git matters for sharing work and for promoting it to the baseline, not for
+   trying it out.
+
+## When every request 401s
+
+`{"code":"unauthorized","message":"Could not verify the token: identity provider is
+unreachable."}` means the gateway could not fetch the JWKS — your token was never
+examined. In order of likelihood:
+
+1. **`CLERK_ISSUER_URL` empty or wrong.** It ships empty in `.env.example`. Kong
+   resolves it at config load, so recreate the gateway after setting it:
+   `docker compose -p pf-baseline -f compose.yaml -f compose.baseline.yaml up -d --force-recreate api-gateway`.
+2. **A stale JWKS cache entry** in `gateway-redis` — clear `clerk:jwks:*` keys.
+3. **No egress or DNS from the container.** Test on the stack's own network:
+   `docker run --rm --network pf-baseline_default curlimages/curl:8.9.1 -s -o /dev/null -w '%{http_code}\n' "$CLERK_ISSUER_URL/.well-known/jwks.json"` — expect 200.
+4. **TLS verification** — the fetch uses `ssl_verify = true`, so the image needs CA
+   certificates (the custom gateway image installs them).
+
+The plugin logs the real reason, which is always the fastest answer:
+`docker logs pf-baseline-api-gateway-1 2>&1 | grep -i clerk-jwt | tail -5`
 
 ## The colima trap
 
@@ -75,11 +137,12 @@ and reach them through an SSH tunnel when you need them.
 
 Sandboxes run **on this host** with the developer's source bind-mounted, so the
 only port a developer strictly needs is the gateway. Everything below it is for
-convenience (psql, a REPL) or for the off-host escape hatch.
+convenience (psql, a REPL) or for the off-host escape hatch — which is why the
+gateway has its own bind address.
 
 | Port | Service | Who needs it |
 | --- | --- | --- |
-| 8080 | Kong proxy | **every developer — the only required one** |
+| 8080 | Kong proxy | **every developer — the only required one** (`PROXY_BIND_ADDRESS`) |
 | 5433 / 5434 / 5436 / 5437 | write / read / ai / webhook Postgres | `psql` from a laptop; off-host escape hatch |
 | 9200 | Elasticsearch | queries from a laptop; escape hatch |
 | 19092 | Kafka external listener | escape hatch only |
@@ -90,10 +153,11 @@ convenience (psql, a REPL) or for the off-host escape hatch.
 | 16686 | Jaeger UI | local only, or tunnel |
 | 8085 | Flink UI | local only, or tunnel |
 
-Because sandboxes are local to the host, `BIND_ADDRESS` can stay `127.0.0.1` and
-only the gateway need be published to the tailnet. Widen it only for the ports you
-actually want to reach from a laptop — the escape-hatch rows are not needed for
-normal work.
+Because sandboxes are local to the host, the recommended shape is
+`PROXY_BIND_ADDRESS=0.0.0.0` with `BIND_ADDRESS=127.0.0.1`: the gateway is reachable
+over the tailnet and nothing else is reachable from any network this machine joins.
+Widen `BIND_ADDRESS` only for ports you actually want from a laptop, remembering
+that `0.0.0.0` means every interface, not just the tailnet — a café network counts.
 
 `KAFKA_EXTERNAL_HOST` must be the name the laptop uses, because a Kafka client
 reconnects to whatever the broker *advertises*, not to the address it dialled.

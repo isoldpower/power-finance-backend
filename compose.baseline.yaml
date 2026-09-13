@@ -1,4 +1,11 @@
 # See README.md → "Shared dev environment"
+#
+# Three separate bind addresses, because they carry different risk:
+#   PROXY_BIND_ADDRESS  the gateway — the only port developers need. 0.0.0.0 here.
+#   BIND_ADDRESS        datastores and OTLP ingest. Loopback unless someone runs a
+#                       service off-host or wants psql from a laptop.
+#   ADMIN_BIND_ADDRESS  Kong admin (unauthenticated), Jaeger UI, Flink UI. Keep
+#                       loopback and reach them over an SSH tunnel.
 x-observability-env: &observability-env
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
   OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
@@ -178,7 +185,7 @@ services:
 
   api-gateway:
     ports: !override
-      - "${BIND_ADDRESS:-127.0.0.1}:${GATEWAY_PROXY_PORT:-8080}:8000"
+      - "${PROXY_BIND_ADDRESS:-127.0.0.1}:${GATEWAY_PROXY_PORT:-8080}:8000"
       - "${ADMIN_BIND_ADDRESS:-127.0.0.1}:${GATEWAY_ADMIN_PORT:-8001}:8001"
     mem_limit: 512m
 

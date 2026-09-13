@@ -136,6 +136,11 @@ a 16 GB box, so a stack per developer does not fit — the reasoning is in
 
 ### Baseline
 
+The first `baseline-up` on a fresh host builds every image (10–20 minutes); after
+that it starts in under a minute. Images are local-only tags, so each service built
+from source sets `pull_policy: build` — Compose would otherwise try a registry pull
+first and log `pull access denied` for each one before building anyway.
+
 ```bash
 make baseline-up        # pf-baseline: everything at main, tuned, Kibana off, Jaeger on
 make baseline-logs
@@ -180,16 +185,23 @@ mount, so only first-party service source reloads. Changing a shared library und
 rebuild (~20s warm). The HTTP services run `uvicorn --reload`; the consumers and
 workers have no reloader, so they pick changes up on `make sandbox-restart`.
 
-Editing therefore happens **against the checkout on the dev host** — over SSH with
-VS Code Remote or JetBrains Gateway, or by pushing a branch and pulling it there. A
-remote editor server is a few hundred MB, which the host has room for; what it does
-not have room for is a full IDE workspace per developer.
+Editing therefore happens **against the checkout on the dev host** — normally with
+VS Code Remote SSH or JetBrains Gateway, whose editor UI runs on your machine while
+the files stay on the host. A remote editor server is a few hundred MB, which the
+host has room for; what it does not have room for is a full IDE workspace per
+developer. A file-sync tool (mutagen, `rsync -w`) works too.
+
+**No git in the edit loop.** Sandbox images build from the host working tree, so
+uncommitted edits are live — save and the service reloads. Pushing a branch is how
+you *move* work to the host or share it, and merging is how a change reaches the
+baseline; neither is needed to test one.
 
 If you truly cannot put source on the host, there is an escape hatch: run the
 service natively on your laptop and point the gateway at it with
 `make sandbox-env` + `make sandbox-local`. It needs the baseline's Kafka, Postgres,
-Redis, ImmuDB and Elasticsearch reachable from your machine (`BIND_ADDRESS` plus
-Kafka's external listener — see
+Redis, ImmuDB and Elasticsearch reachable from your machine, which means widening
+`BIND_ADDRESS` beyond the loopback default (the gateway has its own
+`PROXY_BIND_ADDRESS`) plus Kafka's external listener — see
 [infrastructure/dev-host/README.md](infrastructure/dev-host/README.md)) and the
 gateway able to dial back to you. It works and is tested, but it is a wider
 exposure and a second code path; prefer the mounted container.

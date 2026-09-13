@@ -253,8 +253,21 @@ guard-%:
 		exit 1; \
 	fi
 
+# The power-finance/*:dev tags live in no registry, so `up` would attempt a pull and
+# log "pull access denied" for each. They also have to be built one service per
+# tag: write-service and its six consumers share a tag, as do read-service and its
+# jobs, and BuildKit exports them in parallel — several services naming the same
+# tag fail with `image "...": already exists`. Building only the canonical service
+# behind each tag resolves every image exactly once.
+BASELINE_BUILD_SERVICES := write-service read-service ai-service push-service \
+	webhook-service antifraud-jobmanager api-gateway
+
+.PHONY: baseline-build
+baseline-build: ## Build every baseline image, one per tag (safe to re-run; cached)
+	$(BASELINE_COMPOSE) build $(BASELINE_BUILD_SERVICES)
+
 .PHONY: baseline-up
-baseline-up: ## Start the shared baseline stack on the dev host (tuned, Kibana off, Jaeger on)
+baseline-up: baseline-build ## Start the shared baseline stack on the dev host (tuned, Kibana off, Jaeger on)
 	$(BASELINE_COMPOSE) up -d
 
 .PHONY: baseline-down
@@ -286,7 +299,9 @@ ifdef ISOLATED
 		$(SANDBOX_COMPOSE) run --rm --no-deps sbx-webhook-migrate
 endif
 	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
-		$(SANDBOX_COMPOSE) up -d --no-deps $(if $(BAKED),--build,) $(SANDBOX_SERVICE)
+		$(SANDBOX_COMPOSE) build $(SANDBOX_SERVICE)
+	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
+		$(SANDBOX_COMPOSE) up -d --no-deps $(SANDBOX_SERVICE)
 	@if ! echo "$(SANDBOX_HTTP_SERVICES)" | tr ' ' '\n' | grep -qx "$(SERVICE)"; then \
 		echo "sandbox '$(NAME)': $(SERVICE) serves no HTTP — running it without a gateway route"; \
 		exit 0; \
