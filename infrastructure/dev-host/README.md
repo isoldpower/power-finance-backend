@@ -84,23 +84,17 @@ What turns a MacBook M2 Pro (16 GB) into the shared dev host. Run these on the
    back to building — noisy and slow, but never fatal. If you see those lines, the
    `pull_policy` is missing somewhere.
 
-7. **Give developers a way to edit the checkout here.** Their sandbox mounts this
-   working tree, so this is where the code has to be — but **nothing in the edit
-   loop involves git**. In preference order:
+7. **Give developers SSH access.** They clone and edit on their own machines and
+   run the service they are changing there; this host supplies the dependencies.
+   `make sandbox-tunnels DEV_HOST=<this host>` on their laptop forwards Kafka,
+   the four Postgres instances, Redis, ImmuDB, Elasticsearch, OTLP and the Jaeger
+   UI to their localhost, and forwards one local port back so the gateway can route
+   to them. Membership of the `docker` group is only needed by whoever runs
+   host-side sandboxes; plain SSH is enough for the tunnels.
 
-   1. **Remote editor** — VS Code Remote SSH or JetBrains Gateway pointed at this
-      host. The editor UI runs locally, the files are the host's. Save and the
-      sandbox reloads; no commit, no push.
-   2. **File sync** — mutagen or `rsync`/`unison` in watch mode from a laptop
-      checkout to this one. Same loop, plus a sync hop of a few milliseconds. Do
-      not also edit the host copy by hand, or the two trees diverge.
-   3. **Push and pull** — only if neither of the above is available. It puts a
-      commit in every iteration, which is a bad loop; use it to *move* work here,
-      not to test it.
-
-   Sandbox images build from this working tree, so uncommitted changes are picked
-   up. Git matters for sharing work and for promoting it to the baseline, not for
-   trying it out.
+   Keep a checkout here too, on `main`, for `make baseline-up` — and one per
+   developer if anyone uses host-side sandboxes (`make sandbox-up`), since those
+   mount whichever tree the command runs in.
 
 ## Credentials are baked in at first init
 
@@ -169,10 +163,10 @@ and reach them through an SSH tunnel when you need them.
 
 ## What each port is for
 
-Sandboxes run **on this host** with the developer's source bind-mounted, so the
-only port a developer strictly needs is the gateway. Everything below it is for
-convenience (psql, a REPL) or for the off-host escape hatch — which is why the
-gateway has its own bind address.
+Developers run their service on their own machine and reach everything else through
+SSH tunnels (`make sandbox-tunnels`), so the only port that has to be **published**
+is the gateway. Everything else is reached over SSH, which is why the gateway has its
+own bind address and the rest can stay on loopback.
 
 | Port | Service | Who needs it |
 | --- | --- | --- |
@@ -187,11 +181,16 @@ gateway has its own bind address.
 | 16686 | Jaeger UI | local only, or tunnel |
 | 8085 | Flink UI | local only, or tunnel |
 
-Because sandboxes are local to the host, the recommended shape is
-`PROXY_BIND_ADDRESS=0.0.0.0` with `BIND_ADDRESS=127.0.0.1`: the gateway is reachable
-over the tailnet and nothing else is reachable from any network this machine joins.
-Widen `BIND_ADDRESS` only for ports you actually want from a laptop, remembering
-that `0.0.0.0` means every interface, not just the tailnet — a café network counts.
+The recommended shape is `PROXY_BIND_ADDRESS=0.0.0.0` with
+`BIND_ADDRESS=127.0.0.1`: the gateway is reachable over the tailnet, and everything
+else is reachable only through an SSH tunnel. Widening `BIND_ADDRESS` is an
+alternative to tunnelling, not a requirement — and remember `0.0.0.0` means every
+interface, not just the tailnet, so a café network counts.
+
+`KAFKA_EXTERNAL_HOST` interacts with this choice. A Kafka client reconnects to what
+the broker advertises, so leave it `localhost` when developers tunnel (the
+advertisement points back into their own tunnel) and set it to this host's tailnet
+name only if you publish 19092 instead.
 
 `KAFKA_EXTERNAL_HOST` must be the name the laptop uses, because a Kafka client
 reconnects to whatever the broker *advertises*, not to the address it dialled.

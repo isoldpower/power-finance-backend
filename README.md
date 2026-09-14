@@ -155,76 +155,75 @@ untagged traffic.
 
 ### Sandboxes
 
-A sandbox brings up no infrastructure of its own — it joins the baseline's network
-and uses the baseline's Kafka, Postgres, Elasticsearch and Redis.
+**What you install locally:** `uv` and Python for the Python services, plus Go or a
+JDK only if you are changing those. No Docker, no local Kafka or Postgres.
 
-Your **source on the dev host is bind-mounted into the container**, so an edit is
-live in about a second — there is no image rebuild in the loop. That is the only
-mode; everything below is a variation on it.
+You clone the repo **on your laptop**, edit it there, and run the service you are
+changing there too — the ordinary clone-edit-run loop, with your own debugger and
+test runner. Only the heavy dependencies stay on the dev host: Kafka, Postgres,
+Elasticsearch, Redis, ImmuDB, the gateway and every service you are *not* changing.
+
+Reach them over SSH tunnels, so nothing on the host has to be published beyond the
+gateway:
 
 ```bash
-make sandbox-up NAME=nikita SERVICE=write-service     # source live-mounted, routed
-make sandbox-up NAME=nikita SERVICE=read-service      # same sandbox name, second service
-make sandbox-restart NAME=nikita SERVICE=read-write-consumer   # workers have no reloader
+make sandbox-tunnels DEV_HOST=pf-dev-host          # leave running; Ctrl-C closes
+```
 
-# its own Postgres + prefixed ES indices — migrations, projection changes
-make sandbox-up NAME=nikita SERVICE=read-service ISOLATED=1
+Then, in another shell:
 
-# run the image exactly as built, no mount — for testing the image itself
-make sandbox-up NAME=nikita SERVICE=write-service BAKED=1
+```bash
+make sandbox-env NAME=$USER SERVICE=write-service  # writes .sandbox/$USER-write-service.env
+set -a; . .sandbox/$USER-write-service.env; set +a
+cd services/write-service
+uv run uvicorn write_service.asgi:application --port 8100 --reload
+```
 
-make sandbox-list     # routes and their TTL
+That is enough for most work — hit your own service directly, no gateway involved:
+
+```bash
+curl -H "X-User-Id: <clerk-id>" localhost:8100/api/v1/wallets
+```
+
+To exercise the **full edge** (Clerk auth, rate limits, read-fallback, read-your-writes),
+let the gateway route your sandbox traffic back to your laptop. `make sandbox-tunnels`
+already opened the reverse tunnel for `LOCAL_SERVICE_PORT`:
+
+```bash
+make sandbox-local NAME=$USER SERVICE=write-service TARGET=host.docker.internal:8100
+curl -H "Authorization: Bearer $TOKEN" -H "X-Sandbox: $USER" http://pf-dev-host:8080/api/v1/wallets
+```
+
+Requests without `X-Sandbox` keep going to the baseline, so nobody else notices.
+
+#### Why Kafka works over a tunnel
+
+A Kafka client reconnects to whatever the broker *advertises*, not to the address it
+dialled. The broker advertises `${KAFKA_EXTERNAL_HOST}:${KAFKA_EXTERNAL_PORT}`, so
+leaving `KAFKA_EXTERNAL_HOST=localhost` is correct here: the client follows the
+advertisement straight back into the tunnel. Set it to the host's name only if you
+widen `BIND_ADDRESS` and connect without tunnels.
+
+#### Running on the host instead
+
+Some things are better off on the dev host, and `sandbox-up` runs them there with
+your host-side checkout bind-mounted (`BAKED=1` to skip the mount and use the image):
+
+```bash
+make sandbox-up NAME=$USER SERVICE=write-service          # source live-mounted, ~1s reload
+make sandbox-up NAME=$USER SERVICE=read-service ISOLATED=1 # own Postgres + prefixed ES indices
+make sandbox-restart NAME=$USER SERVICE=read-write-consumer # workers have no reloader
+```
+
+Worth it for the compiled services (Go, Java) if you would rather not install their
+toolchains, for anything that should keep running while your laptop is closed, and
+for `ISOLATED=1` work. It needs the source on the host, so it is the secondary path.
+
+```bash
+make sandbox-list     # routes, per service, with TTL
 make sandbox-prune    # drop routes whose container is gone
-make sandbox-logs NAME=nikita SERVICE=write-service
-make sandbox-down NAME=nikita
+make sandbox-down NAME=$USER
 ```
-
-**What is live and what is not.** The venv lives at `/app/.venv`, outside the
-mount, so only first-party service source reloads. Changing a shared library under
-`libraries/`, adding a dependency, or touching a Dockerfile needs `BAKED=1` and a
-rebuild (~20s warm). The HTTP services run `uvicorn --reload`; the consumers and
-workers have no reloader, so they pick changes up on `make sandbox-restart`.
-
-Editing therefore happens **against the checkout on the dev host** — normally with
-VS Code Remote SSH or JetBrains Gateway, whose editor UI runs on your machine while
-the files stay on the host. A remote editor server is a few hundred MB, which the
-host has room for; what it does not have room for is a full IDE workspace per
-developer. A file-sync tool (mutagen, `rsync -w`) works too.
-
-**No git in the edit loop.** Sandbox images build from the host working tree, so
-uncommitted edits are live — save and the service reloads. Pushing a branch is how
-you *move* work to the host or share it, and merging is how a change reaches the
-baseline; neither is needed to test one.
-
-If you truly cannot put source on the host, there is an escape hatch: run the
-service natively on your laptop and point the gateway at it with
-`make sandbox-env` + `make sandbox-local`. It needs the baseline's Kafka, Postgres,
-Redis, ImmuDB and Elasticsearch reachable from your machine, which means widening
-`BIND_ADDRESS` beyond the loopback default (the gateway has its own
-`PROXY_BIND_ADDRESS`) plus Kafka's external listener — see
-[infrastructure/dev-host/README.md](infrastructure/dev-host/README.md)) and the
-gateway able to dial back to you. It works and is tested, but it is a wider
-exposure and a second code path; prefer the mounted container.
-
-Then send `X-Sandbox: nikita` and your requests hit your code:
-
-```bash
-curl -H "X-Sandbox: nikita" -H "Authorization: Bearer ..." localhost:8080/api/v1/wallets
-```
-
-Requests without the header keep flowing through the baseline the whole time, so
-two developers on two features never collide.
-
-Sandbox services are named `sbx-<service>` and pulled in with `extends` rather
-than layered over `compose.yaml`. That is load-bearing, not cosmetic: Compose always
-adds the service name as a network alias, so a sandbox reusing the baseline's names
-on the shared network makes `write-service` round-robin between the baseline and the
-sandbox — sending a share of *untagged* traffic into someone's sandbox. Routes are
-registered by container IP for the same reason, so two sandboxes of the same service
-cannot collide on a name either.
-
-Only services that serve HTTP get a gateway route; `sandbox-up` on a consumer runs
-it and says so rather than pointing the route at something with no HTTP port.
 
 ### How isolation actually works
 
@@ -268,7 +267,9 @@ same shapes.
 
 ### Two things to know
 
-Sandbox services report to Jaeger under the **same** `OTEL_SERVICE_NAME` as the
+A locally-run service exports traces through the tunnelled OTLP port, so it lands in
+the host's Jaeger alongside everything else — one trace still spans your laptop and
+the baseline's consumers. It reports under the **same** `OTEL_SERVICE_NAME` as the
 baseline, on purpose — a sandbox is the same service, and splitting the name would
 split one request's trace across two service entries. Filter on the `sandbox` field
 that the log filter and baggage carry instead.

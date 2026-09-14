@@ -235,6 +235,7 @@ SANDBOX_HTTP_PORT         = $(or $(SANDBOX_HTTP_PORT_$(SERVICE)),8000)
 SANDBOX_HTTP_SERVICES    := write-service read-service ai-service push-service webhook-service
 SANDBOX_ENV_DIR          := .sandbox
 DEV_HOST                 ?= localhost
+LOCAL_SERVICE_PORT       ?= 8100
 
 BASELINE_COMPOSE  := $(COMPOSE) -p $(BASELINE_PROJECT) -f compose.yaml -f compose.baseline.yaml --profile local-elastic
 SANDBOX_DATASTORE_FILES = $(if $(ISOLATED),-f compose.sandbox-datastores.yaml,)
@@ -283,7 +284,7 @@ baseline-kibana: ## Bring Kibana up alongside the baseline (it is scaled to 0 by
 	$(BASELINE_COMPOSE) up -d --scale kibana=1 kibana
 
 .PHONY: sandbox-up
-sandbox-up: guard-NAME guard-SERVICE ## Run one service as a sandbox with your source live-mounted: NAME=<dev> SERVICE=<compose service> [ISOLATED=1 own Postgres + prefixed ES] [BAKED=1 run the built image]
+sandbox-up: guard-NAME guard-SERVICE ## Run a service on the dev host instead of your laptop (compiled services, unattended): NAME= SERVICE= [ISOLATED=1 own Postgres + prefixed ES] [BAKED=1 no source mount]
 ifdef ISOLATED
 	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
 		$(SANDBOX_COMPOSE) up -d --wait sbx-postgres
@@ -319,11 +320,16 @@ endif
 	$(MAKE) --no-print-directory sandbox-route NAME=$(NAME) SERVICE=$(SERVICE) TARGET="$$address:$(SANDBOX_HTTP_PORT)"
 
 .PHONY: sandbox-local
-sandbox-local: guard-NAME guard-SERVICE guard-TARGET ## Escape hatch — route one service of a sandbox at an off-host process: NAME= SERVICE= TARGET=<host:port>
+sandbox-local: guard-NAME guard-SERVICE guard-TARGET ## Route one service of a sandbox at a process on your laptop: NAME= SERVICE= TARGET=host.docker.internal:8100
 	@$(MAKE) --no-print-directory sandbox-route NAME=$(NAME) SERVICE=$(SERVICE) TARGET=$(TARGET)
 
+.PHONY: sandbox-tunnels
+sandbox-tunnels: guard-DEV_HOST ## Open SSH tunnels from this laptop to the dev host: DEV_HOST= [LOCAL_SERVICE_PORT=8100] [PRINT=1]
+	@infrastructure/dev-host/open_tunnels.sh \
+		"$(DEV_HOST)" "$(LOCAL_SERVICE_PORT)" "$(PRINT)"
+
 .PHONY: sandbox-env
-sandbox-env: guard-NAME guard-SERVICE ## Write an env file pointing a natively-run service at the baseline: NAME= SERVICE= [DEV_HOST=]
+sandbox-env: guard-NAME guard-SERVICE ## Write an env file pointing a locally-run service at the baseline: NAME= SERVICE= [DEV_HOST=]
 	@set -a; [ -f .env ] && . ./.env; set +a; \
 	written=$$(infrastructure/dev-host/generate_sandbox_env.sh \
 		"$(NAME)" "$(SERVICE)" "$(DEV_HOST)" "$(SANDBOX_ENV_DIR)/$(NAME)-$(SERVICE).env"); \

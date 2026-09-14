@@ -129,6 +129,29 @@ as instrumenting the server that runs it.
 write-side span that wrote the outbox row; and with a sandbox running, the baseline
 consumer saw only untagged messages while the sandbox consumer saw only its own.
 
+**Revised again 2026-09-13: the developer's service runs on their own machine.**
+The revision below collapsed to a host-side container on the grounds that the loop
+needed a fast reload, which a bind mount supplies. That holds, but it forces the
+source to live on the dev host, and an ordinary clone-edit-run loop with a local
+debugger is worth more than the uniformity gained. So a locally-run service is the
+primary path again, with two corrections to how it was first designed:
+
+- **SSH tunnels rather than published ports.** `make sandbox-tunnels` forwards the
+  baseline's infrastructure to the laptop's localhost and forwards one local port
+  back for the gateway. `BIND_ADDRESS` stays loopback and only the gateway is
+  published, so the earlier trade of "local execution costs you exposure" does not
+  apply. `KAFKA_EXTERNAL_HOST=localhost` is *correct* under tunnelling, because a
+  client follows the broker's advertisement back into its own tunnel.
+- **Most work needs no gateway route at all.** Hitting the local service directly
+  with `X-User-Id` exercises everything but the edge; the reverse tunnel and
+  `sandbox-local` are only for testing through Clerk auth, rate limits and
+  read-fallback.
+
+The host-side container mode stays for the compiled services, for anything that
+should outlive a closed laptop, and for `ISOLATED=1` datastore work. The accepted
+cost of running locally is environment drift — a laptop's interpreter is not the
+image's — so CI remains the arbiter before merge.
+
 **Revised 2026-09-13: one execution mode, not two.** The original design offered a
 native-process mode alongside the container mode, on the grounds that a rebuild loop
 is too slow to iterate in. Measured, a warm rebuild is ~19s against ~1s for a
