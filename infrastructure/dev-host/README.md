@@ -102,6 +102,40 @@ What turns a MacBook M2 Pro (16 GB) into the shared dev host. Run these on the
    up. Git matters for sharing work and for promoting it to the baseline, not for
    trying it out.
 
+## Credentials are baked in at first init
+
+Postgres, ImmuDB and Elasticsearch write their user, password and database/cluster
+name into the data directory the **first** time they start, then ignore those
+variables forever. Change one in `.env` afterwards and the client uses the new value
+against a server that still holds the old one.
+
+Recreating the container does not help — the credential lives in the **volume**.
+Either remove the volume and let it re-initialise, or change the password in-place
+with SQL.
+
+| Volume | Baked from |
+| --- | --- |
+| `pf-baseline_postgres_write_data` | `WRITE_DATABASE_{USER,PASSWORD,NAME}` |
+| `pf-baseline_postgres_read_data` | `READ_DATABASE_*` |
+| `pf-baseline_postgres_ai_data` | `AI_DATABASE_*` |
+| `pf-baseline_webhook_postgres_data` | `WEBHOOK_DATABASE_*` |
+| `pf-baseline_immudb_data` | `IMMUDB_{USER,PASSWORD}` |
+| `pf-baseline_esdata01` | `ELASTIC_PASSWORD`, `CLUSTER_NAME` |
+
+```bash
+make baseline-down
+docker volume rm pf-baseline_postgres_write_data pf-baseline_postgres_read_data \
+                 pf-baseline_postgres_ai_data pf-baseline_webhook_postgres_data
+make baseline-up
+```
+
+`kafka_data`, `jaeger_data` and `redis_read_data` hold no credentials and can stay.
+
+**Decide these before the first `baseline-up`** and you never meet this. The
+database healthchecks now authenticate, so a mismatch shows up as
+`postgres-write` going *unhealthy* rather than as a pool timeout inside four
+unrelated migrations — but the volume still has to be re-initialised either way.
+
 ## When every request 401s
 
 `{"code":"unauthorized","message":"Could not verify the token: identity provider is
