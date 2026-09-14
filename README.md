@@ -68,6 +68,165 @@ The gateway proxy is published on `localhost:${GATEWAY_PROXY_PORT:-8080}`. Each
 service stack is also standalone-runnable from its own directory
 (`docker compose up` under `services/<name>/`).
 
+That runs the **whole stack on this machine** — about 30 containers. If you are
+joining a team that already has a shared dev host, you do not need it: go to
+[Developer setup](#developer-setup-shared-dev-host) instead and run only the service
+you are changing.
+
+## Developer setup (shared dev host)
+
+Start here if someone has given you access to a shared dev host. You clone and edit
+locally and run only the service you are changing; the host supplies Kafka, Postgres,
+Elasticsearch, Redis, ImmuDB, the gateway and every other service.
+
+What you install: **uv** and Python, plus Go or a JDK only if you are changing those
+services. No Docker, no local databases.
+
+You will need from whoever runs the host: its **tailnet name**, your **account name**
+on it, the **repo path** there, and the **database / ImmuDB / Elasticsearch
+passwords**.
+
+### 1. Join the tailnet
+
+```bash
+brew install --cask tailscale && sudo tailscale up
+tailscale status | grep <dev-host>          # the host should appear
+```
+
+### 2. Set up SSH
+
+Your account on the host is probably not your laptop account, and ssh defaults to the
+laptop one. Record it once:
+
+```bash
+cat >> ~/.ssh/config <<'EOF'
+Host <dev-host>
+  User <your account on the host>
+  ForwardAgent yes
+EOF
+
+ssh <dev-host> 'echo ok'
+```
+
+If you get `tailnet policy does not permit you to SSH as user …`, that is usually the
+wrong username rather than an ACL problem — see
+[infrastructure/dev-host/README.md](infrastructure/dev-host/README.md).
+
+### 3. Clone and install
+
+```bash
+git clone git@github.com:isoldpower/power-finance-backend.git
+cd power-finance-backend
+make install
+```
+
+### 4. Write your `.env`
+
+```bash
+cp .env.local.example .env
+```
+
+Fill in the passwords you were given — they must match the host exactly. Everything
+else in that file is optional and already correct.
+
+Do **not** add `ELASTICSEARCH_HOSTS`, `KAFKA_EXTERNAL_HOST`, any `*BIND_ADDRESS`,
+`CLERK_ISSUER_URL` or `READ_AT_LEAST_HMAC_SECRET`. Those are host-side settings; the
+host's value for the first one (`https://es01:9200`) is a Docker-internal name that
+will not resolve on your machine.
+
+### 5. Choose a sandbox name
+
+One fixed word, yours, used identically everywhere — `anna`, `nikita`, `payments-fix`.
+**Do not use `$USER`**: it differs between your laptop and the host, and a mismatch
+fails silently (your request quietly runs against `main`).
+
+### 6. Open the tunnels — leave this running
+
+```bash
+make sandbox-tunnels DEV_HOST=<dev-host>
+```
+
+This forwards the host's Kafka, databases, Redis, ImmuDB, Elasticsearch, OTLP and the
+Jaeger UI onto your own `localhost`, and forwards port 8100 back so the gateway can
+reach your service. Nothing on the host is published for this; it all rides SSH.
+
+If the binds fail with *"Address already in use"*, something local holds those ports —
+most often a baseline stack you started yourself. You do not need one: `make baseline-down`.
+
+### 7. Run the service you are changing
+
+In a second terminal:
+
+```bash
+make sandbox-env NAME=<your-sandbox-name> SERVICE=write-service DEV_HOST=localhost
+set -a; . .sandbox/<your-sandbox-name>-write-service.env; set +a
+
+cd services/write-service
+uv run uvicorn write_service.asgi:application --port 8100 --reload
+```
+
+`DEV_HOST=localhost` is right: the endpoints are your tunnel's near end.
+
+### 8. Test it directly — this covers most work
+
+```bash
+curl -s -X POST localhost:8100/api/v1/wallets \
+  -H "X-User-Id: <a clerk user id>" -H 'Content-Type: application/json' \
+  -d '{"name":"Hello","currency":"USD"}'
+```
+
+`X-User-Id` is what the gateway would have injected after verifying a token, so this
+skips auth and exercises everything else. Edit a file, save, and uvicorn reloads in
+about a second — the ordinary loop.
+
+### 9. Test through the gateway, when you need the edge
+
+Only for Clerk auth, rate limits, read-fallback and read-your-writes. Register your
+route **on the host** (routes live in the baseline's Redis):
+
+```bash
+ssh <dev-host> 'cd <repo path on host> && make sandbox-route \
+    NAME=<your-sandbox-name> SERVICE=write-service TARGET=host.docker.internal:8100'
+```
+
+```bash
+curl -H "Authorization: Bearer <clerk session token>" \
+     -H "X-Sandbox: <your-sandbox-name>" \
+     http://<dev-host>:8080/api/v1/wallets
+```
+
+Requests without `X-Sandbox` go to the baseline, so you never disturb anyone else.
+
+**Mind the method.** The gateway sends `GET /api/v1/*` to read-service and
+`POST/PUT/PATCH/DELETE` to write-service. A GET will not reach a write-service
+sandbox — it finds no read-service route for your name and falls back to the
+baseline, which looks like your sandbox was ignored. Register a route per service you
+run locally.
+
+### 10. Finish up
+
+```bash
+ssh <dev-host> 'cd <repo path on host> && make sandbox-down NAME=<your-sandbox-name>'
+```
+
+Then stop your service and the tunnel. Routes also expire on their own after a week.
+
+### When something looks wrong
+
+| Symptom | Cause |
+| --- | --- |
+| `tailnet policy does not permit you to SSH as user …` | wrong username — set `User` in `~/.ssh/config` |
+| `Address already in use` on every tunnel port | a local stack holds them — `make baseline-down` |
+| `500` on your first request | a password in `.env` does not match the host's; check Postgres and ImmuDB |
+| `identity provider is unreachable` | host-side `CLERK_ISSUER_URL`; not your problem to fix |
+| `User is not yet provisioned in the read store` | that Clerk user has never been written; do one write **without** `X-Sandbox` first |
+| `X-Sandbox` seems ignored | the name does not match the registered route, so it fell back to the baseline — `make sandbox-list` on the host |
+| a log count is always `0` | Python logs to stderr: `docker logs … 2>&1 \| grep -c …` |
+
+Your sandboxed writes are deliberately invisible to the baseline's read model — its
+consumer skips them. If you need your own projections too, ask for
+`make sandbox-up NAME=<your-sandbox-name> SERVICE=read-write-consumer` on the host.
+
 ## Repository layout
 
 - `services/` — `write-service`, `read-service` (Python/Django), `ai-service`
@@ -176,8 +335,8 @@ Add `DEV_HOST_USER=<host account>` if your account there differs from your lapto
 Then, in another shell:
 
 ```bash
-make sandbox-env NAME=$USER SERVICE=write-service DEV_HOST=localhost
-set -a; . .sandbox/$USER-write-service.env; set +a
+make sandbox-env NAME=<your-sandbox-name> SERVICE=write-service DEV_HOST=localhost
+set -a; . .sandbox/<your-sandbox-name>-write-service.env; set +a
 cd services/write-service
 uv run uvicorn write_service.asgi:application --port 8100 --reload
 ```
@@ -199,11 +358,31 @@ let the gateway route your sandbox traffic back to your laptop. `make sandbox-tu
 already opened the reverse tunnel for `LOCAL_SERVICE_PORT`:
 
 ```bash
-make sandbox-local NAME=$USER SERVICE=write-service TARGET=host.docker.internal:8100
-curl -H "Authorization: Bearer $TOKEN" -H "X-Sandbox: $USER" http://pf-dev-host:8080/api/v1/wallets
+# routes live in the baseline's Redis, so register them ON THE DEV HOST
+ssh <user>@pf-dev-host 'cd ~/srv/power-finance-backend && make sandbox-route \
+    NAME=<your-sandbox-name> SERVICE=write-service TARGET=host.docker.internal:8100'
+
+curl -H "Authorization: Bearer $TOKEN" -H "X-Sandbox: <your-sandbox-name>" http://pf-dev-host:8080/api/v1/wallets
 ```
 
+`host.docker.internal:8100` is the **dev host's** own loopback as seen from inside the
+gateway container, which the `-R` tunnel connects back to your laptop. So the gateway
+reaches your locally-run service without your machine being reachable at all.
+
+`make sandbox-route` and `make sandbox-local` only work where the baseline runs; run
+from a laptop they stop with a message telling you the ssh form rather than a Compose
+error.
+
 Requests without `X-Sandbox` keep going to the baseline, so nobody else notices.
+
+**Pick one fixed sandbox name and use it everywhere.** It has to match on both sides —
+the `NAME=` you start the sandbox with and the `X-Sandbox:` you send — and `$USER`
+differs between your laptop and the dev host, so it silently produces two different
+names. A mismatch is not an error: `sandbox-router` finds no route and falls back to
+the baseline, so your request quietly runs against `main`.
+
+When a check counts log lines, remember Python logs to **stderr**, so
+`docker logs … 2>&1 | grep -c …` — without the redirect the count is always zero.
 
 #### Why Kafka works over a tunnel
 
@@ -219,9 +398,9 @@ Some things are better off on the dev host, and `sandbox-up` runs them there wit
 your host-side checkout bind-mounted (`BAKED=1` to skip the mount and use the image):
 
 ```bash
-make sandbox-up NAME=$USER SERVICE=write-service          # source live-mounted, ~1s reload
-make sandbox-up NAME=$USER SERVICE=read-service ISOLATED=1 # own Postgres + prefixed ES indices
-make sandbox-restart NAME=$USER SERVICE=read-write-consumer # workers have no reloader
+make sandbox-up NAME=<your-sandbox-name> SERVICE=write-service          # source live-mounted, ~1s reload
+make sandbox-up NAME=<your-sandbox-name> SERVICE=read-service ISOLATED=1 # own Postgres + prefixed ES indices
+make sandbox-restart NAME=<your-sandbox-name> SERVICE=read-write-consumer # workers have no reloader
 ```
 
 Worth it for the compiled services (Go, Java) if you would rather not install their
@@ -231,7 +410,7 @@ for `ISOLATED=1` work. It needs the source on the host, so it is the secondary p
 ```bash
 make sandbox-list     # routes, per service, with TTL
 make sandbox-prune    # drop routes whose container is gone
-make sandbox-down NAME=$USER
+make sandbox-down NAME=<your-sandbox-name>
 ```
 
 ### How isolation actually works
@@ -388,5 +567,7 @@ That is safe only while they stay bound to loopback.
 
 - [Architecture spec](docs/architecture.md) — components, data flows, patterns.
 - [ADR-0001: fraud service on Java/Flink](docs/adr-0001-fraud-service.md)
-- [ADR-0002: shared dev environment](docs/adr-0002-shared-dev-environment.md)
+- [ADR-0002: shared dev environment](docs/adr-0002-shared-dev-environment.md) — why
+  one baseline plus per-developer sandboxes, and what it costs.
+- [Dev host setup](infrastructure/dev-host/README.md) — for whoever runs the host.
 - [Infrastructure](infrastructure/README.md) — Kafka, Kong, Postgres, Debezium.

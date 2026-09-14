@@ -134,6 +134,101 @@ database healthchecks now authenticate, so a mismatch shows up as
 `postgres-write` going *unhealthy* rather than as a pool timeout inside four
 unrelated migrations — but the volume still has to be re-initialised either way.
 
+## Testing the reverse tunnel
+
+**Verified working on colima 2026-09-14** with the default loopback reverse forward —
+no `GatewayPorts` change needed. The fallbacks below are only for a runtime where step
+3 fails.
+
+The gateway reaching a developer's locally-run service is the one hop that depends on
+the container runtime, so test it in order — each step isolates one link.
+
+```
+gateway container → host.docker.internal:8100 → this host's :8100 → ssh -R → laptop:8100
+```
+
+**1. On the laptop**, with the service running:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8100/health/live       # 200
+```
+
+**2. On this host** — proves `ssh -R` is delivering:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8100/health/live       # 200
+```
+
+Nothing here means the tunnel is not established; check that
+`make sandbox-tunnels` is still running on the laptop and that it printed an
+`inbound:` line.
+
+**3. From the baseline network** — the step that actually differs by runtime:
+
+```bash
+docker run --rm --network pf-baseline_default curlimages/curl:8.9.1 \
+  -s -o /dev/null -w '%{http_code}\n' http://host.docker.internal:8100/health/live
+```
+
+`200` and you are done; the documented route target works. This is what colima does.
+
+**4. Then the real thing** — and mind the method. Kong routes `GET /api/v1/*` to
+read-service and `POST/PUT/PATCH/DELETE` to write-service, so a GET will not reach a
+write-service sandbox; it finds no `…:read-service` route and falls through to the
+baseline, which looks like the sandbox was ignored.
+
+```bash
+curl -X POST http://<this host>:8080/api/v1/wallets \
+  -H "Authorization: Bearer <token>" -H "X-Sandbox: <name>" \
+  -H 'Content-Type: application/json' -d '{"name":"Probe","currency":"USD"}'
+```
+
+`000` at step 3 means the runtime cannot reach this host's **loopback**. Docker Desktop can;
+colima reaches the host over a bridge address, so a loopback-only reverse forward is
+invisible to containers. Two ways out:
+
+**Bind the reverse forward on every interface.** Add to this host's
+`/etc/ssh/sshd_config`:
+
+```
+GatewayPorts clientspecified
+```
+
+reload sshd, and have the developer run:
+
+```bash
+make sandbox-tunnels DEV_HOST=<this host> REMOTE_BIND=0.0.0.0
+```
+
+Then repeat step 3. This publishes port 8100 on the host while a developer is
+tunnelling, so prefer it on a tailnet-only host.
+
+**Or skip the reverse tunnel** and point the route at the laptop's tailnet address,
+which works because both machines are on the tailnet and containers egress through
+this host's network stack:
+
+```bash
+make sandbox-route NAME=<name> SERVICE=write-service TARGET=<laptop tailnet ip>:8100
+```
+
+For that the developer's service must listen on more than loopback —
+`uvicorn … --host 0.0.0.0 --port 8100` — since ssh is no longer the one connecting.
+
+If neither works, find what the name resolves to and try that address directly:
+
+```bash
+docker exec pf-baseline-api-gateway-1 getent hosts host.docker.internal
+```
+
+## Sandbox names must match on both sides
+
+The `NAME=` a sandbox is started with and the `X-Sandbox:` header a request carries
+have to be the same string. `$USER` is a trap: it is one value on a developer's
+laptop and another on this host, so it silently yields two names. The consequence is
+quiet rather than loud — `sandbox-router` finds no route and falls back to the
+baseline, so the request runs against `main` and looks like the sandbox was ignored.
+Give each developer a fixed name and use it literally.
+
 ## When SSH is refused
 
 ```

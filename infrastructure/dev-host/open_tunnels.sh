@@ -47,8 +47,17 @@ for port in "${forwarded_ports[@]}"; do
     ssh_arguments+=(-L "${port}:127.0.0.1:${port}")
 done
 
+# The reverse forward binds on the dev host's loopback by default. That is enough when
+# the container runtime can reach the host's loopback (Docker Desktop can). If it
+# cannot, bind it on all of the host's interfaces instead — which additionally needs
+# "GatewayPorts clientspecified" in the host's sshd_config.
+remote_bind_address="${REMOTE_BIND:-}"
 if [ -n "$local_service_port" ]; then
-    ssh_arguments+=(-R "${local_service_port}:localhost:${local_service_port}")
+    if [ -n "$remote_bind_address" ]; then
+        ssh_arguments+=(-R "${remote_bind_address}:${local_service_port}:localhost:${local_service_port}")
+    else
+        ssh_arguments+=(-R "${local_service_port}:localhost:${local_service_port}")
+    fi
 fi
 ssh_arguments+=("$ssh_target")
 
@@ -62,6 +71,10 @@ fi
 echo "tunnelling to $ssh_target — Ctrl-C to close"
 echo "  outbound: ${forwarded_ports[*]}"
 if [ -n "$local_service_port" ]; then
-    echo "  inbound:  $local_service_port (gateway can reach your service at host.docker.internal:$local_service_port)"
+    if [ -n "$remote_bind_address" ]; then
+        echo "  inbound:  $local_service_port bound on ${remote_bind_address} on the dev host"
+    else
+        echo "  inbound:  $local_service_port on the dev host's loopback"
+    fi
 fi
 exec ssh "${ssh_arguments[@]}"

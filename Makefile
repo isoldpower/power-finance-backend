@@ -322,7 +322,7 @@ endif
 	$(MAKE) --no-print-directory sandbox-route NAME=$(NAME) SERVICE=$(SERVICE) TARGET="$$address:$(SANDBOX_HTTP_PORT)"
 
 .PHONY: sandbox-local
-sandbox-local: guard-NAME guard-SERVICE guard-TARGET ## Route one service of a sandbox at a process on your laptop: NAME= SERVICE= TARGET=host.docker.internal:8100
+sandbox-local: guard-NAME guard-SERVICE guard-TARGET ## Route one service of a sandbox at a process on your laptop (run on the dev host): NAME= SERVICE= TARGET=host.docker.internal:8100
 	@$(MAKE) --no-print-directory sandbox-route NAME=$(NAME) SERVICE=$(SERVICE) TARGET=$(TARGET)
 
 .PHONY: sandbox-tunnels
@@ -338,8 +338,19 @@ sandbox-env: guard-NAME guard-SERVICE ## Write an env file pointing a locally-ru
 	echo "wrote $$written (endpoints: $(DEV_HOST))"; \
 	echo "run the service with:  set -a; . $$written; set +a; <your run command>"
 
+# Routes live in the baseline's Redis, so this runs where the baseline runs — on the
+# dev host. From a laptop, invoke it over ssh (see the hint below).
 .PHONY: sandbox-route
-sandbox-route: guard-NAME guard-SERVICE guard-TARGET ## Register the upstream one service of a sandbox routes to
+sandbox-route: guard-NAME guard-SERVICE guard-TARGET ## Register the upstream one service of a sandbox routes to (run on the dev host)
+	@if ! docker ps --filter "name=$(BASELINE_PROJECT)-gateway-redis" --format '{{.Names}}' | grep -q .; then \
+		echo "The baseline is not running here, so there is no route store to write to."; \
+		echo "Route registration happens on the dev host. From a laptop:"; \
+		echo ""; \
+		echo "  ssh <user>@<dev-host> 'cd <repo> && make sandbox-route \\"; \
+		echo "      NAME=$(NAME) SERVICE=$(SERVICE) TARGET=$(TARGET)'"; \
+		echo ""; \
+		exit 1; \
+	fi
 	@$(REDIS_IN_BASELINE) SET $(SANDBOX_ROUTE_KEY) "$(TARGET)" EX $(SANDBOX_ROUTE_TTL_SECONDS) >/dev/null
 	@echo "sandbox '$(NAME)' $(SERVICE) -> $(TARGET)"
 
