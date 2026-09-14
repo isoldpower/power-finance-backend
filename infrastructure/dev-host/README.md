@@ -92,6 +92,10 @@ What turns a MacBook M2 Pro (16 GB) into the shared dev host. Run these on the
    to them. Membership of the `docker` group is only needed by whoever runs
    host-side sandboxes; plain SSH is enough for the tunnels.
 
+   Developers need the **database, ImmuDB and Elasticsearch passwords** in their own
+   local `.env` — nothing else from this file. Hand those over out of band; do not
+   copy this `.env`, which also holds the Clerk issuer and the gateway HMAC secret.
+
    Keep a checkout here too, on `main`, for `make baseline-up` — and one per
    developer if anyone uses host-side sandboxes (`make sandbox-up`), since those
    mount whichever tree the command runs in.
@@ -113,7 +117,7 @@ with SQL.
 | `pf-baseline_postgres_read_data` | `READ_DATABASE_*` |
 | `pf-baseline_postgres_ai_data` | `AI_DATABASE_*` |
 | `pf-baseline_webhook_postgres_data` | `WEBHOOK_DATABASE_*` |
-| `pf-baseline_immudb_data` | `IMMUDB_{USER,PASSWORD}` |
+| `pf-baseline_immudb_data` | nothing — the server runs with `--force-admin-password`, so `IMMUDB_PASSWORD` is reapplied on every start |
 | `pf-baseline_esdata01` | `ELASTIC_PASSWORD`, `CLUSTER_NAME` |
 
 ```bash
@@ -129,6 +133,43 @@ make baseline-up
 database healthchecks now authenticate, so a mismatch shows up as
 `postgres-write` going *unhealthy* rather than as a pool timeout inside four
 unrelated migrations — but the volume still has to be re-initialised either way.
+
+## When SSH is refused
+
+```
+tailscale: tailnet policy does not permit you to SSH as user "<your-laptop-user>"
+```
+
+Almost always the **wrong username**, not the ACL: ssh defaults to your laptop
+account, which does not exist on the dev host. Pass the host's account:
+
+```bash
+make sandbox-tunnels DEV_HOST=pf-dev-host DEV_HOST_USER=<host account>
+```
+
+Or set it once per developer in `~/.ssh/config`, which every ssh invocation then
+picks up:
+
+```
+Host pf-dev-host
+  User <host account>
+```
+
+If it persists with the right username, it *is* the tailnet policy — Tailscale SSH
+needs an `ssh` rule whose `users` includes that account, for example:
+
+```json
+"ssh": [{
+  "action": "accept",
+  "src": ["autogroup:member"],
+  "dst": ["autogroup:self"],
+  "users": ["<host account>", "autogroup:nonroot"]
+}]
+```
+
+`autogroup:nonroot` only matches accounts that exist on the target, which is why a
+laptop-only username is rejected by it. Plain `sshd` with `ssh-copy-id` is the
+alternative if you would rather not manage the policy.
 
 ## When every request 401s
 

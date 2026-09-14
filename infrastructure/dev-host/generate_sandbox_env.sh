@@ -16,31 +16,57 @@ read_redis_port="${READ_REDIS_EXTERNAL_PORT:-6384}"
 immudb_port="${IMMUDB_EXTERNAL_PORT:-3322}"
 elasticsearch_hosts="${ELASTICSEARCH_HOSTS:-https://${dev_host}:9200}"
 
+# Credentials are per service in this repo (WRITE_DATABASE_USER, READ_DATABASE_*, …).
+# Reading a generic DATABASE_USER/PASSWORD silently falls back to postgres/postgres
+# and then fails against any host that set its own passwords.
 case "$service_name" in
     write-service|write-*)
         database_port="$write_database_port"
         database_name="${WRITE_DATABASE_NAME:-power_finance_write}"
+        database_user="${WRITE_DATABASE_USER:-postgres}"
+        database_password="${WRITE_DATABASE_PASSWORD:-postgres}"
         redis_port="$write_redis_port"
         ;;
     read-service|read-*)
         database_port="$read_database_port"
         database_name="${READ_DATABASE_NAME:-power_finance_read}"
+        database_user="${READ_DATABASE_USER:-postgres}"
+        database_password="${READ_DATABASE_PASSWORD:-postgres}"
         redis_port="$read_redis_port"
         ;;
     ai-service|ai-*)
         database_port="$ai_database_port"
         database_name="${AI_DATABASE_NAME:-power_finance_ai}"
+        database_user="${AI_DATABASE_USER:-postgres}"
+        database_password="${AI_DATABASE_PASSWORD:-postgres}"
         redis_port="$read_redis_port"
         ;;
     webhook-service)
         database_port="$webhook_database_port"
-        database_name="${WEBHOOK_DATABASE_NAME:-power_finance_webhook}"
+        database_name="${WEBHOOK_DATABASE_NAME:-power_finance_webhooks}"
+        database_user="${WEBHOOK_DATABASE_USER:-postgres}"
+        database_password="${WEBHOOK_DATABASE_PASSWORD:-postgres}"
         redis_port="$read_redis_port"
         ;;
     *)
         database_port="$write_database_port"
         database_name="${WRITE_DATABASE_NAME:-power_finance_write}"
+        database_user="${WRITE_DATABASE_USER:-postgres}"
+        database_password="${WRITE_DATABASE_PASSWORD:-postgres}"
         redis_port="$write_redis_port"
+        ;;
+esac
+
+# ai-service and webhook-service read a whole URL rather than DATABASE_* parts.
+service_specific_lines=""
+case "$service_name" in
+    ai-service|ai-*)
+        service_specific_lines="AI_DATABASE_URL=postgresql+psycopg://${database_user}:${database_password}@${dev_host}:${database_port}/${database_name}
+"
+        ;;
+    webhook-service)
+        service_specific_lines="POSTGRES_DSN=postgres://${database_user}:${database_password}@${dev_host}:${database_port}/${database_name}
+"
         ;;
 esac
 
@@ -56,8 +82,8 @@ KAFKA_BOOTSTRAP_SERVERS=${dev_host}:${kafka_port}
 DATABASE_HOST=$dev_host
 DATABASE_PORT=$database_port
 DATABASE_NAME=$database_name
-DATABASE_USER=${DATABASE_USER:-postgres}
-DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres}
+DATABASE_USER=$database_user
+DATABASE_PASSWORD=$database_password
 
 REDIS_HOST=$dev_host
 REDIS_PORT=$redis_port
@@ -67,6 +93,7 @@ IMMUDB_PORT=$immudb_port
 IMMUDB_USER=${IMMUDB_USER:-immudb}
 IMMUDB_PASSWORD=${IMMUDB_PASSWORD:-immudb}
 
+$service_specific_lines
 ELASTICSEARCH_HOSTS=$elasticsearch_hosts
 ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME:-elastic}
 ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD:-changeme}

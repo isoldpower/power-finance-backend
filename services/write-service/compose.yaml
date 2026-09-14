@@ -318,6 +318,13 @@ services:
   immudb:
     image: codenotary/immudb:1.10
     restart: unless-stopped
+    # Without this the server keeps immudb's built-in admin password while
+    # IMMUDB_PASSWORD reaches only the clients, so any custom value fails with
+    # "invalid user name or password". --force-admin-password reapplies it on every
+    # start, so unlike Postgres the value is not frozen at first init.
+    command: ["--force-admin-password"]
+    environment:
+      IMMUDB_ADMIN_PASSWORD: ${IMMUDB_PASSWORD:-immudb}
     expose:
       - "3322"
       - "9497"

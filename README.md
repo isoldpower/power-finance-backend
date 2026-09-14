@@ -170,14 +170,23 @@ gateway:
 make sandbox-tunnels DEV_HOST=pf-dev-host          # leave running; Ctrl-C closes
 ```
 
+Add `DEV_HOST_USER=<host account>` if your account there differs from your laptop's
+— or put `User <host account>` under `Host pf-dev-host` in `~/.ssh/config` once.
+
 Then, in another shell:
 
 ```bash
-make sandbox-env NAME=$USER SERVICE=write-service  # writes .sandbox/$USER-write-service.env
+make sandbox-env NAME=$USER SERVICE=write-service DEV_HOST=localhost
 set -a; . .sandbox/$USER-write-service.env; set +a
 cd services/write-service
 uv run uvicorn write_service.asgi:application --port 8100 --reload
 ```
+
+`DEV_HOST=localhost` because the endpoints are your tunnel's near end. The generator
+reads credentials from your **local** `.env`, so the passwords there must match the
+dev host's — a mismatch shows up as a `500` from your service, not a connection
+error, because the credentials are wrong rather than missing. See
+[Environment](#environment) for the short list a laptop actually needs.
 
 That is enough for most work — hit your own service directly, no gateway involved:
 

@@ -236,6 +236,8 @@ SANDBOX_HTTP_SERVICES    := write-service read-service ai-service push-service w
 SANDBOX_ENV_DIR          := .sandbox
 DEV_HOST                 ?= localhost
 LOCAL_SERVICE_PORT       ?= 8100
+# The dev host account is rarely your laptop account; ssh defaults to the latter.
+DEV_HOST_USER            ?=
 
 BASELINE_COMPOSE  := $(COMPOSE) -p $(BASELINE_PROJECT) -f compose.yaml -f compose.baseline.yaml --profile local-elastic
 SANDBOX_DATASTORE_FILES = $(if $(ISOLATED),-f compose.sandbox-datastores.yaml,)
@@ -324,16 +326,16 @@ sandbox-local: guard-NAME guard-SERVICE guard-TARGET ## Route one service of a s
 	@$(MAKE) --no-print-directory sandbox-route NAME=$(NAME) SERVICE=$(SERVICE) TARGET=$(TARGET)
 
 .PHONY: sandbox-tunnels
-sandbox-tunnels: guard-DEV_HOST ## Open SSH tunnels from this laptop to the dev host: DEV_HOST= [LOCAL_SERVICE_PORT=8100] [PRINT=1]
+sandbox-tunnels: guard-DEV_HOST ## Open SSH tunnels from this laptop to the dev host: DEV_HOST= [DEV_HOST_USER=] [LOCAL_SERVICE_PORT=8100] [PRINT=1]
 	@infrastructure/dev-host/open_tunnels.sh \
-		"$(DEV_HOST)" "$(LOCAL_SERVICE_PORT)" "$(PRINT)"
+		"$(DEV_HOST)" "$(LOCAL_SERVICE_PORT)" "$(PRINT)" "$(DEV_HOST_USER)"
 
 .PHONY: sandbox-env
 sandbox-env: guard-NAME guard-SERVICE ## Write an env file pointing a locally-run service at the baseline: NAME= SERVICE= [DEV_HOST=]
 	@set -a; [ -f .env ] && . ./.env; set +a; \
 	written=$$(infrastructure/dev-host/generate_sandbox_env.sh \
 		"$(NAME)" "$(SERVICE)" "$(DEV_HOST)" "$(SANDBOX_ENV_DIR)/$(NAME)-$(SERVICE).env"); \
-	echo "wrote $$written (dev host: $(DEV_HOST))"; \
+	echo "wrote $$written (endpoints: $(DEV_HOST))"; \
 	echo "run the service with:  set -a; . $$written; set +a; <your run command>"
 
 .PHONY: sandbox-route

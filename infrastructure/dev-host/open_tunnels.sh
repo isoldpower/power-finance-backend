@@ -5,9 +5,19 @@ set -euo pipefail
 # a natively-run service reaches it, and optionally forwards a local port back so
 # the gateway can route to that service. Nothing on the dev host has to be
 # published beyond the gateway for this to work.
-dev_host="${1:?usage: open_tunnels.sh <dev-host> [local-service-port] [print-only]}"
+dev_host="${1:?usage: open_tunnels.sh <dev-host> [local-service-port] [print-only] [remote-user]}"
 local_service_port="${2:-}"
 print_only="${3:-}"
+remote_user="${4:-}"
+
+# The account on the dev host is rarely the account on the laptop, and ssh defaults
+# to the local one. Tailscale SSH rejects that with "tailnet policy does not permit
+# you to SSH as user <you>", which reads like an ACL problem but is usually just the
+# wrong username.
+ssh_target="$dev_host"
+if [ -n "$remote_user" ]; then
+    ssh_target="${remote_user}@${dev_host}"
+fi
 
 if [ "$dev_host" = "localhost" ] || [ "$dev_host" = "127.0.0.1" ]; then
     echo "DEV_HOST is '$dev_host' — pass the dev host's tailnet name, e.g. DEV_HOST=pf-dev-host" >&2
@@ -40,7 +50,7 @@ done
 if [ -n "$local_service_port" ]; then
     ssh_arguments+=(-R "${local_service_port}:localhost:${local_service_port}")
 fi
-ssh_arguments+=("$dev_host")
+ssh_arguments+=("$ssh_target")
 
 if [ -n "$print_only" ]; then
     printf 'ssh'
@@ -49,7 +59,7 @@ if [ -n "$print_only" ]; then
     exit 0
 fi
 
-echo "tunnelling to $dev_host — Ctrl-C to close"
+echo "tunnelling to $ssh_target — Ctrl-C to close"
 echo "  outbound: ${forwarded_ports[*]}"
 if [ -n "$local_service_port" ]; then
     echo "  inbound:  $local_service_port (gateway can reach your service at host.docker.internal:$local_service_port)"
