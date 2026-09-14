@@ -61,8 +61,16 @@ Shared code lives in `libraries/` (Python: `correlation-py`, `kafka-client-py`,
 ```bash
 make install            # sync the uv workspace + wire the git pre-commit hook
 docker compose up -d    # gateway + all services + Kafka/Postgres/Redis
+make test-datastores    # throwaway Postgres for the Python suites (5533/5534/5536)
 make test               # run every service + library suite
 ```
+
+`make test-datastores` is separate from the stack on purpose. The Python suites
+default to 5533/5534/5536 rather than the stack's 5433/5434/5436, because those
+belong to the **dev host** whenever `make sandbox-tunnels` is running — and a test
+run that reaches one of them creates and drops its test database on the machine
+everyone shares. The throwaway instances are tmpfs-backed and safe to leave up;
+`make test-datastores-down` discards them.
 
 The gateway proxy is published on `localhost:${GATEWAY_PROXY_PORT:-8080}`. Each
 service stack is also standalone-runnable from its own directory
@@ -181,12 +189,13 @@ about a second — the ordinary loop.
 
 ### 9. Test through the gateway, when you need the edge
 
-Only for Clerk auth, rate limits, read-fallback and read-your-writes. Register your
-route **on the host** (routes live in the baseline's Redis):
+Only for Clerk auth, rate limits, read-fallback and read-your-writes. Routes live in
+the baseline's Redis, so registration happens **on the host** — one ssh hop, made for
+you:
 
 ```bash
-ssh <dev-host> 'cd <repo path on host> && make sandbox-route \
-    NAME=<your-sandbox-name> SERVICE=write-service TARGET=host.docker.internal:8100'
+make sandbox-route-remote NAME=<your-sandbox-name> SERVICE=write-service \
+    DEV_HOST=<dev-host>
 ```
 
 ```bash
@@ -260,6 +269,7 @@ directory.
   when not routing, so a service subcommand sharing a name doesn't collide. Use
   `make help`, not `make write help`, for the root.
 - **Setup / quality:** `make install` (sync the uv workspace + wire the hook),
+  `make test-datastores` (the Postgres instances the Python suites expect),
   `make test`, `make lint` / `lint-fix`, `make format` / `format-check`,
   `make typecheck`, `make precommit`.
 - The git pre-commit hook is auto-installed on every Makefile invocation: every
@@ -358,11 +368,19 @@ let the gateway route your sandbox traffic back to your laptop. `make sandbox-tu
 already opened the reverse tunnel for `LOCAL_SERVICE_PORT`:
 
 ```bash
-# routes live in the baseline's Redis, so register them ON THE DEV HOST
-ssh <user>@pf-dev-host 'cd ~/srv/power-finance-backend && make sandbox-route \
-    NAME=<your-sandbox-name> SERVICE=write-service TARGET=host.docker.internal:8100'
+# routes live in the baseline's Redis, so this registers one ON THE DEV HOST over ssh
+make sandbox-route-remote NAME=<your-sandbox-name> SERVICE=write-service DEV_HOST=pf-dev-host
 
 curl -H "Authorization: Bearer $TOKEN" -H "X-Sandbox: <your-sandbox-name>" http://pf-dev-host:8080/api/v1/wallets
+```
+
+It defaults `TARGET` to `host.docker.internal:8100` and the repo on the host to
+`~/srv/power-finance-backend`; override either with `TARGET=` / `DEV_HOST_REPO=`, and
+pass `DEV_HOST_USER=` where the tunnels need it. The hop it makes is exactly:
+
+```bash
+ssh <user>@pf-dev-host 'cd ~/srv/power-finance-backend && make sandbox-route \
+    NAME=<your-sandbox-name> SERVICE=write-service TARGET=host.docker.internal:8100'
 ```
 
 `host.docker.internal:8100` is the **dev host's** own loopback as seen from inside the
@@ -370,8 +388,8 @@ gateway container, which the `-R` tunnel connects back to your laptop. So the ga
 reaches your locally-run service without your machine being reachable at all.
 
 `make sandbox-route` and `make sandbox-local` only work where the baseline runs; run
-from a laptop they stop with a message telling you the ssh form rather than a Compose
-error.
+from a laptop they stop with a message pointing at `sandbox-route-remote` rather than
+a Compose error.
 
 Requests without `X-Sandbox` keep going to the baseline, so nobody else notices.
 

@@ -8,6 +8,13 @@ class TransactionWalletSerializer(serializers.Serializer):
     name = serializers.CharField(allow_blank=True)
 
 
+class TransactionChainSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    size = serializers.IntegerField(
+        help_text="How many live transactions the chain currently carries."
+    )
+
+
 def transaction_preview_fields() -> dict:
     return {
         "id": serializers.UUIDField(),
@@ -22,5 +29,5 @@ def transaction_preview_fields() -> dict:
         "origin": serializers.CharField(),
         "wallet": TransactionWalletSerializer(),
         "category": serializers.CharField(allow_null=True),
-        "chain_id": serializers.UUIDField(allow_null=True),
+        "chain": TransactionChainSerializer(allow_null=True),
     }

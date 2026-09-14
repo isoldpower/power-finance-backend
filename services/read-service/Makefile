@@ -11,7 +11,7 @@ run: ## Run the Kafka consumer locally (no docker; needs Kafka + postgres-read r
 	uv run python manage.py run_write_message_consumer
 
 .PHONY: test
-test: ## Run Read Service tests (pytest, postgres-read on host port 5434)
+test: ## Run Read Service tests (pytest; needs `make test-datastores` at the repo root, port 5534)
 	uv run pytest -q
 
 .PHONY: build-image

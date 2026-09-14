@@ -33,8 +33,10 @@ writes nothing under `/app` at runtime.
   failing closed (503) when Redis is unreachable. Kept separate from
   `gateway-redis` so rate-limit churn and idempotency state don't compete for
   memory/eviction.
-- **postgres-write** — loopback-only host publish on `127.0.0.1:5433`
-  (`settings.test` points here). Server config (logical replication for Debezium,
+- **postgres-write** — loopback-only host publish on `127.0.0.1:5433` for tooling.
+  `settings.test` points at `5533` instead — the disposable instance
+  `make test-datastores` starts — because 5433 belongs to the dev host whenever
+  sandbox tunnels are open. Server config (logical replication for Debezium,
   WAL slot bounds) lives in the mounted `infrastructure/postgres/write_config/
   postgresql.conf`, which includes the image defaults then layers overrides.
 - **immudb** — internal-only (`immudb:3322`), not host-published.

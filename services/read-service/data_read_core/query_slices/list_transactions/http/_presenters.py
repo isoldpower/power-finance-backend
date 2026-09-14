@@ -1,11 +1,16 @@
+from collections.abc import Mapping
 from decimal import Decimal
 
+from data_read_core.shared.chains import fetch_chain_sizes, present_chain
 from data_read_core.shared.money import money_at_scale
 
 from ..dtos import TransactionDTO
 
 
-async def present_one(transaction: TransactionDTO) -> dict:
+async def present_one(
+    transaction: TransactionDTO,
+    chain_sizes: Mapping[str, int],
+) -> dict:
     return {
         "id": transaction.id,
         "name": transaction.name,
@@ -23,9 +28,11 @@ async def present_one(transaction: TransactionDTO) -> dict:
             "name": transaction.wallet_name,
         },
         "category": transaction.category,
-        "chain_id": transaction.chain_id,
+        "chain": present_chain(transaction.chain_id, chain_sizes),
     }
 
 
 async def present_many(transactions: list[TransactionDTO]) -> list[dict]:
-    return [await present_one(transaction) for transaction in transactions]
+    chain_sizes = await fetch_chain_sizes(transaction.chain_id for transaction in transactions)
+
+    return [await present_one(transaction, chain_sizes) for transaction in transactions]

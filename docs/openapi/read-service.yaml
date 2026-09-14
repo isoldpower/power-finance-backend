@@ -3027,6 +3027,18 @@ components:
       required:
       - balanced
       - comment
+    TransactionChain:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        size:
+          type: integer
+          description: How many live transactions the chain currently carries.
+      required:
+      - id
+      - size
     TransactionDetail:
       type: object
       properties:
@@ -3073,14 +3085,14 @@ components:
         category:
           type: string
           nullable: true
-        chain_id:
-          type: string
-          format: uuid
+        chain:
+          allOf:
+          - $ref: '#/components/schemas/TransactionChain'
           nullable: true
       required:
       - analysis
       - category
-      - chain_id
+      - chain
       - created_at
       - deleted_at
       - evidence
@@ -3162,13 +3174,13 @@ components:
         category:
           type: string
           nullable: true
-        chain_id:
-          type: string
-          format: uuid
+        chain:
+          allOf:
+          - $ref: '#/components/schemas/TransactionChain'
           nullable: true
       required:
       - category
-      - chain_id
+      - chain
       - created_at
       - deleted_at
       - id
@@ -3211,13 +3223,13 @@ components:
         category:
           type: string
           nullable: true
-        chain_id:
-          type: string
-          format: uuid
+        chain:
+          allOf:
+          - $ref: '#/components/schemas/TransactionChain'
           nullable: true
       required:
       - category
-      - chain_id
+      - chain
       - created_at
       - deleted_at
       - id
@@ -3387,13 +3399,13 @@ components:
         category:
           type: string
           nullable: true
-        chain_id:
-          type: string
-          format: uuid
+        chain:
+          allOf:
+          - $ref: '#/components/schemas/TransactionChain'
           nullable: true
       required:
       - category
-      - chain_id
+      - chain
       - created_at
       - deleted_at
       - id

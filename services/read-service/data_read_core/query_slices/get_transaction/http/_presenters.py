@@ -1,11 +1,14 @@
 from decimal import Decimal
 
+from data_read_core.shared.chains import fetch_chain_sizes, present_chain
 from data_read_core.shared.money import money_at_scale
 
 from ..dtos import TransactionDTO
 
 
 async def present_one(transaction: TransactionDTO) -> dict:
+    chain_sizes = await fetch_chain_sizes([transaction.chain_id])
+
     return {
         "id": transaction.id,
         "name": transaction.name,
@@ -23,7 +26,7 @@ async def present_one(transaction: TransactionDTO) -> dict:
             "name": transaction.wallet_name,
         },
         "category": transaction.category,
-        "chain_id": transaction.chain_id,
+        "chain": present_chain(transaction.chain_id, chain_sizes),
         "evidence": ({"url": transaction.evidence_url} if transaction.evidence_url else None),
         "postings": [
             await _present_posting(posting, transaction.currency)

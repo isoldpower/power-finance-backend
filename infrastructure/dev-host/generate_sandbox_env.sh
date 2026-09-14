@@ -14,7 +14,31 @@ webhook_database_port="${WEBHOOK_DATABASE_EXTERNAL_PORT:-5437}"
 write_redis_port="${WRITE_REDIS_EXTERNAL_PORT:-6383}"
 read_redis_port="${READ_REDIS_EXTERNAL_PORT:-6384}"
 immudb_port="${IMMUDB_EXTERNAL_PORT:-3322}"
-elasticsearch_hosts="${ELASTICSEARCH_HOSTS:-https://${dev_host}:9200}"
+otlp_grpc_port="${OTLP_GRPC_PORT:-4317}"
+elasticsearch_port="${ELASTICSEARCH_EXTERNAL_PORT:-9200}"
+elasticsearch_hosts="${ELASTICSEARCH_HOSTS:-https://${dev_host}:${elasticsearch_port}}"
+
+# Every other endpoint below is built from "$dev_host", so it follows the tunnel by
+# construction. ELASTICSEARCH_HOSTS is the one line a caller can inherit from the
+# environment, and an inherited value that names a different host quietly leaves the
+# tunnel — reaching the dev host's published port directly, which BIND_ADDRESS keeps
+# on its loopback. That failure surfaces much later as a connection error from
+# Elasticsearch alone, so say it here.
+elasticsearch_note=""
+if [ -n "${ELASTICSEARCH_HOSTS:-}" ]; then
+    inherited_host=$(printf '%s' "$ELASTICSEARCH_HOSTS" \
+        | sed -e 's|^[a-zA-Z][a-zA-Z0-9+.-]*://||' -e 's|[/?#].*$||' -e 's|^.*@||' -e 's|:[0-9]*$||')
+    if [ "$inherited_host" != "$dev_host" ]; then
+        elasticsearch_note="# Inherited from the environment, NOT built from DEV_HOST=${dev_host} like the lines above.
+"
+        {
+            echo "warning: ELASTICSEARCH_HOSTS is set to '$ELASTICSEARCH_HOSTS'."
+            echo "         Every other endpoint points at '$dev_host'; Elasticsearch will not."
+            echo "         A laptop should leave it unset — the tunnel then serves it on"
+            echo "         https://${dev_host}:${elasticsearch_port}."
+        } >&2
+    fi
+fi
 
 # Credentials are per service in this repo (WRITE_DATABASE_USER, READ_DATABASE_*, …).
 # Reading a generic DATABASE_USER/PASSWORD silently falls back to postgres/postgres
@@ -94,12 +118,12 @@ IMMUDB_USER=${IMMUDB_USER:-immudb}
 IMMUDB_PASSWORD=${IMMUDB_PASSWORD:-immudb}
 
 $service_specific_lines
-ELASTICSEARCH_HOSTS=$elasticsearch_hosts
+${elasticsearch_note}ELASTICSEARCH_HOSTS=$elasticsearch_hosts
 ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME:-elastic}
 ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD:-changeme}
 ELASTICSEARCH_VERIFY_CERTS=${ELASTICSEARCH_VERIFY_CERTS:-false}
 
-OTEL_EXPORTER_OTLP_ENDPOINT=http://${dev_host}:4317
+OTEL_EXPORTER_OTLP_ENDPOINT=http://${dev_host}:${otlp_grpc_port}
 OTEL_SERVICE_NAME=$service_name
 OTEL_DEPLOYMENT_ENVIRONMENT=sandbox
 ENVEOF

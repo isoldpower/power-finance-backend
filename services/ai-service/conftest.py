@@ -8,9 +8,13 @@ have to reimplement in order to be wrong about.
 
 import os
 
+# Port 5536 sits off the ones `make sandbox-tunnels` forwards. On a tunnelled laptop
+# localhost:5436 is the DEV HOST's postgres-ai, and the `_test` guard below is the only
+# thing that would stand between this suite and the machine everyone shares.
+# `make test-datastores` starts what this default expects.
 os.environ.setdefault(
     "AI_DATABASE_URL",
-    "postgresql+psycopg://postgres:postgres@localhost:5436/power_finance_ai_test",
+    "postgresql+psycopg://postgres:postgres@localhost:5536/power_finance_ai_test",
 )
 os.environ.setdefault("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 os.environ.setdefault("KAFKA_OUTBOX_TOPIC", "events.async")

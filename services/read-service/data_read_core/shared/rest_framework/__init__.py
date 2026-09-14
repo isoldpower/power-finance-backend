@@ -22,6 +22,7 @@ from .schema_parameters import (
     LIMIT_PARAMETER,
 )
 from .transaction_serializers import (
+    TransactionChainSerializer,
     TransactionWalletSerializer,
     transaction_preview_fields,
 )
@@ -37,6 +38,7 @@ __all__ = [
     "ErrorResponseSerializer",
     "MoneySerializer",
     "NotificationSubjectSerializer",
+    "TransactionChainSerializer",
     "TransactionWalletSerializer",
     "transaction_preview_fields",
     "ResourceMetaSerializer",

@@ -105,15 +105,15 @@ test-libraries: | $(HOOK_SENTINEL) ## Run the pytest library suites (observabili
 	cd $(WEBHOOK_CATALOG_LIB_DIR) && uv run pytest -q
 
 .PHONY: test-write
-test-write: | $(HOOK_SENTINEL) ## Run Write Service tests (pytest, postgres-write on host port 5433)
+test-write: | $(HOOK_SENTINEL) ## Run Write Service tests (pytest; needs `make test-datastores`, port 5533)
 	cd $(WRITE_SERVICE_DIR) && uv run pytest -q
 
 .PHONY: test-read
-test-read: | $(HOOK_SENTINEL) ## Run Read Service tests (pytest, postgres-read on host port 5434)
+test-read: | $(HOOK_SENTINEL) ## Run Read Service tests (pytest; needs `make test-datastores`, port 5534)
 	cd $(READ_SERVICE_DIR) && uv run pytest -q
 
 .PHONY: test-ai
-test-ai: | $(HOOK_SENTINEL) ## Run AI Service tests (pytest, postgres-ai on host port 5436)
+test-ai: | $(HOOK_SENTINEL) ## Run AI Service tests (pytest; needs `make test-datastores`, port 5536)
 	@$(MAKE) -C $(AI_SERVICE_DIR) test
 
 .PHONY: test-go
@@ -127,6 +127,16 @@ test-java: | $(HOOK_SENTINEL) ## Run the antifraud-service JVM tests
 .PHONY: test-contract
 test-contract: | $(HOOK_SENTINEL) ## Run the cross-service contract suite (no infrastructure needed)
 	uv run pytest $(CONTRACT_TESTS_DIR) -q
+
+# Disposable, tmpfs-backed, and deliberately off the ports `sandbox-tunnels` forwards,
+# so a suite can never reach the dev host's databases. Safe to leave running.
+.PHONY: test-datastores
+test-datastores: ## Start the throwaway Postgres instances the Python suites expect (5533/5534/5536)
+	$(TEST_DATASTORES_COMPOSE) up -d --wait
+
+.PHONY: test-datastores-down
+test-datastores-down: ## Stop them and discard their data
+	$(TEST_DATASTORES_COMPOSE) down --remove-orphans
 
 .PHONY: lint
 lint: | $(HOOK_SENTINEL) ## Check code with ruff
@@ -199,6 +209,9 @@ endif
 COMPOSE_ENV_LAYERS := $(wildcard .env) $(wildcard services/*/.env.compose)
 COMPOSE_ENV_FLAGS  := $(foreach layer,$(COMPOSE_ENV_LAYERS),--env-file $(layer))
 COMPOSE            := docker compose $(COMPOSE_ENV_FLAGS)
+# No env layering: the test databases take the plain credentials the suites default to,
+# never the dev host's, which is what a laptop .env carries.
+TEST_DATASTORES_COMPOSE := docker compose -f compose.test-datastores.yaml
 
 .PHONY: env-layers
 env-layers: ## Show which env files the compose targets will stack, in order
@@ -238,6 +251,7 @@ DEV_HOST                 ?= localhost
 LOCAL_SERVICE_PORT       ?= 8100
 # The dev host account is rarely your laptop account; ssh defaults to the latter.
 DEV_HOST_USER            ?=
+DEV_HOST_REPO            ?= ~/daemons/power-finance-backend
 
 BASELINE_COMPOSE  := $(COMPOSE) -p $(BASELINE_PROJECT) -f compose.yaml -f compose.baseline.yaml --profile local-elastic
 SANDBOX_DATASTORE_FILES = $(if $(ISOLATED),-f compose.sandbox-datastores.yaml,)
@@ -249,6 +263,9 @@ SANDBOX_CONTAINER  = $(SANDBOX_PROJECT_PREFIX)$(NAME)-$(SANDBOX_SERVICE)-1
 SANDBOX_ADDRESS_FORMAT := {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}
 REDIS_IN_BASELINE  = $(BASELINE_COMPOSE) exec -T gateway-redis redis-cli
 SANDBOX_ROUTE_KEY  = $(SANDBOX_ROUTE_KEY_PREFIX)$(NAME):$(SERVICE)
+# From a laptop the gateway reaches your service back down the -R tunnel that
+# `sandbox-tunnels` opened, which lands on the dev host's own loopback.
+SANDBOX_REMOTE_TARGET = $(or $(TARGET),host.docker.internal:$(LOCAL_SERVICE_PORT))
 
 guard-%:
 	@if [ -z "$($*)" ]; then \
@@ -346,6 +363,11 @@ sandbox-route: guard-NAME guard-SERVICE guard-TARGET ## Register the upstream on
 		echo "The baseline is not running here, so there is no route store to write to."; \
 		echo "Route registration happens on the dev host. From a laptop:"; \
 		echo ""; \
+		echo "  make sandbox-route-remote NAME=$(NAME) SERVICE=$(SERVICE) \\"; \
+		echo "      TARGET=$(TARGET) DEV_HOST=<dev-host>"; \
+		echo ""; \
+		echo "or by hand:"; \
+		echo ""; \
 		echo "  ssh <user>@<dev-host> 'cd <repo> && make sandbox-route \\"; \
 		echo "      NAME=$(NAME) SERVICE=$(SERVICE) TARGET=$(TARGET)'"; \
 		echo ""; \
@@ -353,6 +375,13 @@ sandbox-route: guard-NAME guard-SERVICE guard-TARGET ## Register the upstream on
 	fi
 	@$(REDIS_IN_BASELINE) SET $(SANDBOX_ROUTE_KEY) "$(TARGET)" EX $(SANDBOX_ROUTE_TTL_SECONDS) >/dev/null
 	@echo "sandbox '$(NAME)' $(SERVICE) -> $(TARGET)"
+
+# The laptop-side companion to sandbox-route: same registration, one ssh hop away.
+.PHONY: sandbox-route-remote
+sandbox-route-remote: guard-NAME guard-SERVICE guard-DEV_HOST ## Register a sandbox route on the dev host from your laptop: NAME= SERVICE= DEV_HOST= [TARGET=host.docker.internal:8100] [DEV_HOST_USER=] [DEV_HOST_REPO=~/srv/power-finance-backend]
+	@infrastructure/dev-host/register_remote_route.sh \
+		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
+		"$(NAME)" "$(SERVICE)" "$(SANDBOX_REMOTE_TARGET)"
 
 .PHONY: sandbox-down
 sandbox-down: guard-NAME ## Remove a sandbox's containers and its gateway route

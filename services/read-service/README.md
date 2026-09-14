@@ -33,8 +33,10 @@ bind-mounted so they stay out of the layer), then source + editable install.
   consumer group so offsets survive restarts and partitions can be shared across
   replicas.
 - **postgres-read** — a *separate* Postgres instance from the write side, holding
-  only projections. Loopback-only host publish on `127.0.0.1:5434` for
-  tests/tooling. Compose-level interpolation uses `READ_DATABASE_*` so it can't
+  only projections. Loopback-only host publish on `127.0.0.1:5434` for tooling.
+  Tests do *not* use it: `settings.test` defaults to `5534`, the disposable
+  instance `make test-datastores` starts, because 5434 belongs to the dev host
+  whenever sandbox tunnels are open. Compose-level interpolation uses `READ_DATABASE_*` so it can't
   collide with the write stack's `DATABASE_*` in a shared root `.env`; the
   container env still exposes the standard `DATABASE_*` names the settings read.
 - **read-redis** — read-side cache (single-wallet entries), loopback-only on

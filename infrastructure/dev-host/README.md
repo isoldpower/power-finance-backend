@@ -60,7 +60,11 @@ What turns a MacBook M2 Pro (16 GB) into the shared dev host. Run these on the
    READ_AT_LEAST_HMAC_SECRET=$(openssl rand -hex 32)
 
    # worth setting on a shared host:
-   ELASTICSEARCH_HOSTS=https://es01:9200   # the node this stack starts
+   ELASTICSEARCH_HOSTS=https://es01:9200   # the node this stack starts — in-network
+                                           # only; it never governs what is published
+   # ELASTICSEARCH_EXTERNAL_PORT=9200      # what the baseline publishes, on
+                                           # BIND_ADDRESS, and what tunnels forward.
+                                           # Elastic's own ES_PORT is ignored here.
    PROXY_BIND_ADDRESS=0.0.0.0              # the gateway — the only port devs need
    BIND_ADDRESS=127.0.0.1                  # datastores stay on loopback
    ADMIN_BIND_ADDRESS=127.0.0.1            # Kong admin, Jaeger UI, Flink UI
@@ -308,7 +312,7 @@ own bind address and the rest can stay on loopback.
 | --- | --- | --- |
 | 8080 | Kong proxy | **every developer — the only required one** (`PROXY_BIND_ADDRESS`) |
 | 5433 / 5434 / 5436 / 5437 | write / read / ai / webhook Postgres | `psql` from a laptop; off-host escape hatch |
-| 9200 | Elasticsearch | queries from a laptop; escape hatch |
+| 9200 | Elasticsearch | queries from a laptop; escape hatch (`ELASTICSEARCH_EXTERNAL_PORT`) |
 | 19092 | Kafka external listener | escape hatch only |
 | 6383 / 6384 | write / read Redis | escape hatch only |
 | 3322 | ImmuDB | escape hatch only |
@@ -338,6 +342,7 @@ Set it wrong and metadata succeeds while every fetch fails.
 | --- | --- |
 | `generate_sandbox_env.sh` | Escape hatch only: writes the env file that points a natively-run service at the baseline. Driven by `make sandbox-env`. |
 | `prune_sandbox_routes.sh` | Drops gateway routes whose sandbox container is gone. Driven by `make sandbox-prune`. |
+| `register_remote_route.sh` | Runs `make sandbox-route` here over ssh, from a developer's laptop. Driven by `make sandbox-route-remote`. |
 | `com.powerfinance.colima.plist` | LaunchAgent that starts colima at login. |
 
 ## Routes are ephemeral
@@ -345,4 +350,5 @@ Set it wrong and metadata succeeds while every fetch fails.
 `gateway-redis` runs with persistence off on purpose — Kong's rate-limit counters
 are disposable. Sandbox routes live in the same Redis, so **restarting
 `gateway-redis` drops every sandbox route**. Re-register with `make sandbox-up`
-(or `make sandbox-route`); routes also carry a 7-day TTL so forgotten ones expire.
+(or `make sandbox-route` here, `make sandbox-route-remote` from a laptop); routes also
+carry a 7-day TTL so forgotten ones expire.

@@ -1,5 +1,7 @@
+from collections.abc import Mapping
 from decimal import Decimal
 
+from data_read_core.shared.chains import fetch_chain_sizes, present_chain
 from data_read_core.shared.money import money_at_scale
 
 from ..dtos import RecentTransactionDTO, WalletDetailDTO
@@ -11,6 +13,8 @@ async def present_one(
 ) -> dict:
     wallet = detail.wallet
     currency = wallet.currency
+    recent_rows = detail.recent if recent is None else recent
+    chain_sizes = await fetch_chain_sizes(row.chain_id for row in recent_rows)
 
     return {
         "id": wallet.id,
@@ -40,13 +44,14 @@ async def present_one(
                 currency,
             ),
         },
-        "recent": [
-            await _present_recent(row) for row in (detail.recent if recent is None else recent)
-        ],
+        "recent": [await _present_recent(row, chain_sizes) for row in recent_rows],
     }
 
 
-async def _present_recent(transaction: RecentTransactionDTO) -> dict:
+async def _present_recent(
+    transaction: RecentTransactionDTO,
+    chain_sizes: Mapping[str, int],
+) -> dict:
     return {
         "id": transaction.id,
         "name": transaction.name,
@@ -64,5 +69,5 @@ async def _present_recent(transaction: RecentTransactionDTO) -> dict:
             "name": transaction.wallet_name,
         },
         "category": transaction.category,
-        "chain_id": transaction.chain_id,
+        "chain": present_chain(transaction.chain_id, chain_sizes),
     }

@@ -1,0 +1,56 @@
+# Disposable Postgres instances for the Python test suites. See README.md → "Testing".
+#
+# These deliberately sit off the ports `make sandbox-tunnels` forwards (5433 / 5434 /
+# 5436 are the dev host's databases once tunnels are open). A suite defaulting to a
+# tunnelled port either fails to authenticate or — with matching credentials — creates
+# and drops its test database on the machine everyone shares.
+#
+# Credentials are the plain defaults the test settings expect, and nothing here is
+# persisted: the data directory is a tmpfs, so `down` leaves nothing behind.
+name: pf-test
+
+x-test-postgres: &test-postgres
+  image: postgres:18.3
+  environment: &test-postgres-environment
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+    PGDATA: /var/lib/postgresql/data/pgdata
+  tmpfs:
+    - /var/lib/postgresql/data
+  healthcheck:
+    # pg_isready never authenticates, so it reports healthy while every login is
+    # rejected. Probe with the real credentials over the container's own network
+    # address: pg_hba trusts 127.0.0.1, so a loopback probe would bypass
+    # authentication and pass with any password.
+    test:
+      - CMD-SHELL
+      - PGPASSWORD="$$POSTGRES_PASSWORD" psql -h "$$(hostname -i | awk '{print $$1}')" -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -c 'select 1' >/dev/null
+    start_period: 20s
+    interval: 5s
+    timeout: 3s
+    retries: 10
+
+services:
+  test-postgres-write:
+    <<: *test-postgres
+    ports:
+      - "127.0.0.1:${WRITE_TEST_DATABASE_PORT:-5533}:5432"
+    environment:
+      <<: *test-postgres-environment
+      POSTGRES_DB: power_finance_write
+
+  test-postgres-read:
+    <<: *test-postgres
+    ports:
+      - "127.0.0.1:${READ_TEST_DATABASE_PORT:-5534}:5432"
+    environment:
+      <<: *test-postgres-environment
+      POSTGRES_DB: power_finance_read
+
+  test-postgres-ai:
+    <<: *test-postgres
+    ports:
+      - "127.0.0.1:${AI_TEST_DATABASE_PORT:-5536}:5432"
+    environment:
+      <<: *test-postgres-environment
+      POSTGRES_DB: power_finance_ai_test

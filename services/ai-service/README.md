@@ -360,7 +360,9 @@ The image runs as an unprivileged `app` user; unlike read-service there is no
   service directory, where `alembic.ini` lives.
 - **postgres-ai** — this service's *own* Postgres, holding the chart of
   accounts, the entries and the transaction projection. Loopback-only host
-  publish on `127.0.0.1:5436` for tests and tooling. Compose-level interpolation
+  publish on `127.0.0.1:5436` for tooling. Tests default to `5536`, the
+  disposable instance `make test-datastores` starts, because 5436 belongs to the
+  dev host whenever sandbox tunnels are open. Compose-level interpolation
   uses `AI_DATABASE_*` so it can't collide with the write stack's
   `DATABASE_*` in a shared root `.env`; the container gets the single
   `AI_DATABASE_URL` the settings actually read, composed from those parts.

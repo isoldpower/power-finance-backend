@@ -318,7 +318,7 @@ async def test_detail_embeds_recent_transactions_in_the_preview_shape():
             "origin": "manual",
             "wallet": {"id": str(wallet.id), "name": "Main"},
             "category": "Some Category",
-            "chain_id": None,
+            "chain": None,
         }
     ]
 

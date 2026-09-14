@@ -1,7 +1,9 @@
 # What is being ran in case the user called Makefile without command(last) argument.
 .DEFAULT_GOAL := help
 # Separate test database URL used to protect user data from testing seed.
-AI_TEST_DATABASE_URL ?= postgresql+psycopg://postgres:postgres@localhost:5436/power_finance_ai_test
+# Port 5536, not 5436: the latter is the dev host's postgres-ai while sandbox tunnels
+# are open. `make test-datastores` at the repo root starts what this expects.
+AI_TEST_DATABASE_URL ?= postgresql+psycopg://postgres:postgres@localhost:5536/power_finance_ai_test
 # Docker compose target.
 COMPOSE := docker compose -f compose.yaml
 
@@ -27,7 +29,7 @@ makemigration: ## Autogenerate a migration from the models (pass NAME="...")
 	uv run alembic revision --autogenerate -m "$(NAME)"
 
 .PHONY: test
-test: ## Run AI Service tests (postgres-ai on host port 5436)
+test: ## Run AI Service tests (needs `make test-datastores` at the repo root, port 5536)
 	AI_DATABASE_URL="$(AI_TEST_DATABASE_URL)" uv run pytest -q
 
 .PHONY: build-image

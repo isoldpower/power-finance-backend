@@ -119,7 +119,7 @@ async def test_preview_carries_the_target_shape():
             "origin": "manual",
             "wallet": {"id": str(WALLET_ID), "name": "Random Credit Card"},
             "category": "Some Category",
-            "chain_id": None,
+            "chain": None,
         }
     ]
 
@@ -157,6 +157,31 @@ async def test_chain_members_arrive_contiguously():
     legs = [index for index, name in enumerate(names) if name.startswith("Leg")]
 
     assert legs == [legs[0], legs[0] + 1]
+
+
+async def test_a_chained_row_reports_the_chain_and_its_size():
+    chain = uuid.UUID("cccccccc-cccc-cccc-cccc-cccccccccccc")
+    await _transaction(name="Leg one", chain_id=chain)
+    await _transaction(name="Leg two", chain_id=chain)
+
+    rows = {row["name"]: row for row in body_of(await as_user("/api/v1/transactions"))["data"]}
+
+    assert rows["Leg one"]["chain"] == {"id": str(chain), "size": 2}
+    assert rows["Leg two"]["chain"] == {"id": str(chain), "size": 2}
+
+
+async def test_the_chain_size_counts_only_live_legs():
+    chain = uuid.UUID("dddddddd-dddd-dddd-dddd-dddddddddddd")
+    live = await _transaction(name="Leg one", chain_id=chain)
+    await _transaction(
+        name="Leg two",
+        chain_id=chain,
+        deleted_at=datetime(2026, 8, 13, tzinfo=UTC),
+    )
+
+    payload = body_of(await as_user(f"/api/v1/transactions/{live.id}"))
+
+    assert payload["data"]["chain"] == {"id": str(chain), "size": 1}
 
 
 async def test_a_standalone_transaction_sorts_after_chained_ones():
