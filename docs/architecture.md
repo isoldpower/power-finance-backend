@@ -748,7 +748,9 @@ request at the application layer, the pattern Lyft (Staging Overrides) and Uber
   Kong's `sandbox-router` plugin overrides the upstream for tagged requests and
   falls back to the baseline otherwise; consumers use the same entry to decide
   ownership, under a per-sandbox consumer group so a sandbox cannot take partitions
-  off the baseline.
+  off the baseline. Consumers fall back the same way the gateway does: a sandbox's
+  events go to its own consumer where one is running, and to the baseline for every
+  service where none is.
 - **Datastores** are shared by default. A migration or a projection-logic change
   needs `ISOLATED=1`, which gives the sandbox its own Postgres and prefixes every
   Elasticsearch index.
@@ -756,7 +758,9 @@ request at the application layer, the pattern Lyft (Staging Overrides) and Uber
 This is the reason the outbox carries propagation columns at all: the same
 mechanism that makes tracing continuous is what makes per-developer isolation
 possible. See [ADR-0002](./adr-0002-shared-dev-environment.md) for the decision and
-its costs, and `infrastructure/dev-host/README.md` for the host itself.
+its costs, [ADR-0003](./adr-0003-sandbox-event-fallback.md) for how a baseline
+consumer covers a sandbox that is not running that service, and
+`infrastructure/dev-host/README.md` for the host itself.
 
 ## Implementation Notes
 

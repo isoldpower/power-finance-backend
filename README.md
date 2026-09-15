@@ -346,6 +346,23 @@ Then, in another shell:
 
 ```bash
 make sandbox-env NAME=<your-sandbox-name> SERVICE=write-service DEV_HOST=localhost
+make write sandbox NAME=<your-sandbox-name>
+```
+
+`make <service> sandbox` is the one to reach for: it checks the environment is
+complete, then runs **every** process that service is made of — its HTTP edge *and*
+its consumers — stopping them all if any one exits. A service is rarely just its
+edge, and the missing half is invisible from the outside:
+
+| service | processes it runs |
+| --- | --- |
+| `read-service` | edge + the projection consumer (without it, writes never reach the read model: reads 507 or silently go stale) |
+| `ai-service` | edge + the posting dispatcher (without it, transactions get no ledger postings) |
+| `write-service` | edge + automation engine, automation scheduler, fraud alerts, inbound notifications, action expiry |
+
+To run one process by hand instead, source the env file first:
+
+```bash
 set -a; . .sandbox/<your-sandbox-name>-write-service.env; set +a
 cd services/write-service
 uv run uvicorn write_service.asgi:application --port 8100 --reload
@@ -387,9 +404,31 @@ ssh <user>@pf-dev-host 'cd ~/srv/power-finance-backend && make sandbox-route \
 gateway container, which the `-R` tunnel connects back to your laptop. So the gateway
 reaches your locally-run service without your machine being reachable at all.
 
-`make sandbox-route` and `make sandbox-local` only work where the baseline runs; run
-from a laptop they stop with a message pointing at `sandbox-route-remote` rather than
-a Compose error.
+`make sandbox-route`, `make sandbox-unroute` and `make sandbox-local` only work where
+the baseline runs; run from a laptop they stop with a message pointing at the
+`*-remote` form rather than a Compose error.
+
+When you are done with the sandbox, send that service back to the baseline:
+
+```bash
+make sandbox-unroute-remote NAME=<your-sandbox-name> SERVICE=write-service DEV_HOST=pf-dev-host
+```
+
+That drops the route only. To remove the sandbox altogether — containers, routes and
+the consumer groups that make baseline consumers skip its events — one command does
+all three:
+
+```bash
+make sandbox-wipe-remote NAME=<your-sandbox-name> DEV_HOST=pf-dev-host
+```
+
+Afterwards `X-Sandbox: <your-sandbox-name>` behaves exactly like sending no header.
+
+It refuses if a sandbox consumer still has unapplied events, because deleting its
+group loses them: baseline consumers skipped those events while the sandbox owned
+them and have already committed past that point. Drain the consumer first, or pass
+`FORCE=1` to accept the gap. Processes running on your own laptop are not covered —
+stop those yourself.
 
 Requests without `X-Sandbox` keep going to the baseline, so nobody else notices.
 

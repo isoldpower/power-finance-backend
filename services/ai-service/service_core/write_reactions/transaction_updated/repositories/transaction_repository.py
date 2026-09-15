@@ -18,5 +18,6 @@ class ProjectedTransactionRepository(ABC):
         amount: Decimal,
         updated_at: datetime,
         applied_seq: int,
+        chain_id: str = "",
     ) -> None:
         raise NotImplementedError()

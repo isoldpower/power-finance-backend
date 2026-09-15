@@ -342,7 +342,9 @@ Set it wrong and metadata succeeds while every fetch fails.
 | --- | --- |
 | `generate_sandbox_env.sh` | Escape hatch only: writes the env file that points a natively-run service at the baseline. Driven by `make sandbox-env`. |
 | `prune_sandbox_routes.sh` | Drops gateway routes whose sandbox container is gone. Driven by `make sandbox-prune`. |
-| `register_remote_route.sh` | Runs `make sandbox-route` here over ssh, from a developer's laptop. Driven by `make sandbox-route-remote`. |
+| `run_remote_make.sh` | Runs one of this host's make targets over ssh, from a developer's laptop. Drives `make sandbox-route-remote`, `make sandbox-unroute-remote` and `make sandbox-wipe-remote`. |
+| `wipe_sandbox.sh` | Removes a sandbox's containers, gateway routes and consumer groups. Driven by `make sandbox-wipe`. |
+| `run_sandbox_service.sh` | Runs every process a service is made of (edge + consumers) against a sandbox env, on a laptop. Driven by `make <service> sandbox NAME=`. |
 | `com.powerfinance.colima.plist` | LaunchAgent that starts colima at login. |
 
 ## Routes are ephemeral

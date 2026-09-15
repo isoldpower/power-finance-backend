@@ -55,3 +55,15 @@ class TransactionRepository(ABC):
     @abstractmethod
     async def hard_delete_chain(self, chain_id: UUID) -> None:
         raise NotImplementedError()
+
+    @abstractmethod
+    async def live_chain_transactions(
+        self,
+        chain_id: UUID,
+        user_id: int,
+    ) -> list[TransactionEntity]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def delete_chain_row(self, chain_id: UUID) -> None:
+        raise NotImplementedError()

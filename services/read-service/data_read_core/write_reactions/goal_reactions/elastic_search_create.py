@@ -1,4 +1,5 @@
 from datetime import UTC
+from decimal import Decimal
 
 from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import GoalCreated
@@ -21,8 +22,10 @@ class IndexGoalDocument(Effect):
             "user_id": payload.user_id,
             "title": payload.title,
             "currency_code": payload.currency_code,
-            "target": payload.target or "0",
-            "progress": 0,
+            # See IndexWalletDocument: progress is script-adjusted, so it has to
+            # start as a float or every fractional delta is truncated away.
+            "target": float(Decimal(payload.target or "0")),
+            "progress": 0.0,
             "url": payload.url or None,
             "finish_at": (
                 payload.finish_at.ToDatetime(tzinfo=UTC).isoformat()

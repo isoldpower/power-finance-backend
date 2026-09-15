@@ -30,6 +30,7 @@ class SqlAlchemyProjectedTransactionRepository(ProjectedTransactionRepository):
         amount: Decimal,
         updated_at: datetime,
         applied_seq: int,
+        chain_id: str = "",
     ) -> None:
         await self._session.execute(
             update(ProjectedTransaction)
@@ -41,5 +42,6 @@ class SqlAlchemyProjectedTransactionRepository(ProjectedTransactionRepository):
                 applied_seq=applied_seq,
                 amount=amount,
                 updated_at=updated_at,
+                chain_id=chain_id,
             )
         )

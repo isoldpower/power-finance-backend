@@ -15,7 +15,10 @@ env = environ.Env(
     DATABASE_PASSWORD=(str, "postgres"),
     KAFKA_BOOTSTRAP_SERVERS=(str, "localhost:9092"),
     KAFKA_OUTBOX_TOPIC=(str, "events.async"),
-    KAFKA_READ_GROUP_ID=(str, "read-service.test-consumer"),
+    # Must match services/read-service/compose.yaml: the baseline names a sandbox's
+    # group by deriving it from its own, so a process that falls back to a different
+    # default is invisible to it and both would project the same events.
+    KAFKA_READ_GROUP_ID=(str, "read-service.write-consumer"),
     KAFKA_RETRY_TOPIC=(str, "read-service.retry"),
     KAFKA_DLQ_TOPIC=(str, "read-service.dlq"),
     REDIS_URL=(str, "redis://localhost:6379/0"),

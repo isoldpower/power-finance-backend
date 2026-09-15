@@ -18,7 +18,7 @@ class SandboxFilteredMessageProcessor:
 
     async def __call__(self, message: ConsumedMessage) -> None:
         message_sandbox_id = self._context_binder.read_sandbox_id(message.headers or ())
-        if not self._traffic_policy.is_owned_traffic(message_sandbox_id):
+        if not await self._traffic_policy.is_owned_traffic(message_sandbox_id):
             debug_foreign_sandbox_message_skipped(
                 message,
                 message_sandbox_id=message_sandbox_id,

@@ -132,6 +132,18 @@ def log_transaction_postgres_unchanged(transaction_id: str, amount: Decimal) -> 
     )
 
 
+def log_transaction_postgres_chain_changed(
+    transaction_id: str,
+    chain_id: str | None,
+) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Transaction %s now belongs to chain %s.",
+        transaction_id,
+        chain_id or "none",
+    )
+
+
 def log_transaction_postgres_updated(
     transaction_id: str,
     new_amount: Decimal,

@@ -62,7 +62,7 @@ class TransactionDeleted(_message.Message):
     def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., transaction_id: _Optional[str] = ..., wallet_id: _Optional[str] = ..., user_id: _Optional[int] = ..., amount: _Optional[str] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class TransactionUpdated(_message.Message):
-    __slots__ = ("event_id", "occurred_at", "schema_version", "transaction_id", "wallet_id", "user_id", "previous_amount", "new_amount", "updated_at")
+    __slots__ = ("event_id", "occurred_at", "schema_version", "transaction_id", "wallet_id", "user_id", "previous_amount", "new_amount", "updated_at", "chain_id")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
     SCHEMA_VERSION_FIELD_NUMBER: _ClassVar[int]
@@ -72,6 +72,7 @@ class TransactionUpdated(_message.Message):
     PREVIOUS_AMOUNT_FIELD_NUMBER: _ClassVar[int]
     NEW_AMOUNT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    CHAIN_ID_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     occurred_at: _timestamp_pb2.Timestamp
     schema_version: int
@@ -81,7 +82,8 @@ class TransactionUpdated(_message.Message):
     previous_amount: str
     new_amount: str
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., transaction_id: _Optional[str] = ..., wallet_id: _Optional[str] = ..., user_id: _Optional[int] = ..., previous_amount: _Optional[str] = ..., new_amount: _Optional[str] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    chain_id: str
+    def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., transaction_id: _Optional[str] = ..., wallet_id: _Optional[str] = ..., user_id: _Optional[int] = ..., previous_amount: _Optional[str] = ..., new_amount: _Optional[str] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., chain_id: _Optional[str] = ...) -> None: ...
 
 class TransactionMetadataUpdated(_message.Message):
     __slots__ = ("event_id", "occurred_at", "schema_version", "transaction_id", "user_id", "name", "category", "evidence_url", "updated_at")

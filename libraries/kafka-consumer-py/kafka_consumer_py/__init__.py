@@ -22,14 +22,18 @@ from .health import HealthGuardedHandler, HealthProbe
 from .kafka_consumer import KafkaConsumerLoop
 from .kafka_router import KafkaEventRouter
 from .message_context import (
+    BaselineFallbackTrafficPolicy,
+    KafkaSandboxGroupRegistry,
     MessageContextBinder,
     MessageHeaderPairs,
     NullMessageContextBinder,
     PermissiveSandboxTrafficPolicy,
     SandboxTrafficPolicy,
+    StrictSandboxTrafficPolicy,
 )
 from .processing import Effect, EffectFn, ExecutionPlan, SyncProcessGroup
 from .retry_delay import DeferredPartitions, retry_due_at
+from .sandbox_policy_builder import build_sandbox_traffic_policy
 from .shutdown_aware_runner import ShutdownAwareRunner
 from .shutdown_signals import NeverShutdown, SigtermShutdownSignal
 from .types import (
@@ -82,7 +86,11 @@ __all__ = [
     "MessageHeaderPairs",
     "MessageProcessor",
     "NullMessageContextBinder",
+    "BaselineFallbackTrafficPolicy",
+    "KafkaSandboxGroupRegistry",
     "PermissiveSandboxTrafficPolicy",
+    "StrictSandboxTrafficPolicy",
+    "build_sandbox_traffic_policy",
     "SandboxFilteredMessageProcessor",
     "SandboxTrafficPolicy",
     "resolve_sandbox_scoped_group_id",

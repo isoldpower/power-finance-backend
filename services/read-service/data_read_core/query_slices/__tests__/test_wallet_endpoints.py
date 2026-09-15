@@ -190,6 +190,33 @@ async def test_detail_reports_period_flows_as_positive_magnitudes():
     }
 
 
+async def test_period_flows_leave_out_cancelled_transactions():
+    since, _ = period_bounds(Period.LAST_MONTH, UTC_ZONE)
+    wallet = await _wallet()
+    user_id = await _user_id()
+    for amount, deleted_at in (
+        (Decimal("50.00"), None),
+        (Decimal("10.00"), since + timedelta(days=20)),
+    ):
+        await TransactionReadModel.objects.acreate(
+            id=uuid.uuid4(),
+            wallet_id=wallet.id,
+            user_id=user_id,
+            amount=amount,
+            currency_code="USD",
+            occurred_at=since + timedelta(days=9),
+            created_at=since + timedelta(days=9),
+            deleted_at=deleted_at,
+        )
+
+    response = await as_user(
+        f"/api/v1/wallets/{wallet.id}",
+        **{"X-User-Timezone": "UTC"},
+    )
+
+    assert body_of(response)["data"]["period"]["inflow"]["amount"] == "50.00"
+
+
 async def test_period_is_zeroed_rather_than_absent_when_nothing_moved():
     wallet = await _wallet()
 

@@ -14,6 +14,7 @@ from kafka_consumer_py import (
     EventRouter,
     KafkaEventRouter,
     build_consumer_loop,
+    build_sandbox_traffic_policy,
 )
 from observability import build_kafka_message_context_components
 
@@ -112,7 +113,9 @@ async def build_event_router(config: ConsumerConfig) -> None:
             retry_publisher=RetryPublisher(publisher, topic=settings.KAFKA["RETRY_TOPIC"]),
             dlq_publisher=DLQPublisher(publisher, topic=settings.KAFKA["DLQ_TOPIC"]),
             context_binder=message_context.context_binder,
-            traffic_policy=message_context.traffic_policy,
+            traffic_policy=build_sandbox_traffic_policy(
+                config, message_context.traffic_policy.own_sandbox_id
+            ),
             dedupe_store=DjangoDedupeStore(consumer_group=config.group_id),
         )
         await consumer_loop.run()

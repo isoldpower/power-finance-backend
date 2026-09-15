@@ -19,8 +19,15 @@ from .._logger_shortcuts import (
 )
 from .._utilities import decode_payload
 
-WALLET_BALANCE_ADJUSTMENT_SCRIPT = "ctx._source.balance += params.delta"
-GOAL_PROGRESS_ADJUSTMENT_SCRIPT = "ctx._source.progress += params.delta"
+# Assign rather than `+=`: Painless narrows a compound assignment back to the left
+# operand's type, so `int += double` truncates. The cast makes the result a double
+# whatever the stored document happens to hold.
+WALLET_BALANCE_ADJUSTMENT_SCRIPT = (
+    "ctx._source.balance = ((double) ctx._source.balance) + params.delta"
+)
+GOAL_PROGRESS_ADJUSTMENT_SCRIPT = (
+    "ctx._source.progress = ((double) ctx._source.progress) + params.delta"
+)
 CONFLICT_RETRIES = 3
 
 

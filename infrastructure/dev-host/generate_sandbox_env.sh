@@ -81,6 +81,34 @@ case "$service_name" in
         ;;
 esac
 
+# The consumer group a process joins decides who owns a sandbox's events: the baseline
+# skips them only when a group named after its own plus this sandbox exists. Pinning
+# the group here keeps a locally-run consumer in the same group as the container it
+# stands in for, whatever the code defaults say.
+case "$service_name" in
+    read-service|read-*)
+        consumer_group_lines="KAFKA_READ_GROUP_ID=${KAFKA_READ_GROUP_ID:-read-service.write-consumer}
+"
+        ;;
+    ai-service|ai-*)
+        consumer_group_lines="KAFKA_AI_GROUP_ID=${KAFKA_AI_GROUP_ID:-ai-service.dispatcher}
+"
+        ;;
+    write-service|write-*)
+        consumer_group_lines="KAFKA_AUTOMATION_ENGINE_GROUP_ID=${KAFKA_AUTOMATION_ENGINE_GROUP_ID:-write-service.automation-engine}
+KAFKA_FRAUD_ALERTS_GROUP_ID=${KAFKA_FRAUD_ALERTS_GROUP_ID:-write-service.fraud-alerts}
+KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID=${KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID:-write-service.notifications-inbound}
+"
+        ;;
+    webhook-service)
+        consumer_group_lines="KAFKA_GROUP_ID=${WEBHOOK_KAFKA_GROUP_ID:-webhook-service.deliveries}
+"
+        ;;
+    *)
+        consumer_group_lines=""
+        ;;
+esac
+
 # ai-service and webhook-service read a whole URL rather than DATABASE_* parts.
 service_specific_lines=""
 case "$service_name" in
@@ -102,7 +130,7 @@ cat > "$output_file" <<ENVEOF
 SANDBOX_ID=$sandbox_name
 
 KAFKA_BOOTSTRAP_SERVERS=${dev_host}:${kafka_port}
-
+${consumer_group_lines}
 DATABASE_HOST=$dev_host
 DATABASE_PORT=$database_port
 DATABASE_NAME=$database_name

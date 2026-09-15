@@ -1,4 +1,5 @@
 from datetime import UTC
+from decimal import Decimal
 
 from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import WalletUpdated
@@ -24,7 +25,7 @@ class UpdateWalletDocument(Effect):
             "category": payload.category,
             "color": payload.color,
             "favorite": payload.favorite,
-            "zero_balance": payload.zero_balance or "0",
+            "zero_balance": float(Decimal(payload.zero_balance or "0")),
         }
 
         await get_elasticsearch().update(

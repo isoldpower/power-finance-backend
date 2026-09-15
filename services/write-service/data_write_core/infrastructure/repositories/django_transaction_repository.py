@@ -83,3 +83,20 @@ class DjangoTransactionRepository(TransactionRepository):
     async def hard_delete_chain(self, chain_id: UUID) -> None:
         await TransactionModel.objects.filter(chain_id=chain_id).adelete()
         await TransactionChainModel.objects.filter(id=chain_id).adelete()
+
+    async def live_chain_transactions(
+        self,
+        chain_id: UUID,
+        user_id: int,
+    ) -> list[TransactionEntity]:
+        rows = (
+            self._live(user_id)
+            .select_related("container")
+            .filter(chain_id=chain_id)
+            .order_by("created_at", "id")
+        )
+
+        return [TransactionMapper.to_domain(model) async for model in rows]
+
+    async def delete_chain_row(self, chain_id: UUID) -> None:
+        await TransactionChainModel.objects.filter(id=chain_id).adelete()

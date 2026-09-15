@@ -225,6 +225,26 @@ async def test_index_wallet_writes_full_document(monkeypatch):
     assert document["updated_at"] is None
 
 
+async def test_indexed_money_is_seeded_as_a_float_so_adjustments_keep_their_cents(monkeypatch):
+    fake = _use_fake_es(monkeypatch, wl_create)
+
+    event = make_event(
+        WalletCreated(
+            wallet_id=WALLET_ID,
+            user_id=7,
+            title="Vacation",
+            currency_code="USD",
+            zero_balance="0",
+            created_at=_ts(),
+        )
+    )
+    await IndexWalletDocument().apply(event)
+
+    _, _, document = fake.indexed[0]
+    assert isinstance(document["balance"], float)
+    assert isinstance(document["zero_balance"], float)
+
+
 async def test_update_wallet_patches_title_with_upsert(monkeypatch):
     fake = _use_fake_es(monkeypatch, wl_update)
 

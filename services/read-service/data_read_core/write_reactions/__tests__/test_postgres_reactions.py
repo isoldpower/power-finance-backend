@@ -15,7 +15,11 @@ from kafka_messages import (
     WalletUpdated,
 )
 
-from data_read_core.shared.postgres_orm import TransactionReadModel, WalletReadModel
+from data_read_core.shared.postgres_orm import (
+    NO_CHAIN_SENTINEL,
+    TransactionReadModel,
+    WalletReadModel,
+)
 from data_read_core.write_reactions import (
     CreateTransactionReadModel,
     CreateWalletReadModel,
@@ -50,13 +54,15 @@ async def _make_wallet(*, balance: Decimal = Decimal("0"), currency: str = "USD"
     )
 
 
-async def _make_transaction(amount: Decimal) -> None:
+async def _make_transaction(amount: Decimal, chain_id: str | None = None) -> None:
     await TransactionReadModel.objects.acreate(
         id=TX_ID,
         wallet_id=WALLET_ID,
         user_id=7,
         amount=amount,
         currency_code="USD",
+        chain_id=chain_id,
+        chain_sort=chain_id or NO_CHAIN_SENTINEL,
         occurred_at=datetime.now(UTC),
         created_at=datetime.now(UTC),
     )
@@ -130,6 +136,51 @@ async def test_update_transaction_adjusts_wallet_balance_by_delta():
     wallet = await WalletReadModel.objects.aget(id=WALLET_ID)
     assert transaction.amount == Decimal("70")
     assert wallet.balance == Decimal("130")
+
+
+async def test_an_update_releases_the_transaction_from_its_chain():
+    chain_id = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+    await _make_wallet(balance=Decimal("100"))
+    await _make_transaction(Decimal("40"), chain_id=chain_id)
+
+    await UpdateTransactionReadModel().apply(
+        make_event(
+            TransactionUpdated(
+                transaction_id=TX_ID,
+                wallet_id=WALLET_ID,
+                user_id=7,
+                previous_amount="40",
+                new_amount="40",
+                chain_id="",
+            )
+        )
+    )
+
+    transaction = await TransactionReadModel.objects.aget(id=TX_ID)
+    assert transaction.chain_id is None
+    assert transaction.chain_sort == NO_CHAIN_SENTINEL
+
+
+async def test_an_update_carrying_a_chain_records_the_membership():
+    chain_id = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+    await _make_wallet(balance=Decimal("100"))
+    await _make_transaction(Decimal("40"))
+
+    await UpdateTransactionReadModel().apply(
+        make_event(
+            TransactionUpdated(
+                transaction_id=TX_ID,
+                wallet_id=WALLET_ID,
+                user_id=7,
+                new_amount="40",
+                chain_id=chain_id,
+            )
+        )
+    )
+
+    transaction = await TransactionReadModel.objects.aget(id=TX_ID)
+    assert str(transaction.chain_id) == chain_id
+    assert str(transaction.chain_sort) == chain_id
 
 
 async def test_update_transaction_to_same_amount_leaves_balance():

@@ -27,6 +27,7 @@ async def sum_wallet_flows(
 
     totals = await TransactionReadModel.objects.filter(
         wallet_id=wallet_id,
+        deleted_at__isnull=True,
         **window,
     ).aaggregate(
         inflow=Sum("amount", filter=Q(amount__gt=0)),

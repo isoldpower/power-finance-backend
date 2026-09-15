@@ -99,6 +99,15 @@ def warn_compensation_undefined(effect_name: str, event_id: str, event_type: str
     )
 
 
+def warn_sandbox_registry_unreachable(error: Exception) -> None:
+    logger = get_consumer_logger("sandbox")
+    logger.warning(
+        "could not list consumer groups, so sandbox ownership is unknown; "
+        "leaving tagged traffic to its sandbox: %s",
+        error,
+    )
+
+
 def debug_foreign_sandbox_message_skipped(
     message: ConsumedMessage,
     *,

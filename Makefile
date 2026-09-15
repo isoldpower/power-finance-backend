@@ -379,9 +379,34 @@ sandbox-route: guard-NAME guard-SERVICE guard-TARGET ## Register the upstream on
 # The laptop-side companion to sandbox-route: same registration, one ssh hop away.
 .PHONY: sandbox-route-remote
 sandbox-route-remote: guard-NAME guard-SERVICE guard-DEV_HOST ## Register a sandbox route on the dev host from your laptop: NAME= SERVICE= DEV_HOST= [TARGET=host.docker.internal:8100] [DEV_HOST_USER=] [DEV_HOST_REPO=~/srv/power-finance-backend]
-	@infrastructure/dev-host/register_remote_route.sh \
+	@infrastructure/dev-host/run_remote_make.sh \
 		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
-		"$(NAME)" "$(SERVICE)" "$(SANDBOX_REMOTE_TARGET)"
+		sandbox-route "NAME=$(NAME)" "SERVICE=$(SERVICE)" "TARGET=$(SANDBOX_REMOTE_TARGET)"
+
+# The inverse of sandbox-route-remote: the route goes, the service falls back to the
+# baseline. Leaves containers and consumer groups alone — see `sandbox-down` for those.
+.PHONY: sandbox-unroute-remote
+sandbox-unroute-remote: guard-NAME guard-SERVICE guard-DEV_HOST ## Drop a sandbox route on the dev host from your laptop: NAME= SERVICE= DEV_HOST= [DEV_HOST_USER=] [DEV_HOST_REPO=~/srv/power-finance-backend]
+	@infrastructure/dev-host/run_remote_make.sh \
+		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
+		sandbox-unroute "NAME=$(NAME)" "SERVICE=$(SERVICE)"
+
+.PHONY: sandbox-unroute
+sandbox-unroute: guard-NAME guard-SERVICE ## Drop one service's sandbox route, sending it back to the baseline (run on the dev host)
+	@if ! docker ps --filter "name=$(BASELINE_PROJECT)-gateway-redis" --format '{{.Names}}' | grep -q .; then \
+		echo "The baseline is not running here, so there is no route store to write to."; \
+		echo "From a laptop:"; \
+		echo ""; \
+		echo "  make sandbox-unroute-remote NAME=$(NAME) SERVICE=$(SERVICE) DEV_HOST=<dev-host>"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@removed=$$($(REDIS_IN_BASELINE) DEL $(SANDBOX_ROUTE_KEY) | tr -d '\r'); \
+	if [ "$$removed" = "0" ]; then \
+		echo "sandbox '$(NAME)' had no $(SERVICE) route; nothing to drop"; \
+	else \
+		echo "sandbox '$(NAME)' $(SERVICE) -> baseline (route dropped)"; \
+	fi
 
 .PHONY: sandbox-down
 sandbox-down: guard-NAME ## Remove a sandbox's containers and its gateway route
@@ -391,6 +416,21 @@ sandbox-down: guard-NAME ## Remove a sandbox's containers and its gateway route
 		$(REDIS_IN_BASELINE) DEL "$$key" < /dev/null >/dev/null; \
 	done
 	@echo "sandbox '$(NAME)' removed"
+
+# Everything a sandbox owns, in one go: its containers, the routes that divert HTTP to
+# it, and the consumer groups that divert events to it. Afterwards `X-Sandbox: <name>`
+# is indistinguishable from sending no header.
+.PHONY: sandbox-wipe
+sandbox-wipe: guard-NAME ## Remove a sandbox entirely — containers, routes and consumer groups (run on the dev host): NAME= [FORCE=1]
+	@infrastructure/dev-host/wipe_sandbox.sh \
+		"$(NAME)" "$(SANDBOX_ROUTE_KEY_PREFIX)" "$(BASELINE_PROJECT)" \
+		"$(SANDBOX_PROJECT_PREFIX)$(NAME)" "$(FORCE)"
+
+.PHONY: sandbox-wipe-remote
+sandbox-wipe-remote: guard-NAME guard-DEV_HOST ## Remove a sandbox entirely, from your laptop: NAME= DEV_HOST= [FORCE=1] [DEV_HOST_USER=] [DEV_HOST_REPO=]
+	@infrastructure/dev-host/run_remote_make.sh \
+		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
+		sandbox-wipe "NAME=$(NAME)" "FORCE=$(FORCE)"
 
 .PHONY: sandbox-list
 sandbox-list: ## List registered sandbox routes

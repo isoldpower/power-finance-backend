@@ -109,7 +109,11 @@ services:
       - "${BIND_ADDRESS:-127.0.0.1}:${ELASTICSEARCH_EXTERNAL_PORT:-9200}:9200"
     environment:
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
-    mem_limit: 1g
+    # Heap is only part of what the node needs: Lucene's mmap accounting, netty
+    # direct buffers, metaspace and thread stacks all live outside -Xmx. At 1g the
+    # cgroup killed it (exit 137) twice under ordinary indexing, taking search down
+    # for everyone on the host, so the limit is ~2x the heap with room to spare.
+    mem_limit: 1536m
 
   kibana:
     deploy:

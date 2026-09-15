@@ -27,6 +27,9 @@ class UpdateProjectedTransactionAmount(Effect):
                 parse_money(payload.new_amount),
                 payload.updated_at.ToDatetime(tzinfo=UTC),
                 event.outbox_seq or 0,
+                # Chain membership rides along as current state; the facts a
+                # dispatch is built from read it straight off this row.
+                payload.chain_id,
             )
 
         log_transaction_amount_updated(payload.transaction_id)

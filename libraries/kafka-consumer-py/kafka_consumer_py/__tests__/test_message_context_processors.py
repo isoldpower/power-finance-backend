@@ -42,14 +42,14 @@ class _RecordingBinder:
 class _BaselineTrafficPolicy:
     own_sandbox_id = None
 
-    def is_owned_traffic(self, message_sandbox_id):
+    async def is_owned_traffic(self, message_sandbox_id):
         return message_sandbox_id is None
 
 
 class _SandboxTrafficPolicy:
     own_sandbox_id = "nikita"
 
-    def is_owned_traffic(self, message_sandbox_id):
+    async def is_owned_traffic(self, message_sandbox_id):
         return message_sandbox_id == self.own_sandbox_id
 
 

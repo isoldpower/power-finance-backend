@@ -5,9 +5,15 @@ from asgiref.sync import sync_to_async
 from data_read_core.shared.elasticsearch import (
     AUTOMATIONS_INDEX,
     GOALS_INDEX,
+    TRANSACTIONS_INDEX,
     get_elasticsearch,
 )
-from data_read_core.shared.postgres_orm import AutomationReadModel, GoalReadModel
+from data_read_core.shared.postgres_orm import (
+    NO_CHAIN_SENTINEL,
+    AutomationReadModel,
+    GoalReadModel,
+    TransactionReadModel,
+)
 from data_read_core.shared.timestamps import to_iso
 from django.core.management.base import BaseCommand
 from elasticsearch import AsyncElasticsearch
@@ -18,15 +24,16 @@ BATCH_SIZE = 500
 
 AUTOMATIONS_RESOURCE = "automations"
 GOALS_RESOURCE = "goals"
-KNOWN_RESOURCES = (AUTOMATIONS_RESOURCE, GOALS_RESOURCE)
+TRANSACTIONS_RESOURCE = "transactions"
+KNOWN_RESOURCES = (AUTOMATIONS_RESOURCE, GOALS_RESOURCE, TRANSACTIONS_RESOURCE)
 
 
 class Command(BaseCommand):
     help = (
-        "Seed the automation and goal Elasticsearch indices from the Postgres "
-        "read models. Use once after the indices are created, or to repair "
-        "drift. Idempotent: every document is rewritten from the row it "
-        "belongs to."
+        "Seed the automation, goal and transaction Elasticsearch indices from "
+        "the Postgres read models. Use once after the indices are created, or "
+        "to repair drift. Idempotent: every document is rewritten from the row "
+        "it belongs to."
     )
 
     def add_arguments(self, parser) -> None:
@@ -79,6 +86,14 @@ class Command(BaseCommand):
                     rows=self._goal_rows(include_deleted=include_deleted),
                     build_document=goal_document,
                 )
+
+            if TRANSACTIONS_RESOURCE in chosen_resources:
+                indexed_counts[TRANSACTIONS_RESOURCE] = await self._backfill(
+                    client,
+                    index_name=TRANSACTIONS_INDEX,
+                    rows=self._transaction_rows(include_deleted=include_deleted),
+                    build_document=transaction_document,
+                )
         finally:
             await client.close()
 
@@ -112,6 +127,10 @@ class Command(BaseCommand):
 
     async def _goal_rows(self, *, include_deleted: bool):
         async for row in self._paged(GoalReadModel, include_deleted=include_deleted):
+            yield row
+
+    async def _transaction_rows(self, *, include_deleted: bool):
+        async for row in self._paged(TransactionReadModel, include_deleted=include_deleted):
             yield row
 
     async def _paged(self, model, *, include_deleted: bool):
@@ -172,4 +191,26 @@ def goal_document(goal: GoalReadModel) -> dict:
         "created_at": to_iso(goal.created_at),
         "updated_at": to_iso(goal.updated_at),
         "deleted_at": to_iso(goal.deleted_at),
+    }
+
+
+def transaction_document(transaction: TransactionReadModel) -> dict:
+    return {
+        "id": str(transaction.id),
+        "wallet_id": str(transaction.wallet_id),
+        "wallet_name": transaction.wallet_name,
+        "user_id": transaction.user_id,
+        "amount": float(transaction.amount),
+        "currency_code": transaction.currency_code,
+        "name": transaction.name,
+        "category": transaction.category or None,
+        "evidence_url": transaction.evidence_url or None,
+        "origin": transaction.origin or "manual",
+        "type": "expense" if transaction.amount < 0 else "income",
+        "chain_id": str(transaction.chain_id) if transaction.chain_id else None,
+        "chain_sort": str(transaction.chain_sort or NO_CHAIN_SENTINEL),
+        "occurred_at": to_iso(transaction.occurred_at),
+        "created_at": to_iso(transaction.created_at),
+        "updated_at": to_iso(transaction.updated_at),
+        "deleted_at": to_iso(transaction.deleted_at),
     }

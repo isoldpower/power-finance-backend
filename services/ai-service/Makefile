@@ -6,6 +6,20 @@
 AI_TEST_DATABASE_URL ?= postgresql+psycopg://postgres:postgres@localhost:5536/power_finance_ai_test
 # Docker compose target.
 COMPOSE := docker compose -f compose.yaml
+REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../..)
+SANDBOX_RUNNER := $(REPO_ROOT)/infrastructure/dev-host/run_sandbox_service.sh
+SANDBOX_NAME ?= $(NAME)
+SANDBOX_ENV_FILE = $(REPO_ROOT)/.sandbox/$(SANDBOX_NAME)-ai-service.env
+PORT ?= 8101
+# The dispatcher is the half that books postings; running only the edge leaves
+# every transaction in the sandbox without ledger entries.
+AI_PROCESSES = \
+	"edge=uv run uvicorn ai_service.main:app --port $(PORT) --reload" \
+	"dispatcher=uv run python -m background_workers.main"
+# The Kafka topics and group are this service's own settings, declared with no
+# defaults, so they come from services/ai-service/.env rather than the sandbox file.
+AI_REQUIRED = AI_DATABASE_URL KAFKA_BOOTSTRAP_SERVERS KAFKA_OUTBOX_TOPIC \
+	KAFKA_AI_GROUP_ID KAFKA_RETRY_TOPIC KAFKA_DLQ_TOPIC LOG_LEVEL
 
 
 .PHONY: help
@@ -43,3 +57,13 @@ up: ## Start the AI Service stack (ai-service + ai-dispatcher + postgres-ai + ka
 .PHONY: down
 down: ## Stop the AI Service stack (ai-service + ai-dispatcher + postgres-ai + kafka)
 	$(COMPOSE) down
+
+guard-NAME:
+	@if [ -z "$(SANDBOX_NAME)" ]; then \
+		echo "Missing required variable: NAME (the sandbox to run as)"; \
+		exit 1; \
+	fi
+
+.PHONY: sandbox
+sandbox: guard-NAME ## Run the whole service for a sandbox — edge + posting dispatcher: NAME= [PORT=8101]
+	@$(SANDBOX_RUNNER) "$(SANDBOX_ENV_FILE)" "$(REPO_ROOT)/services/ai-service/.env" "$(AI_REQUIRED)" $(AI_PROCESSES)

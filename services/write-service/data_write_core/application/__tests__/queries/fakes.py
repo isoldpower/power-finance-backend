@@ -218,6 +218,16 @@ class FakeTransactionRepository:
             if transaction.chain_id == chain_id:
                 del self._transactions[key]
 
+    async def live_chain_transactions(self, chain_id, user_id: int) -> list[TransactionEntity]:
+        return [
+            transaction
+            for transaction in self._transactions.values()
+            if transaction.chain_id == chain_id and transaction.deleted_at is None
+        ]
+
+    async def delete_chain_row(self, chain_id) -> None:
+        self.chains.pop(str(chain_id), None)
+
 
 def make_checkpoint(wallet_id: str, balance: str, settled_at: datetime) -> BalanceCheckpointEntity:
     return BalanceCheckpointEntity(

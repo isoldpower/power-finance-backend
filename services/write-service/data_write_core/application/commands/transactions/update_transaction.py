@@ -117,6 +117,7 @@ class UpdateTransactionCommandHandler(
                         previous_amount=str(previous_amount),
                         new_amount=str(aggregate.amount),
                         updated_at=datetime_to_timestamp(timestamp),
+                        chain_id=str(root.chain_id) if root.chain_id else "",
                     ),
                     aggregate_type="transaction",
                     aggregate_id=aggregate.unique_id,

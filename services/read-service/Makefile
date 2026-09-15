@@ -1,5 +1,17 @@
 .DEFAULT_GOAL := help
 COMPOSE := docker compose -f compose.yaml
+REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../..)
+SANDBOX_RUNNER := $(REPO_ROOT)/infrastructure/dev-host/run_sandbox_service.sh
+SANDBOX_NAME ?= $(NAME)
+SANDBOX_ENV_FILE = $(REPO_ROOT)/.sandbox/$(SANDBOX_NAME)-read-service.env
+PORT ?= 8100
+# Every process the read-service image runs, minus the one-shot jobs (migrate,
+# es-init). Kept in step with services/read-service/compose.yaml.
+READ_PROCESSES = \
+	"edge=uv run uvicorn read_service.asgi:application --port $(PORT) --reload" \
+	"projection=uv run python manage.py run_write_message_consumer"
+READ_REQUIRED = DATABASE_HOST DATABASE_PORT DATABASE_NAME DATABASE_USER \
+	DATABASE_PASSWORD KAFKA_BOOTSTRAP_SERVERS REDIS_HOST REDIS_PORT ELASTICSEARCH_HOSTS
 
 
 .PHONY: help
@@ -25,3 +37,13 @@ up: ## Start the Read Service stack (read-write-consumer + postgres-read + kafka
 .PHONY: down
 down: ## Stop the Read Service stack (read-write-consumer + postgres-read + kafka)
 	$(COMPOSE) down
+
+guard-NAME:
+	@if [ -z "$(SANDBOX_NAME)" ]; then \
+		echo "Missing required variable: NAME (the sandbox to run as)"; \
+		exit 1; \
+	fi
+
+.PHONY: sandbox
+sandbox: guard-NAME ## Run the whole service for a sandbox — edge + projection consumer: NAME= [PORT=8100]
+	@$(SANDBOX_RUNNER) "$(SANDBOX_ENV_FILE)" - "$(READ_REQUIRED)" $(READ_PROCESSES)

@@ -122,6 +122,15 @@ class TransactionEntity(EntityRoot, TransactionMetadata):
 
         return changed
 
+    def leave_chain(self, now: datetime) -> bool:
+        if self.chain_id is None:
+            return False
+
+        self.chain_id = None
+        self._updated_at = now
+
+        return True
+
     @staticmethod
     def type_for(amount: Decimal) -> TransactionType:
         return TransactionType.EXPENSE if amount < 0 else TransactionType.INCOME
