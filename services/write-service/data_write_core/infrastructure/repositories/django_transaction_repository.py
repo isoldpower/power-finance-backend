@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
@@ -97,6 +98,23 @@ class DjangoTransactionRepository(TransactionRepository):
         )
 
         return [TransactionMapper.to_domain(model) async for model in rows]
+
+    async def detach_chain_members(self, chain_id: UUID) -> list[UUID]:
+        members = TransactionModel.objects.filter(chain_id=chain_id)
+        member_ids = [model.id async for model in members.only("id")]
+
+        await members.aupdate(chain_id=None)
+
+        return member_ids
+
+    async def attach_chain_members(
+        self,
+        chain_id: UUID,
+        transaction_ids: Sequence[UUID],
+    ) -> None:
+        await TransactionModel.objects.filter(id__in=list(transaction_ids)).aupdate(
+            chain_id=chain_id
+        )
 
     async def delete_chain_row(self, chain_id: UUID) -> None:
         await TransactionChainModel.objects.filter(id=chain_id).adelete()

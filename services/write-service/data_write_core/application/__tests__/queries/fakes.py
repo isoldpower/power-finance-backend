@@ -149,6 +149,13 @@ def make_transaction_entity(
     )
 
 
+class ProtectedChainError(RuntimeError):
+    def __init__(self, chain_id, referencing_transaction_ids) -> None:
+        super().__init__(
+            f"chain {chain_id} is still referenced by {sorted(referencing_transaction_ids)}"
+        )
+
+
 class FakeTransactionRepository:
     def __init__(self, transactions: list[TransactionEntity] | None = None) -> None:
         self._transactions = {
@@ -225,7 +232,30 @@ class FakeTransactionRepository:
             if transaction.chain_id == chain_id and transaction.deleted_at is None
         ]
 
+    async def detach_chain_members(self, chain_id) -> list[UUID]:
+        member_ids = []
+        for transaction in self._transactions.values():
+            if transaction.chain_id == chain_id:
+                member_ids.append(UUID(transaction.unique_id))
+                transaction.chain_id = None
+
+        return member_ids
+
+    async def attach_chain_members(self, chain_id, transaction_ids) -> None:
+        wanted = {str(transaction_id) for transaction_id in transaction_ids}
+        for key, transaction in self._transactions.items():
+            if key in wanted:
+                transaction.chain_id = chain_id
+
     async def delete_chain_row(self, chain_id) -> None:
+        referencing = [
+            transaction.unique_id
+            for transaction in self._transactions.values()
+            if transaction.chain_id == chain_id
+        ]
+        if referencing:
+            raise ProtectedChainError(chain_id, referencing)
+
         self.chains.pop(str(chain_id), None)
 
 

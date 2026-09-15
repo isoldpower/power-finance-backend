@@ -176,6 +176,7 @@ class DeleteTransactionCommandHandler(
             return None
 
         if not survivors:
+            await self._transaction_repository.detach_chain_members(chain_id)
             await self._transaction_repository.delete_chain_row(chain_id)
             return None
 
@@ -202,15 +203,18 @@ class DeleteTransactionCommandHandler(
             return None
 
         repository = self._transaction_repository
+        detached_members: list[UUID] = []
 
         async def forward() -> None:
             await repository.save_transaction(root)
+            detached_members.extend(await repository.detach_chain_members(chain_id))
             await repository.delete_chain_row(chain_id)
 
         async def compensate() -> None:
             root.chain_id = chain_id
-            await repository.save_transaction(root)
             await repository.create_chain(chain_id, command.user_id, root.created_at)
+            await repository.attach_chain_members(chain_id, detached_members)
+            await repository.save_transaction(root)
 
         return await run_transaction_saga(
             postgres_steps=[

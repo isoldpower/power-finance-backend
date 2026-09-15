@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
@@ -62,6 +63,18 @@ class TransactionRepository(ABC):
         chain_id: UUID,
         user_id: int,
     ) -> list[TransactionEntity]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def detach_chain_members(self, chain_id: UUID) -> list[UUID]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def attach_chain_members(
+        self,
+        chain_id: UUID,
+        transaction_ids: Sequence[UUID],
+    ) -> None:
         raise NotImplementedError()
 
     @abstractmethod

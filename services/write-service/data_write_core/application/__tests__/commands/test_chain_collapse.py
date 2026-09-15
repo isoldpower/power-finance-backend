@@ -150,3 +150,22 @@ async def test_an_unchained_transaction_collapses_nothing():
 
     assert await handler._collapse_chain_if_spent(aggregate, _command(), MOMENT) is None
     assert outbox.entries == []
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_cancelled_legs_release_the_chain_they_still_reference():
+    repository = FakeTransactionRepository(
+        [
+            make_transaction_entity(SURVIVOR, WALLET, chain_id=CHAIN),
+            make_transaction_entity(CANCELLED, WALLET, chain_id=CHAIN, deleted_at=MOMENT),
+            make_transaction_entity(THIRD_LEG, WALLET, chain_id=CHAIN, deleted_at=MOMENT),
+        ]
+    )
+    repository.chains[str(CHAIN)] = {"user_id": 7}
+    handler = _handler(repository)
+
+    await handler._collapse_chain_if_spent(_cancelled_aggregate(), _command(), MOMENT)
+
+    assert str(CHAIN) not in repository.chains
+    for transaction_id in (SURVIVOR, CANCELLED, THIRD_LEG):
+        assert (await repository.get_user_transaction_by_id(transaction_id, 7)).chain_id is None
