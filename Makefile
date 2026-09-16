@@ -74,7 +74,9 @@ ifeq ($(ROUTING),)
 
 .PHONY: help
 help: ## Show available targets
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*?## "} \
+		/^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5); next } \
+		/^[a-zA-Z_-]+:.*?## / { printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
 .PHONY: install
 install: ## Sync the uv workspace + wire git pre-commit hook
@@ -88,7 +90,7 @@ clean: | $(HOOK_SENTINEL) ## Remove __pycache__ and bytecode artefacts
 	find . -type f -name '*.pyc' -delete 2>/dev/null || true
 
 .PHONY: test
-test: test-correlation test-libraries test-write test-read test-ai test-go test-java test-contract ## Run every test suite
+test: test-correlation test-libraries test-write test-read test-ai test-go test-java test-contract test-gateway ## Run every test suite
 
 .PHONY: test-correlation
 test-correlation: | $(HOOK_SENTINEL) ## Run correlation-py library tests (unittest)
@@ -128,7 +130,11 @@ test-java: | $(HOOK_SENTINEL) ## Run the antifraud-service JVM tests
 test-contract: | $(HOOK_SENTINEL) ## Run the cross-service contract suite (no infrastructure needed)
 	uv run pytest $(CONTRACT_TESTS_DIR) -q
 
-# Disposable, tmpfs-backed, and deliberately off the ports `sandbox-tunnels` forwards,
+.PHONY: test-gateway
+test-gateway: ## Run the Kong plugin specs under the gateway's own LuaJIT (needs Docker)
+	@infrastructure/kong/run_plugin_tests.sh
+
+# Disposable, tmpfs-backed, and deliberately off the ports `devhost-tunnels` forwards,
 # so a suite can never reach the dev host's databases. Safe to leave running.
 .PHONY: test-datastores
 test-datastores: ## Start the throwaway Postgres instances the Python suites expect (5533/5534/5536)
@@ -248,10 +254,26 @@ SANDBOX_HTTP_PORT         = $(or $(SANDBOX_HTTP_PORT_$(SERVICE)),8000)
 SANDBOX_HTTP_SERVICES    := write-service read-service ai-service push-service webhook-service
 SANDBOX_ENV_DIR          := .sandbox
 DEV_HOST                 ?= localhost
-LOCAL_SERVICE_PORT       ?= 8100
+# The port each service's edge listens on when run natively on a laptop, mirroring
+# the PORT default in that service's own Makefile. A route registered for one
+# service must reach that service: pointing ai-service at 8100 lands on
+# read-service, which answers, so the mistake looks like a routing success.
+SANDBOX_LOCAL_PORT_read-service  := 8100
+SANDBOX_LOCAL_PORT_ai-service    := 8101
+SANDBOX_LOCAL_PORT_write-service := 8102
+SANDBOX_LOCAL_PORTS              := 8100 8101 8102
+LOCAL_SERVICE_PORT       ?= $(SANDBOX_LOCAL_PORT_$(SERVICE))
+# Every laptop port is forwarded unless one is named, so routing a second service
+# does not need the tunnels reopened.
+LOCAL_SERVICE_PORTS      ?= $(if $(filter command line environment,$(origin LOCAL_SERVICE_PORT)),$(LOCAL_SERVICE_PORT),$(SANDBOX_LOCAL_PORTS))
 # The dev host account is rarely your laptop account; ssh defaults to the latter.
 DEV_HOST_USER            ?=
 DEV_HOST_REPO            ?= ~/daemons/power-finance-backend
+
+# The laptop's own datastores for an isolated sandbox. Project name carries the
+# sandbox, so two of them on one machine keep separate volumes.
+SANDBOX_LOCAL_DATASTORES = $(COMPOSE) -p pf-sbx-$(NAME) -f compose.sandbox-local-datastores.yaml
+SANDBOX_DATABASE_PORT   ?= 5633
 
 BASELINE_COMPOSE  := $(COMPOSE) -p $(BASELINE_PROJECT) -f compose.yaml -f compose.baseline.yaml --profile local-elastic
 SANDBOX_DATASTORE_FILES = $(if $(ISOLATED),-f compose.sandbox-datastores.yaml,)
@@ -264,8 +286,8 @@ SANDBOX_ADDRESS_FORMAT := {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end
 REDIS_IN_BASELINE  = $(BASELINE_COMPOSE) exec -T gateway-redis redis-cli
 SANDBOX_ROUTE_KEY  = $(SANDBOX_ROUTE_KEY_PREFIX)$(NAME):$(SERVICE)
 # From a laptop the gateway reaches your service back down the -R tunnel that
-# `sandbox-tunnels` opened, which lands on the dev host's own loopback.
-SANDBOX_REMOTE_TARGET = $(or $(TARGET),host.docker.internal:$(LOCAL_SERVICE_PORT))
+# `devhost-tunnels` opened, which lands on the dev host's own loopback.
+SANDBOX_REMOTE_TARGET = $(or $(TARGET),$(if $(LOCAL_SERVICE_PORT),host.docker.internal:$(LOCAL_SERVICE_PORT)))
 
 guard-%:
 	@if [ -z "$($*)" ]; then \
@@ -279,31 +301,35 @@ guard-%:
 # jobs, and BuildKit exports them in parallel — several services naming the same
 # tag fail with `image "...": already exists`. Building only the canonical service
 # behind each tag resolves every image exactly once.
+
+
 BASELINE_BUILD_SERVICES := write-service read-service ai-service push-service \
 	webhook-service antifraud-jobmanager api-gateway
 
-.PHONY: baseline-build
-baseline-build: ## Build every baseline image, one per tag (safe to re-run; cached)
+##@ Dev host — run these ON the dev host
+
+.PHONY: host-build
+host-build: ## Build every baseline image, one per tag (safe to re-run; cached)
 	$(BASELINE_COMPOSE) build $(BASELINE_BUILD_SERVICES)
 
-.PHONY: baseline-up
-baseline-up: baseline-build ## Start the shared baseline stack on the dev host (tuned, Kibana off, Jaeger on)
+.PHONY: host-up
+host-up: host-build ## Start the shared baseline stack on the dev host (tuned, Kibana off, Jaeger on)
 	$(BASELINE_COMPOSE) up -d
 
-.PHONY: baseline-down
-baseline-down: ## Stop the shared baseline stack
+.PHONY: host-down
+host-down: ## Stop the shared baseline stack
 	$(BASELINE_COMPOSE) down
 
-.PHONY: baseline-logs
-baseline-logs: ## Follow logs for the shared baseline stack
+.PHONY: host-logs
+host-logs: ## Follow logs for the shared baseline stack
 	$(BASELINE_COMPOSE) logs -f
 
-.PHONY: baseline-kibana
-baseline-kibana: ## Bring Kibana up alongside the baseline (it is scaled to 0 by default)
+.PHONY: host-kibana
+host-kibana: ## Bring Kibana up alongside the baseline (it is scaled to 0 by default)
 	$(BASELINE_COMPOSE) up -d --scale kibana=1 kibana
 
-.PHONY: sandbox-up
-sandbox-up: guard-NAME guard-SERVICE ## Run a service on the dev host instead of your laptop (compiled services, unattended): NAME= SERVICE= [ISOLATED=1 own Postgres + prefixed ES] [BAKED=1 no source mount]
+.PHONY: host-sandbox-up
+host-sandbox-up: guard-NAME guard-SERVICE ## Run a service on the dev host instead of your laptop (compiled services, unattended): NAME= SERVICE= [ISOLATED=1 own Postgres + prefixed ES] [BAKED=1 no source mount]
 ifdef ISOLATED
 	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
 		$(SANDBOX_COMPOSE) up -d --wait sbx-postgres
@@ -336,39 +362,40 @@ endif
 		echo "Could not read the address of $(SANDBOX_CONTAINER) — is it running?"; \
 		exit 1; \
 	fi; \
-	$(MAKE) --no-print-directory sandbox-route NAME=$(NAME) SERVICE=$(SERVICE) TARGET="$$address:$(SANDBOX_HTTP_PORT)"
+	$(MAKE) --no-print-directory host-route NAME=$(NAME) SERVICE=$(SERVICE) TARGET="$$address:$(SANDBOX_HTTP_PORT)"
 
-.PHONY: sandbox-local
-sandbox-local: guard-NAME guard-SERVICE guard-TARGET ## Route one service of a sandbox at a process on your laptop (run on the dev host): NAME= SERVICE= TARGET=host.docker.internal:8100
-	@$(MAKE) --no-print-directory sandbox-route NAME=$(NAME) SERVICE=$(SERVICE) TARGET=$(TARGET)
+.PHONY: host-sandbox-down
+host-sandbox-down: guard-NAME ## Remove a sandbox's containers and its gateway route
+	-SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) $(SANDBOX_COMPOSE) down --remove-orphans --volumes
+	-@keys=$$($(REDIS_IN_BASELINE) --scan --pattern '$(SANDBOX_ROUTE_KEY_PREFIX)$(NAME):*' | tr -d '\r'); \
+	for key in $$keys; do \
+		$(REDIS_IN_BASELINE) DEL "$$key" < /dev/null >/dev/null; \
+	done
+	@echo "sandbox '$(NAME)' removed"
 
-.PHONY: sandbox-tunnels
-sandbox-tunnels: guard-DEV_HOST ## Open SSH tunnels from this laptop to the dev host: DEV_HOST= [DEV_HOST_USER=] [LOCAL_SERVICE_PORT=8100] [PRINT=1]
-	@infrastructure/dev-host/open_tunnels.sh \
-		"$(DEV_HOST)" "$(LOCAL_SERVICE_PORT)" "$(PRINT)" "$(DEV_HOST_USER)"
+.PHONY: host-sandbox-restart
+host-sandbox-restart: guard-NAME guard-SERVICE ## Restart a sandbox container so a worker picks up live-mounted changes
+	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
+		$(SANDBOX_COMPOSE) restart $(SANDBOX_SERVICE)
 
-.PHONY: sandbox-env
-sandbox-env: guard-NAME guard-SERVICE ## Write an env file pointing a locally-run service at the baseline: NAME= SERVICE= [DEV_HOST=]
-	@set -a; [ -f .env ] && . ./.env; set +a; \
-	written=$$(infrastructure/dev-host/generate_sandbox_env.sh \
-		"$(NAME)" "$(SERVICE)" "$(DEV_HOST)" "$(SANDBOX_ENV_DIR)/$(NAME)-$(SERVICE).env"); \
-	echo "wrote $$written (endpoints: $(DEV_HOST))"; \
-	echo "run the service with:  set -a; . $$written; set +a; <your run command>"
+.PHONY: host-sandbox-logs
+host-sandbox-logs: guard-NAME ## Follow logs for a sandbox's containers
+	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) $(SANDBOX_COMPOSE) logs -f
 
 # Routes live in the baseline's Redis, so this runs where the baseline runs — on the
 # dev host. From a laptop, invoke it over ssh (see the hint below).
-.PHONY: sandbox-route
-sandbox-route: guard-NAME guard-SERVICE guard-TARGET ## Register the upstream one service of a sandbox routes to (run on the dev host)
+.PHONY: host-route
+host-route: guard-NAME guard-SERVICE guard-TARGET ## Register the upstream one service of a sandbox routes to
 	@if ! docker ps --filter "name=$(BASELINE_PROJECT)-gateway-redis" --format '{{.Names}}' | grep -q .; then \
 		echo "The baseline is not running here, so there is no route store to write to."; \
 		echo "Route registration happens on the dev host. From a laptop:"; \
 		echo ""; \
-		echo "  make sandbox-route-remote NAME=$(NAME) SERVICE=$(SERVICE) \\"; \
+		echo "  make devhost-route NAME=$(NAME) SERVICE=$(SERVICE) \\"; \
 		echo "      TARGET=$(TARGET) DEV_HOST=<dev-host>"; \
 		echo ""; \
 		echo "or by hand:"; \
 		echo ""; \
-		echo "  ssh <user>@<dev-host> 'cd <repo> && make sandbox-route \\"; \
+		echo "  ssh <user>@<dev-host> 'cd <repo> && make host-route \\"; \
 		echo "      NAME=$(NAME) SERVICE=$(SERVICE) TARGET=$(TARGET)'"; \
 		echo ""; \
 		exit 1; \
@@ -376,28 +403,17 @@ sandbox-route: guard-NAME guard-SERVICE guard-TARGET ## Register the upstream on
 	@$(REDIS_IN_BASELINE) SET $(SANDBOX_ROUTE_KEY) "$(TARGET)" EX $(SANDBOX_ROUTE_TTL_SECONDS) >/dev/null
 	@echo "sandbox '$(NAME)' $(SERVICE) -> $(TARGET)"
 
-# The laptop-side companion to sandbox-route: same registration, one ssh hop away.
-.PHONY: sandbox-route-remote
-sandbox-route-remote: guard-NAME guard-SERVICE guard-DEV_HOST ## Register a sandbox route on the dev host from your laptop: NAME= SERVICE= DEV_HOST= [TARGET=host.docker.internal:8100] [DEV_HOST_USER=] [DEV_HOST_REPO=~/srv/power-finance-backend]
-	@infrastructure/dev-host/run_remote_make.sh \
-		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
-		sandbox-route "NAME=$(NAME)" "SERVICE=$(SERVICE)" "TARGET=$(SANDBOX_REMOTE_TARGET)"
+.PHONY: host-route-laptop
+host-route-laptop: guard-NAME guard-SERVICE guard-TARGET ## Route one service of a sandbox at a process on your laptop: NAME= SERVICE= TARGET=host.docker.internal:8100
+	@$(MAKE) --no-print-directory host-route NAME=$(NAME) SERVICE=$(SERVICE) TARGET=$(TARGET)
 
-# The inverse of sandbox-route-remote: the route goes, the service falls back to the
-# baseline. Leaves containers and consumer groups alone — see `sandbox-down` for those.
-.PHONY: sandbox-unroute-remote
-sandbox-unroute-remote: guard-NAME guard-SERVICE guard-DEV_HOST ## Drop a sandbox route on the dev host from your laptop: NAME= SERVICE= DEV_HOST= [DEV_HOST_USER=] [DEV_HOST_REPO=~/srv/power-finance-backend]
-	@infrastructure/dev-host/run_remote_make.sh \
-		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
-		sandbox-unroute "NAME=$(NAME)" "SERVICE=$(SERVICE)"
-
-.PHONY: sandbox-unroute
-sandbox-unroute: guard-NAME guard-SERVICE ## Drop one service's sandbox route, sending it back to the baseline (run on the dev host)
+.PHONY: host-unroute
+host-unroute: guard-NAME guard-SERVICE ## Drop one service's sandbox route, sending it back to the baseline
 	@if ! docker ps --filter "name=$(BASELINE_PROJECT)-gateway-redis" --format '{{.Names}}' | grep -q .; then \
 		echo "The baseline is not running here, so there is no route store to write to."; \
 		echo "From a laptop:"; \
 		echo ""; \
-		echo "  make sandbox-unroute-remote NAME=$(NAME) SERVICE=$(SERVICE) DEV_HOST=<dev-host>"; \
+		echo "  make devhost-unroute NAME=$(NAME) SERVICE=$(SERVICE) DEV_HOST=<dev-host>"; \
 		echo ""; \
 		exit 1; \
 	fi
@@ -408,32 +424,8 @@ sandbox-unroute: guard-NAME guard-SERVICE ## Drop one service's sandbox route, s
 		echo "sandbox '$(NAME)' $(SERVICE) -> baseline (route dropped)"; \
 	fi
 
-.PHONY: sandbox-down
-sandbox-down: guard-NAME ## Remove a sandbox's containers and its gateway route
-	-SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) $(SANDBOX_COMPOSE) down --remove-orphans --volumes
-	-@keys=$$($(REDIS_IN_BASELINE) --scan --pattern '$(SANDBOX_ROUTE_KEY_PREFIX)$(NAME):*' | tr -d '\r'); \
-	for key in $$keys; do \
-		$(REDIS_IN_BASELINE) DEL "$$key" < /dev/null >/dev/null; \
-	done
-	@echo "sandbox '$(NAME)' removed"
-
-# Everything a sandbox owns, in one go: its containers, the routes that divert HTTP to
-# it, and the consumer groups that divert events to it. Afterwards `X-Sandbox: <name>`
-# is indistinguishable from sending no header.
-.PHONY: sandbox-wipe
-sandbox-wipe: guard-NAME ## Remove a sandbox entirely — containers, routes and consumer groups (run on the dev host): NAME= [FORCE=1]
-	@infrastructure/dev-host/wipe_sandbox.sh \
-		"$(NAME)" "$(SANDBOX_ROUTE_KEY_PREFIX)" "$(BASELINE_PROJECT)" \
-		"$(SANDBOX_PROJECT_PREFIX)$(NAME)" "$(FORCE)"
-
-.PHONY: sandbox-wipe-remote
-sandbox-wipe-remote: guard-NAME guard-DEV_HOST ## Remove a sandbox entirely, from your laptop: NAME= DEV_HOST= [FORCE=1] [DEV_HOST_USER=] [DEV_HOST_REPO=]
-	@infrastructure/dev-host/run_remote_make.sh \
-		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
-		sandbox-wipe "NAME=$(NAME)" "FORCE=$(FORCE)"
-
-.PHONY: sandbox-list
-sandbox-list: ## List registered sandbox routes
+.PHONY: host-list
+host-list: ## List registered sandbox routes
 	@keys=$$($(REDIS_IN_BASELINE) --scan --pattern '$(SANDBOX_ROUTE_KEY_PREFIX)*' | tr -d '\r' | sort); \
 	printf '%-14s %-30s %-24s %s\n' SANDBOX SERVICE TARGET TTL; \
 	for key in $$keys; do \
@@ -443,16 +435,100 @@ sandbox-list: ## List registered sandbox routes
 		printf '%-14s %-30s %-24s %ss\n' "$${identity%%:*}" "$${identity#*:}" "$$target" "$$remaining"; \
 	done
 
-.PHONY: sandbox-restart
-sandbox-restart: guard-NAME guard-SERVICE ## Restart a sandbox container so a worker picks up live-mounted changes
-	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) \
-		$(SANDBOX_COMPOSE) restart $(SANDBOX_SERVICE)
-
-.PHONY: sandbox-prune
-sandbox-prune: ## Drop gateway routes whose sandbox container is gone
+.PHONY: host-prune
+host-prune: ## Drop gateway routes whose sandbox container is gone
 	@infrastructure/dev-host/prune_sandbox_routes.sh \
 		"$(SANDBOX_ROUTE_KEY_PREFIX)" "$(BASELINE_PROJECT)"
 
-.PHONY: sandbox-logs
-sandbox-logs: guard-NAME ## Follow logs for a sandbox's containers
-	SANDBOX_ID=$(NAME) BASELINE_NETWORK_NAME=$(BASELINE_NETWORK_NAME) $(SANDBOX_COMPOSE) logs -f
+# Everything a sandbox owns, in one go: its containers, the routes that divert HTTP to
+# it, and the consumer groups that divert events to it. Afterwards `X-Sandbox: <name>`
+# is indistinguishable from sending no header.
+.PHONY: host-wipe
+host-wipe: guard-NAME ## Remove a sandbox entirely — containers, routes and consumer groups: NAME= [FORCE=1]
+	@infrastructure/dev-host/wipe_sandbox.sh \
+		"$(NAME)" "$(SANDBOX_ROUTE_KEY_PREFIX)" "$(BASELINE_PROJECT)" \
+		"$(SANDBOX_PROJECT_PREFIX)$(NAME)" "$(FORCE)"
+
+# Only for a sandbox that ran ISOLATED: it applied the events it claimed into its own
+# datastores, so the baseline's read model never saw them. A shared sandbox needs
+# nothing — its consumer wrote into the baseline's stores on the baseline's behalf.
+.PHONY: host-replay
+host-replay: guard-NAME ## Give a finished isolated sandbox's events back to the baseline read model: NAME= [DRY_RUN=1] [SINCE=] [UNTIL=]
+	@infrastructure/dev-host/replay_sandbox_events.sh \
+		"$(NAME)" "$(BASELINE_PROJECT)" "$(DRY_RUN)" "$(SINCE)" "$(UNTIL)"
+
+##@ Dev host, driven from your laptop — these reach it over ssh
+
+.PHONY: devhost-tunnels
+devhost-tunnels: guard-DEV_HOST ## Open SSH tunnels from this laptop to the dev host: DEV_HOST= [DEV_HOST_USER=] [LOCAL_SERVICE_PORTS=8100 8101 8102] [PRINT=1]
+	@infrastructure/dev-host/open_tunnels.sh \
+		"$(DEV_HOST)" "$(LOCAL_SERVICE_PORTS)" "$(PRINT)" "$(DEV_HOST_USER)"
+
+# The laptop-side companion to host-route: same registration, one ssh hop away.
+.PHONY: devhost-route
+devhost-route: guard-NAME guard-SERVICE guard-DEV_HOST ## Register a sandbox route on the dev host from your laptop: NAME= SERVICE= DEV_HOST= [TARGET=host.docker.internal:<service's port>] [DEV_HOST_USER=] [DEV_HOST_REPO=~/daemons/power-finance-backend]
+	@if [ -z "$(SANDBOX_REMOTE_TARGET)" ]; then \
+		echo "No laptop port is known for '$(SERVICE)', so there is nothing to route to."; \
+		echo "Services with a laptop runner: read-service ai-service write-service."; \
+		echo "For anything else, name the upstream yourself:"; \
+		echo ""; \
+		echo "  make devhost-route NAME=$(NAME) SERVICE=$(SERVICE) \\"; \
+		echo "      DEV_HOST=$(DEV_HOST) TARGET=host.docker.internal:<port>"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@infrastructure/dev-host/run_remote_make.sh \
+		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
+		host-route "NAME=$(NAME)" "SERVICE=$(SERVICE)" "TARGET=$(SANDBOX_REMOTE_TARGET)"
+
+# The inverse of devhost-route: the route goes, the service falls back to the
+# baseline. Leaves containers and consumer groups alone — see `host-sandbox-down` for those.
+.PHONY: devhost-unroute
+devhost-unroute: guard-NAME guard-SERVICE guard-DEV_HOST ## Drop a sandbox route on the dev host from your laptop: NAME= SERVICE= DEV_HOST= [DEV_HOST_USER=] [DEV_HOST_REPO=~/daemons/power-finance-backend]
+	@infrastructure/dev-host/run_remote_make.sh \
+		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
+		host-unroute "NAME=$(NAME)" "SERVICE=$(SERVICE)"
+
+.PHONY: devhost-replay
+devhost-replay: guard-NAME guard-DEV_HOST ## Replay a finished isolated sandbox's events into the baseline, from your laptop: NAME= DEV_HOST= [DRY_RUN=1]
+	@infrastructure/dev-host/run_remote_make.sh \
+		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
+		host-replay "NAME=$(NAME)" "DRY_RUN=$(DRY_RUN)" "SINCE=$(SINCE)" "UNTIL=$(UNTIL)"
+
+.PHONY: devhost-wipe
+devhost-wipe: guard-NAME guard-DEV_HOST ## Remove a sandbox entirely, from your laptop: NAME= DEV_HOST= [FORCE=1] [DEV_HOST_USER=] [DEV_HOST_REPO=]
+	@infrastructure/dev-host/run_remote_make.sh \
+		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
+		host-wipe "NAME=$(NAME)" "FORCE=$(FORCE)"
+
+##@ Local sandbox — run these on your laptop
+
+.PHONY: sandbox-env
+sandbox-env: guard-NAME guard-SERVICE ## Write an env file pointing a locally-run service at the baseline: NAME= SERVICE= [DEV_HOST=] [ISOLATED=1 own Postgres + prefixed ES]
+	@set -a; [ -f .env ] && . ./.env; set +a; \
+	SANDBOX_DATABASE_PORT=$(SANDBOX_DATABASE_PORT) \
+	written=$$(infrastructure/dev-host/generate_sandbox_env.sh \
+		"$(NAME)" "$(SERVICE)" "$(DEV_HOST)" "$(SANDBOX_ENV_DIR)/$(NAME)-$(SERVICE).env" "$(ISOLATED)"); \
+	echo "wrote $$written (endpoints: $(DEV_HOST)$(if $(ISOLATED), — database: localhost:$(SANDBOX_DATABASE_PORT),))"; \
+	$(if $(ISOLATED),echo "start that database with:  make sandbox-datastores NAME=$(NAME)";,) \
+	echo "run the service with:  set -a; . $$written; set +a; <your run command>"
+
+# The laptop half of ISOLATED=1. compose.sandbox-datastores.yaml does this for a
+# sandbox running on the dev host; this does it for one running here.
+.PHONY: sandbox-datastores
+sandbox-datastores: guard-NAME ## Start this laptop's own Postgres for an isolated sandbox and migrate every service: NAME= [SANDBOX_DATABASE_PORT=5633]
+	@SANDBOX_DATABASE_PORT=$(SANDBOX_DATABASE_PORT) $(SANDBOX_LOCAL_DATASTORES) up -d --wait sbx-postgres
+	@# --build, because the point of an isolated sandbox is usually a migration that
+	@# only exists in the working tree. Without it the prebuilt image runs whatever
+	@# chain it was built with and reports success at the wrong revision.
+	@for job in sbx-write-migrate sbx-read-migrate sbx-ai-migrate sbx-webhook-migrate; do \
+		echo "== $$job"; \
+		SANDBOX_DATABASE_PORT=$(SANDBOX_DATABASE_PORT) \
+			$(SANDBOX_LOCAL_DATASTORES) run --rm --no-deps --build "$$job" || exit 1; \
+	done
+	@echo "sandbox '$(NAME)' database ready on localhost:$(SANDBOX_DATABASE_PORT)"
+
+.PHONY: sandbox-datastores-down
+sandbox-datastores-down: guard-NAME ## Remove this laptop's isolated sandbox database AND its data: NAME=
+	@SANDBOX_DATABASE_PORT=$(SANDBOX_DATABASE_PORT) $(SANDBOX_LOCAL_DATASTORES) down -v
+	@echo "sandbox '$(NAME)' local database removed"

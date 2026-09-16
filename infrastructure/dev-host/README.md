@@ -74,7 +74,7 @@ What turns a MacBook M2 Pro (16 GB) into the shared dev host. Run these on the
 6. **Start it:**
 
    ```bash
-   make baseline-up
+   make host-up
    ```
 
    **The first run builds seven images and takes 10–20 minutes** — a Gradle build
@@ -90,7 +90,7 @@ What turns a MacBook M2 Pro (16 GB) into the shared dev host. Run these on the
 
 7. **Give developers SSH access.** They clone and edit on their own machines and
    run the service they are changing there; this host supplies the dependencies.
-   `make sandbox-tunnels DEV_HOST=<this host>` on their laptop forwards Kafka,
+   `make devhost-tunnels DEV_HOST=<this host>` on their laptop forwards Kafka,
    the four Postgres instances, Redis, ImmuDB, Elasticsearch, OTLP and the Jaeger
    UI to their localhost, and forwards one local port back so the gateway can route
    to them. Membership of the `docker` group is only needed by whoever runs
@@ -100,8 +100,8 @@ What turns a MacBook M2 Pro (16 GB) into the shared dev host. Run these on the
    local `.env` — nothing else from this file. Hand those over out of band; do not
    copy this `.env`, which also holds the Clerk issuer and the gateway HMAC secret.
 
-   Keep a checkout here too, on `main`, for `make baseline-up` — and one per
-   developer if anyone uses host-side sandboxes (`make sandbox-up`), since those
+   Keep a checkout here too, on `main`, for `make host-up` — and one per
+   developer if anyone uses host-side sandboxes (`make host-sandbox-up`), since those
    mount whichever tree the command runs in.
 
 ## Credentials are baked in at first init
@@ -125,15 +125,15 @@ with SQL.
 | `pf-baseline_esdata01` | `ELASTIC_PASSWORD`, `CLUSTER_NAME` |
 
 ```bash
-make baseline-down
+make host-down
 docker volume rm pf-baseline_postgres_write_data pf-baseline_postgres_read_data \
                  pf-baseline_postgres_ai_data pf-baseline_webhook_postgres_data
-make baseline-up
+make host-up
 ```
 
 `kafka_data`, `jaeger_data` and `redis_read_data` hold no credentials and can stay.
 
-**Decide these before the first `baseline-up`** and you never meet this. The
+**Decide these before the first `host-up`** and you never meet this. The
 database healthchecks now authenticate, so a mismatch shows up as
 `postgres-write` going *unhealthy* rather than as a pool timeout inside four
 unrelated migrations — but the volume still has to be re-initialised either way.
@@ -151,6 +151,10 @@ the container runtime, so test it in order — each step isolates one link.
 gateway container → host.docker.internal:8100 → this host's :8100 → ssh -R → laptop:8100
 ```
 
+8100 below is read-service; ai-service is 8101 and write-service 8102, and
+`make devhost-tunnels` forwards all three. Substitute the port of the service you
+routed — a ladder walked against the wrong one passes at every rung and proves nothing.
+
 **1. On the laptop**, with the service running:
 
 ```bash
@@ -164,7 +168,7 @@ curl -s -o /dev/null -w '%{http_code}\n' localhost:8100/health/live       # 200
 ```
 
 Nothing here means the tunnel is not established; check that
-`make sandbox-tunnels` is still running on the laptop and that it printed an
+`make devhost-tunnels` is still running on the laptop and that it printed an
 `inbound:` line.
 
 **3. From the baseline network** — the step that actually differs by runtime:
@@ -201,7 +205,7 @@ GatewayPorts clientspecified
 reload sshd, and have the developer run:
 
 ```bash
-make sandbox-tunnels DEV_HOST=<this host> REMOTE_BIND=0.0.0.0
+make devhost-tunnels DEV_HOST=<this host> REMOTE_BIND=0.0.0.0
 ```
 
 Then repeat step 3. This publishes port 8100 on the host while a developer is
@@ -212,7 +216,7 @@ which works because both machines are on the tailnet and containers egress throu
 this host's network stack:
 
 ```bash
-make sandbox-route NAME=<name> SERVICE=write-service TARGET=<laptop tailnet ip>:8100
+make host-route NAME=<name> SERVICE=write-service TARGET=<laptop tailnet ip>:8100
 ```
 
 For that the developer's service must listen on more than loopback —
@@ -243,7 +247,7 @@ Almost always the **wrong username**, not the ACL: ssh defaults to your laptop
 account, which does not exist on the dev host. Pass the host's account:
 
 ```bash
-make sandbox-tunnels DEV_HOST=pf-dev-host DEV_HOST_USER=<host account>
+make devhost-tunnels DEV_HOST=pf-dev-host DEV_HOST_USER=<host account>
 ```
 
 Or set it once per developer in `~/.ssh/config`, which every ssh invocation then
@@ -304,7 +308,7 @@ and reach them through an SSH tunnel when you need them.
 ## What each port is for
 
 Developers run their service on their own machine and reach everything else through
-SSH tunnels (`make sandbox-tunnels`), so the only port that has to be **published**
+SSH tunnels (`make devhost-tunnels`), so the only port that has to be **published**
 is the gateway. Everything else is reached over SSH, which is why the gateway has its
 own bind address and the rest can stay on loopback.
 
@@ -341,9 +345,9 @@ Set it wrong and metadata succeeds while every fetch fails.
 | Script | Purpose |
 | --- | --- |
 | `generate_sandbox_env.sh` | Escape hatch only: writes the env file that points a natively-run service at the baseline. Driven by `make sandbox-env`. |
-| `prune_sandbox_routes.sh` | Drops gateway routes whose sandbox container is gone. Driven by `make sandbox-prune`. |
-| `run_remote_make.sh` | Runs one of this host's make targets over ssh, from a developer's laptop. Drives `make sandbox-route-remote`, `make sandbox-unroute-remote` and `make sandbox-wipe-remote`. |
-| `wipe_sandbox.sh` | Removes a sandbox's containers, gateway routes and consumer groups. Driven by `make sandbox-wipe`. |
+| `prune_sandbox_routes.sh` | Drops gateway routes whose sandbox container is gone. Driven by `make host-prune`. |
+| `run_remote_make.sh` | Runs one of this host's make targets over ssh, from a developer's laptop. Drives `make devhost-route`, `make devhost-unroute` and `make devhost-wipe`. |
+| `wipe_sandbox.sh` | Removes a sandbox's containers, gateway routes and consumer groups. Driven by `make host-wipe`. |
 | `run_sandbox_service.sh` | Runs every process a service is made of (edge + consumers) against a sandbox env, on a laptop. Driven by `make <service> sandbox NAME=`. |
 | `com.powerfinance.colima.plist` | LaunchAgent that starts colima at login. |
 
@@ -351,6 +355,6 @@ Set it wrong and metadata succeeds while every fetch fails.
 
 `gateway-redis` runs with persistence off on purpose — Kong's rate-limit counters
 are disposable. Sandbox routes live in the same Redis, so **restarting
-`gateway-redis` drops every sandbox route**. Re-register with `make sandbox-up`
-(or `make sandbox-route` here, `make sandbox-route-remote` from a laptop); routes also
+`gateway-redis` drops every sandbox route**. Re-register with `make host-sandbox-up`
+(or `make host-route` here, `make devhost-route` from a laptop); routes also
 carry a 7-day TTL so forgotten ones expire.

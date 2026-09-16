@@ -1,5 +1,6 @@
 from .account import AccountModel
 from .assistant_message import AssistantMessageModel
+from .assistant_quota import AssistantQuotaModel
 from .base import (
     ModelBase,
 )
@@ -12,6 +13,7 @@ from .user import UserModel
 __all__ = [
     "AccountModel",
     "AssistantMessageModel",
+    "AssistantQuotaModel",
     "EntryModel",
     "KafkaConsumedEventModel",
     "OutboxEntryModel",

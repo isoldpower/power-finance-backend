@@ -136,7 +136,7 @@ source to live on the dev host, and an ordinary clone-edit-run loop with a local
 debugger is worth more than the uniformity gained. So a locally-run service is the
 primary path again, with two corrections to how it was first designed:
 
-- **SSH tunnels rather than published ports.** `make sandbox-tunnels` forwards the
+- **SSH tunnels rather than published ports.** `make devhost-tunnels` forwards the
   baseline's infrastructure to the laptop's localhost and forwards one local port
   back for the gateway. `BIND_ADDRESS` stays loopback and only the gateway is
   published, so the earlier trade of "local execution costs you exposure" does not
@@ -144,13 +144,21 @@ primary path again, with two corrections to how it was first designed:
   client follows the broker's advertisement back into its own tunnel.
 - **Most work needs no gateway route at all.** Hitting the local service directly
   with `X-User-Id` exercises everything but the edge; the reverse tunnel and
-  `sandbox-local` are only for testing through Clerk auth, rate limits and
+  `host-route-laptop` are only for testing through Clerk auth, rate limits and
   read-fallback.
 
 The host-side container mode stays for the compiled services, for anything that
 should outlive a closed laptop, and for `ISOLATED=1` datastore work. The accepted
 cost of running locally is environment drift — a laptop's interpreter is not the
 image's — so CI remains the arbiter before merge.
+
+**Revised 2026-09-15: `ISOLATED=1` is no longer a reason to use container mode.**
+The flag reached only `host-sandbox-up`, so a laptop testing a migration had to either
+move to the dev host or apply it to the shared database — and since nothing said
+so, the second is what happened. `sandbox-env` now honours the flag (pointing the
+database lines at a laptop-local Postgres and prefixing Elasticsearch indices), and
+`make <service> sandbox ISOLATED=1` starts and migrates it. The remaining reasons
+for container mode are unchanged.
 
 **Revised 2026-09-13: one execution mode, not two.** The original design offered a
 native-process mode alongside the container mode, on the grounds that a rebuild loop

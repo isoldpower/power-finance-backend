@@ -1,6 +1,6 @@
 # Disposable Postgres instances for the Python test suites. See README.md → "Testing".
 #
-# These deliberately sit off the ports `make sandbox-tunnels` forwards (5433 / 5434 /
+# These deliberately sit off the ports `make devhost-tunnels` forwards (5433 / 5434 /
 # 5436 are the dev host's databases once tunnels are open). A suite defaulting to a
 # tunnelled port either fails to authenticate or — with matching credentials — creates
 # and drops its test database on the machine everyone shares.

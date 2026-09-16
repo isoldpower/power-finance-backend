@@ -1,4 +1,5 @@
 from .entities import (
+    AssistantQuota,
     ConversationMessage,
     MessageRole,
     MessageStatus,
@@ -12,6 +13,7 @@ from .entities import (
 )
 
 __all__ = [
+    "AssistantQuota",
     "ConversationMessage",
     "MessageRole",
     "MessageStatus",

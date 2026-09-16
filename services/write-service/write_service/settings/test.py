@@ -4,7 +4,7 @@ from .base import *  # noqa: F401,F403
 
 TESTING = True
 
-# Ports sit off the ones `make sandbox-tunnels` forwards. On a tunnelled laptop
+# Ports sit off the ones `make devhost-tunnels` forwards. On a tunnelled laptop
 # localhost:5433/5434/5436 are the DEV HOST's databases, and a test run that reaches
 # one of those creates and drops its test database on the machine everyone shares.
 # `make test-datastores` starts what these defaults expect.

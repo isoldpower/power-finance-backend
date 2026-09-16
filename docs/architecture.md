@@ -753,7 +753,8 @@ request at the application layer, the pattern Lyft (Staging Overrides) and Uber
   service where none is.
 - **Datastores** are shared by default. A migration or a projection-logic change
   needs `ISOLATED=1`, which gives the sandbox its own Postgres and prefixes every
-  Elasticsearch index.
+  Elasticsearch index. The flag applies to both paths — `host-sandbox-up` on the dev
+  host, and `sandbox-env` plus the service's own `sandbox` target on a laptop.
 
 This is the reason the outbox carries propagation columns at all: the same
 mechanism that makes tracing continuous is what makes per-developer isolation

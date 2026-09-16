@@ -33,6 +33,18 @@ local resolve_sandbox_id = function()
         return header_sandbox_id, baggage_header_value, false
     end
 
+    -- Last, because a URL is the weakest claim of the three: baggage is a decision
+    -- already taken upstream and a header is set by a client that could also have set
+    -- the URL. Repeating the argument yields a table, and picking the first keeps a
+    -- doubled query string from resolving to a Lua table used as a sandbox name.
+    local query_sandbox_id = kong.request.get_query_arg(plugin_config.SandboxQueryArgument)
+    if type(query_sandbox_id) == "table" then
+        query_sandbox_id = query_sandbox_id[1]
+    end
+    if type(query_sandbox_id) == "string" and query_sandbox_id ~= "" then
+        return query_sandbox_id, baggage_header_value, false
+    end
+
     return nil, baggage_header_value, false
 end
 

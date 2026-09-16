@@ -54,6 +54,22 @@ if [ "${#missing[@]}" -gt 0 ]; then
     exit 1
 fi
 
+# The env file records which kind it is, so asking for isolation and being handed a
+# file that still points at the baseline is caught here rather than discovered by
+# reading the shared database's contents back.
+file_isolation="${SANDBOX_ISOLATED:-0}"
+if [ -n "${ISOLATED:-}" ] && [ "$file_isolation" != "1" ]; then
+    echo "ISOLATED=1 was asked for, but $sandbox_env_file points at the shared baseline." >&2
+    echo "Rewrite it first:" >&2
+    echo "  make sandbox-env NAME=<sandbox> SERVICE=<service> DEV_HOST=<host> ISOLATED=1" >&2
+    exit 1
+fi
+if [ -z "${ISOLATED:-}" ] && [ "$file_isolation" = "1" ]; then
+    echo "warning: $sandbox_env_file is an isolated environment, but ISOLATED=1 was not" >&2
+    echo "         passed, so this laptop's sandbox Postgres has not been started." >&2
+    echo "         Start it with: make sandbox-datastores NAME=${SANDBOX_ID:-<sandbox>}" >&2
+fi
+
 if [ -z "${SANDBOX_ID:-}" ]; then
     echo "warning: SANDBOX_ID is empty, so this runs as the baseline: its consumers" >&2
     echo "         will take untagged traffic and compete with the dev host's own." >&2

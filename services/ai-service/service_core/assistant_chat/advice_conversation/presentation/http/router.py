@@ -20,6 +20,7 @@ from ...application import (
 from ...infrastructure import (
     ProjectedReferenceExtractor,
     SqlAlchemyMessageRepository,
+    SqlAlchemyQuotaRepository,
 )
 from ._messages_view import clear_messages, list_messages
 from ._schemas import ClearedConversationResponseSchema, MessageCollectionSchema
@@ -108,4 +109,5 @@ def _default_handler(messages: MessageRepository) -> MessageHandler:
         messages=messages,
         generator=EchoReplyGenerator(),
         references=ProjectedReferenceExtractor(get_session_factory()),
+        quotas=SqlAlchemyQuotaRepository(get_session_factory()),
     )

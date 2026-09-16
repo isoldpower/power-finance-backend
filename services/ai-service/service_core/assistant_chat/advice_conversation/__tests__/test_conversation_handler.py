@@ -8,6 +8,7 @@ from .fakes import (
     ExplodingReferenceExtractor,
     FailingGenerator,
     InMemoryMessageRepository,
+    InMemoryQuotaRepository,
     ScriptedGenerator,
     StaticReferenceExtractor,
 )
@@ -15,11 +16,12 @@ from .fakes import (
 TRANSACTION_ID = UUID("b21d7e40-9c3a-4f18-88de-1a5c6b0e7f92")
 
 
-def _handler(store, generator, references=None) -> ConversationHandler:
+def _handler(store, generator, references=None, quotas=None) -> ConversationHandler:
     return ConversationHandler(
         messages=store,
         generator=generator,
         references=references or StaticReferenceExtractor(),
+        quotas=quotas or InMemoryQuotaRepository(),
     )
 
 

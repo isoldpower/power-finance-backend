@@ -3,6 +3,7 @@ from .engine import dispose_engine, get_engine, get_session_factory, session_sco
 from .models import (
     AccountModel,
     AssistantMessageModel,
+    AssistantQuotaModel,
     EntryModel,
     ModelBase,
     OutboxEntryModel,
@@ -14,6 +15,7 @@ __all__ = [
     "AccountGroup",
     "AccountModel",
     "AssistantMessageModel",
+    "AssistantQuotaModel",
     "DatabaseSettings",
     "EntryModel",
     "ModelBase",

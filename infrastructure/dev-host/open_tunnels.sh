@@ -5,8 +5,8 @@ set -euo pipefail
 # a natively-run service reaches it, and optionally forwards a local port back so
 # the gateway can route to that service. Nothing on the dev host has to be
 # published beyond the gateway for this to work.
-dev_host="${1:?usage: open_tunnels.sh <dev-host> [local-service-port] [print-only] [remote-user]}"
-local_service_port="${2:-}"
+dev_host="${1:?usage: open_tunnels.sh <dev-host> [local-service-ports] [print-only] [remote-user]}"
+local_service_ports="${2:-}"
 print_only="${3:-}"
 remote_user="${4:-}"
 
@@ -51,14 +51,18 @@ done
 # the container runtime can reach the host's loopback (Docker Desktop can). If it
 # cannot, bind it on all of the host's interfaces instead — which additionally needs
 # "GatewayPorts clientspecified" in the host's sshd_config.
+#
+# Each routable service listens on its own laptop port, so every one of them is
+# forwarded: a sandbox is routed a service at a time, and reopening the tunnels to
+# add the second one drops the first.
 remote_bind_address="${REMOTE_BIND:-}"
-if [ -n "$local_service_port" ]; then
+for local_service_port in $local_service_ports; do
     if [ -n "$remote_bind_address" ]; then
         ssh_arguments+=(-R "${remote_bind_address}:${local_service_port}:localhost:${local_service_port}")
     else
         ssh_arguments+=(-R "${local_service_port}:localhost:${local_service_port}")
     fi
-fi
+done
 ssh_arguments+=("$ssh_target")
 
 if [ -n "$print_only" ]; then
@@ -70,11 +74,11 @@ fi
 
 echo "tunnelling to $ssh_target — Ctrl-C to close"
 echo "  outbound: ${forwarded_ports[*]}"
-if [ -n "$local_service_port" ]; then
+if [ -n "$local_service_ports" ]; then
     if [ -n "$remote_bind_address" ]; then
-        echo "  inbound:  $local_service_port bound on ${remote_bind_address} on the dev host"
+        echo "  inbound:  $local_service_ports bound on ${remote_bind_address} on the dev host"
     else
-        echo "  inbound:  $local_service_port on the dev host's loopback"
+        echo "  inbound:  $local_service_ports on the dev host's loopback"
     fi
 fi
 exec ssh "${ssh_arguments[@]}"

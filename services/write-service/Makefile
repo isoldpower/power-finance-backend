@@ -54,5 +54,6 @@ guard-NAME:
 	fi
 
 .PHONY: sandbox
-sandbox: guard-NAME ## Run the whole service for a sandbox — edge + all five consumers: NAME= [PORT=8102]
-	@$(SANDBOX_RUNNER) "$(SANDBOX_ENV_FILE)" - "$(WRITE_REQUIRED)" $(WRITE_PROCESSES)
+sandbox: guard-NAME ## Run the whole service for a sandbox — edge + all five consumers: NAME= [PORT=8102] [ISOLATED=1]
+	@$(if $(ISOLATED),$(MAKE) --no-print-directory -C $(REPO_ROOT) sandbox-datastores NAME=$(SANDBOX_NAME),:)
+	@ISOLATED=$(ISOLATED) $(SANDBOX_RUNNER) "$(SANDBOX_ENV_FILE)" - "$(WRITE_REQUIRED)" $(WRITE_PROCESSES)

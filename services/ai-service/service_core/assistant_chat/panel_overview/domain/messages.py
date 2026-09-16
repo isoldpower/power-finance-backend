@@ -6,8 +6,9 @@ NO_BASELINE = "no baseline yet"
 NOTHING_SPENT = "nothing yet"
 
 BASE_PROMPTS = (
-    "Where did my money go last month?",
-    "What am I spending the most on?",
+    "What is my next step to financial wealth?",
+    "How should I rearrange my assets?",
+    "What are conditions for the car loan that I can afford?",
 )
 UNCATEGORISED_PROMPT = "Which transactions still need a category?"
 FIRST_TRANSACTION_PROMPT = "How do I record my first transaction?"

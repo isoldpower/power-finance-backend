@@ -58,7 +58,7 @@ return {
                             type = "string",
                             default = "sandbox:route:",
                             description = "Key namespace; the sandbox id is appended "
-                                .. "verbatim. Must match what `make sandbox-up` writes.",
+                                .. "verbatim. Must match what `make host-route` writes.",
                         },
                     },
                     {

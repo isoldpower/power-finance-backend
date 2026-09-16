@@ -6,13 +6,13 @@
 # network would make `write-service` round-robin between the baseline and a
 # sandbox, silently sending a share of untagged traffic into someone's sandbox.
 x-sandbox-env: &sandbox-env
-  SANDBOX_ID: ${SANDBOX_ID:?SANDBOX_ID is required — use `make sandbox-up NAME=...`}
+  SANDBOX_ID: ${SANDBOX_ID:?SANDBOX_ID is required — use `make host-sandbox-up NAME=...`}
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
   OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
   OTEL_DEPLOYMENT_ENVIRONMENT: sandbox
 
 x-flink-sandbox-env: &flink-sandbox-env
-  - SANDBOX_ID=${SANDBOX_ID:?SANDBOX_ID is required — use `make sandbox-up NAME=...`}
+  - SANDBOX_ID=${SANDBOX_ID:?SANDBOX_ID is required — use `make host-sandbox-up NAME=...`}
   - OTEL_JAVAAGENT_ENABLED=true
   - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc

@@ -1,0 +1,87 @@
+# See README.md → "Shared dev environment"
+#
+# The laptop counterpart of compose.sandbox-datastores.yaml. That file layers onto
+# compose.sandbox.yaml and is reachable only from inside the baseline's network;
+# this one stands alone and PUBLISHES a port, because the process that uses it runs
+# natively next to Docker rather than in it.
+#
+# One instance holds every service's database, created by sandbox_init, so a laptop
+# runs one container rather than four. Kafka, Redis and ImmuDB stay shared: event
+# routing is what makes a sandbox a sandbox, and isolating the broker would cut the
+# sandbox off from the traffic it exists to handle.
+volumes:
+  sandbox_local_postgres_data:
+
+# One instance, so one set of credentials: the per-service DATABASE_USER/PASSWORD
+# pairs describe the baseline's separate servers, and using them here would build a
+# DSN the sandbox's own Postgres rejects.
+x-local-database-env: &local-database-env
+  DATABASE_HOST: sbx-postgres
+  DATABASE_PORT: "5432"
+  DATABASE_USER: ${DATABASE_USER:-postgres}
+  DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+
+services:
+  sbx-postgres:
+    image: postgres:18.3
+    restart: unless-stopped
+    ports:
+      # Bound to loopback and off both the tunnel band (5433-5437) and the test
+      # band (5533-5536), so an isolated sandbox cannot be confused for either.
+      - "127.0.0.1:${SANDBOX_DATABASE_PORT:-5633}:5432"
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${WRITE_DATABASE_NAME:-power_finance_write}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      WRITE_DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      READ_DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
+      AI_DATABASE_NAME: ${AI_DATABASE_NAME:-power_finance_ai}
+      WEBHOOK_DATABASE_NAME: ${WEBHOOK_DATABASE_NAME:-power_finance_webhooks}
+    volumes:
+      - sandbox_local_postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/sandbox_init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # Authenticating, unlike pg_isready: a server still loading its volume answers
+      # pg_isready before it will accept a password, and a migration then fails.
+      test:
+        - CMD-SHELL
+        - PGPASSWORD="$$POSTGRES_PASSWORD" psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -c 'select 1' >/dev/null
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+
+  sbx-write-migrate:
+    extends:
+      file: services/write-service/compose.yaml
+      service: write-migrate
+    depends_on: !reset {}
+    environment:
+      <<: *local-database-env
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+
+  sbx-read-migrate:
+    extends:
+      file: services/read-service/compose.yaml
+      service: read-migrate
+    depends_on: !reset {}
+    environment:
+      <<: *local-database-env
+      DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
+
+  sbx-ai-migrate:
+    extends:
+      file: services/ai-service/compose.yaml
+      service: ai-migrate
+    depends_on: !reset {}
+    environment:
+      AI_DATABASE_URL: postgresql+psycopg://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@sbx-postgres:5432/${AI_DATABASE_NAME:-power_finance_ai}
+
+  sbx-webhook-migrate:
+    extends:
+      file: services/webhook-service/compose.yaml
+      service: webhook-migrate
+    depends_on: !reset {}
+    environment:
+      POSTGRES_DSN: postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@sbx-postgres:5432/${WEBHOOK_DATABASE_NAME:-power_finance_webhooks}

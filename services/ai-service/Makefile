@@ -65,5 +65,6 @@ guard-NAME:
 	fi
 
 .PHONY: sandbox
-sandbox: guard-NAME ## Run the whole service for a sandbox — edge + posting dispatcher: NAME= [PORT=8101]
-	@$(SANDBOX_RUNNER) "$(SANDBOX_ENV_FILE)" "$(REPO_ROOT)/services/ai-service/.env" "$(AI_REQUIRED)" $(AI_PROCESSES)
+sandbox: guard-NAME ## Run the whole service for a sandbox — edge + posting dispatcher: NAME= [PORT=8101] [ISOLATED=1]
+	@$(if $(ISOLATED),$(MAKE) --no-print-directory -C $(REPO_ROOT) sandbox-datastores NAME=$(SANDBOX_NAME),:)
+	@ISOLATED=$(ISOLATED) $(SANDBOX_RUNNER) "$(SANDBOX_ENV_FILE)" "$(REPO_ROOT)/services/ai-service/.env" "$(AI_REQUIRED)" $(AI_PROCESSES)

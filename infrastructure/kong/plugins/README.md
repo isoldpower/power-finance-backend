@@ -165,21 +165,38 @@ is the gateway half of the shared dev environment.
 **Resolving the sandbox id**, in order:
 
 1. the `sandbox-id` entry of the W3C `baggage` header;
-2. the `X-Sandbox` header.
+2. the `X-Sandbox` header;
+3. the `sandbox` query argument.
+
+The order is deliberate. Baggage is a decision already taken by an upstream hop and
+outranks anything a client asserts; between the other two, a header and a URL come
+from the same place, so either could be the weaker — the URL is treated as such.
+
+The query argument exists for **WebSockets**. A browser cannot set headers on a
+handshake: `new WebSocket(url, protocols)` takes a URL and a subprotocol list and
+nothing else, which is also why the Clerk token rides the subprotocol list rather
+than `Authorization`. A third subprotocol pair is not available for the sandbox
+either — `clerk-jwt` accepts that list only when it holds exactly two entries — so
+the id travels in the URL: `wss://…/api/v1/chat/advice?sandbox=<name>`.
+
+It is accepted on every route, not only upgrades. Anyone can therefore pin a request
+to a sandbox by editing a URL, which was already true of `X-Sandbox`; this is a
+development gateway and neither is a privilege boundary. Note that the id lands in
+the access log as part of the request line.
 
 No sandbox id means no routing — the request goes to the baseline upstream, which
 is what every ordinary request does.
 
-**Propagating it.** When the id arrived in `X-Sandbox` rather than in baggage, the
-plugin appends `sandbox-id=<id>` to the `baggage` header it forwards (disable with
-`propagate_baggage: false`). That is what lets Python, Go and Java consumers
+**Propagating it.** When the id arrived in `X-Sandbox` or the query argument rather
+than in baggage, the plugin appends `sandbox-id=<id>` to the `baggage` header it
+forwards (disable with `propagate_baggage: false`). That is what lets Python, Go and Java consumers
 downstream see the sandbox on events the request produces, without any of them
 knowing about `X-Sandbox`.
 
 **Choosing the upstream.** The key is **per service**:
 `{redis_key_prefix}{sandbox_id}:{service}`, where `{service}` is the Kong service the
 router matched (`kong.router.get_service().name`). Its value is a plain `host:port`.
-On a hit the plugin calls `kong.service.set_target`; `make sandbox-up` writes those
+On a hit the plugin calls `kong.service.set_target`; `make host-sandbox-up` writes those
 keys. Scoping by service is what lets one sandbox name override several services at
 once — `alice` can run both `write-service` and `read-service`, and a request is
 re-pointed only for the service it actually addresses.

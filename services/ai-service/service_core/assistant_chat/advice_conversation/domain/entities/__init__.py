@@ -1,3 +1,4 @@
+from .assistant_quota import AssistantQuota
 from .conversation_message import ConversationMessage, MessageRole, MessageStatus
 from .reply_frame import (
     ReplyEvent,
@@ -10,6 +11,7 @@ from .resource_reference import ResourceReference
 from .routed_replies import RoutedReplies
 
 __all__ = [
+    "AssistantQuota",
     "ConversationMessage",
     "MessageRole",
     "MessageStatus",

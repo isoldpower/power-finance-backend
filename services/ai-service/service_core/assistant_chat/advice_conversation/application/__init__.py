@@ -6,6 +6,7 @@ from .contracts import (
     MalformedFrameError,
     MessageHandler,
     MessageRepository,
+    QuotaRepository,
     ReferenceExtractor,
     ReplyGenerator,
     Termination,
@@ -15,6 +16,7 @@ from .contracts import (
 from .conversation_handler import ConversationHandler
 from .dtos import (
     ConversationMessageDTO,
+    QuotaDecisionDTO,
     ResourceReferenceDTO,
     conversation_message_to_dto,
     dto_to_conversation_message,
@@ -38,6 +40,8 @@ __all__ = [
     "MessageRouter",
     "NeverTerminates",
     "ProcessShutdownSignal",
+    "QuotaDecisionDTO",
+    "QuotaRepository",
     "ReferenceExtractor",
     "ReplyGenerator",
     "ResourceReferenceDTO",

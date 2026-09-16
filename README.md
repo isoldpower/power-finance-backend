@@ -67,7 +67,7 @@ make test               # run every service + library suite
 
 `make test-datastores` is separate from the stack on purpose. The Python suites
 default to 5533/5534/5536 rather than the stack's 5433/5434/5436, because those
-belong to the **dev host** whenever `make sandbox-tunnels` is running — and a test
+belong to the **dev host** whenever `make devhost-tunnels` is running — and a test
 run that reaches one of them creates and drops its test database on the machine
 everyone shares. The throwaway instances are tmpfs-backed and safe to leave up;
 `make test-datastores-down` discards them.
@@ -151,7 +151,7 @@ fails silently (your request quietly runs against `main`).
 ### 6. Open the tunnels — leave this running
 
 ```bash
-make sandbox-tunnels DEV_HOST=<dev-host>
+make devhost-tunnels DEV_HOST=<dev-host>
 ```
 
 This forwards the host's Kafka, databases, Redis, ImmuDB, Elasticsearch, OTLP and the
@@ -159,7 +159,7 @@ Jaeger UI onto your own `localhost`, and forwards port 8100 back so the gateway 
 reach your service. Nothing on the host is published for this; it all rides SSH.
 
 If the binds fail with *"Address already in use"*, something local holds those ports —
-most often a baseline stack you started yourself. You do not need one: `make baseline-down`.
+most often a baseline stack you started yourself. You do not need one: `make host-down`.
 
 ### 7. Run the service you are changing
 
@@ -194,7 +194,7 @@ the baseline's Redis, so registration happens **on the host** — one ssh hop, m
 you:
 
 ```bash
-make sandbox-route-remote NAME=<your-sandbox-name> SERVICE=write-service \
+make devhost-route NAME=<your-sandbox-name> SERVICE=write-service \
     DEV_HOST=<dev-host>
 ```
 
@@ -206,6 +206,11 @@ curl -H "Authorization: Bearer <clerk session token>" \
 
 Requests without `X-Sandbox` go to the baseline, so you never disturb anyone else.
 
+A **WebSocket** cannot carry that header — the browser's `WebSocket` constructor takes
+only a URL and subprotocols — so the socket URL carries `?sandbox=<your-sandbox-name>`
+instead. Without it the socket lands on the baseline while the page's HTTP calls go to
+your sandbox, which shows up as a chat that records messages you can never read back.
+
 **Mind the method.** The gateway sends `GET /api/v1/*` to read-service and
 `POST/PUT/PATCH/DELETE` to write-service. A GET will not reach a write-service
 sandbox — it finds no read-service route for your name and falls back to the
@@ -215,7 +220,7 @@ run locally.
 ### 10. Finish up
 
 ```bash
-ssh <dev-host> 'cd <repo path on host> && make sandbox-down NAME=<your-sandbox-name>'
+ssh <dev-host> 'cd <repo path on host> && make host-sandbox-down NAME=<your-sandbox-name>'
 ```
 
 Then stop your service and the tunnel. Routes also expire on their own after a week.
@@ -225,16 +230,16 @@ Then stop your service and the tunnel. Routes also expire on their own after a w
 | Symptom | Cause |
 | --- | --- |
 | `tailnet policy does not permit you to SSH as user …` | wrong username — set `User` in `~/.ssh/config` |
-| `Address already in use` on every tunnel port | a local stack holds them — `make baseline-down` |
+| `Address already in use` on every tunnel port | a local stack holds them — `make host-down` |
 | `500` on your first request | a password in `.env` does not match the host's; check Postgres and ImmuDB |
 | `identity provider is unreachable` | host-side `CLERK_ISSUER_URL`; not your problem to fix |
 | `User is not yet provisioned in the read store` | that Clerk user has never been written; do one write **without** `X-Sandbox` first |
-| `X-Sandbox` seems ignored | the name does not match the registered route, so it fell back to the baseline — `make sandbox-list` on the host |
+| `X-Sandbox` seems ignored | the name does not match the registered route, so it fell back to the baseline — `make host-list` on the host |
 | a log count is always `0` | Python logs to stderr: `docker logs … 2>&1 \| grep -c …` |
 
 Your sandboxed writes are deliberately invisible to the baseline's read model — its
 consumer skips them. If you need your own projections too, ask for
-`make sandbox-up NAME=<your-sandbox-name> SERVICE=read-write-consumer` on the host.
+`make host-sandbox-up NAME=<your-sandbox-name> SERVICE=read-write-consumer` on the host.
 
 ## Repository layout
 
@@ -305,16 +310,16 @@ a 16 GB box, so a stack per developer does not fit — the reasoning is in
 
 ### Baseline
 
-The first `baseline-up` on a fresh host builds every image (10–20 minutes); after
+The first `host-up` on a fresh host builds every image (10–20 minutes); after
 that it starts in under a minute. Images are local-only tags, so each service built
 from source sets `pull_policy: build` — Compose would otherwise try a registry pull
 first and log `pull access denied` for each one before building anyway.
 
 ```bash
-make baseline-up        # pf-baseline: everything at main, tuned, Kibana off, Jaeger on
-make baseline-logs
-make baseline-kibana    # Kibana is scaled to 0 by default; ~768 MB when you want it
-make baseline-down
+make host-up        # pf-baseline: everything at main, tuned, Kibana off, Jaeger on
+make host-logs
+make host-kibana    # Kibana is scaled to 0 by default; ~768 MB when you want it
+make host-down
 ```
 
 `compose.baseline.yaml` layers over `compose.yaml`: memory limits per container,
@@ -336,7 +341,7 @@ Reach them over SSH tunnels, so nothing on the host has to be published beyond t
 gateway:
 
 ```bash
-make sandbox-tunnels DEV_HOST=pf-dev-host          # leave running; Ctrl-C closes
+make devhost-tunnels DEV_HOST=pf-dev-host          # leave running; Ctrl-C closes
 ```
 
 Add `DEV_HOST_USER=<host account>` if your account there differs from your laptop's
@@ -381,37 +386,40 @@ curl -H "X-User-Id: <clerk-id>" localhost:8100/api/v1/wallets
 ```
 
 To exercise the **full edge** (Clerk auth, rate limits, read-fallback, read-your-writes),
-let the gateway route your sandbox traffic back to your laptop. `make sandbox-tunnels`
-already opened the reverse tunnel for `LOCAL_SERVICE_PORT`:
+let the gateway route your sandbox traffic back to your laptop. `make devhost-tunnels`
+already opened a reverse tunnel for every laptop service port (8100 read-service,
+8101 ai-service, 8102 write-service), so routing a second service needs no reopening:
 
 ```bash
 # routes live in the baseline's Redis, so this registers one ON THE DEV HOST over ssh
-make sandbox-route-remote NAME=<your-sandbox-name> SERVICE=write-service DEV_HOST=pf-dev-host
+make devhost-route NAME=<your-sandbox-name> SERVICE=write-service DEV_HOST=pf-dev-host
 
 curl -H "Authorization: Bearer $TOKEN" -H "X-Sandbox: <your-sandbox-name>" http://pf-dev-host:8080/api/v1/wallets
 ```
 
-It defaults `TARGET` to `host.docker.internal:8100` and the repo on the host to
-`~/srv/power-finance-backend`; override either with `TARGET=` / `DEV_HOST_REPO=`, and
-pass `DEV_HOST_USER=` where the tunnels need it. The hop it makes is exactly:
+It derives `TARGET` from `SERVICE` — `host.docker.internal:8102` for write-service,
+`:8101` for ai-service, `:8100` for read-service — and defaults the repo on the host to
+`~/daemons/power-finance-backend`; override either with `TARGET=` / `DEV_HOST_REPO=`, and
+pass `DEV_HOST_USER=` where the tunnels need it. A service with no laptop runner has no
+port to derive, so it asks for `TARGET=` rather than guessing. The hop it makes is exactly:
 
 ```bash
-ssh <user>@pf-dev-host 'cd ~/srv/power-finance-backend && make sandbox-route \
-    NAME=<your-sandbox-name> SERVICE=write-service TARGET=host.docker.internal:8100'
+ssh <user>@pf-dev-host 'cd ~/daemons/power-finance-backend && make host-route \
+    NAME=<your-sandbox-name> SERVICE=write-service TARGET=host.docker.internal:8102'
 ```
 
-`host.docker.internal:8100` is the **dev host's** own loopback as seen from inside the
+`host.docker.internal:<port>` is the **dev host's** own loopback as seen from inside the
 gateway container, which the `-R` tunnel connects back to your laptop. So the gateway
 reaches your locally-run service without your machine being reachable at all.
 
-`make sandbox-route`, `make sandbox-unroute` and `make sandbox-local` only work where
+`make host-route`, `make host-unroute` and `make host-route-laptop` only work where
 the baseline runs; run from a laptop they stop with a message pointing at the
 `*-remote` form rather than a Compose error.
 
 When you are done with the sandbox, send that service back to the baseline:
 
 ```bash
-make sandbox-unroute-remote NAME=<your-sandbox-name> SERVICE=write-service DEV_HOST=pf-dev-host
+make devhost-unroute NAME=<your-sandbox-name> SERVICE=write-service DEV_HOST=pf-dev-host
 ```
 
 That drops the route only. To remove the sandbox altogether — containers, routes and
@@ -419,7 +427,7 @@ the consumer groups that make baseline consumers skip its events — one command
 all three:
 
 ```bash
-make sandbox-wipe-remote NAME=<your-sandbox-name> DEV_HOST=pf-dev-host
+make devhost-wipe NAME=<your-sandbox-name> DEV_HOST=pf-dev-host
 ```
 
 Afterwards `X-Sandbox: <your-sandbox-name>` behaves exactly like sending no header.
@@ -451,13 +459,13 @@ widen `BIND_ADDRESS` and connect without tunnels.
 
 #### Running on the host instead
 
-Some things are better off on the dev host, and `sandbox-up` runs them there with
+Some things are better off on the dev host, and `host-sandbox-up` runs them there with
 your host-side checkout bind-mounted (`BAKED=1` to skip the mount and use the image):
 
 ```bash
-make sandbox-up NAME=<your-sandbox-name> SERVICE=write-service          # source live-mounted, ~1s reload
-make sandbox-up NAME=<your-sandbox-name> SERVICE=read-service ISOLATED=1 # own Postgres + prefixed ES indices
-make sandbox-restart NAME=<your-sandbox-name> SERVICE=read-write-consumer # workers have no reloader
+make host-sandbox-up NAME=<your-sandbox-name> SERVICE=write-service          # source live-mounted, ~1s reload
+make host-sandbox-up NAME=<your-sandbox-name> SERVICE=read-service ISOLATED=1 # own Postgres + prefixed ES indices
+make host-sandbox-restart NAME=<your-sandbox-name> SERVICE=read-write-consumer # workers have no reloader
 ```
 
 Worth it for the compiled services (Go, Java) if you would rather not install their
@@ -465,9 +473,9 @@ toolchains, for anything that should keep running while your laptop is closed, a
 for `ISOLATED=1` work. It needs the source on the host, so it is the secondary path.
 
 ```bash
-make sandbox-list     # routes, per service, with TTL
-make sandbox-prune    # drop routes whose container is gone
-make sandbox-down NAME=<your-sandbox-name>
+make host-list     # routes, per service, with TTL
+make host-prune    # drop routes whose container is gone
+make host-sandbox-down NAME=<your-sandbox-name>
 ```
 
 ### How isolation actually works
@@ -506,9 +514,76 @@ documents. Kafka isolation does not help; the boundary stops at the datastore.
 `ISOLATED=1` is the answer for both: the sandbox gets its own Postgres (one
 instance, all four service databases created by
 `infrastructure/postgres/sandbox_init/`), its migrations run against it, and every
-Elasticsearch index is prefixed `sbx_<name>_`. `make sandbox-down` removes those
+Elasticsearch index is prefixed `sbx_<name>_`. `make host-sandbox-down` removes those
 volumes. Without the flag a sandbox is only safe for changes that keep writing the
 same shapes.
+
+The flag works on **both** paths, with one instance of Postgres each side:
+
+```bash
+# on the dev host — the container path
+make host-sandbox-up NAME=<name> SERVICE=ai-service ISOLATED=1
+
+# on your laptop — the primary path
+make sandbox-env NAME=<name> SERVICE=ai-service DEV_HOST=localhost ISOLATED=1
+make ai sandbox NAME=<name> ISOLATED=1     # starts and migrates it, then runs
+```
+
+`DEV_HOST=localhost` here, as everywhere else for `sandbox-env`, because the
+endpoints it writes are your tunnel's near end. The tailnet name belongs to
+`devhost-*`, which ssh somewhere; `sandbox-env` only names endpoints a local
+process dials.
+
+On the laptop the database lands on `localhost:5633` (`SANDBOX_DATABASE_PORT=`),
+deliberately clear of the tunnel band (5433-5437) and the test band (5533-5536).
+Kafka, Redis and ImmuDB stay the dev host's: event routing is what makes a sandbox
+a sandbox, so isolating the broker would cut it off from the traffic it exists to
+handle.
+
+`make ai sandbox ISOLATED=1` is a convenience over
+`make sandbox-datastores NAME=<name>`, which starts that Postgres and migrates all
+four databases. It **rebuilds the migration images from your working tree**, since
+the usual reason to want isolation is a migration that exists nowhere else yet.
+`make sandbox-datastores-down NAME=<name>` removes the database and its data.
+
+The env file records which kind it is (`SANDBOX_ISOLATED`), and asking for
+`ISOLATED=1` with a file that still points at the baseline is refused rather than
+run. Note that the laptop's database is **not** covered by `make host-wipe`,
+which runs on the dev host and cannot see it.
+
+#### Giving the baseline back what an isolated sandbox took
+
+Isolation has a cost the shared mode does not. An isolated **read-service** applies
+the events it claims into its own database, and the baseline's consumer skipped
+them, so the baseline read model is left permanently short — its write store knows
+about transactions its read store will never project. (A *shared* sandbox has no
+such problem: its consumer writes into the baseline's stores on the baseline's
+behalf, which is exactly why skipping is safe there.)
+
+When the sandbox is finished, hand those events back:
+
+```bash
+make devhost-replay NAME=<your-sandbox-name> DEV_HOST=pf-dev-host DRY_RUN=1  # look first
+make devhost-replay NAME=<your-sandbox-name> DEV_HOST=pf-dev-host
+```
+
+It reads the write outbox for rows whose `baggage` carries the sandbox id, tells
+read-service to forget it consumed exactly those, and re-publishes them with their
+**original event ids**. The ids are what make it safe to put them back on a shared
+topic: every other service still holds a dedupe row for the event it really did
+apply, so it rejects the copy. read-service is the one exception, and only for the
+ids named. The sandbox tag is stripped from the baggage on the way out, so the
+baseline claims them regardless of whether any consumer group for that sandbox is
+left; `--keep-sandbox-baggage` leaves it in place and falls back to the ADR-0003
+ownership rules instead.
+
+Replaying from the outbox rather than by resetting consumer offsets is deliberate:
+the outbox is durable, so it still works after `events.async` has aged past its
+seven-day retention, and it needs nothing stopped.
+
+Elasticsearch has its own consumer group, its own dedupe rows and its own
+applied-seq, so it is **not** covered — rebuild it afterwards with
+`backfill_elastic_from_postgres`.
 
 ### Two things to know
 

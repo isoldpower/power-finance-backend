@@ -8,12 +8,14 @@ from ..application.contracts import (
     MalformedFrameError,
     MessageHandler,
     MessageRepository,
+    QuotaRepository,
     ReferenceExtractor,
     ReplyGenerator,
     Termination,
 )
 from ..application.dtos import (
     ConversationMessageDTO,
+    QuotaDecisionDTO,
     ResourceReferenceDTO,
     dtos_to_conversation_messages,
 )
@@ -164,6 +166,39 @@ class ExplodingReferenceExtractor(ReferenceExtractor):
         context: ConnectionContext,
     ) -> tuple[ResourceReferenceDTO, ...]:
         raise RuntimeError("reference lookup is broken")
+
+
+class InMemoryQuotaRepository(QuotaRepository):
+    def __init__(self, allowance: int = 10, consumed: int = 0) -> None:
+        self.allowance = allowance
+        self.consumed = consumed
+        self.refunds = 0
+
+    async def consume_message(self, external_id: str) -> QuotaDecisionDTO:
+        if self.consumed >= self.allowance:
+            return QuotaDecisionDTO(
+                granted=False,
+                allowance=self.allowance,
+                consumed=self.consumed,
+            )
+
+        self.consumed += 1
+
+        return QuotaDecisionDTO(
+            granted=True,
+            allowance=self.allowance,
+            consumed=self.consumed,
+        )
+
+    async def refund_message(self, external_id: str) -> QuotaDecisionDTO:
+        self.refunds += 1
+        self.consumed = max(0, self.consumed - 1)
+
+        return QuotaDecisionDTO(
+            granted=True,
+            allowance=self.allowance,
+            consumed=self.consumed,
+        )
 
 
 class InMemoryMessageRepository(MessageRepository):

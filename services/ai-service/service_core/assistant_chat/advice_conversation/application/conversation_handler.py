@@ -8,8 +8,11 @@ from ..config import (
     GENERATION_FAILED,
     GENERATION_FAILED_MESSAGE,
     PROMPT_FIELD,
+    QUOTA_EXHAUSTED,
+    QUOTA_EXHAUSTED_MESSAGE,
 )
 from ..domain.entities import (
+    AssistantQuota,
     ConversationMessage,
     MessageRole,
     MessageStatus,
@@ -20,15 +23,18 @@ from ..domain.entities import (
     message_frame,
 )
 from ..presentation.message_view import present_message
+from ..presentation.quota_view import present_quota
 from .contracts import (
     ClientDisconnectedError,
     ConnectionContext,
     MessageHandler,
     MessageRepository,
+    QuotaRepository,
     ReferenceExtractor,
     ReplyGenerator,
 )
 from .dtos import (
+    QuotaDecisionDTO,
     conversation_message_to_dto,
     dtos_to_resource_references,
     resource_references_to_dtos,
@@ -43,10 +49,12 @@ class ConversationHandler(MessageHandler):
         messages: MessageRepository,
         generator: ReplyGenerator,
         references: ReferenceExtractor,
+        quotas: QuotaRepository,
     ) -> None:
         self._messages = messages
         self._generator = generator
         self._references = references
+        self._quotas = quotas
 
     async def is_responsible(self, message: dict, context: ConnectionContext) -> bool:
         return isinstance(message.get(PROMPT_FIELD), str)
@@ -57,11 +65,25 @@ class ConversationHandler(MessageHandler):
         context: ConnectionContext,
     ) -> AsyncIterator[dict]:
         prompt = message[PROMPT_FIELD]
+
+        # Spent before the turn is opened, so a refused message leaves no half of an
+        # exchange behind and costs nothing to store.
+        spent = await self._quotas.consume_message(context.external_id)
+        if not spent.granted:
+            yield error_frame(
+                QUOTA_EXHAUSTED,
+                QUOTA_EXHAUSTED_MESSAGE,
+                None,
+                _quota_view(spent),
+            )
+            return
+
         question, answer = await self._open_turn(prompt, context)
 
         yield accepted_frame(
             user_message_id=question.id,
             message_id=answer.id,
+            quota=_quota_view(spent),
         )
 
         produced = ""
@@ -74,12 +96,20 @@ class ConversationHandler(MessageHandler):
             raise
         except Exception:
             logger.exception("assistant reply generation failed")
+            # Ours to fix, so it is not the user's to pay for. A disconnect is not
+            # refunded: the reply was generated, they left.
+            refunded = await self._quotas.refund_message(context.external_id)
             await self._settle(answer, produced, context, MessageStatus.FAILED)
-            yield error_frame(GENERATION_FAILED, GENERATION_FAILED_MESSAGE, answer.id)
+            yield error_frame(
+                GENERATION_FAILED,
+                GENERATION_FAILED_MESSAGE,
+                answer.id,
+                _quota_view(refunded),
+            )
             return
 
         settled = await self._settle(answer, produced, context, MessageStatus.COMPLETE)
-        yield message_frame(present_message(settled))
+        yield message_frame(present_message(settled), _quota_view(spent))
 
     async def _open_turn(
         self,
@@ -148,3 +178,7 @@ class ConversationHandler(MessageHandler):
             logger.exception("reference extraction failed; storing the reply without refs")
 
             return ()
+
+
+def _quota_view(decision: QuotaDecisionDTO) -> dict:
+    return present_quota(AssistantQuota(allowance=decision.allowance, consumed=decision.consumed))
