@@ -61,11 +61,6 @@ message TransactionUpdated {
   string new_amount = 14;
 
   google.protobuf.Timestamp updated_at = 15;
-
-  // The transaction's chain membership as it stands after the update; empty means
-  // unchained. Always populated, so consumers can apply it as current state rather
-  // than having to tell "cleared" from "not sent". Chains themselves are write-side
-  // storage: the read models only record which chain a transaction belongs to.
   string chain_id = 16;
 }
 

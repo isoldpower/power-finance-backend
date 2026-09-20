@@ -20,10 +20,9 @@ class SqlAlchemyQuotaRepository(QuotaRepository):
         self._session_factory = session_factory
         self._default_allowance = default_allowance
 
-    # One statement, so two sockets opened by the same user cannot both read a
-    # spare message and both spend it. The guard rides on the conflict branch: an
-    # exhausted row matches nothing, updates nothing, and returns nothing.
     async def consume_message(self, external_id: str) -> QuotaDecisionDTO:
+        """Spend one message from the user's allowance, granting it if absent."""
+
         now = datetime.now(UTC)
         statement = (
             insert(AssistantQuotaModel)

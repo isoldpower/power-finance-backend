@@ -4,6 +4,26 @@ read-service, write-service and ai-service each keep their own codec — the
 house pattern — and webhook-service reimplements it in Go. A client stores one
 token whichever service answered it, so the four have to agree byte for byte,
 and nothing but this holds them together.
+
+`GOLDEN_VALUES`, `GOLDEN_ORDER` and `GOLDEN_DIRECTION` are a fixed token written
+down rather than generated: a round trip through one codec would pass even if
+all four drifted together.
+
+`_FILTER_MATERIAL_SCRIPTS` covers the second half of the agreement. A cursor is
+bound to the query that produced it by a fingerprint over the sort order AND the
+active filters. read-service mints one; when the projection goes stale the
+gateway hands the very same token to write-service, which rebuilds the
+fingerprint from its own copy of the filter material. If the two dicts differ by
+so much as a key name the token is rejected as a mismatch, and the client loses
+the page it could already see.
+
+`_RUNNERS` differ because read-service keeps its filter objects beside its ORM
+models, so reading them means booting Django, while write-service keeps its in
+an infrastructure-free module precisely so this does not have to boot anything.
+
+`FILTERED_ORDERS` is what the two sides must agree on for a rerouted page to
+continue rather than restart. It is written down here so that agreement on a
+WRONG order still fails.
 """
 
 import json
@@ -13,8 +33,6 @@ from functools import cache
 
 from .documents import REPOSITORY
 
-# A fixed token, written down rather than generated: a round trip through one
-# codec would pass even if all four drifted together.
 GOLDEN_VALUES = ["2026-08-12T12:00:00+00:00", "7c3e9a10-4d2b-4f77-91cc-5e8b0a2f6d34"]
 GOLDEN_ORDER = "created_at:desc,id:desc"
 GOLDEN_DIRECTION = "next"
@@ -87,12 +105,6 @@ def minted() -> dict[str, dict]:
     return results
 
 
-# A cursor is bound to the query that produced it by a fingerprint over the
-# sort order AND the active filters. read-service mints one; when the projection
-# goes stale the gateway hands the very same token to write-service, which
-# rebuilds the fingerprint from its own copy of the filter material. If the two
-# dicts differ by so much as a key name the token is rejected as a mismatch, and
-# the client loses the page it could already see.
 _FILTER_MATERIAL_SCRIPTS = {
     "read-service": (
         "import json;"
@@ -118,16 +130,11 @@ _FILTER_MATERIAL_SCRIPTS = {
     ),
 }
 
-# read-service keeps its filter objects beside its ORM models, so reading them
-# means booting Django. write-service keeps its in an infrastructure-free module
-# precisely so this does not have to boot anything.
 _RUNNERS = {
     "read-service": ("uv", "run", "python", "manage.py", "shell", "-c"),
     "write-service": ("uv", "run", "python", "-c"),
 }
 
-# What the two sides must agree on for a rerouted page to continue rather than
-# restart. Written down here so agreement on a WRONG order still fails.
 FILTERED_ORDERS = {
     "actions": "severity_rank:desc,created_at:desc,id:desc",
     "automations": "created_at:desc,id:desc",

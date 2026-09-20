@@ -8,10 +8,6 @@ SANDBOX_RUNNER := $(REPO_ROOT)/infrastructure/dev-host/run_sandbox_service.sh
 SANDBOX_NAME ?= $(NAME)
 SANDBOX_ENV_FILE = $(REPO_ROOT)/.sandbox/$(SANDBOX_NAME)-write-service.env
 PORT ?= 8102
-# Every long-running process the write-service image runs, minus the one-shot
-# migrate job. Kept in step with services/write-service/compose.yaml — a sandbox
-# missing one of these looks like a feature silently not working (automations that
-# never fire, actions that never expire), not like a service that is down.
 WRITE_PROCESSES = \
 	"edge=uv run uvicorn write_service.asgi:application --port $(PORT) --reload" \
 	"automation-engine=uv run python manage.py run_automation_engine" \

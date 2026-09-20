@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+
+	observabilitylogging "github.com/power-finance/observability-go/logging"
 )
 
 // Setup installs a JSON stdout slog logger as the default for early bootstrap;
@@ -18,11 +20,13 @@ func SetLevel(name string) {
 	install(levelFromName(name))
 }
 
+// install wraps the JSON handler in the shared trace-context handler, so every
+// line carries trace_id, span_id and sandbox_id the way the Python services do.
 func install(level slog.Level) {
 	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: level,
 	})
-	slog.SetDefault(slog.New(handler))
+	slog.SetDefault(slog.New(observabilitylogging.NewTraceContextHandler(handler)))
 }
 
 func levelFromName(name string) slog.Level {

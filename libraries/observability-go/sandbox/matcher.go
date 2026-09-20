@@ -1,5 +1,6 @@
 package sandbox
 
+// TrafficMatcher decides whether a message belongs to this process.
 type TrafficMatcher struct {
 	ownSandboxID string
 }

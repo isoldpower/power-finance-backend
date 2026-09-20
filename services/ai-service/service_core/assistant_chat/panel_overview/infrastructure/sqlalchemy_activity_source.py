@@ -110,7 +110,13 @@ class SqlAlchemyActivitySource(ActivitySource):
 
 
 def month_bounds(now: datetime) -> tuple[datetime, datetime]:
-    this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    this_month = now.replace(
+        day=1,
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
     last_month = (
         this_month.replace(year=this_month.year - 1, month=12)
         if this_month.month == 1

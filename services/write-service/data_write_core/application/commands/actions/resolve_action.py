@@ -16,7 +16,7 @@ from data_write_core.infrastructure.outbox_saga import (
 from ...bootstrap import get_repository_registry
 from ...dtos import ActionDTO, action_to_dto
 from ...interfaces import ActionRepository, OutboxRepository
-from ..command_base import CommandHandlerBase
+from .._command_base import CommandHandlerBase
 from ._events import action_resolved
 
 

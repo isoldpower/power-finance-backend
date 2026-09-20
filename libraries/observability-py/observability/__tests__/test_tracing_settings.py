@@ -1,7 +1,7 @@
 """Tracing settings come from OTEL_* environment variables."""
 
 from observability import resolve_tracing_settings
-from observability.configuration.tracing_settings import (
+from observability.configuration.config import (
     DEFAULT_EXPORTER_ENDPOINT,
     ENVIRONMENT_VARIABLE_EXPORTER_ENDPOINT,
     ENVIRONMENT_VARIABLE_SAMPLER_RATIO,

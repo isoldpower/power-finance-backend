@@ -68,7 +68,11 @@ class PostgresDedupeStore(DedupeStore):
             f"INSERT INTO {self._table} (consumer_group, event_id, consumed_at) "
             f"VALUES (%s, %s, %s) ON CONFLICT DO NOTHING"
         )
-        insert_parameters = (self._consumer_group, event_id, consumed_at_timestamp)
+        insert_parameters = (
+            self._consumer_group,
+            event_id,
+            consumed_at_timestamp,
+        )
 
         if connection is not None:
             async with connection.cursor() as cursor:

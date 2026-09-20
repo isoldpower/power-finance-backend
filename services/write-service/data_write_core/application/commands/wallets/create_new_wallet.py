@@ -40,7 +40,7 @@ from ...interfaces import (
     TransactionRepository,
     WalletRepository,
 )
-from ..command_base import CommandHandlerBase
+from .._command_base import CommandHandlerBase
 from ..transactions import (
     build_transaction,
     persist_transaction_step,

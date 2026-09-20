@@ -19,6 +19,7 @@ class UpdateProjectedTransactionAmount(Effect):
         self._unit_of_work = unit_of_work
 
     async def apply(self, event: EventMessage) -> None:
+        """Write the new amount, and the chain the transaction now belongs to."""
         payload = decode_payload(event, TransactionUpdated)
 
         async with self._unit_of_work() as work:
@@ -27,8 +28,6 @@ class UpdateProjectedTransactionAmount(Effect):
                 parse_money(payload.new_amount),
                 payload.updated_at.ToDatetime(tzinfo=UTC),
                 event.outbox_seq or 0,
-                # Chain membership rides along as current state; the facts a
-                # dispatch is built from read it straight off this row.
                 payload.chain_id,
             )
 

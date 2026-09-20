@@ -32,7 +32,8 @@ func Configure(ctx context.Context, defaultServiceName string) (Settings, Shutdo
 		otlptracegrpc.WithInsecure(),
 	)
 	if exporterErr != nil {
-		return settings, noopShutdown, fmt.Errorf("tracing: otlp exporter: %w", exporterErr)
+		returnError := fmt.Errorf("tracing: otlp exporter: %w", exporterErr)
+		return settings, noopShutdown, returnError
 	}
 
 	tracerProvider := sdktrace.NewTracerProvider(
@@ -41,7 +42,6 @@ func Configure(ctx context.Context, defaultServiceName string) (Settings, Shutdo
 		sdktrace.WithResource(buildResource(settings)),
 	)
 	otel.SetTracerProvider(tracerProvider)
-
 	return settings, tracerProvider.Shutdown, nil
 }
 
@@ -69,7 +69,10 @@ func buildResource(settings Settings) *resource.Resource {
 }
 
 func stripScheme(endpoint string) string {
-	withoutScheme := strings.TrimPrefix(strings.TrimPrefix(endpoint, "http://"), "https://")
+	withoutScheme := strings.TrimPrefix(
+		strings.TrimPrefix(endpoint, "http://"),
+		"https://",
+	)
 
 	return strings.TrimSuffix(withoutScheme, "/")
 }

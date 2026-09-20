@@ -1,3 +1,15 @@
+"""Base settings shared by all environments. Concrete environments (local,
+production, test) extend this module and override values that differ.
+
+Environment variables are loaded via django-environ from a `.env` file at the
+service root. See `.env.example` for the full list of recognised keys.
+
+`KAFKA_READ_GROUP_ID` must match services/read-service/compose.yaml: the
+baseline names a sandbox's group by deriving it from its own, so a process that
+falls back to a different default is invisible to it and both would project the
+same events.
+"""
+
 from pathlib import Path
 
 import environ
@@ -15,9 +27,6 @@ env = environ.Env(
     DATABASE_PASSWORD=(str, "postgres"),
     KAFKA_BOOTSTRAP_SERVERS=(str, "localhost:9092"),
     KAFKA_OUTBOX_TOPIC=(str, "events.async"),
-    # Must match services/read-service/compose.yaml: the baseline names a sandbox's
-    # group by deriving it from its own, so a process that falls back to a different
-    # default is invisible to it and both would project the same events.
     KAFKA_READ_GROUP_ID=(str, "read-service.write-consumer"),
     KAFKA_RETRY_TOPIC=(str, "read-service.retry"),
     KAFKA_DLQ_TOPIC=(str, "read-service.dlq"),

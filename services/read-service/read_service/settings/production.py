@@ -1,3 +1,6 @@
+"""Production overrides. Hardened defaults; sensitive values must come from
+the environment, not from code."""
+
 from .base import *  # noqa: F401,F403
 from .base import env
 

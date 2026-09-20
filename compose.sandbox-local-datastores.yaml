@@ -1,20 +1,7 @@
 # See README.md → "Shared dev environment"
-#
-# The laptop counterpart of compose.sandbox-datastores.yaml. That file layers onto
-# compose.sandbox.yaml and is reachable only from inside the baseline's network;
-# this one stands alone and PUBLISHES a port, because the process that uses it runs
-# natively next to Docker rather than in it.
-#
-# One instance holds every service's database, created by sandbox_init, so a laptop
-# runs one container rather than four. Kafka, Redis and ImmuDB stay shared: event
-# routing is what makes a sandbox a sandbox, and isolating the broker would cut the
-# sandbox off from the traffic it exists to handle.
 volumes:
   sandbox_local_postgres_data:
 
-# One instance, so one set of credentials: the per-service DATABASE_USER/PASSWORD
-# pairs describe the baseline's separate servers, and using them here would build a
-# DSN the sandbox's own Postgres rejects.
 x-local-database-env: &local-database-env
   DATABASE_HOST: sbx-postgres
   DATABASE_PORT: "5432"
@@ -26,8 +13,6 @@ services:
     image: postgres:18.3
     restart: unless-stopped
     ports:
-      # Bound to loopback and off both the tunnel band (5433-5437) and the test
-      # band (5533-5536), so an isolated sandbox cannot be confused for either.
       - "127.0.0.1:${SANDBOX_DATABASE_PORT:-5633}:5432"
     environment:
       POSTGRES_USER: ${DATABASE_USER:-postgres}
@@ -42,8 +27,6 @@ services:
       - sandbox_local_postgres_data:/var/lib/postgresql/data
       - ./infrastructure/postgres/sandbox_init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      # Authenticating, unlike pg_isready: a server still loading its volume answers
-      # pg_isready before it will accept a password, and a migration then fails.
       test:
         - CMD-SHELL
         - PGPASSWORD="$$POSTGRES_PASSWORD" psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -c 'select 1' >/dev/null

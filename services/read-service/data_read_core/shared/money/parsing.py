@@ -107,12 +107,18 @@ class AmountParser:
     rules: tuple[AmountRule, ...] = AMOUNT_RULES
 
     def parse(self, raw: object, decimals: int, field: str) -> Decimal:
+        """Turn a raw amount into a Decimal, or raise the rule that rejected it.
+
+        The `InvalidOperation` branch is unreachable in practice: the rules
+        reject a malformed amount first. It stands in case a rule is relaxed.
+        """
+
         candidate = AmountCandidate(raw=raw, decimals=decimals)
         self._enforce(candidate, field)
 
         try:
             return Decimal(candidate.text)
-        except InvalidOperation as exc:  # pragma: no cover - the rules reject these first
+        except InvalidOperation as exc:  # pragma: no cover
             raise _failure(field, DetailCode.AMOUNT_MALFORMED, "Amount is not a decimal") from exc
 
     def _enforce(self, candidate: AmountCandidate, field: str) -> None:

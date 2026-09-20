@@ -1,13 +1,4 @@
 # See README.md → "Shared dev environment"
-#
-# Layered on top of compose.sandbox.yaml when a sandbox must not write into the
-# baseline's stores — a migration under test, or changed projection logic that
-# would otherwise put wrong documents in the shared read model. Postgres comes up
-# per sandbox; Elasticsearch stays shared but every index gets a per-sandbox
-# prefix, so `ELASTICSEARCH_INDEX_PREFIX` is what isolates the read side there.
-# One instance, so one set of credentials: the per-service DATABASE_USER/PASSWORD
-# pairs describe the baseline's separate servers, and using them here would build a
-# DSN the sandbox's own Postgres rejects.
 x-sandbox-database-env: &sandbox-database-env
   DATABASE_HOST: sbx-postgres
   DATABASE_PORT: "5432"

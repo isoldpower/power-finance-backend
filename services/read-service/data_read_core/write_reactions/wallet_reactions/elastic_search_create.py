@@ -16,15 +16,20 @@ from .._utilities import decode_payload
 
 class IndexWalletDocument(Effect):
     async def apply(self, event: EventMessage) -> None:
+        """Seed the wallet document.
+
+        `balance` and `zero_balance` are floats, not ints or strings: the
+        balance is adjusted in place by a Painless script, and `+=` casts its
+        result back to the left operand's type. An integer seed silently
+        truncates every fractional delta.
+        """
+
         payload = decode_payload(event, WalletCreated)
         document = {
             "id": payload.wallet_id,
             "user_id": payload.user_id,
             "title": payload.title,
             "currency_code": payload.currency_code,
-            # Floats, not ints or strings: the balance is adjusted in place by a
-            # Painless script, and `+=` casts its result back to the left operand's
-            # type. An integer seed silently truncates every fractional delta.
             "balance": 0.0,
             "zero_balance": float(Decimal(payload.zero_balance or "0")),
             "created_at": payload.created_at.ToDatetime(tzinfo=UTC).isoformat(),

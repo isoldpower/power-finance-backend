@@ -45,10 +45,9 @@ def error_frame(
     )
 
 
-# Quota rides beside the payload rather than inside it: what is left to spend
-# belongs to the connection, not to the message being sent. Deltas carry none —
-# nothing about an allowance changes mid-stream, and they are the frequent frame.
 def _frame(event: ReplyEvent, data: dict, quota: dict | None = None) -> dict:
+    """Assemble one outbound frame."""
+
     frame = {
         "event": str(event),
         "data": data,

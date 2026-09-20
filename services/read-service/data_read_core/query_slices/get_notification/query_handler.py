@@ -36,4 +36,7 @@ class GetNotificationQueryHandler:
         await self._cache_worker.save_to_cache(notification)
 
         log_served_from_store(query.notification_id)
-        return FetchedResource(resource=notification, cached=False)
+        return FetchedResource(
+            resource=notification,
+            cached=False,
+        )

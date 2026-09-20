@@ -4,6 +4,18 @@ Read from each service's own generated OpenAPI document rather than from a list
 kept here, so a route added anywhere shows up without this suite being edited.
 The two Go services publish no schema; their handful of routes is named below
 and pinned against the gateway config instead.
+
+`AI_ENVIRONMENT` is enough for `build_app()` to construct a lazy engine; nothing
+connects.
+
+`GO_ROUTES` belong to the Go services, which have no OpenAPI document. Each is
+covered by a gateway-routing assertion, so a typo there cannot pass silently.
+
+`WEBSOCKET_ROUTES` are upgrades rather than OpenAPI operations, so they never
+appear in a generated document however real they are.
+
+`INTERNAL_PREFIXES` are not part of the published API: probes, the schema itself
+and the internal staleness fallback the gateway alone is allowed to call.
 """
 
 import json
@@ -14,7 +26,6 @@ from functools import cache
 
 from .documents import METHODS, REPOSITORY, Endpoint
 
-# Enough for `build_app()` to construct a lazy engine; nothing connects.
 AI_ENVIRONMENT = {
     "AI_DATABASE_URL": "postgresql+psycopg://unused:unused@127.0.0.1:1/unused",
     "KAFKA_BOOTSTRAP_SERVERS": "127.0.0.1:1",
@@ -40,19 +51,13 @@ AI_SCHEMA_SCRIPT = (
     "print(json.dumps(build_app().openapi()))"
 )
 
-# Routes belonging to the Go services, which have no OpenAPI document. Each is
-# covered by a gateway-routing assertion, so a typo here cannot pass silently.
 GO_ROUTES = (
     Endpoint("GET", "/api/v1/notifications/stream"),
     Endpoint("GET", "/api/v1/webhooks/{webhook_id}/deliveries"),
 )
 
-# WebSocket upgrades are not OpenAPI operations, so they never appear in a
-# generated document however real they are.
 WEBSOCKET_ROUTES = (Endpoint("GET", "/api/v1/chat/advice"),)
 
-# Not part of the published API: probes, the schema itself and the internal
-# staleness fallback the gateway alone is allowed to call.
 INTERNAL_PREFIXES = (
     "/health",
     "/api/schema",
@@ -81,6 +86,12 @@ class ServiceSchema:
 
 
 def _run(command: tuple[str, ...], service: str, environment: dict | None = None) -> dict:
+    """Run a schema-printing command and parse the document it writes.
+
+    `manage.py` writes its own log lines to stderr; the document is the last
+    thing on stdout.
+    """
+
     completed = subprocess.run(
         ("uv", "run", *command),
         cwd=REPOSITORY / "services" / service,
@@ -90,8 +101,6 @@ def _run(command: tuple[str, ...], service: str, environment: dict | None = None
         env={**os.environ, **(environment or {})},
     )
 
-    # `manage.py` writes its own log lines to stderr; the document is the last
-    # thing on stdout.
     return json.loads(completed.stdout[completed.stdout.index("{") :])
 
 

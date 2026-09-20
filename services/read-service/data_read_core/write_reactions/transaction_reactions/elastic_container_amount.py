@@ -1,3 +1,10 @@
+"""In-place amount adjustments on the indexed money containers.
+
+Both adjustment scripts assign rather than `+=`: Painless narrows a compound
+assignment back to the left operand's type, so `int += double` truncates. The
+cast makes the result a double whatever the stored document happens to hold.
+"""
+
 from decimal import Decimal
 from typing import NamedTuple
 
@@ -19,9 +26,6 @@ from .._logger_shortcuts import (
 )
 from .._utilities import decode_payload
 
-# Assign rather than `+=`: Painless narrows a compound assignment back to the left
-# operand's type, so `int += double` truncates. The cast makes the result a double
-# whatever the stored document happens to hold.
 WALLET_BALANCE_ADJUSTMENT_SCRIPT = (
     "ctx._source.balance = ((double) ctx._source.balance) + params.delta"
 )

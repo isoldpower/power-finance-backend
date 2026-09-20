@@ -1,11 +1,4 @@
 # See README.md → "Shared dev environment"
-#
-# Three separate bind addresses, because they carry different risk:
-#   PROXY_BIND_ADDRESS  the gateway — the only port developers need. 0.0.0.0 here.
-#   BIND_ADDRESS        datastores and OTLP ingest. Loopback unless someone runs a
-#                       service off-host or wants psql from a laptop.
-#   ADMIN_BIND_ADDRESS  Kong admin (unauthenticated), Jaeger UI, Flink UI. Keep
-#                       loopback and reach them over an SSH tunnel.
 x-observability-env: &observability-env
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
   OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
@@ -101,18 +94,10 @@ services:
     mem_limit: 1g
 
   es01:
-    # compose.elastic.yaml carries Elastic's own ES_PORT knob, which bakes the bind
-    # address into the same value. Publish it the way every other datastore here is
-    # published instead, so BIND_ADDRESS and the *_EXTERNAL_PORT that the tunnels
-    # forward (`open_tunnels.sh`) actually govern Elasticsearch too.
     ports: !override
       - "${BIND_ADDRESS:-127.0.0.1}:${ELASTICSEARCH_EXTERNAL_PORT:-9200}:9200"
     environment:
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
-    # Heap is only part of what the node needs: Lucene's mmap accounting, netty
-    # direct buffers, metaspace and thread stacks all live outside -Xmx. At 1g the
-    # cgroup killed it (exit 137) twice under ordinary indexing, taking search down
-    # for everyone on the host, so the limit is ~2x the heap with room to spare.
     mem_limit: 1536m
 
   kibana:

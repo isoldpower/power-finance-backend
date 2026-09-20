@@ -6,9 +6,6 @@ x-ai-database-url: &ai-database-url
   AI_DATABASE_URL: postgresql+psycopg://${AI_DATABASE_USER:-postgres}:${AI_DATABASE_PASSWORD:-postgres}@postgres-ai:5432/${AI_DATABASE_NAME:-power_finance_ai}
 
 x-exchange-rates-env: &exchange-rates-env
-  # Postings are booked in USD whatever they were spent in, so the dispatcher
-  # needs the rate feed. `.env` is deliberately not in the image, so these come
-  # through compose like every other runtime setting.
   EXCHANGE_RATES_PROVIDER: ${EXCHANGE_RATES_PROVIDER:-open-er-api}
   EXCHANGE_RATES_BASE_URL: ${EXCHANGE_RATES_BASE_URL:-https://open.er-api.com/v6/latest}
   EXCHANGE_RATES_TIMEOUT_SECONDS: ${EXCHANGE_RATES_TIMEOUT_SECONDS:-5.0}
@@ -130,10 +127,6 @@ services:
       - "-c"
       - "config_file=/etc/postgresql/postgresql.conf"
     healthcheck:
-      # pg_isready never authenticates, so it reports healthy while every login
-      # is rejected. Probe with the real credentials over the container's own
-      # network address: pg_hba trusts 127.0.0.1, so a loopback probe would
-      # bypass authentication and pass with any password.
       test:
         - CMD-SHELL
         - PGPASSWORD="$$POSTGRES_PASSWORD" psql -h "$$(hostname -i | awk '{print $$1}')" -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -c 'select 1' >/dev/null

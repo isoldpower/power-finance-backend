@@ -3,7 +3,7 @@ from datetime import datetime
 from aiokafka import ConsumerRecord
 from kafka_client_py import ConsumedMessage
 
-from ._logging import get_consumer_logger
+from ._logger_registry import get_consumer_logger
 
 
 def warn_routed_to_dlq(message: ConsumedMessage) -> None:

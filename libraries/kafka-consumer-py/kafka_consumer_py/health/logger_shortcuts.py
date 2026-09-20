@@ -1,4 +1,4 @@
-from .._logging import get_consumer_logger
+from .._logger_registry import get_consumer_logger
 
 
 def warn_probe_unavailable(title: str, poll_seconds: float):

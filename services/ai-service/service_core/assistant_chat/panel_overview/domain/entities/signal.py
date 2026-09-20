@@ -15,4 +15,8 @@ class Signal:
     tone: SignalTone
 
     def as_dict(self) -> dict:
-        return {"label": self.label, "value": self.value, "tone": str(self.tone)}
+        return {
+            "label": self.label,
+            "value": self.value,
+            "tone": str(self.tone),
+        }

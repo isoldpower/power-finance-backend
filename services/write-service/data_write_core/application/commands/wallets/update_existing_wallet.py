@@ -21,8 +21,8 @@ from ..._amount_scale import ensure_amount_scale
 from ...bootstrap import get_repository_registry
 from ...dtos import WalletDTO, wallet_to_dto
 from ...interfaces import MoneyFlowRepository, OutboxRepository, WalletRepository
-from ..command_base import CommandHandlerBase
-from ..loader_mixins import LoadWalletMixin
+from .._command_base import CommandHandlerBase
+from .._loader_mixins import LoadWalletMixin
 
 
 @dataclass(frozen=True)

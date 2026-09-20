@@ -16,14 +16,19 @@ from .._utilities import decode_payload
 
 class IndexGoalDocument(Effect):
     async def apply(self, event: EventMessage) -> None:
+        """Seed the goal document.
+
+        See IndexWalletDocument: progress is script-adjusted, so `target` and
+        `progress` have to start as floats or every fractional delta is
+        truncated away.
+        """
+
         payload = decode_payload(event, GoalCreated)
         document = {
             "id": payload.goal_id,
             "user_id": payload.user_id,
             "title": payload.title,
             "currency_code": payload.currency_code,
-            # See IndexWalletDocument: progress is script-adjusted, so it has to
-            # start as a float or every fractional delta is truncated away.
             "target": float(Decimal(payload.target or "0")),
             "progress": 0.0,
             "url": payload.url or None,

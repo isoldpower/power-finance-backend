@@ -1,7 +1,5 @@
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from write_service.common.base_async_api_view import BaseAsyncAPIView
 from write_service.common.idempotency import idempotent
 
 from data_write_core.application.commands import (
@@ -9,7 +7,6 @@ from data_write_core.application.commands import (
     ResolveActionCommandHandler,
 )
 
-from ...auth import IsGatewayAuthenticated
 from ...decorators import trace_handler_flow
 from ...presenters import ActionHttpPresenter
 from ...serializers import (
@@ -18,11 +15,11 @@ from ...serializers import (
     ResolveActionRequestSerializer,
 )
 from ..mixins import CommandResponseMixin
+from .base import ActionView
+from .config import ACTION_ID_PARAMETER
 
 
-class ActionResolveView(BaseAsyncAPIView, CommandResponseMixin):
-    permission_classes = [IsGatewayAuthenticated]
-
+class ActionResolveView(ActionView, CommandResponseMixin):
     @extend_schema(
         operation_id="actions_resolve",
         summary="Answer an action",
@@ -41,14 +38,7 @@ class ActionResolveView(BaseAsyncAPIView, CommandResponseMixin):
             "`action_already_resolved`. `Idempotency-Key` is optional but "
             "recommended for resolutions that apply, since those move real data."
         ),
-        parameters=[
-            OpenApiParameter(
-                "action_id",
-                type=OpenApiTypes.UUID,
-                location=OpenApiParameter.PATH,
-                description="Action ID",
-            ),
-        ],
+        parameters=[ACTION_ID_PARAMETER],
         request=ResolveActionRequestSerializer,
         responses={
             200: EnvelopedActionResponseSerializer,

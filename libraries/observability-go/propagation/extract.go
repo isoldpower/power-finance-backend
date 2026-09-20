@@ -8,5 +8,8 @@ import (
 )
 
 func ExtractFromKafkaHeaders(ctx context.Context, kafkaHeaders headers.KafkaHeaders) context.Context {
-	return otel.GetTextMapPropagator().Extract(ctx, NewKafkaHeaderCarrier(kafkaHeaders))
+	return otel.GetTextMapPropagator().Extract(
+		ctx,
+		NewKafkaHeaderCarrier(kafkaHeaders),
+	)
 }

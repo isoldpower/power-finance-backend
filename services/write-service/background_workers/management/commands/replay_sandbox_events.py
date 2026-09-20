@@ -104,11 +104,15 @@ async def _publish(entries, options) -> None:
             )
 
 
-# Debezium's EventRouter builds these from the outbox row, and a replayed message has
-# to be indistinguishable from one it produced — same event_id above all, because that
-# is what every consumer's dedupe keys on, and what stops the services that already
-# applied this event from applying it twice.
 def _headers(entry, keep_sandbox: bool):
+    """The envelope headers a replayed message carries.
+
+    Debezium's EventRouter builds these from the outbox row, and a replayed
+    message has to be indistinguishable from one it produced — same event_id
+    above all, because that is what every consumer's dedupe keys on, and what
+    stops the services that already applied this event from applying it twice.
+    """
+
     baggage = entry.baggage if keep_sandbox else _without_sandbox(entry.baggage)
     candidates = (
         ("event_id", str(entry.event_id)),

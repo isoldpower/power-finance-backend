@@ -2,11 +2,7 @@ from .sandbox_group_registry import KafkaSandboxGroupRegistry
 
 
 class StrictSandboxTrafficPolicy:
-    """A sandbox takes its own traffic and nothing else.
-
-    Unchanged on purpose: a sandbox runs a developer's edited code, so it must never
-    process the baseline's events into the shared datastores.
-    """
+    """A sandbox takes its own traffic and nothing else."""
 
     def __init__(self, own_sandbox_id: str) -> None:
         self._own_sandbox_id = own_sandbox_id
@@ -20,14 +16,7 @@ class StrictSandboxTrafficPolicy:
 
 
 class BaselineFallbackTrafficPolicy:
-    """The baseline takes untagged traffic, plus tagged traffic nobody is running.
-
-    A developer routing read-service should not have to run ai-service, the webhook
-    deliveries consumer and the automation engine just to keep their sandbox whole.
-    So the question is asked per service: this consumer skips a sandbox's event only
-    when that sandbox runs a consumer of its own *for this service*, and processes it
-    otherwise. Exactly one consumer still handles each event per datastore.
-    """
+    """The baseline takes untagged traffic, plus tagged traffic nobody is running."""
 
     def __init__(self, registry: KafkaSandboxGroupRegistry) -> None:
         self._registry = registry

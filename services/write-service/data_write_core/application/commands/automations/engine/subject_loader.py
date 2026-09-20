@@ -15,7 +15,7 @@ from ....interfaces import (
     TransactionRepository,
     WalletRepository,
 )
-from ...loader_mixins import (
+from ..._loader_mixins import (
     LoadContainerMixin,
     LoadTransactionMixin,
 )

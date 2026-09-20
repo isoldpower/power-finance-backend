@@ -223,3 +223,30 @@ take the shared environment down with it.
 
 The Redis lookup itself lives in `shared/lua/sandbox_routes.lua` so that
 `read-fallback` can resolve the same keys without duplicating it.
+
+### Layout
+
+| Module | Holds |
+| --- | --- |
+| `handler.lua` | the `access` phase only — the order of the fail-open steps |
+| `sandbox_resolver.lua` | reading the id off the request, and appending it to outbound baggage |
+| `baggage_parser.lua` | parsing and building `baggage` entries, with no Kong objects involved |
+| `sandbox_lookup.lua` | the seam onto `shared/lua/sandbox_routes.lua` |
+| `logger_shortcuts.lua` | every line the plugin logs |
+| `config.lua` | header, baggage-entry and query-argument names |
+| `schema.lua` | the Kong config schema |
+
+`resolve_sandbox()` returns a table (`sandbox_id`, `baggage_value`,
+`from_baggage`) rather than three positional values, so a caller reading only
+the id does not have to know the order of the rest.
+
+There is no `messages.lua` — unlike the other plugins this one never writes a
+response, it only re-points the upstream or stands aside. `logger_shortcuts.lua`
+takes that place: because the plugin fails open, a log line is the only trace a
+request that quietly went to the baseline leaves behind, so the wording of all
+four lines is kept in one file.
+
+`__tests__/` runs under the gateway's own LuaJIT via
+`infrastructure/kong/run_plugin_tests.sh`: `resolve_sandbox_spec.lua` pins the
+precedence of the three channels, `route_target_spec.lua` pins each fail-open
+branch and the baggage propagation.

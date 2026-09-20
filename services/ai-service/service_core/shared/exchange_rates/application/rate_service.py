@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from .contracts import RateProvider, RateUnavailable
 from .dtos import dto_to_rate_snapshot
-from .logging import log_rates_fetched, log_snapshot_too_old
+from .logger_shortcuts import log_rates_fetched, log_snapshot_too_old
 from .rate_snapshot import RateSnapshot
 
 

@@ -6,10 +6,6 @@ from django.core.management.base import BaseCommand
 
 logger = logging.getLogger("background_workers.elastic_backfill")
 
-# Postgres is the source of truth for every indexed value, so repairing a drifted
-# index is always "rewrite the document from its row". The per-index work already
-# lives in the two commands below; this one exists so that repairing *everything*
-# is a single call rather than a list to remember under pressure.
 BACKFILL_COMMANDS = (
     "backfill_wallet_balances",
     "backfill_search_documents",
@@ -33,12 +29,9 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options) -> None:
+        """Run each per-index backfill in turn, on a fresh Elasticsearch client."""
         for command_name in BACKFILL_COMMANDS:
             self.stdout.write(self.style.MIGRATE_HEADING(f"Running {command_name}…"))
-            # Each sub-command owns an asyncio.run() of its own and closes the
-            # client it used. The factory is lru_cached, so without dropping the
-            # cache the next command inherits a client bound to a dead event loop
-            # and aiohttp refuses it.
             get_elasticsearch.cache_clear()
             call_command(
                 command_name,

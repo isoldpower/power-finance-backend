@@ -4,14 +4,22 @@ These run against a real Postgres rather than a stand-in. The effects are
 mostly `INSERT ... ON CONFLICT`, `applied_seq` guards and a unique constraint —
 the parts of them worth testing are exactly the parts a fake database would
 have to reimplement in order to be wrong about.
+
+The `AI_DATABASE_URL` default names port 5536, which sits off the ones
+`make devhost-tunnels` forwards. On a tunnelled laptop localhost:5436 is the DEV
+HOST's postgres-ai, and the `_test` guard in `_schema` is the only thing that
+would stand between this suite and the machine everyone shares.
+`make test-datastores` starts what this default expects.
+
+The `EXCHANGE_RATES_*` defaults keep every test off the live rate feed: booking
+multiplies by whatever it says, so a suite that called it would assert today's
+exchange rate. The base URL points at the discard port, which refuses instantly
+— a dispatch that forgot to inject rates fails loudly here instead of quietly
+depending on the internet.
 """
 
 import os
 
-# Port 5536 sits off the ones `make devhost-tunnels` forwards. On a tunnelled laptop
-# localhost:5436 is the DEV HOST's postgres-ai, and the `_test` guard below is the only
-# thing that would stand between this suite and the machine everyone shares.
-# `make test-datastores` starts what this default expects.
 os.environ.setdefault(
     "AI_DATABASE_URL",
     "postgresql+psycopg://postgres:postgres@localhost:5536/power_finance_ai_test",
@@ -23,10 +31,6 @@ os.environ.setdefault("KAFKA_RETRY_TOPIC", "ai-service.retry")
 os.environ.setdefault("KAFKA_DLQ_TOPIC", "ai-service.dlq")
 os.environ.setdefault("LOG_LEVEL", "INFO")
 
-# No test may reach the live rate feed: booking multiplies by whatever it says,
-# so a suite that called it would assert today's exchange rate. Pointed at the
-# discard port, which refuses instantly — a dispatch that forgot to inject rates
-# fails loudly here instead of quietly depending on the internet.
 os.environ.setdefault("EXCHANGE_RATES_PROVIDER", "open-er-api")
 os.environ.setdefault("EXCHANGE_RATES_BASE_URL", "http://127.0.0.1:9/unreachable-in-tests")
 os.environ.setdefault("EXCHANGE_RATES_TIMEOUT_SECONDS", "0.25")
@@ -85,8 +89,12 @@ def _create_database_if_missing() -> None:
 
 @pytest.fixture(scope="session", autouse=True)
 def _schema():
-    # The fixture drops every table it manages, so pointing AI_DATABASE_URL at a
-    # real database would be quietly destructive rather than loud.
+    """Build the schema once per session and tear it down at the end.
+
+    The fixture drops every table it manages, so pointing AI_DATABASE_URL at a
+    real database would be quietly destructive rather than loud.
+    """
+
     if not _database_name().endswith("_test"):
         raise RuntimeError(
             f"refusing to run tests against database {_database_name()!r}: "

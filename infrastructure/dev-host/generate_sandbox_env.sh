@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# See ../../README.md → "Shared dev environment"
 set -euo pipefail
 
 sandbox_name="${1:?usage: generate_sandbox_env.sh <sandbox-name> <service> <dev-host> <output-file>}"
@@ -19,12 +20,6 @@ otlp_grpc_port="${OTLP_GRPC_PORT:-4317}"
 elasticsearch_port="${ELASTICSEARCH_EXTERNAL_PORT:-9200}"
 elasticsearch_hosts="${ELASTICSEARCH_HOSTS:-https://${dev_host}:${elasticsearch_port}}"
 
-# Every other endpoint below is built from "$dev_host", so it follows the tunnel by
-# construction. ELASTICSEARCH_HOSTS is the one line a caller can inherit from the
-# environment, and an inherited value that names a different host quietly leaves the
-# tunnel — reaching the dev host's published port directly, which BIND_ADDRESS keeps
-# on its loopback. That failure surfaces much later as a connection error from
-# Elasticsearch alone, so say it here.
 elasticsearch_note=""
 if [ -n "${ELASTICSEARCH_HOSTS:-}" ]; then
     inherited_host=$(printf '%s' "$ELASTICSEARCH_HOSTS" \
@@ -41,12 +36,6 @@ if [ -n "${ELASTICSEARCH_HOSTS:-}" ]; then
     fi
 fi
 
-# `make devhost-tunnels` binds its forwards on THIS machine's loopback, so a laptop
-# reaches the baseline at localhost and nowhere else. Naming the dev host here instead
-# builds endpoints that leave the tunnel and dial its published ports directly — which
-# BIND_ADDRESS keeps on the host's own loopback, so they refuse. The failure surfaces
-# later as a bootstrap or connection error naming the tailnet host, which reads like
-# the tunnel is down rather than like it was never used.
 case "$dev_host" in
     localhost|127.0.0.1) ;;
     *)
@@ -60,9 +49,6 @@ case "$dev_host" in
         ;;
 esac
 
-# Credentials are per service in this repo (WRITE_DATABASE_USER, READ_DATABASE_*, …).
-# Reading a generic DATABASE_USER/PASSWORD silently falls back to postgres/postgres
-# and then fails against any host that set its own passwords.
 case "$service_name" in
     write-service|write-*)
         database_port="$write_database_port"
@@ -101,10 +87,6 @@ case "$service_name" in
         ;;
 esac
 
-# The consumer group a process joins decides who owns a sandbox's events: the baseline
-# skips them only when a group named after its own plus this sandbox exists. Pinning
-# the group here keeps a locally-run consumer in the same group as the container it
-# stands in for, whatever the code defaults say.
 case "$service_name" in
     read-service|read-*)
         consumer_group_lines="KAFKA_READ_GROUP_ID=${KAFKA_READ_GROUP_ID:-read-service.write-consumer}
@@ -129,7 +111,6 @@ KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID=${KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID:-wri
         ;;
 esac
 
-# ai-service and webhook-service read a whole URL rather than DATABASE_* parts.
 service_specific_lines=""
 case "$service_name" in
     ai-service|ai-*)
@@ -142,10 +123,6 @@ case "$service_name" in
         ;;
 esac
 
-# An isolated sandbox keeps its own Postgres on this laptop, so the database lines
-# stop following the tunnel and point at localhost instead. Everything else still
-# does: the broker is deliberately shared, and Elasticsearch is separated by index
-# prefix rather than by instance, exactly as the dev-host path separates it.
 database_host="$dev_host"
 elasticsearch_prefix_line=""
 header_note="# Every endpoint points at the dev host; nothing here starts infrastructure.

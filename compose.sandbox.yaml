@@ -1,10 +1,4 @@
 # See README.md → "Shared dev environment"
-#
-# Every service here is named sbx-<service> and pulled in with `extends` rather
-# than layered over compose.yaml. That is deliberate: Compose always adds the
-# service name as a network alias, so reusing the baseline's names on the shared
-# network would make `write-service` round-robin between the baseline and a
-# sandbox, silently sending a share of untagged traffic into someone's sandbox.
 x-sandbox-env: &sandbox-env
   SANDBOX_ID: ${SANDBOX_ID:?SANDBOX_ID is required — use `make host-sandbox-up NAME=...`}
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}

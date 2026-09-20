@@ -59,4 +59,7 @@ async def get_automation(request, automation_id=None):
     )
     log_request_served(logger, "get_automation", id=automation_id)
 
-    return ok(present_one(fetched.resource), {"cached": fetched.cached})
+    return ok(
+        present_one(fetched.resource),
+        {"cached": fetched.cached},
+    )

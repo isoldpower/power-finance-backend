@@ -1,7 +1,3 @@
-"""Test doubles for consumers built on this library."""
-
-from __future__ import annotations
-
 from google.protobuf.json_format import MessageToJson
 from google.protobuf.message import Message
 
@@ -9,8 +5,6 @@ from .types import EventMessage
 
 
 class FakeConsumedMessage:
-    """Stand-in for kafka_client_py.ConsumedMessage (a structural Protocol)."""
-
     def __init__(
         self,
         *,
@@ -37,8 +31,6 @@ def make_consumed_message(
     outbox_seq: int | None = 1,
     **kwargs,
 ) -> FakeConsumedMessage:
-    """Build a FakeConsumedMessage with the standard envelope headers set."""
-
     headers: list[tuple[str, bytes]] = []
     if event_id is not None:
         headers.append(("event_id", event_id.encode("utf-8")))
@@ -52,8 +44,6 @@ def make_consumed_message(
 
 
 def make_event(payload: Message, *, outbox_seq: int | None = 1) -> EventMessage:
-    """Wrap a proto message in an EventMessage the way the consumer would."""
-
     return EventMessage(
         event_id="evt-1",
         event_type=type(payload).__name__,

@@ -143,7 +143,9 @@ async def sum_accounts_by_group_and_currency(user_id: int) -> GroupSubtotals:
 
     group_subtotals: GroupSubtotals = defaultdict(dict)
     async for account in account_rows:
-        group_subtotals[account["group"]][account["currency_code"]] = account["total"] or ZERO
+        related_group = account["group"]
+        related_currency = account["currency_code"]
+        group_subtotals[related_group][related_currency] = account["total"] or ZERO
 
     return dict(group_subtotals)
 

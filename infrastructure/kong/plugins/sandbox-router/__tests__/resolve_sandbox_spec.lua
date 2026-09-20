@@ -2,15 +2,7 @@
 -- exists because a browser cannot set headers on a WebSocket handshake, and it is
 -- tried last: baggage is a decision already taken upstream, and a header is set by a
 -- client that could equally have written the URL.
---
--- resolve_sandbox_id is a local, so it is reached through the closure rather than by
--- widening the plugin's surface just to be testable.
 local PLUGIN = os.getenv("PLUGIN_DIR") or "/p"
-
-package.loaded["kong.plugins.sandbox-router.config"]  = dofile(PLUGIN .. "/config.lua")
-package.loaded["power_finance.sandbox_routes"]        = { resolve_target = function() return nil end }
-package.loaded["kong.plugins.sandbox-router.baggage_parser"] = dofile(PLUGIN .. "/baggage_parser.lua")
-package.loaded["kong.plugins.sandbox-router.sandbox_lookup"] = dofile(PLUGIN .. "/sandbox_lookup.lua")
 
 local headers, query = {}, {}
 kong = {
@@ -20,23 +12,27 @@ kong = {
     },
     service = { request = { set_header = function() end } },
     router  = { get_service = function() return nil end },
-    log     = { warn = function() end, err = function() end },
+    log     = { warn = function() end, err = function() end, debug = function() end },
     ctx     = { shared = {} },
 }
 
-local handler = dofile(PLUGIN .. "/handler.lua")
+package.loaded["kong.plugins.sandbox-router.config"] = dofile(PLUGIN .. "/config.lua")
+package.loaded["kong.plugins.sandbox-router.baggage_parser"] =
+    dofile(PLUGIN .. "/baggage_parser.lua")
 
-local resolve
-for index = 1, 60 do
-    local name, value = debug.getupvalue(handler.access, index)
-    if not name then break end
-    if name == "resolve_sandbox_id" then resolve = value end
-end
-assert(resolve, "could not reach resolve_sandbox_id")
+local sandbox_resolver = dofile(PLUGIN .. "/sandbox_resolver.lua")
 
 local failures = 0
 local function check(label, expected)
-    local actual = resolve()
+    local actual = sandbox_resolver.resolve_sandbox().sandbox_id
+    local ok = actual == expected
+    if not ok then failures = failures + 1 end
+    print((ok and "ok   " or "FAIL ") .. label
+        .. "  expected=" .. tostring(expected) .. " actual=" .. tostring(actual))
+end
+
+local function check_from_baggage(label, expected)
+    local actual = sandbox_resolver.resolve_sandbox().from_baggage
     local ok = actual == expected
     if not ok then failures = failures + 1 end
     print((ok and "ok   " or "FAIL ") .. label
@@ -71,5 +67,14 @@ check("empty header falls through to query", "from-query")
 
 given({ baggage = "team=core,sandbox-id=tagged,tier=free" }, {})
 check("baggage entry is found among others", "tagged")
+
+given({ baggage = "sandbox-id=tagged" }, {})
+check_from_baggage("an id already in baggage is not re-propagated", true)
+
+given({ ["X-Sandbox"] = "from-header" }, {})
+check_from_baggage("an id from the header is propagated", false)
+
+given({}, { sandbox = "from-query" })
+check_from_baggage("an id from the query argument is propagated", false)
 
 os.exit(failures == 0 and 0 or 1)

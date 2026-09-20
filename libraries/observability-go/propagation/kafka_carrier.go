@@ -20,7 +20,10 @@ func (c KafkaHeaderCarrier) Get(key string) string {
 }
 
 func (c KafkaHeaderCarrier) Set(key string, value string) {
-	c.kafkaHeaders = headers.Merge(c.kafkaHeaders, headers.String(key, value))
+	c.kafkaHeaders = headers.Merge(
+		c.kafkaHeaders,
+		headers.String(key, value),
+	)
 }
 
 func (c KafkaHeaderCarrier) Keys() []string {

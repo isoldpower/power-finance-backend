@@ -64,10 +64,16 @@ class ConversationHandler(MessageHandler):
         message: dict,
         context: ConnectionContext,
     ) -> AsyncIterator[dict]:
+        """Stream one exchange: spend the quota, open the turn, settle the reply.
+
+        The quota is spent before the turn is opened, so a refused message leaves
+        no half of an exchange behind and costs nothing to store. A generation
+        failure is ours to fix and so is refunded; a disconnect is not, because
+        the reply was generated and the client left.
+        """
+
         prompt = message[PROMPT_FIELD]
 
-        # Spent before the turn is opened, so a refused message leaves no half of an
-        # exchange behind and costs nothing to store.
         spent = await self._quotas.consume_message(context.external_id)
         if not spent.granted:
             yield error_frame(
@@ -96,8 +102,6 @@ class ConversationHandler(MessageHandler):
             raise
         except Exception:
             logger.exception("assistant reply generation failed")
-            # Ours to fix, so it is not the user's to pay for. A disconnect is not
-            # refunded: the reply was generated, they left.
             refunded = await self._quotas.refund_message(context.external_id)
             await self._settle(answer, produced, context, MessageStatus.FAILED)
             yield error_frame(

@@ -11,7 +11,13 @@ class PropagationContext(NamedTuple):
 
     @property
     def is_empty(self) -> bool:
-        return not any((self.traceparent, self.tracestate, self.baggage))
+        return not any(
+            (
+                self.traceparent,
+                self.tracestate,
+                self.baggage,
+            )
+        )
 
 
 EMPTY_PROPAGATION_CONTEXT = PropagationContext(

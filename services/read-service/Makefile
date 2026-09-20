@@ -5,8 +5,6 @@ SANDBOX_RUNNER := $(REPO_ROOT)/infrastructure/dev-host/run_sandbox_service.sh
 SANDBOX_NAME ?= $(NAME)
 SANDBOX_ENV_FILE = $(REPO_ROOT)/.sandbox/$(SANDBOX_NAME)-read-service.env
 PORT ?= 8100
-# Every process the read-service image runs, minus the one-shot jobs (migrate,
-# es-init). Kept in step with services/read-service/compose.yaml.
 READ_PROCESSES = \
 	"edge=uv run uvicorn read_service.asgi:application --port $(PORT) --reload" \
 	"projection=uv run python manage.py run_write_message_consumer"

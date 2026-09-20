@@ -7,9 +7,6 @@ from .effect import Effect, EffectFn, as_effect
 
 
 class _EffectSagaStep(SagaStep[None]):
-    """Binds an Effect to a specific event so it satisfies the parameterless
-    SagaStep contract the shared coordinator orchestrates."""
-
     def __init__(self, effect: Effect, event: EventMessage) -> None:
         self._effect = effect
         self._event = event
@@ -26,10 +23,6 @@ class _EffectSagaStep(SagaStep[None]):
 
 
 class SyncProcessGroup:
-    """A group of effects that run sequentially for a single event. An atomic
-    group runs through the shared SAGA coordinator, so a later failure
-    compensates the effects already applied."""
-
     def __init__(
         self,
         effects: list[Effect | EffectFn],

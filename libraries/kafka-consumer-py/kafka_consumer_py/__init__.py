@@ -1,4 +1,4 @@
-from ._logging import LOGGER_NAMESPACE, get_consumer_logger
+from ._logger_registry import LOGGER_NAMESPACE, get_consumer_logger
 from .consumer_runner import AsyncCloser, KafkaConsumerRunner, MessageCallback
 from .event_processor import (
     ContextBoundMessageProcessor,

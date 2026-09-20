@@ -25,7 +25,12 @@ def build_tracer_provider(settings: TracingSettings) -> TracerProvider:
         sampler=_build_sampler(settings.sampler_ratio),
     )
     tracer_provider.add_span_processor(
-        BatchSpanProcessor(OTLPSpanExporter(endpoint=settings.exporter_endpoint, insecure=True)),
+        BatchSpanProcessor(
+            OTLPSpanExporter(
+                endpoint=settings.exporter_endpoint,
+                insecure=True,
+            )
+        ),
     )
 
     return tracer_provider

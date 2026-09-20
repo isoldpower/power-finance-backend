@@ -21,7 +21,7 @@ from ..._amount_scale import ensure_amount_scale
 from ...bootstrap import get_repository_registry
 from ...dtos import GoalDTO, goal_to_dto
 from ...interfaces import GoalRepository, MoneyFlowRepository, OutboxRepository
-from ..command_base import CommandHandlerBase
+from .._command_base import CommandHandlerBase
 from ._goal_loader import LoadGoalMixin
 
 

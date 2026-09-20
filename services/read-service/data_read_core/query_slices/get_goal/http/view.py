@@ -80,5 +80,9 @@ async def get_goal(request, goal_id=None):
 
     return ok(
         await present_one(detail, history_page.items),
-        present_history_meta(CacheNamespace.HISTORY, history_page, fetched.cached),
+        present_history_meta(
+            CacheNamespace.HISTORY,
+            history_page,
+            fetched.cached,
+        ),
     )

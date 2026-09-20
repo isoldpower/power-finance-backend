@@ -1,19 +1,7 @@
 #!/usr/bin/env bash
+# See ../../README.md → "Giving the baseline back what an isolated sandbox took"
 set -euo pipefail
 
-# Run on the dev host. Gives the baseline's read model the events an ISOLATED sandbox
-# took and applied somewhere else.
-#
-# The order matters and is the whole trick:
-#   1. the write outbox says which events carried this sandbox's baggage
-#   2. read-service is told to forget it consumed exactly those
-#   3. they are re-published with their ORIGINAL event ids
-#
-# Step 3 reaches every service, not just read-service, because the topic is shared.
-# That is safe precisely because the ids are unchanged: any service that really did
-# apply the event still has its dedupe row and rejects the copy. Step 2 is what makes
-# read-service the one exception, and it is scoped to the ids from step 1 for the same
-# reason — forget an event it actually applied and the replay applies it twice.
 sandbox_name="${1:?usage: replay_sandbox_events.sh <sandbox> <baseline-project> [dry-run] [since] [until]}"
 baseline_project="${2:?missing baseline project}"
 dry_run="${3:-}"

@@ -70,7 +70,15 @@ default to 5533/5534/5536 rather than the stack's 5433/5434/5436, because those
 belong to the **dev host** whenever `make devhost-tunnels` is running — and a test
 run that reaches one of them creates and drops its test database on the machine
 everyone shares. The throwaway instances are tmpfs-backed and safe to leave up;
-`make test-datastores-down` discards them.
+`make test-datastores-down` discards them — the data directory is a tmpfs, so
+`down` leaves nothing behind. They take the plain credentials the suites
+default to, which is why `make test-datastores` runs Compose with **no**
+`--env-file` layering: a laptop `.env` carries the dev host's credentials, and
+layering them in is how a test run ends up authenticating against the shared
+machine.
+
+Their healthcheck authenticates rather than calling `pg_isready`, for the
+reason given under [Environment](#environment).
 
 The gateway proxy is published on `localhost:${GATEWAY_PROXY_PORT:-8080}`. Each
 service stack is also standalone-runnable from its own directory
@@ -141,6 +149,12 @@ Do **not** add `ELASTICSEARCH_HOSTS`, `KAFKA_EXTERNAL_HOST`, any `*BIND_ADDRESS`
 `CLERK_ISSUER_URL` or `READ_AT_LEAST_HMAC_SECRET`. Those are host-side settings; the
 host's value for the first one (`https://es01:9200`) is a Docker-internal name that
 will not resolve on your machine.
+
+`ELASTICSEARCH_HOSTS` is the one endpoint `make sandbox-env` will inherit from
+your environment rather than build from `DEV_HOST`. An inherited value naming a
+different host quietly leaves the tunnel and dials the dev host's published
+port, which `BIND_ADDRESS` keeps on its own loopback — so it surfaces much
+later as a connection error from Elasticsearch alone.
 
 ### 5. Choose a sandbox name
 
@@ -327,6 +341,30 @@ capped ES and Kafka heaps, one Flink task slot, `OTEL_*` pointed at Jaeger, and
 `SANDBOX_ID` explicitly empty, which is what makes the baseline the owner of all
 untagged traffic.
 
+It publishes on **three separate bind addresses**, because they carry different
+risk:
+
+| Variable | Covers | Default |
+| --- | --- | --- |
+| `PROXY_BIND_ADDRESS` | the gateway — the only port developers need | `0.0.0.0` |
+| `BIND_ADDRESS` | datastores and OTLP ingest | loopback, unless someone runs a service off-host or wants `psql` from a laptop |
+| `ADMIN_BIND_ADDRESS` | Kong admin (unauthenticated), Jaeger UI, Flink UI | loopback; reach them over an SSH tunnel |
+
+Elasticsearch is published the way every other datastore here is, rather than
+through the `ES_PORT` knob `compose.elastic.yaml` carries — that one bakes the
+bind address into the same value, so `BIND_ADDRESS` and the `*_EXTERNAL_PORT`
+the tunnels forward (`open_tunnels.sh`) would not govern Elasticsearch. Its
+container memory limit is about **twice** its heap: Lucene's mmap accounting,
+netty direct buffers, metaspace and thread stacks all live outside `-Xmx`, and
+at 1g the cgroup killed it (exit 137) twice under ordinary indexing, taking
+search down for everyone on the host.
+
+Images are built **one service per tag**. write-service and its six consumers
+share a tag, as do read-service and its jobs, and BuildKit exports them in
+parallel — several services naming the same tag fail with
+`image "...": already exists`. `BASELINE_BUILD_SERVICES` names only the
+canonical service behind each tag, so every image resolves exactly once.
+
 ### Sandboxes
 
 **What you install locally:** `uv` and Python for the Python services, plus Go or a
@@ -365,6 +403,12 @@ edge, and the missing half is invisible from the outside:
 | `ai-service` | edge + the posting dispatcher (without it, transactions get no ledger postings) |
 | `write-service` | edge + automation engine, automation scheduler, fraud alerts, inbound notifications, action expiry |
 
+Each list lives in `<PREFIX>_PROCESSES` in that service's own Makefile, minus
+the one-shot jobs (`migrate`, `es-init`), and has to be kept in step with the
+service's `compose.yaml`. A sandbox missing one of them looks like a feature
+silently not working — automations that never fire, actions that never expire —
+rather than like a service that is down.
+
 To run one process by hand instead, source the env file first:
 
 ```bash
@@ -388,7 +432,11 @@ curl -H "X-User-Id: <clerk-id>" localhost:8100/api/v1/wallets
 To exercise the **full edge** (Clerk auth, rate limits, read-fallback, read-your-writes),
 let the gateway route your sandbox traffic back to your laptop. `make devhost-tunnels`
 already opened a reverse tunnel for every laptop service port (8100 read-service,
-8101 ai-service, 8102 write-service), so routing a second service needs no reopening:
+8101 ai-service, 8102 write-service), so routing a second service needs no reopening.
+Those ports mirror the `PORT` default in each service's own Makefile, and the
+mapping matters: a route registered for one service must reach *that* service.
+Pointing ai-service at 8100 lands on read-service, which answers — so the
+mistake looks like a routing success.
 
 ```bash
 # routes live in the baseline's Redis, so this registers one ON THE DEV HOST over ssh
@@ -503,8 +551,31 @@ Sandbox consumers also run under their own Kafka consumer group
 (`<group>-sbx-<name>`) and their own dedupe scope. Without that a sandbox joins the
 baseline's group and quietly steals its partitions.
 
+The group a process joins is what decides ownership — the baseline skips a
+sandbox's events only when a group named after its own plus that sandbox
+exists. `make sandbox-env` therefore pins the group in the env file, so a
+consumer you run on your laptop lands in the same group as the container it
+stands in for, whatever the code defaults say. (ai-service and webhook-service
+take a whole database URL rather than `DATABASE_*` parts, so the generator
+writes those instead.)
+
 Note that a sandbox reuses the baseline's Elastic certs: `compose.sandbox.yaml`
 declares the baseline's `certs` volume as external.
+
+Every service in `compose.sandbox.yaml` is named `sbx-<service>` and pulled in
+with `extends` rather than layered over `compose.yaml`. That is deliberate:
+Compose always adds the service name as a network alias, so reusing the
+baseline's names on the shared network would make `write-service` round-robin
+between the baseline and a sandbox, silently sending a share of untagged
+traffic into someone's sandbox.
+
+The default overlay is `compose.sandbox-live.yaml`: the service's source is
+bind-mounted from the checkout on the dev host, so a change is picked up in
+about a second instead of a ~20s image rebuild. The venv lives at `/app/.venv`,
+outside the mount, so dependencies are untouched — only first-party source is
+live. Changing a shared library under `libraries/` or a dependency still needs
+`BAKED=1` and a rebuild, and long-running workers have no reloader: they pick
+the change up on `make host-sandbox-restart`.
 
 **Datastores are shared by default, and that has two edges.** A migration under
 test would hit everyone, and so would changed *projection* logic — a sandbox
@@ -517,6 +588,15 @@ instance, all four service databases created by
 Elasticsearch index is prefixed `sbx_<name>_`. `make host-sandbox-down` removes those
 volumes. Without the flag a sandbox is only safe for changes that keep writing the
 same shapes.
+
+Elasticsearch itself stays shared on the host path — the per-sandbox index
+prefix is what isolates the read side there. And because it is **one** Postgres
+instance, it takes **one** set of credentials: the per-service
+`DATABASE_USER`/`DATABASE_PASSWORD` pairs describe the baseline's four separate
+servers, and using them here builds a DSN the sandbox's own Postgres rejects.
+On the laptop the same file publishes a port, because the process that uses it
+runs natively next to Docker rather than in it, and its Compose project name
+carries the sandbox name so two of them on one machine keep separate volumes.
 
 The flag works on **both** paths, with one instance of Postgres each side:
 
@@ -677,6 +757,21 @@ nothing reaches Kafka, and the read side goes stale with no error at the API.
 Redis is the one store with no authentication, on any of its three instances.
 That is safe only while they stay bound to loopback.
 
+ImmuDB needs `--force-admin-password` on top of `IMMUDB_PASSWORD`. Without it
+the server keeps immudb's built-in admin password while `IMMUDB_PASSWORD`
+reaches only the clients, so any custom value fails with
+`invalid user name or password`. The flag reapplies it on every start, so
+unlike Postgres the value is not frozen at first init.
+
+**Every Postgres healthcheck in this repo authenticates**, rather than calling
+`pg_isready`. `pg_isready` never authenticates, so it reports healthy while
+every login is rejected — and a server still loading its volume answers it
+before it will accept a password, which makes a migration fail on a container
+Compose already called ready. The probes pass the real credentials over the
+container's **own network address**, not loopback: `pg_hba` trusts
+`127.0.0.1`, so a loopback probe would bypass authentication and pass with any
+password.
+
 ## Tooling notes
 
 - **uv workspace** (`pyproject.toml`): `services/push-service` and
@@ -687,10 +782,22 @@ That is safe only while they stay bound to loopback.
   even when a runner passes the file path explicitly — without it, ruff strips
   the side-effectful `timestamp_pb2` import from `*_pb2.py` as "unused", breaking
   descriptor-pool loading at runtime. Excludes also cover `migrations/`,
+  `**/alembic/versions/` (Alembic's equivalent of a migrations directory),
+  `.phase-5-backup` (reference copies of removed work, not on the import path),
   `generated/`, `.venv`, `old-structure`.
+- **isort** (inside ruff) sets `combine-as-imports = true` so an `X as Y` import
+  stays in the same statement as its siblings; without it every aliased name
+  gets a `from module import (...)` block of its own.
 - **mypy** excludes `fakes.py` (test-double modules at each project root share the
   top-level name `fakes`, which mypy can't map in a single run), plus
-  `migrations/`, `__tests__/`, `generated/`, and `old-structure/`.
+  `migrations/`, `__tests__/`, `generated/`, and `old-structure/`. It also runs
+  **once per Django service** rather than once over the tree: each is its own
+  package root and both own a top-level `background_workers`, so a single run
+  sees two files claiming the same module name and refuses to check either.
+- **The pydantic mypy plugin** is enabled because pydantic-settings fills every
+  field from the environment, so a field with no default is not a required
+  constructor argument. Only that plugin knows it; without it every
+  `Settings()` call needs a `type: ignore`.
 - **pre-commit** (`.pre-commit.yaml`) delegates mypy and tests to Makefile targets
   so commands have a single source of truth, and excludes `old-structure/` from
   every hook.

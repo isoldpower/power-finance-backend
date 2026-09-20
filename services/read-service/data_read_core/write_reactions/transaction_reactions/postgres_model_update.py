@@ -45,6 +45,13 @@ class UpdateTransactionReadModel(Effect):
         transaction_id: str,
         chain_id: str | None,
     ) -> None:
+        """Apply the amount, the chain membership and the container delta.
+
+        Chain membership is applied on its own: an event that only releases a
+        transaction from its chain carries an unchanged amount and would
+        otherwise be discarded as a no-op.
+        """
+
         new_amount = Decimal(new_amount)
         transaction_row = await (
             TransactionReadModel.objects.select_for_update().filter(id=transaction_id).afirst()
@@ -55,9 +62,6 @@ class UpdateTransactionReadModel(Effect):
                 transaction_row,
                 new_amount,
             )
-            # Chain membership rides along as current state, so it is applied on its
-            # own: an event that only releases a transaction from its chain carries
-            # an unchanged amount and would otherwise be discarded as a no-op.
             await self._apply_chain_update(transaction_row, chain_id)
             await self._apply_container_update(
                 transaction_row.wallet_id,

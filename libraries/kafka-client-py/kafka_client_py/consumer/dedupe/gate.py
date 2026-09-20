@@ -28,7 +28,10 @@ class DedupeGate:
             return False
 
         if await self._dedupe_store.seen(event_id):
-            logger.debug("kafka.dedupe.skip", extra={"event_id": event_id})
+            logger.debug(
+                "kafka.dedupe.skip",
+                extra={"event_id": event_id},
+            )
             return True
         return False
 
@@ -41,4 +44,7 @@ class DedupeGate:
             return
 
         await self._dedupe_store.mark(event_id)
-        logger.debug("kafka.dedupe.mark", extra={"event_id": event_id})
+        logger.debug(
+            "kafka.dedupe.mark",
+            extra={"event_id": event_id},
+        )

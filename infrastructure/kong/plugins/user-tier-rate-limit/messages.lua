@@ -1,5 +1,3 @@
--- Centralised error response builders for the user-tier-rate-limit plugin.
-
 local envelope = require "power_finance.envelope"
 
 

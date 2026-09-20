@@ -9,8 +9,7 @@ import (
 	kafkaclient "github.com/power-finance/kafka-client-go"
 	"github.com/power-finance/kafka-client-go/envelope"
 	"github.com/power-finance/kafka-client-go/headers"
-	"github.com/power-finance/kafka-client-go/sandbox"
-	otelpropagation "github.com/power-finance/observability-go/propagation"
+	"github.com/power-finance/observability-go/messaging"
 	"github.com/power-finance/observability-go/tracing"
 	"github.com/twmb/franz-go/pkg/kgo"
 
@@ -48,13 +47,16 @@ func BuildNotificationsConsumerLoop(
 }
 
 func newEventsSinkHandler(eventsSink chan<- types.OutboxEvent) MessageHandlerFunc {
-	trafficMatcher := sandbox.NewTrafficMatcherFromEnvironment()
+	messageContext := messaging.BuildKafkaMessageContextComponents()
 
 	return func(ctx context.Context, message kafkaclient.ConsumedMessage) error {
-		ctx = otelpropagation.ExtractFromKafkaHeaders(ctx, message.Headers)
-		messageSandboxID := sandbox.ReadIDFromHeaders(message.Headers)
-		if !trafficMatcher.IsOwnedTraffic(messageSandboxID) {
-			logForeignSandboxMessageSkipped(messageSandboxID, trafficMatcher.OwnSandboxID())
+		ctx = messageContext.ContextBinder.Bind(ctx, message.Headers)
+		messageSandboxID := messageContext.ContextBinder.ReadSandboxID(message.Headers)
+		if !messageContext.TrafficPolicy.IsOwnedTraffic(messageSandboxID) {
+			logForeignSandboxMessageSkipped(
+				messageSandboxID,
+				messageContext.TrafficPolicy.OwnSandboxID(),
+			)
 			return nil
 		}
 

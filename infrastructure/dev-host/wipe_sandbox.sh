@@ -1,15 +1,7 @@
 #!/usr/bin/env bash
+# See ./README.md → "Scripts here"
 set -euo pipefail
 
-# Run where the baseline runs. Removes every trace of one sandbox, so that sending
-# `X-Sandbox: <name>` becomes indistinguishable from sending nothing:
-#
-#   containers       — the sandbox's own processes on this host
-#   gateway routes   — what makes the gateway send HTTP somewhere other than baseline
-#   consumer groups  — what makes baseline consumers skip that sandbox's events
-#
-# The third is the one that is easy to miss. Group existence *is* the claim, so a
-# stopped consumer still owns its traffic until its group is gone.
 usage="usage: wipe_sandbox.sh <sandbox-name> <route-key-prefix> <baseline-project> <sandbox-project> [force]"
 sandbox_name="${1:?$usage}"
 route_key_prefix="${2:?$usage}"
@@ -29,9 +21,6 @@ kafka_groups() {
         tr -d '\r' | grep -- "${group_suffix}$" || true
 }
 
-# Events a sandbox consumer never got to are lost once its group goes: while the claim
-# stood, baseline consumers skipped those events and committed past them. So say so
-# before deleting anything, and let the caller decide.
 report_pending() {
     local group="$1"
     local pending

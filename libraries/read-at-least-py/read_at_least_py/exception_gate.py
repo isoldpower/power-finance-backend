@@ -3,9 +3,6 @@ from .sequence_reader import AppliedSeqReader
 
 
 class ReadAtLeastGate:
-    """Decides whether the read side has applied enough writes to satisfy a
-    client's Read-At-Least requirement."""
-
     def __init__(self, reader: AppliedSeqReader) -> None:
         self._reader = reader
 

@@ -1,19 +1,12 @@
 #!/usr/bin/env bash
+# See ./README.md → "Scripts here" and "Testing the reverse tunnel"
 set -euo pipefail
 
-# Run on a developer laptop. Forwards the baseline's infrastructure to localhost so
-# a natively-run service reaches it, and optionally forwards a local port back so
-# the gateway can route to that service. Nothing on the dev host has to be
-# published beyond the gateway for this to work.
 dev_host="${1:?usage: open_tunnels.sh <dev-host> [local-service-ports] [print-only] [remote-user]}"
 local_service_ports="${2:-}"
 print_only="${3:-}"
 remote_user="${4:-}"
 
-# The account on the dev host is rarely the account on the laptop, and ssh defaults
-# to the local one. Tailscale SSH rejects that with "tailnet policy does not permit
-# you to SSH as user <you>", which reads like an ACL problem but is usually just the
-# wrong username.
 ssh_target="$dev_host"
 if [ -n "$remote_user" ]; then
     ssh_target="${remote_user}@${dev_host}"
@@ -24,9 +17,6 @@ if [ "$dev_host" = "localhost" ] || [ "$dev_host" = "127.0.0.1" ]; then
     exit 1
 fi
 
-# Kafka is forwarded on the port it advertises. The broker advertises
-# ${KAFKA_EXTERNAL_HOST}:${KAFKA_EXTERNAL_PORT}, so with KAFKA_EXTERNAL_HOST left
-# at localhost a client follows the advertisement straight back into this tunnel.
 forwarded_ports=(
     "${KAFKA_EXTERNAL_PORT:-19092}"
     "${WRITE_DATABASE_EXTERNAL_PORT:-5433}"
@@ -47,14 +37,6 @@ for port in "${forwarded_ports[@]}"; do
     ssh_arguments+=(-L "${port}:127.0.0.1:${port}")
 done
 
-# The reverse forward binds on the dev host's loopback by default. That is enough when
-# the container runtime can reach the host's loopback (Docker Desktop can). If it
-# cannot, bind it on all of the host's interfaces instead — which additionally needs
-# "GatewayPorts clientspecified" in the host's sshd_config.
-#
-# Each routable service listens on its own laptop port, so every one of them is
-# forwarded: a sandbox is routed a service at a time, and reopening the tunnels to
-# add the second one drops the first.
 remote_bind_address="${REMOTE_BIND:-}"
 for local_service_port in $local_service_ports; do
     if [ -n "$remote_bind_address" ]; then

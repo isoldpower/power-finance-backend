@@ -303,10 +303,6 @@ services:
       - "-c"
       - "config_file=/etc/postgresql/postgresql.conf"
     healthcheck:
-      # pg_isready never authenticates, so it reports healthy while every login
-      # is rejected. Probe with the real credentials over the container's own
-      # network address: pg_hba trusts 127.0.0.1, so a loopback probe would
-      # bypass authentication and pass with any password.
       test:
         - CMD-SHELL
         - PGPASSWORD="$$POSTGRES_PASSWORD" psql -h "$$(hostname -i | awk '{print $$1}')" -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -c 'select 1' >/dev/null
@@ -318,10 +314,6 @@ services:
   immudb:
     image: codenotary/immudb:1.10
     restart: unless-stopped
-    # Without this the server keeps immudb's built-in admin password while
-    # IMMUDB_PASSWORD reaches only the clients, so any custom value fails with
-    # "invalid user name or password". --force-admin-password reapplies it on every
-    # start, so unlike Postgres the value is not frozen at first init.
     command: ["--force-admin-password"]
     environment:
       IMMUDB_ADMIN_PASSWORD: ${IMMUDB_PASSWORD:-immudb}

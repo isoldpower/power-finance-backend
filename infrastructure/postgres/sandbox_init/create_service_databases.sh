@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
+# See ../../dev-host/README.md → "Scripts here"
 set -euo pipefail
 
-# A sandbox runs one Postgres for every service that needs an isolated database,
-# so the databases the baseline spreads across separate instances are created
-# side by side here. Runs only on first initialisation of an empty volume.
 for database_name in \
     "${WRITE_DATABASE_NAME:-power_finance_write}" \
     "${READ_DATABASE_NAME:-power_finance_read}" \

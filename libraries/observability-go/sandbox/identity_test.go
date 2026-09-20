@@ -1,10 +1,20 @@
 package sandbox
 
 import (
+	"context"
 	"testing"
 
 	"github.com/power-finance/kafka-client-go/headers"
+	"go.opentelemetry.io/otel"
+	otelpropagation "go.opentelemetry.io/otel/propagation"
 )
+
+func init() {
+	otel.SetTextMapPropagator(otelpropagation.NewCompositeTextMapPropagator(
+		otelpropagation.TraceContext{},
+		otelpropagation.Baggage{},
+	))
+}
 
 func TestScopeGroupIDLeavesBaselineUntouched(t *testing.T) {
 	if scoped := ScopeGroupID("webhook-service", ""); scoped != "webhook-service" {
@@ -45,47 +55,34 @@ func TestReadIDFromHeadersIsEmptyWithoutBaggage(t *testing.T) {
 	}
 }
 
-func TestReadBaggageEntryIgnoresEntryProperties(t *testing.T) {
-	if value := ReadBaggageEntry("sandbox-id=nikita;meta=1", "sandbox-id"); value != "nikita" {
-		t.Fatalf("expected nikita, got %q", value)
+func TestReadIDFromHeadersIgnoresEntryProperties(t *testing.T) {
+	kafkaHeaders := headers.KafkaHeaders{
+		headers.String("baggage", "sandbox-id=nikita;meta=1"),
+	}
+
+	if sandboxID := ReadIDFromHeaders(kafkaHeaders); sandboxID != "nikita" {
+		t.Fatalf("expected nikita, got %q", sandboxID)
 	}
 }
 
-func TestBaselineMatcherOwnsUntaggedTrafficOnly(t *testing.T) {
-	matcher := NewTrafficMatcher("")
+func TestAttachIDRoundTripsThroughContext(t *testing.T) {
+	ctx := AttachID(context.Background(), "nikita")
 
-	if !matcher.IsBaseline() {
-		t.Fatal("expected baseline matcher")
-	}
-	if !matcher.IsOwnedTraffic("") {
-		t.Fatal("baseline should own untagged traffic")
-	}
-	if matcher.IsOwnedTraffic("nikita") {
-		t.Fatal("baseline should not own sandbox traffic")
+	if sandboxID := CurrentID(ctx); sandboxID != "nikita" {
+		t.Fatalf("expected nikita, got %q", sandboxID)
 	}
 }
 
-func TestSandboxMatcherOwnsItsOwnTrafficOnly(t *testing.T) {
-	matcher := NewTrafficMatcher("nikita")
-
-	if matcher.IsBaseline() {
-		t.Fatal("expected sandbox matcher")
-	}
-	if !matcher.IsOwnedTraffic("nikita") {
-		t.Fatal("sandbox should own its own traffic")
-	}
-	if matcher.IsOwnedTraffic("") {
-		t.Fatal("sandbox should not own baseline traffic")
-	}
-	if matcher.IsOwnedTraffic("someone-else") {
-		t.Fatal("sandbox should not own another sandbox's traffic")
+func TestCurrentIDIsEmptyOnABareContext(t *testing.T) {
+	if sandboxID := CurrentID(context.Background()); sandboxID != "" {
+		t.Fatalf("expected empty sandbox id, got %q", sandboxID)
 	}
 }
 
-func TestMatcherFromEnvironmentTrimsBlankValue(t *testing.T) {
+func TestResolveOwnIDTrimsWhitespace(t *testing.T) {
 	t.Setenv(EnvironmentVariableID, "   ")
 
-	if !NewTrafficMatcherFromEnvironment().IsBaseline() {
-		t.Fatal("blank SANDBOX_ID should mean baseline")
+	if ownID := ResolveOwnID(); ownID != "" {
+		t.Fatalf("expected blank sandbox id to resolve empty, got %q", ownID)
 	}
 }

@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
+# See ./README.md → "Scripts here"
 set -euo pipefail
 
-# Removes gateway routes whose sandbox container is gone. Routes that point off
-# the host (a developer running a service natively) cannot be checked this way,
-# so they are reported and kept — their Redis TTL is what eventually clears them.
 route_key_prefix="${1:?usage: prune_sandbox_routes.sh <redis-key-prefix> <baseline-project>}"
 baseline_project="${2:?missing baseline project}"
 

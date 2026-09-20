@@ -17,7 +17,7 @@ from data_write_core.infrastructure.outbox_saga import (
 from ...bootstrap import get_repository_registry
 from ...dtos import GoalDTO, goal_to_dto
 from ...interfaces import GoalRepository, MoneyFlowRepository, OutboxRepository
-from ..command_base import CommandHandlerBase
+from .._command_base import CommandHandlerBase
 from ._goal_loader import LoadGoalMixin
 
 

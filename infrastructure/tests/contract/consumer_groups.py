@@ -1,11 +1,14 @@
-"""Where each consumer's group id is written down, in code and in compose."""
+"""Where each consumer's group id is written down, in code and in compose.
+
+Both mappings below are keyed by the variable name and hold the pair of files
+that must agree on it: the settings module and the compose file.
+"""
 
 import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
-# variable name -> (settings file, compose file)
 GROUP_ID_SOURCES = {
     "KAFKA_READ_GROUP_ID": (
         "services/read-service/read_service/settings/base.py",

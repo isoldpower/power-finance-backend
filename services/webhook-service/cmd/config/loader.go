@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/power-finance/kafka-client-go/sandbox"
+	"github.com/power-finance/observability-go/sandbox"
 	"github.com/spf13/viper"
 
 	"services/webhook-service/webhook_service"

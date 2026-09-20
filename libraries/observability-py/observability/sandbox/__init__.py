@@ -1,7 +1,9 @@
-from .sandbox_identity import (
+from .config import (
     ENVIRONMENT_VARIABLE_SANDBOX_ID,
     SANDBOX_BAGGAGE_ENTRY_NAME,
     SANDBOX_HTTP_HEADER_NAME,
+)
+from .sandbox_identity import (
     attach_sandbox_id,
     current_sandbox_id,
     detach_sandbox_id,

@@ -21,7 +21,7 @@ from data_write_core.infrastructure.outbox_saga import (
 from ...bootstrap import get_repository_registry
 from ...dtos import WebhookDTO, webhook_to_dto
 from ...interfaces import OutboxRepository, WebhookRepository
-from ..command_base import CommandHandlerBase
+from .._command_base import CommandHandlerBase
 
 
 @dataclass(frozen=True)

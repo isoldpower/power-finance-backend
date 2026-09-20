@@ -5,7 +5,7 @@ import httpx
 
 from ...application.contracts import RateUnavailable
 from ...application.dtos import RateSnapshotDTO
-from ..logging import log_provider_failed, log_provider_refused
+from ..logger_shortcuts import log_provider_failed, log_provider_refused
 from .mappers import OpenExchangeMapper
 
 

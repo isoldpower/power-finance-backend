@@ -15,4 +15,8 @@ def write_baggage_entry(
     entry_value: str,
     context: Context | None = None,
 ) -> Context:
-    return baggage.set_baggage(entry_name, entry_value, context)
+    return baggage.set_baggage(
+        entry_name,
+        entry_value,
+        context,
+    )

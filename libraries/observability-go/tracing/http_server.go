@@ -7,5 +7,8 @@ import (
 )
 
 func WrapHTTPHandler(handler http.Handler, serverName string) http.Handler {
-	return otelhttp.NewHandler(handler, serverName)
+	return otelhttp.NewHandler(
+		handler,
+		serverName,
+	)
 }

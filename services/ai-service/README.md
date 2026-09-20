@@ -314,7 +314,18 @@ A `.env` beside this file is read if present.
 The `KAFKA_*` values are the dispatcher's alone —
 `service_core.shared.db_connection.config` asks only for `AI_DATABASE_URL`, so
 the ASGI app and `alembic upgrade` start without a broker address they would
-never use.
+never use. They are declared with no defaults, so a sandbox run takes them from
+this service's own `.env` rather than from the generated sandbox env file.
+
+Postings are booked in USD whatever they were spent in, so the dispatcher also
+needs the `EXCHANGE_RATES_*` settings. `.env` is deliberately not baked into
+the image, so those reach a container through compose like every other runtime
+setting.
+
+`make ai test` runs against `AI_TEST_DATABASE_URL`, which defaults to port
+**5536, not 5436**: the latter is the dev host's `postgres-ai` whenever sandbox
+tunnels are open. `make test-datastores` at the repo root starts what the
+default expects.
 
 ## Build & Docker
 

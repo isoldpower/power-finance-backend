@@ -10,7 +10,7 @@ from data_write_core.infrastructure.outbox_saga import (
 from ...bootstrap import get_repository_registry
 from ...dtos import AutomationDTO
 from ...interfaces import AutomationRepository, OutboxRepository
-from ..command_base import CommandHandlerBase
+from .._command_base import CommandHandlerBase
 
 
 class AutomationCommandHandler(CommandHandlerBase[AutomationDTO], ABC):

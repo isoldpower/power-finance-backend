@@ -27,7 +27,7 @@ from ...interfaces import (
     GoalRepository,
     OutboxRepository,
 )
-from ..command_base import CommandHandlerBase
+from .._command_base import CommandHandlerBase
 
 
 @dataclass(frozen=True)

@@ -1,3 +1,10 @@
+"""Base settings shared by all environments. Concrete environments (local,
+production, test) extend this module and override values that differ.
+
+Environment variables are loaded via django-environ from a `.env` file at the
+service root. See `.env.example` for the full list of recognised keys.
+"""
+
 from pathlib import Path
 
 import environ

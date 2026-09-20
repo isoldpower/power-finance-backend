@@ -1,7 +1,7 @@
 from fastapi import status
 from fastapi.responses import JSONResponse
 
-from .._logging import get_probe_logger
+from .._logger_registry import get_probe_logger
 from ..contracts import ProbeStatus
 from .contracts import (
     Check,

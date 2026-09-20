@@ -96,6 +96,11 @@ What turns a MacBook M2 Pro (16 GB) into the shared dev host. Run these on the
    to them. Membership of the `docker` group is only needed by whoever runs
    host-side sandboxes; plain SSH is enough for the tunnels.
 
+   Those passwords are read **per service** (`WRITE_DATABASE_USER`,
+   `READ_DATABASE_*`, …). A generic `DATABASE_USER` / `DATABASE_PASSWORD` is not
+   consulted: `generate_sandbox_env.sh` would silently fall back to
+   `postgres`/`postgres` and then fail against any host that set its own.
+
    Developers need the **database, ImmuDB and Elasticsearch passwords** in their own
    local `.env` — nothing else from this file. Hand those over out of band; do not
    copy this `.env`, which also holds the Clerk issuer and the gateway HMAC secret.
@@ -344,12 +349,41 @@ Set it wrong and metadata succeeds while every fetch fails.
 
 | Script | Purpose |
 | --- | --- |
+| `open_tunnels.sh` | Run on a laptop. Forwards the baseline's infrastructure to localhost, and forwards each local service port back so the gateway can route to it. Driven by `make devhost-tunnels`. |
 | `generate_sandbox_env.sh` | Escape hatch only: writes the env file that points a natively-run service at the baseline. Driven by `make sandbox-env`. |
 | `prune_sandbox_routes.sh` | Drops gateway routes whose sandbox container is gone. Driven by `make host-prune`. |
 | `run_remote_make.sh` | Runs one of this host's make targets over ssh, from a developer's laptop. Drives `make devhost-route`, `make devhost-unroute` and `make devhost-wipe`. |
 | `wipe_sandbox.sh` | Removes a sandbox's containers, gateway routes and consumer groups. Driven by `make host-wipe`. |
 | `run_sandbox_service.sh` | Runs every process a service is made of (edge + consumers) against a sandbox env, on a laptop. Driven by `make <service> sandbox NAME=`. |
 | `com.powerfinance.colima.plist` | LaunchAgent that starts colima at login. |
+
+`open_tunnels.sh` forwards **every** routable laptop service port, not just the
+one you asked for. A sandbox is routed a service at a time, and reopening the
+tunnels to add a second one would drop the first.
+
+`prune_sandbox_routes.sh` can only check routes that point at a container on
+this host. A route pointing off-host — a developer running a service natively —
+is reported and kept; its Redis TTL is what eventually clears it.
+
+`run_remote_make.sh` passes the repo path **unquoted** so a leading `~` expands
+in the remote shell, and quotes every other argument, because a sandbox name or
+route target is likelier to carry a surprise.
+
+`wipe_sandbox.sh` removes the consumer groups last and that is the part easy to
+miss: **group existence _is_ the claim**, so a stopped sandbox consumer still
+owns its traffic until its group is gone. Deleting the group loses whatever it
+never got to — baseline consumers skipped those events while the claim stood
+and have committed past them — so the script says so and lets the caller decide.
+
+`run_sandbox_service.sh` sources the service's own `.env` **first** and the
+sandbox env file **second**, so the sandbox endpoints win. That is the
+precedence the services themselves apply: a real environment variable beats a
+value read from an env file.
+
+`create_service_databases.sh` (under `infrastructure/postgres/sandbox_init/`)
+creates side by side the databases the baseline spreads across separate
+instances, since a sandbox runs one Postgres for all of them. It runs only on
+the first initialisation of an empty volume.
 
 ## Routes are ephemeral
 

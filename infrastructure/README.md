@@ -89,6 +89,13 @@ by their docker-compose service names on the internal network.
 `kong/Dockerfile` builds from `kong:3.7` with a build context of
 `./infrastructure/kong`.
 
+### Plugin tests
+
+`kong/run_plugin_tests.sh` runs the Lua plugin suite under the **same LuaJIT
+the gateway ships**, inside that image, rather than a separately installed
+interpreter. The image is already pulled for the baseline, and matching
+runtimes is the point of testing the plugins at all.
+
 It bundles `lua-resty-jwt` (not in the upstream image) so the in-tree
 `clerk-jwt` plugin can `require "resty.jwt"`. The rockspec is installed directly
 from GitHub (cdbattags, the current upstream maintainer) because luarocks.org's

@@ -1,14 +1,7 @@
 #!/usr/bin/env bash
+# See ../../README.md → "Shared dev environment"
 set -uo pipefail
 
-# Run on a developer laptop. Starts every process a service is made of — its HTTP
-# edge and each of its consumers — against a sandbox's environment, so a routed
-# sandbox is never half a service.
-#
-# The gap this closes: routing read-service to a laptop moves its HTTP edge, but
-# its projection consumer is a separate process. Run only the edge and writes stop
-# being projected, which surfaces much later as a 507 or as missing data rather
-# than as anything pointing at the consumer.
 usage="usage: run_sandbox_service.sh <sandbox-env-file> <service-env-file|-> <required-vars> <label=command>..."
 sandbox_env_file="${1:?$usage}"
 service_env_file="${2:?$usage}"
@@ -27,9 +20,6 @@ if [ ! -f "$sandbox_env_file" ]; then
     exit 1
 fi
 
-# The service's own .env first, the sandbox file second: the sandbox endpoints win,
-# which is the precedence the services themselves apply (a real environment variable
-# beats a value read from an env file).
 set -a
 if [ "$service_env_file" != "-" ] && [ -f "$service_env_file" ]; then
     # shellcheck disable=SC1090
@@ -54,9 +44,6 @@ if [ "${#missing[@]}" -gt 0 ]; then
     exit 1
 fi
 
-# The env file records which kind it is, so asking for isolation and being handed a
-# file that still points at the baseline is caught here rather than discovered by
-# reading the shared database's contents back.
 file_isolation="${SANDBOX_ISOLATED:-0}"
 if [ -n "${ISOLATED:-}" ] && [ "$file_isolation" != "1" ]; then
     echo "ISOLATED=1 was asked for, but $sandbox_env_file points at the shared baseline." >&2
@@ -114,9 +101,6 @@ done
 
 echo "sandbox '${SANDBOX_ID:-baseline}' running ${#pids[@]} process(es) — Ctrl-C stops all"
 
-# Any one of them exiting takes the rest down: a sandbox missing a consumer is the
-# failure mode this exists to prevent, so it must not be possible to end up in it
-# quietly.
 while :; do
     index=0
     while [ "$index" -lt "${#pids[@]}" ]; do

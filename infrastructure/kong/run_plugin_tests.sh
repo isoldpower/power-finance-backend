@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
+# See ../README.md → "Kong gateway / Plugin tests"
 set -euo pipefail
 
-# The gateway plugins are Lua, so they run under the same LuaJIT the gateway ships
-# rather than a separately installed interpreter — the image is already pulled for
-# the baseline, and matching runtimes is the point of testing them at all.
 image="${KONG_IMAGE:-kong:3.7}"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 

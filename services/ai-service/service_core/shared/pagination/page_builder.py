@@ -26,12 +26,20 @@ def build_page(
         total=total,
         limit=limit,
         next_cursor=(
-            encode_cursor(PageDirection.NEXT, key_of(rows[-1]), fingerprint)
+            encode_cursor(
+                PageDirection.NEXT,
+                key_of(rows[-1]),
+                fingerprint,
+            )
             if backwards or has_more
             else None
         ),
         previous_cursor=(
-            encode_cursor(PageDirection.PREVIOUS, key_of(rows[0]), fingerprint)
+            encode_cursor(
+                PageDirection.PREVIOUS,
+                key_of(rows[0]),
+                fingerprint,
+            )
             if cursor is not None and (not backwards or has_more)
             else None
         ),
