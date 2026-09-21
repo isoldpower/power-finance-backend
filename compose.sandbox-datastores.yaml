@@ -1,0 +1,113 @@
+# See README.md → "Shared dev environment"
+x-sandbox-database-env: &sandbox-database-env
+  DATABASE_HOST: sbx-postgres
+  DATABASE_PORT: "5432"
+  DATABASE_USER: ${DATABASE_USER:-postgres}
+  DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+  ELASTICSEARCH_INDEX_PREFIX: sbx_${SANDBOX_ID:?SANDBOX_ID is required}_
+
+x-sandbox-ai-database-url: &sandbox-ai-database-url
+  AI_DATABASE_URL: postgresql+psycopg://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@sbx-postgres:5432/${AI_DATABASE_NAME:-power_finance_ai}
+
+x-sandbox-webhook-database-dsn: &sandbox-webhook-database-dsn
+  POSTGRES_DSN: postgres://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@sbx-postgres:5432/${WEBHOOK_DATABASE_NAME:-power_finance_webhooks}
+
+volumes:
+  sandbox_postgres_data:
+
+services:
+  sbx-postgres:
+    image: postgres:18.3
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${WRITE_DATABASE_NAME:-power_finance_write}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      WRITE_DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      READ_DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
+      AI_DATABASE_NAME: ${AI_DATABASE_NAME:-power_finance_ai}
+      WEBHOOK_DATABASE_NAME: ${WEBHOOK_DATABASE_NAME:-power_finance_webhooks}
+    volumes:
+      - sandbox_postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/sandbox_init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${DATABASE_USER:-postgres} -d ${WRITE_DATABASE_NAME:-power_finance_write}
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+
+  sbx-write-migrate:
+    extends:
+      file: services/write-service/compose.yaml
+      service: write-migrate
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-database-env
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+
+  sbx-read-migrate:
+    extends:
+      file: services/read-service/compose.yaml
+      service: read-migrate
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-database-env
+      DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
+
+  sbx-read-es-init:
+    extends:
+      file: services/read-service/compose.yaml
+      service: read-es-init
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-database-env
+      DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
+
+  sbx-ai-migrate:
+    extends:
+      file: services/ai-service/compose.yaml
+      service: ai-migrate
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-ai-database-url
+
+  sbx-webhook-migrate:
+    extends:
+      file: services/webhook-service/compose.yaml
+      service: webhook-migrate
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-webhook-database-dsn
+
+  sbx-ai-service:
+    environment:
+      <<: *sandbox-ai-database-url
+      ELASTICSEARCH_INDEX_PREFIX: sbx_${SANDBOX_ID:?SANDBOX_ID is required}_
+
+  sbx-ai-dispatcher:
+    environment:
+      <<: *sandbox-ai-database-url
+      ELASTICSEARCH_INDEX_PREFIX: sbx_${SANDBOX_ID:?SANDBOX_ID is required}_
+
+  sbx-webhook-service:
+    environment:
+      <<: *sandbox-webhook-database-dsn
+
+  sbx-write-service:
+    environment:
+      <<: *sandbox-database-env
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+
+  sbx-read-service:
+    environment:
+      <<: *sandbox-database-env
+      DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
+
+  sbx-read-write-consumer:
+    environment:
+      <<: *sandbox-database-env
+      DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}

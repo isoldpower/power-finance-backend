@@ -75,11 +75,15 @@ def log_transaction_postgres_created(transaction_id: str, amount: float) -> None
     )
 
 
-def log_transaction_postgres_wallet_update(wallet_id: str, amount: float, count: int) -> None:
+def log_transaction_postgres_container_update(
+    container_id: str,
+    amount: float,
+    count: int,
+) -> None:
     logger = get_workers_logger("write_message_consumer")
     logger.info(
-        "Adjusted wallet %s balance by %s (rows=%s).",
-        wallet_id,
+        "Adjusted container %s running total by %s (rows=%s).",
+        container_id,
         amount,
         count,
     )
@@ -102,7 +106,7 @@ def log_transaction_postgres_removed(transaction_id: str, amount: Decimal) -> No
     )
 
 
-def log_transaction_postgres_wallet_reversal(wallet_id: str, amount: Decimal) -> None:
+def log_transaction_postgres_container_reversal(wallet_id: str, amount: Decimal) -> None:
     logger = get_workers_logger("write_message_consumer")
     logger.info(
         "Reversed wallet %s balance by %s.",
@@ -125,6 +129,18 @@ def log_transaction_postgres_unchanged(transaction_id: str, amount: Decimal) -> 
         "Transaction %s already at amount %s; skipping.",
         transaction_id,
         amount,
+    )
+
+
+def log_transaction_postgres_chain_changed(
+    transaction_id: str,
+    chain_id: str | None,
+) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Transaction %s now belongs to chain %s.",
+        transaction_id,
+        chain_id or "none",
     )
 
 
@@ -344,4 +360,258 @@ def log_webhook_cache_evicted(key: str, removed: int) -> None:
         "Evicted cache key %s (removed=%s).",
         key,
         removed,
+    )
+
+
+def log_transaction_postgres_metadata_updated(transaction_id: str, rows: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Updated transaction %s metadata (rows=%s).",
+        transaction_id,
+        rows,
+    )
+
+
+def log_wallet_name_denormalised(wallet_id: str, rows: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Carried wallet %s rename into %s transaction rows.",
+        wallet_id,
+        rows,
+    )
+
+
+def log_goal_postgres_created(goal_id: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Received GoalCreated payload for goal %s.",
+        goal_id,
+    )
+
+
+def log_goal_postgres_removed(goal_id: str, count: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Closed goal %s in read store (rows=%s).",
+        goal_id,
+        count,
+    )
+
+
+def log_goal_postgres_updated(goal_id: str, count: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Updated goal %s in read store (rows=%s).",
+        goal_id,
+        count,
+    )
+
+
+def log_goal_list_version_bumped(user_id: int, version: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Bumped goal list version for user %s to %s.",
+        user_id,
+        version,
+    )
+
+
+def log_goal_cache_evicted(key: str, removed: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Evicted cache key %s (removed=%s).",
+        key,
+        removed,
+    )
+
+
+def log_goal_transactions_renamed(goal_id: str, count: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Renamed goal %s across its transactions (rows=%s).",
+        goal_id,
+        count,
+    )
+
+
+def log_account_postgres_created(account_id: str, name: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Projected account %s (%s) into Postgres.", account_id, name)
+
+
+def log_account_postgres_duplication(account_id: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Account %s was already projected; redelivery ignored.", account_id)
+
+
+def log_account_postgres_updated(account_id: str, balance: Decimal) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Restated account %s balance to %s.", account_id, balance)
+
+
+def log_posting_postgres_created(posting_id: str, transaction_id: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Projected posting %s of transaction %s.", posting_id, transaction_id)
+
+
+def log_posting_postgres_duplication(posting_id: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Posting %s was already projected; redelivery ignored.", posting_id)
+
+
+def log_posting_postgres_removed(posting_id: str, removed_count: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Removed %s row(s) for posting %s.", removed_count, posting_id)
+
+
+def log_dispatch_postgres_recorded(transaction_id: str, balanced: bool) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Recorded dispatch verdict for transaction %s (balanced=%s).",
+        transaction_id,
+        balanced,
+    )
+
+
+def log_account_list_version_bumped(user_id: int, version: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Bumped account list version for user %s to %s.", user_id, version)
+
+
+def log_account_cache_evicted(key: str, removed: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Evicted cache key %s (removed=%s).",
+        key,
+        removed,
+    )
+
+
+def log_action_postgres_raised(action_id: str, occurrences: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Projected action %s (occurrence %s).",
+        action_id,
+        occurrences,
+    )
+
+
+def log_action_postgres_resolved(action_id: str, rows: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Answered action %s (rows=%s).",
+        action_id,
+        rows,
+    )
+
+
+def log_action_list_version_bumped(user_id: int, version: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Bumped action list version for user %s to %s.", user_id, version)
+
+
+def log_automation_postgres_projected(automation_id: str, created: bool) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Projected automation %s (%s).",
+        automation_id,
+        "created" if created else "updated",
+    )
+
+
+def log_automation_postgres_deleted(automation_id: str, rows: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Soft-deleted automation %s (rows=%s).", automation_id, rows)
+
+
+def log_automation_postgres_ran(automation_id: str, runs: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Automation %s has now applied effects %s time(s).", automation_id, runs)
+
+
+def log_automation_list_version_bumped(user_id: int, version: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info("Bumped automation list version for user %s to %s.", user_id, version)
+
+
+def log_container_amount_elastic_adjusted(
+    container_id: str,
+    index: str,
+    delta: Decimal,
+) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Adjusted indexed amount of container %s in %s by %s.",
+        container_id,
+        index,
+        delta,
+    )
+
+
+def log_container_amount_elastic_absent(container_id: str, index: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.debug(
+        "No container document %s in %s to adjust.",
+        container_id,
+        index,
+    )
+
+
+def log_automation_elastic_projected(
+    automation_id: str,
+    index: str,
+    created: bool,
+) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "%s automation %s in %s.",
+        "Indexed" if created else "Updated",
+        automation_id,
+        index,
+    )
+
+
+def log_automation_elastic_ran(automation_id: str, index: str, runs: int) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Recorded run %s of automation %s in %s.",
+        runs,
+        automation_id,
+        index,
+    )
+
+
+def log_automation_elastic_removed(automation_id: str, index: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Removed automation %s from %s.",
+        automation_id,
+        index,
+    )
+
+
+def log_goal_elastic_created(goal_id: str, index: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Indexed goal %s into %s.",
+        goal_id,
+        index,
+    )
+
+
+def log_goal_elastic_updated(goal_id: str, index: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Updated goal %s in %s.",
+        goal_id,
+        index,
+    )
+
+
+def log_goal_elastic_removed(goal_id: str, index: str) -> None:
+    logger = get_workers_logger("write_message_consumer")
+    logger.info(
+        "Removed goal %s from %s.",
+        goal_id,
+        index,
     )

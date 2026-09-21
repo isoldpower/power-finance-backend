@@ -1,6 +1,3 @@
-"""EntryCodec: JSON encode/decode for in-flight and completed slots — pins the
-wire format and lenient decode (junk -> None)."""
-
 from __future__ import annotations
 
 import json
@@ -8,10 +5,9 @@ import json
 from django.test import SimpleTestCase
 
 from write_service.common.idempotency.atomic_redis.entry_codec import (
-    STATE_COMPLETED,
-    STATE_IN_FLIGHT,
     EntryCodec,
 )
+from write_service.common.idempotency.config import EntryState
 
 
 class EncodeLockEntryTests(SimpleTestCase):
@@ -20,7 +16,7 @@ class EncodeLockEntryTests(SimpleTestCase):
 
         self.assertEqual(
             json.loads(encoded),
-            {"state": STATE_IN_FLIGHT, "request_hash": "abc123"},
+            {"state": EntryState.IN_FLIGHT, "request_hash": "abc123"},
         )
 
     def test_is_compact_json_without_whitespace(self) -> None:
@@ -39,7 +35,7 @@ class EncodeCompletedEntryTests(SimpleTestCase):
         )
 
         decoded = json.loads(encoded)
-        self.assertEqual(decoded["state"], STATE_COMPLETED)
+        self.assertEqual(decoded["state"], EntryState.COMPLETED)
         self.assertEqual(decoded["request_hash"], "h1")
         self.assertEqual(decoded["status_code"], 201)
         self.assertEqual(decoded["body"], {"id": 1})
@@ -78,14 +74,14 @@ class DecodeEntryTests(SimpleTestCase):
 
         decoded = EntryCodec.decode_entry(payload.encode("utf-8"))
 
-        self.assertEqual(decoded, {"state": STATE_IN_FLIGHT, "request_hash": "h"})
+        self.assertEqual(decoded, {"state": EntryState.IN_FLIGHT, "request_hash": "h"})
 
     def test_str_input_is_parsed(self) -> None:
         payload = EntryCodec.encode_lock_entry("h")
 
         self.assertEqual(
             EntryCodec.decode_entry(payload),
-            {"state": STATE_IN_FLIGHT, "request_hash": "h"},
+            {"state": EntryState.IN_FLIGHT, "request_hash": "h"},
         )
 
     def test_invalid_json_returns_none_not_raise(self) -> None:

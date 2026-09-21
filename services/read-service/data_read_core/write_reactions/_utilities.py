@@ -5,8 +5,8 @@ from django.db import DataError, IntegrityError
 from google.protobuf.json_format import Parse, ParseError
 from google.protobuf.message import Message
 from kafka_client_py import PoisonError
+from kafka_consumer_py import EventMessage
 
-from data_read_core.shared.kafka_updates import EventMessage
 from data_read_core.shared.postgres_orm import aatomic
 
 from ._logger_shortcuts import (
@@ -24,8 +24,6 @@ async def handle_database_errors(
     *,
     resource_id: object,
 ) -> TReturn | None:
-    """Run a read-model write, swallowing misaligned-data DB errors."""
-
     try:
         async with aatomic():
             return await effect(payload)
@@ -41,8 +39,6 @@ TPayload = TypeVar("TPayload", bound=Message)
 
 
 def decode_payload(event: EventMessage, payload_type: type[TPayload]) -> TPayload:
-    """Parse an event into the given proto message type, or raise PoisonError."""
-
     payload = payload_type()
 
     if not _parse_event_payload(event, payload):

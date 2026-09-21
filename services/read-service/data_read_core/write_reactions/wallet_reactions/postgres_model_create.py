@@ -1,8 +1,9 @@
 from datetime import UTC
+from decimal import Decimal
 
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import WalletCreated
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import WalletReadModel
 
 from .._logger_shortcuts import log_wallet_postgres_created
@@ -27,7 +28,12 @@ class CreateWalletReadModel(Effect):
             balance=0,
             created_at=payload.created_at.ToDatetime(tzinfo=UTC),
             updated_at=None,
+            deleted_at=None,
+            category=payload.category,
+            color=payload.color,
+            favorite=payload.favorite,
+            zero_balance=Decimal(payload.zero_balance or "0"),
         )
-        log_wallet_postgres_created(payload.wallet_id)
 
+        log_wallet_postgres_created(payload.wallet_id)
         return created_wallet

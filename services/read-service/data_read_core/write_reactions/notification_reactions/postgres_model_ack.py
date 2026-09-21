@@ -1,6 +1,8 @@
+from datetime import UTC
+
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import NotificationsAcknowledged
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import NotificationReadModel
 
 from .._logger_shortcuts import log_notification_postgres_acknowledged
@@ -17,10 +19,18 @@ class AcknowledgeNotificationReadModels(Effect):
         )
 
     async def _acknowledge_notifications(self, payload: NotificationsAcknowledged) -> int:
-        updated = await NotificationReadModel.objects.filter(
+        acknowledged_at = payload.acknowledged_at.ToDatetime(tzinfo=UTC)
+        updated_notifications = await NotificationReadModel.objects.filter(
             id__in=list(payload.notification_ids),
             user_id=payload.user_id,
-        ).aupdate(is_read=True)
-        log_notification_postgres_acknowledged(list(payload.notification_ids), updated)
+            acknowledged_at__isnull=True,
+        ).aupdate(
+            acknowledged_at=acknowledged_at,
+            updated_at=acknowledged_at,
+        )
+        log_notification_postgres_acknowledged(
+            list(payload.notification_ids),
+            updated_notifications,
+        )
 
-        return updated
+        return updated_notifications

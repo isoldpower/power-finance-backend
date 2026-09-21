@@ -72,10 +72,20 @@ services:
     routes:
       - name: read-api-v1
         paths:
-          - /api/v1/reads
+          - /api/v1
         strip_path: false
         preserve_host: false
-        methods: [GET, POST, OPTIONS]
+        methods: [GET, OPTIONS]
+      - name: read-api-v1-search
+        paths:
+          - /api/v1/wallets/search
+          - /api/v1/transactions/search
+          - /api/v1/webhooks/search
+          - /api/v1/automations/search
+          - /api/v1/goals/search
+        strip_path: false
+        preserve_host: false
+        methods: [POST, OPTIONS]
     plugins:
       - name: clerk-jwt
         config:
@@ -97,11 +107,60 @@ services:
         config:
           read_service_url: "http://read-service:8000"
           write_service_url: "http://write-service:8000"
-          read_path_prefix: "/api/v1/reads"
+          read_path_prefix: "/api/v1"
           fallback_path_prefix: "/api/v1/fallback-reads"
           fallback_status: 507
           read_timeout_ms: 10000
           fallback_timeout_ms: 30000
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 100
+          redis_key_prefix: "sandbox:route:"
+      - name: rate-limiting
+        config:
+          minute: 1200
+          hour: 30000
+          policy: redis
+          redis_host: gateway-redis
+          redis_port: 6379
+          limit_by: ip
+          fault_tolerant: true
+          hide_client_headers: true
+      - name: user-tier-rate-limit
+        config:
+          per_minute: 600
+          per_hour: 20000
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 1000
+          redis_key_prefix: "rl:user:"
+
+  - name: webhook-service
+    host: webhook-service
+    port: 8002
+    protocol: http
+    connect_timeout: 5000
+    write_timeout: 10000
+    read_timeout: 10000
+    routes:
+      - name: webhook-deliveries
+        paths:
+          - ~/api/v1/webhooks/[^/]+/deliveries$
+        regex_priority: 100
+        strip_path: false
+        preserve_host: false
+        methods: [GET, OPTIONS]
+    plugins:
+      - name: clerk-jwt
+        config:
+          issuer_url: "{vault://env/clerk-issuer-url}"
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 100
+          redis_key_prefix: "clerk:jwks:"
       - name: rate-limiting
         config:
           minute: 1200
@@ -130,9 +189,9 @@ services:
     write_timeout: 3600000
     read_timeout: 3600000
     routes:
-      - name: events-sse
+      - name: notifications-stream
         paths:
-          - /events
+          - /api/v1/notifications/stream
         strip_path: false
         preserve_host: false
         methods: [GET, OPTIONS]
@@ -146,7 +205,53 @@ services:
           redis_timeout_ms: 100
           redis_key_prefix: "clerk:jwks:"
 
+  - name: ai-service
+    host: ai-service
+    port: 8000
+    protocol: http
+    connect_timeout: 5000
+    write_timeout: 3600000
+    read_timeout: 3600000
+    routes:
+      - name: assistant-chat
+        paths:
+          - /api/v1/chat
+        strip_path: false
+        preserve_host: false
+        methods: [GET, OPTIONS]
+      - name: assistant-rest
+        paths:
+          - /api/v1/assistant
+        strip_path: false
+        preserve_host: false
+        methods: [GET, DELETE, OPTIONS]
+    plugins:
+      - name: clerk-jwt
+        config:
+          issuer_url: "{vault://env/clerk-issuer-url}"
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 100
+          redis_key_prefix: "clerk:jwks:"
+
 plugins:
+  - name: sandbox-router
+    config:
+      redis_host: gateway-redis
+      redis_port: 6379
+      redis_database: 0
+      redis_timeout_ms: 100
+      redis_key_prefix: "sandbox:route:"
+      propagate_baggage: true
+
+  - name: opentelemetry
+    config:
+      endpoint: "{vault://env/otel-exporter-otlp-traces-endpoint}"
+      header_type: w3c
+      resource_attributes:
+        service.name: api-gateway
+
   - name: correlation-id
     config:
       header_name: X-Correlation-ID
@@ -165,9 +270,18 @@ plugins:
         - X-Correlation-ID
         - Read-At-Least
         - Idempotency-Key
+        - X-Sandbox
+        - baggage
+        - traceparent
+        - tracestate
       exposed_headers:
         - X-Correlation-ID
         - X-Write-Version
         - Idempotent-Replayed
+        - Retry-After
+        - X-RateLimit-Limit-Minute
+        - X-RateLimit-Remaining-Minute
+        - X-RateLimit-Limit-Hour
+        - X-RateLimit-Remaining-Hour
       credentials: false
       max_age: 3600

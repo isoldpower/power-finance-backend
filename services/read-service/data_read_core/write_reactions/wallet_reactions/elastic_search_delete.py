@@ -1,23 +1,34 @@
+from datetime import UTC
+
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import WalletDeleted
 
-from data_read_core.shared.elasticsearch import WALLETS_INDEX, get_elasticsearch
-from data_read_core.shared.kafka_updates import Effect, EventMessage
+from data_read_core.shared.elasticsearch import (
+    SEARCHABLE_REFRESH,
+    WALLETS_INDEX,
+    get_elasticsearch,
+)
 
 from .._logger_shortcuts import log_wallet_elastic_removed
 from .._utilities import decode_payload
 
 
 class RemoveWalletDocument(Effect):
-    """Delete the wallet document from the search index."""
-
     async def apply(self, event: EventMessage) -> None:
         payload = decode_payload(event, WalletDeleted)
+        deleted_at = payload.deleted_at.ToDatetime(tzinfo=UTC).isoformat()
+
         await (
             get_elasticsearch()
             .options(ignore_status=404)
-            .delete(
+            .update(
                 index=WALLETS_INDEX,
                 id=payload.wallet_id,
+                doc={"deleted_at": deleted_at, "updated_at": deleted_at},
+                refresh=SEARCHABLE_REFRESH,
             )
         )
-        log_wallet_elastic_removed(payload.wallet_id, WALLETS_INDEX)
+        log_wallet_elastic_removed(
+            payload.wallet_id,
+            WALLETS_INDEX,
+        )

@@ -1,26 +1,27 @@
+from filter_grammar_py import WALLET_FILTER_POLICY
+
 from data_read_core.shared.filtering import FilterTree
+from data_read_core.shared.query_results import FetchedRows
 
 from .dtos import SearchWalletsQuery, WalletDTO
 from .infra import search_owned_wallets
 from .logger_shortcuts import log_search_served
-from .policy import WALLET_FILTER_POLICY
 
 
 class SearchWalletsQueryHandler:
-    """Search is served straight from Elasticsearch with no Redis caching. The
-    view gates on the ES applied-seq (es_read_at_least_gate), so a Read-At-Least
-    header is honoured against the ES projection's own progress."""
-
-    async def handle(self, query: SearchWalletsQuery) -> tuple[list[WalletDTO], int]:
+    async def handle(self, query: SearchWalletsQuery) -> FetchedRows:
         filter_query = FilterTree(WALLET_FILTER_POLICY).resolve_es(query.filter_body)
-        sources, total = await search_owned_wallets(
+        matched_documents, total = await search_owned_wallets(
             user_id=query.user_id,
             filter_query=filter_query,
-            limit=query.limit,
-            offset=query.offset,
+            page=query.page,
         )
 
-        wallets = [WalletDTO.from_es_hit(source) for source in sources]
+        wallets = [WalletDTO.from_es_hit(document) for document in matched_documents]
         log_search_served(query.user_id, len(wallets), total)
 
-        return wallets, total
+        return FetchedRows(
+            rows=wallets,
+            total=total,
+            cached=False,
+        )

@@ -33,17 +33,23 @@ writes nothing under `/app` at runtime.
   failing closed (503) when Redis is unreachable. Kept separate from
   `gateway-redis` so rate-limit churn and idempotency state don't compete for
   memory/eviction.
-- **postgres-write** — loopback-only host publish on `127.0.0.1:5433`
-  (`settings.test` points here). Server config (logical replication for Debezium,
+- **postgres-write** — loopback-only host publish on `127.0.0.1:5433` for tooling.
+  `settings.test` points at `5533` instead — the disposable instance
+  `make test-datastores` starts — because 5433 belongs to the dev host whenever
+  sandbox tunnels are open. Server config (logical replication for Debezium,
   WAL slot bounds) lives in the mounted `infrastructure/postgres/write_config/
   postgresql.conf`, which includes the image defaults then layers overrides.
 - **immudb** — internal-only (`immudb:3322`), not host-published.
 
 ## Debezium outbox
 
-The `kafka-connect` worker (Debezium) tails `postgres-write`'s WAL via logical
-replication and forwards `outbox_events` rows through the Outbox Event Router SMT
-onto Kafka. It is write-side-only because it knows the write schema — other
-services owning an outbox would run their own Connect worker. The one-shot
-`debezium-bootstrap` PUTs the connector config to Connect's REST API once it's
-healthy (`PUT .../config` is idempotent, so reruns update in place).
+Debezium tails `postgres-write`'s WAL via logical replication and forwards
+`outbox_events` rows through the Outbox Event Router SMT onto Kafka. The
+`kafka-connect` worker running it is shared, not write-side-only — it lives in
+[`infrastructure/debezium`](../../infrastructure/debezium) and hosts one
+connector per service that owns an outbox. What stays here is the registration:
+the one-shot `write-outbox-connector` PUTs *this* service's connector config to
+Connect's REST API once both Connect and `postgres-write` are healthy
+(`PUT .../config` is idempotent, so reruns update in place). Keeping it here is
+what lets the write stack come up alone without registering connectors against
+databases it does not run.

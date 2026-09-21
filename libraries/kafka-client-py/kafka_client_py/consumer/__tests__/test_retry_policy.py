@@ -53,3 +53,35 @@ def test_jitter_stays_within_ratio_bounds():
     for _ in range(50):
         b = p.compute_backoff(1).total_seconds()
         assert 8.0 <= b <= 12.0
+
+
+def test_a_transient_error_inside_an_exception_group_is_still_retryable():
+    policy = RetryPolicy()
+
+    group = BaseExceptionGroup("plan failed", [TransientError("blip"), TransientError("blip")])
+
+    assert policy.is_retryable(group) is True
+
+
+def test_a_configured_retryable_inside_an_exception_group_is_retryable():
+    policy = RetryPolicy(retryable=(ConnectionError,))
+
+    group = BaseExceptionGroup("plan failed", [ConnectionError(), ConnectionError()])
+
+    assert policy.is_retryable(group) is True
+
+
+def test_a_group_of_unknown_errors_is_not_retryable():
+    policy = RetryPolicy()
+
+    group = BaseExceptionGroup("plan failed", [ValueError(), ValueError()])
+
+    assert policy.is_retryable(group) is False
+
+
+def test_poison_anywhere_in_a_group_disqualifies_the_whole_group():
+    policy = RetryPolicy()
+
+    group = BaseExceptionGroup("plan failed", [TransientError("blip"), PoisonError("bad")])
+
+    assert policy.is_retryable(group) is False

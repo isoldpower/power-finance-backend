@@ -1,5 +1,3 @@
-"""Logger-name builders, context formatting, and request log helpers."""
-
 from unittest.mock import Mock
 
 from data_read_core.shared.logging import (

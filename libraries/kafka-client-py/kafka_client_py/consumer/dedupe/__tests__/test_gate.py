@@ -98,3 +98,33 @@ async def test_extractor_is_called_with_the_message():
     await gate.already_processed(message)
 
     assert captured == [message]
+
+
+@pytest.mark.asyncio
+async def test_record_processed_marks_the_event():
+    store = InMemoryDedupeStore()
+    gate = DedupeGate(dedupe_store=store, event_id_extractor=lambda m: "evt-1")
+
+    assert await gate.already_processed(FakeMessage()) is False
+    await gate.record_processed(FakeMessage())
+
+    assert await gate.already_processed(FakeMessage()) is True
+
+
+@pytest.mark.asyncio
+async def test_record_processed_is_a_noop_without_a_store():
+    gate = DedupeGate(dedupe_store=None, event_id_extractor=lambda m: "evt-1")
+
+    await gate.record_processed(FakeMessage())
+
+    assert await gate.already_processed(FakeMessage()) is False
+
+
+@pytest.mark.asyncio
+async def test_record_processed_skips_a_message_with_no_event_id():
+    store = InMemoryDedupeStore()
+    gate = DedupeGate(dedupe_store=store, event_id_extractor=lambda m: None)
+
+    await gate.record_processed(FakeMessage())
+
+    assert await store.seen("evt-1") is False

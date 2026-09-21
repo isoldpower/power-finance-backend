@@ -99,4 +99,19 @@ public interface TransactionDeletedOrBuilder extends
    * <code>.google.protobuf.Timestamp created_at = 15;</code>
    */
   com.google.protobuf.TimestampOrBuilder getCreatedAtOrBuilder();
+
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+   * @return Whether the deletedAt field is set.
+   */
+  boolean hasDeletedAt();
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+   * @return The deletedAt.
+   */
+  com.google.protobuf.Timestamp getDeletedAt();
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 16;</code>
+   */
+  com.google.protobuf.TimestampOrBuilder getDeletedAtOrBuilder();
 }

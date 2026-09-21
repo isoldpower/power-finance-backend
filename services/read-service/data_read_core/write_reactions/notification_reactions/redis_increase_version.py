@@ -1,6 +1,6 @@
 from google.protobuf.message import Message
+from kafka_consumer_py import Effect, EventMessage
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.redis_cache import get_redis
 
 from .._cache_keys import get_notification_list_version_key
@@ -9,9 +9,6 @@ from .._utilities import decode_payload
 
 
 class BumpNotificationListVersion(Effect):
-    """Invalidate every cached notification-list page for the user by bumping
-    the per-user list version counter."""
-
     def __init__(self, payload_type: type[Message]) -> None:
         self._payload_type = payload_type
 

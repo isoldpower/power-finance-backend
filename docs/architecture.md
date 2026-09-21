@@ -12,7 +12,8 @@ A learning-project fintech system built on CQRS with separate write and read ser
 4. [Data Flows](#data-flows)
 5. [Patterns and Decisions](#patterns-and-decisions)
 6. [Cross-Cutting Concerns](#cross-cutting-concerns)
-7. [Implementation Notes](#implementation-notes)
+7. [Development Environments](#development-environments)
+8. [Implementation Notes](#implementation-notes)
 
 ---
 
@@ -129,7 +130,7 @@ Stateless edge component handling cross-cutting request concerns.
 - `clerk-jwt` — validates Clerk session tokens, stashes claims for downstream plugins
 - `read-at-least` — request-side: verifies inbound `Read-At-Least` HMAC and injects a default from per-user Redis on read routes
 - `write-version` — response-side: signs the raw `X-Write-Version` emitted by Write Service and records `(user_id, seq)` to Redis on write routes
-- `user-tier-rate-limit` — per-user rate caps layered on top of Kong's bundled IP rate-limiting
+- `user-tier-rate-limit` — per-user rate caps layered on top of Kong's bundled IP rate-limiting. Sliding window: two Redis buckets per window, the previous one weighted by how much of it the window still covers, decided and incremented in one atomic script so concurrent requests cannot both pass the same check
 - `read-fallback` — on read routes, transparently redirects a Read Service 507 to the Write Service's fallback-read endpoint
 
 **Responsibilities:**
@@ -145,7 +146,7 @@ Stateless edge component handling cross-cutting request concerns.
 
 **Critical configuration for SSE:**
 - HTTP/2 enabled
-- Idle timeouts disabled or set very high for `/events` endpoints
+- Idle timeouts disabled or set very high for the SSE endpoint (`/api/v1/notifications/stream`)
 - Response buffering disabled
 - Heartbeat configuration aware
 
@@ -596,7 +597,7 @@ sequenceDiagram
     participant VC as Versions Cache
     participant AK as Async Kafka
 
-    C->>GW: GET /events<br/>Accept: text/event-stream<br/>Last-Event-ID: {id}
+    C->>GW: GET /api/v1/notifications/stream<br/>Accept: text/event-stream<br/>Last-Event-ID: {id}
     GW->>PS: Upgrade to SSE
     PS->>PS: Validate auth
     PS->>VC: Read user's last delivered ID
@@ -679,11 +680,26 @@ All Kafka consumers must process events idempotently. Idempotency key is the eve
 
 ### Observability
 
-Required cross-cutting infrastructure (not shown explicitly in diagram):
+Required cross-cutting infrastructure (not shown explicitly in diagram).
 
-- **Distributed tracing:** CorrelationID generated at Gateway, propagated through:
-  - HTTP headers (`X-Correlation-ID`)
-  - Kafka message headers
+**Implemented via OpenTelemetry.** The spec's correlation id is now the **trace
+id**: `get_correlation_id()` returns the active trace id, so the `request_id` in
+every HTTP envelope opens a trace. Propagation is the W3C pair, `traceparent` plus
+`baggage`, carried by `observability-py` (Python), `observability-go` (Go) and the
+OpenTelemetry Java agent (the Flink job). Spans go OTLP to Jaeger; nothing is
+exported unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set.
+
+- **Distributed tracing:** trace context generated at the Gateway (Kong's
+  `opentelemetry` plugin), propagated through:
+  - HTTP headers (`traceparent`, `tracestate`, `baggage`; `X-Correlation-ID` is
+    still echoed for clients)
+  - **the outbox table** — `traceparent` / `tracestate` / `baggage` columns, which
+    the Debezium connector's `additional.placement` copies onto each Kafka record
+    as headers of the same names. Without this hop the async pipeline starts a new
+    trace, because Debezium publishes rows out of band and nothing in-process
+    survives it.
+  - Kafka message headers, re-attached by every consumer so its spans are children
+    of the producing request's span
   - Database query comments (for trace-to-query correlation)
 - **Metrics:** request latency per route, Kafka consumer lag per topic, replication slot lag, cache hit rates, SSE connection counts
 - **Logging:** structured logs with correlation ID at every component
@@ -715,6 +731,37 @@ Required cross-cutting infrastructure (not shown explicitly in diagram):
 - **Flink unavailable:** fraud detection delayed; fast-path still operates; Flink replays from checkpoint
 
 ---
+
+## Development Environments
+
+Developers share **one** baseline stack on a dev host rather than each running the
+full system: ~30 containers come to roughly 9 GB of limits, so one copy per
+developer does not fit on the 16 GB host. Isolation is therefore decided per
+request at the application layer, the pattern Lyft (Staging Overrides) and Uber
+(SLATE) arrived at for cost reasons.
+
+- **Baseline** — every service at `main`, always up, owned by nobody.
+- **Sandbox** — only the service being changed, pointed at the baseline's Kafka,
+  Postgres, Elasticsearch and Redis. Runs either as a container on the host or as a
+  native process on the developer's laptop.
+- **Routing** — the sandbox id travels as a `sandbox-id` entry in W3C `baggage`.
+  Kong's `sandbox-router` plugin overrides the upstream for tagged requests and
+  falls back to the baseline otherwise; consumers use the same entry to decide
+  ownership, under a per-sandbox consumer group so a sandbox cannot take partitions
+  off the baseline. Consumers fall back the same way the gateway does: a sandbox's
+  events go to its own consumer where one is running, and to the baseline for every
+  service where none is.
+- **Datastores** are shared by default. A migration or a projection-logic change
+  needs `ISOLATED=1`, which gives the sandbox its own Postgres and prefixes every
+  Elasticsearch index. The flag applies to both paths — `host-sandbox-up` on the dev
+  host, and `sandbox-env` plus the service's own `sandbox` target on a laptop.
+
+This is the reason the outbox carries propagation columns at all: the same
+mechanism that makes tracing continuous is what makes per-developer isolation
+possible. See [ADR-0002](./adr-0002-shared-dev-environment.md) for the decision and
+its costs, [ADR-0003](./adr-0003-sandbox-event-fallback.md) for how a baseline
+consumer covers a sandbox that is not running that service, and
+`infrastructure/dev-host/README.md` for the host itself.
 
 ## Implementation Notes
 

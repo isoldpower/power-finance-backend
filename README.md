@@ -39,7 +39,7 @@
 - **Gateway** — Kong with in-tree Lua plugins: Clerk JWT auth, the Read-At-Least
   sign/verify pair, read-fallback, and two-tier (IP + per-user) rate limiting.
 - **Fraud (planned)** — a deep-path fraud service on Java/Apache Flink
-  ([ADR-0001](docs/adr-0001-fraud-service-java-flink.md)).
+  ([ADR-0001](docs/adr-0001-fraud-service.md)).
 
 ## Services
 
@@ -48,11 +48,12 @@
 | **write-service** | Python · Django | Commands → Postgres + outbox, ImmuDB mirror, idempotency, inbound-notifications consumer |
 | **read-service** | Python · Django | Projects `events.async` into Postgres + Elasticsearch read models; Redis caches; RAL |
 | **push-service** | Go | SSE fan-out of `events.async`, per-user gateway auth, Prometheus metrics |
-| **webhook-service** | Go | Signed webhook delivery with retry/DLQ; owns its Postgres; Goose migrations |
+| **webhook-service** | Go | Signed webhook delivery with retry/DLQ; serves its own delivery log; owns its Postgres; Goose migrations |
+| **ai-service** | Python · FastAPI | Derives the double-entry postings behind each transaction; owns its Postgres (SQLAlchemy + Alembic); assistant surface |
 
 Shared code lives in `libraries/` (Python: `correlation-py`, `kafka-client-py`,
-`read-at-least-py`, `saga-pattern-py`, `kafka-messages-proto`; Go:
-`kafka-client-go`). Infrastructure (Kafka, Kong, Postgres, Debezium) is in
+`read-at-least-py`, `saga-pattern-py`, `filter-grammar-py`, `webhook-catalog-py`,
+`kafka-messages-proto`; Go: `kafka-client-go`). Infrastructure (Kafka, Kong, Postgres, Debezium) is in
 `infrastructure/`.
 
 ## Quick start
@@ -60,21 +61,216 @@ Shared code lives in `libraries/` (Python: `correlation-py`, `kafka-client-py`,
 ```bash
 make install            # sync the uv workspace + wire the git pre-commit hook
 docker compose up -d    # gateway + all services + Kafka/Postgres/Redis
+make test-datastores    # throwaway Postgres for the Python suites (5533/5534/5536)
 make test               # run every service + library suite
 ```
+
+`make test-datastores` is separate from the stack on purpose. The Python suites
+default to 5533/5534/5536 rather than the stack's 5433/5434/5436, because those
+belong to the **dev host** whenever `make devhost-tunnels` is running — and a test
+run that reaches one of them creates and drops its test database on the machine
+everyone shares. The throwaway instances are tmpfs-backed and safe to leave up;
+`make test-datastores-down` discards them — the data directory is a tmpfs, so
+`down` leaves nothing behind. They take the plain credentials the suites
+default to, which is why `make test-datastores` runs Compose with **no**
+`--env-file` layering: a laptop `.env` carries the dev host's credentials, and
+layering them in is how a test run ends up authenticating against the shared
+machine.
+
+Their healthcheck authenticates rather than calling `pg_isready`, for the
+reason given under [Environment](#environment).
 
 The gateway proxy is published on `localhost:${GATEWAY_PROXY_PORT:-8080}`. Each
 service stack is also standalone-runnable from its own directory
 (`docker compose up` under `services/<name>/`).
 
+That runs the **whole stack on this machine** — about 30 containers. If you are
+joining a team that already has a shared dev host, you do not need it: go to
+[Developer setup](#developer-setup-shared-dev-host) instead and run only the service
+you are changing.
+
+## Developer setup (shared dev host)
+
+Start here if someone has given you access to a shared dev host. You clone and edit
+locally and run only the service you are changing; the host supplies Kafka, Postgres,
+Elasticsearch, Redis, ImmuDB, the gateway and every other service.
+
+What you install: **uv** and Python, plus Go or a JDK only if you are changing those
+services. No Docker, no local databases.
+
+You will need from whoever runs the host: its **tailnet name**, your **account name**
+on it, the **repo path** there, and the **database / ImmuDB / Elasticsearch
+passwords**.
+
+### 1. Join the tailnet
+
+```bash
+brew install --cask tailscale && sudo tailscale up
+tailscale status | grep <dev-host>          # the host should appear
+```
+
+### 2. Set up SSH
+
+Your account on the host is probably not your laptop account, and ssh defaults to the
+laptop one. Record it once:
+
+```bash
+cat >> ~/.ssh/config <<'EOF'
+Host <dev-host>
+  User <your account on the host>
+  ForwardAgent yes
+EOF
+
+ssh <dev-host> 'echo ok'
+```
+
+If you get `tailnet policy does not permit you to SSH as user …`, that is usually the
+wrong username rather than an ACL problem — see
+[infrastructure/dev-host/README.md](infrastructure/dev-host/README.md).
+
+### 3. Clone and install
+
+```bash
+git clone git@github.com:isoldpower/power-finance-backend.git
+cd power-finance-backend
+make install
+```
+
+### 4. Write your `.env`
+
+```bash
+cp .env.local.example .env
+```
+
+Fill in the passwords you were given — they must match the host exactly. Everything
+else in that file is optional and already correct.
+
+Do **not** add `ELASTICSEARCH_HOSTS`, `KAFKA_EXTERNAL_HOST`, any `*BIND_ADDRESS`,
+`CLERK_ISSUER_URL` or `READ_AT_LEAST_HMAC_SECRET`. Those are host-side settings; the
+host's value for the first one (`https://es01:9200`) is a Docker-internal name that
+will not resolve on your machine.
+
+`ELASTICSEARCH_HOSTS` is the one endpoint `make sandbox-env` will inherit from
+your environment rather than build from `DEV_HOST`. An inherited value naming a
+different host quietly leaves the tunnel and dials the dev host's published
+port, which `BIND_ADDRESS` keeps on its own loopback — so it surfaces much
+later as a connection error from Elasticsearch alone.
+
+### 5. Choose a sandbox name
+
+One fixed word, yours, used identically everywhere — `anna`, `nikita`, `payments-fix`.
+**Do not use `$USER`**: it differs between your laptop and the host, and a mismatch
+fails silently (your request quietly runs against `main`).
+
+### 6. Open the tunnels — leave this running
+
+```bash
+make devhost-tunnels DEV_HOST=<dev-host>
+```
+
+This forwards the host's Kafka, databases, Redis, ImmuDB, Elasticsearch, OTLP and the
+Jaeger UI onto your own `localhost`, and forwards port 8100 back so the gateway can
+reach your service. Nothing on the host is published for this; it all rides SSH.
+
+If the binds fail with *"Address already in use"*, something local holds those ports —
+most often a baseline stack you started yourself. You do not need one: `make host-down`.
+
+### 7. Run the service you are changing
+
+In a second terminal:
+
+```bash
+make sandbox-env NAME=<your-sandbox-name> SERVICE=write-service DEV_HOST=localhost
+set -a; . .sandbox/<your-sandbox-name>-write-service.env; set +a
+
+cd services/write-service
+uv run uvicorn write_service.asgi:application --port 8100 --reload
+```
+
+`DEV_HOST=localhost` is right: the endpoints are your tunnel's near end.
+
+### 8. Test it directly — this covers most work
+
+```bash
+curl -s -X POST localhost:8100/api/v1/wallets \
+  -H "X-User-Id: <a clerk user id>" -H 'Content-Type: application/json' \
+  -d '{"name":"Hello","currency":"USD"}'
+```
+
+`X-User-Id` is what the gateway would have injected after verifying a token, so this
+skips auth and exercises everything else. Edit a file, save, and uvicorn reloads in
+about a second — the ordinary loop.
+
+### 9. Test through the gateway, when you need the edge
+
+Only for Clerk auth, rate limits, read-fallback and read-your-writes. Routes live in
+the baseline's Redis, so registration happens **on the host** — one ssh hop, made for
+you:
+
+```bash
+make devhost-route NAME=<your-sandbox-name> SERVICE=write-service \
+    DEV_HOST=<dev-host>
+```
+
+```bash
+curl -H "Authorization: Bearer <clerk session token>" \
+     -H "X-Sandbox: <your-sandbox-name>" \
+     http://<dev-host>:8080/api/v1/wallets
+```
+
+Requests without `X-Sandbox` go to the baseline, so you never disturb anyone else.
+
+A **WebSocket** cannot carry that header — the browser's `WebSocket` constructor takes
+only a URL and subprotocols — so the socket URL carries `?sandbox=<your-sandbox-name>`
+instead. Without it the socket lands on the baseline while the page's HTTP calls go to
+your sandbox, which shows up as a chat that records messages you can never read back.
+
+**Mind the method.** The gateway sends `GET /api/v1/*` to read-service and
+`POST/PUT/PATCH/DELETE` to write-service. A GET will not reach a write-service
+sandbox — it finds no read-service route for your name and falls back to the
+baseline, which looks like your sandbox was ignored. Register a route per service you
+run locally.
+
+### 10. Finish up
+
+```bash
+ssh <dev-host> 'cd <repo path on host> && make host-sandbox-down NAME=<your-sandbox-name>'
+```
+
+Then stop your service and the tunnel. Routes also expire on their own after a week.
+
+### When something looks wrong
+
+| Symptom | Cause |
+| --- | --- |
+| `tailnet policy does not permit you to SSH as user …` | wrong username — set `User` in `~/.ssh/config` |
+| `Address already in use` on every tunnel port | a local stack holds them — `make host-down` |
+| `500` on your first request | a password in `.env` does not match the host's; check Postgres and ImmuDB |
+| `identity provider is unreachable` | host-side `CLERK_ISSUER_URL`; not your problem to fix |
+| `User is not yet provisioned in the read store` | that Clerk user has never been written; do one write **without** `X-Sandbox` first |
+| `X-Sandbox` seems ignored | the name does not match the registered route, so it fell back to the baseline — `make host-list` on the host |
+| a log count is always `0` | Python logs to stderr: `docker logs … 2>&1 \| grep -c …` |
+
+Your sandboxed writes are deliberately invisible to the baseline's read model — its
+consumer skips them. If you need your own projections too, ask for
+`make host-sandbox-up NAME=<your-sandbox-name> SERVICE=read-write-consumer` on the host.
+
 ## Repository layout
 
-- `services/` — `write-service`, `read-service` (Python/Django, uv workspace
-  members), `push-service`, `webhook-service` (Go, `go mod`). Each has its own
-  README.
-- `libraries/` — shared Python libs and the Go `kafka-client-go`.
+- `services/` — `write-service`, `read-service` (Python/Django), `ai-service`
+  (Python/FastAPI) — all uv workspace members — plus `push-service`,
+  `webhook-service` (Go, `go mod`) and `antifraud-service` (Java/Flink). Each
+  has its own README.
+- `libraries/` — shared Python libs and the Go `kafka-client-go`. Tracing,
+  context propagation and sandbox routing live in `observability-py`, which owns
+  every OpenTelemetry import in the workspace; `correlation-py` is a Django-facing
+  layer over it.
 - `infrastructure/` — Kafka, Kong gateway, Postgres, Debezium —
-  [infrastructure/README.md](infrastructure/README.md).
+  [infrastructure/README.md](infrastructure/README.md). Its `tests/contract/`
+  is the cross-service contract suite: the conventions and the published
+  surface, checked against `API_TARGET.md`, `API_DIFF.md` and the gateway
+  config. Needs no infrastructure to run; see its
+  [README](infrastructure/tests/contract/README.md).
 - `docs/` — the [architecture spec](docs/architecture.md), ADRs, and diagrams.
 - `old-structure/` — the pre-CQRS monolith, kept for reference only and excluded
   from all tooling.
@@ -88,10 +284,11 @@ directory.
   `make -C services/<service>-service <subcommand>` (e.g. `make write up`,
   `make read test`, `make webhook migrate`). `make <service>` with no subcommand
   falls into that service's default goal. Router targets are `write`, `read`,
-  `push`, `webhook`; root targets (`help`, `test`, `lint`, …) are only defined
+  `push`, `webhook`, `antifraud`, `ai`; root targets (`help`, `test`, `lint`, …) are only defined
   when not routing, so a service subcommand sharing a name doesn't collide. Use
   `make help`, not `make write help`, for the root.
 - **Setup / quality:** `make install` (sync the uv workspace + wire the hook),
+  `make test-datastores` (the Postgres instances the Python suites expect),
   `make test`, `make lint` / `lint-fix`, `make format` / `format-check`,
   `make typecheck`, `make precommit`.
 - The git pre-commit hook is auto-installed on every Makefile invocation: every
@@ -118,6 +315,463 @@ Gateway specifics (plugins, rate-limit tiers, the Read-At-Least mechanism) are i
 - `gateway-redis` backs Kong's rate-limit counters (keeping the gateway
   stateless); persistence is intentionally off — the counters are ephemeral.
 
+## Shared dev environment
+
+One dev host runs a single **baseline** stack; each developer gets a **sandbox**
+holding only the service they are changing. The full stack is ~12–13 GB untuned on
+a 16 GB box, so a stack per developer does not fit — the reasoning is in
+[ADR-0002](docs/adr-0002-shared-dev-environment.md).
+
+### Baseline
+
+The first `host-up` on a fresh host builds every image (10–20 minutes); after
+that it starts in under a minute. Images are local-only tags, so each service built
+from source sets `pull_policy: build` — Compose would otherwise try a registry pull
+first and log `pull access denied` for each one before building anyway.
+
+```bash
+make host-up        # pf-baseline: everything at main, tuned, Kibana off, Jaeger on
+make host-logs
+make host-kibana    # Kibana is scaled to 0 by default; ~768 MB when you want it
+make host-down
+```
+
+`compose.baseline.yaml` layers over `compose.yaml`: memory limits per container,
+capped ES and Kafka heaps, one Flink task slot, `OTEL_*` pointed at Jaeger, and
+`SANDBOX_ID` explicitly empty, which is what makes the baseline the owner of all
+untagged traffic.
+
+It publishes on **three separate bind addresses**, because they carry different
+risk:
+
+| Variable | Covers | Default |
+| --- | --- | --- |
+| `PROXY_BIND_ADDRESS` | the gateway — the only port developers need | `0.0.0.0` |
+| `BIND_ADDRESS` | datastores and OTLP ingest | loopback, unless someone runs a service off-host or wants `psql` from a laptop |
+| `ADMIN_BIND_ADDRESS` | Kong admin (unauthenticated), Jaeger UI, Flink UI | loopback; reach them over an SSH tunnel |
+
+Elasticsearch is published the way every other datastore here is, rather than
+through the `ES_PORT` knob `compose.elastic.yaml` carries — that one bakes the
+bind address into the same value, so `BIND_ADDRESS` and the `*_EXTERNAL_PORT`
+the tunnels forward (`open_tunnels.sh`) would not govern Elasticsearch. Its
+container memory limit is about **twice** its heap: Lucene's mmap accounting,
+netty direct buffers, metaspace and thread stacks all live outside `-Xmx`, and
+at 1g the cgroup killed it (exit 137) twice under ordinary indexing, taking
+search down for everyone on the host.
+
+Images are built **one service per tag**. write-service and its six consumers
+share a tag, as do read-service and its jobs, and BuildKit exports them in
+parallel — several services naming the same tag fail with
+`image "...": already exists`. `BASELINE_BUILD_SERVICES` names only the
+canonical service behind each tag, so every image resolves exactly once.
+
+### Sandboxes
+
+**What you install locally:** `uv` and Python for the Python services, plus Go or a
+JDK only if you are changing those. No Docker, no local Kafka or Postgres.
+
+You clone the repo **on your laptop**, edit it there, and run the service you are
+changing there too — the ordinary clone-edit-run loop, with your own debugger and
+test runner. Only the heavy dependencies stay on the dev host: Kafka, Postgres,
+Elasticsearch, Redis, ImmuDB, the gateway and every service you are *not* changing.
+
+Reach them over SSH tunnels, so nothing on the host has to be published beyond the
+gateway:
+
+```bash
+make devhost-tunnels DEV_HOST=pf-dev-host          # leave running; Ctrl-C closes
+```
+
+Add `DEV_HOST_USER=<host account>` if your account there differs from your laptop's
+— or put `User <host account>` under `Host pf-dev-host` in `~/.ssh/config` once.
+
+Then, in another shell:
+
+```bash
+make sandbox-env NAME=<your-sandbox-name> SERVICE=write-service DEV_HOST=localhost
+make write sandbox NAME=<your-sandbox-name>
+```
+
+`make <service> sandbox` is the one to reach for: it checks the environment is
+complete, then runs **every** process that service is made of — its HTTP edge *and*
+its consumers — stopping them all if any one exits. A service is rarely just its
+edge, and the missing half is invisible from the outside:
+
+| service | processes it runs |
+| --- | --- |
+| `read-service` | edge + the projection consumer (without it, writes never reach the read model: reads 507 or silently go stale) |
+| `ai-service` | edge + the posting dispatcher (without it, transactions get no ledger postings) |
+| `write-service` | edge + automation engine, automation scheduler, fraud alerts, inbound notifications, action expiry |
+
+Each list lives in `<PREFIX>_PROCESSES` in that service's own Makefile, minus
+the one-shot jobs (`migrate`, `es-init`), and has to be kept in step with the
+service's `compose.yaml`. A sandbox missing one of them looks like a feature
+silently not working — automations that never fire, actions that never expire —
+rather than like a service that is down.
+
+To run one process by hand instead, source the env file first:
+
+```bash
+set -a; . .sandbox/<your-sandbox-name>-write-service.env; set +a
+cd services/write-service
+uv run uvicorn write_service.asgi:application --port 8100 --reload
+```
+
+`DEV_HOST=localhost` because the endpoints are your tunnel's near end. The generator
+reads credentials from your **local** `.env`, so the passwords there must match the
+dev host's — a mismatch shows up as a `500` from your service, not a connection
+error, because the credentials are wrong rather than missing. See
+[Environment](#environment) for the short list a laptop actually needs.
+
+That is enough for most work — hit your own service directly, no gateway involved:
+
+```bash
+curl -H "X-User-Id: <clerk-id>" localhost:8100/api/v1/wallets
+```
+
+To exercise the **full edge** (Clerk auth, rate limits, read-fallback, read-your-writes),
+let the gateway route your sandbox traffic back to your laptop. `make devhost-tunnels`
+already opened a reverse tunnel for every laptop service port (8100 read-service,
+8101 ai-service, 8102 write-service), so routing a second service needs no reopening.
+Those ports mirror the `PORT` default in each service's own Makefile, and the
+mapping matters: a route registered for one service must reach *that* service.
+Pointing ai-service at 8100 lands on read-service, which answers — so the
+mistake looks like a routing success.
+
+```bash
+# routes live in the baseline's Redis, so this registers one ON THE DEV HOST over ssh
+make devhost-route NAME=<your-sandbox-name> SERVICE=write-service DEV_HOST=pf-dev-host
+
+curl -H "Authorization: Bearer $TOKEN" -H "X-Sandbox: <your-sandbox-name>" http://pf-dev-host:8080/api/v1/wallets
+```
+
+It derives `TARGET` from `SERVICE` — `host.docker.internal:8102` for write-service,
+`:8101` for ai-service, `:8100` for read-service — and defaults the repo on the host to
+`~/daemons/power-finance-backend`; override either with `TARGET=` / `DEV_HOST_REPO=`, and
+pass `DEV_HOST_USER=` where the tunnels need it. A service with no laptop runner has no
+port to derive, so it asks for `TARGET=` rather than guessing. The hop it makes is exactly:
+
+```bash
+ssh <user>@pf-dev-host 'cd ~/daemons/power-finance-backend && make host-route \
+    NAME=<your-sandbox-name> SERVICE=write-service TARGET=host.docker.internal:8102'
+```
+
+`host.docker.internal:<port>` is the **dev host's** own loopback as seen from inside the
+gateway container, which the `-R` tunnel connects back to your laptop. So the gateway
+reaches your locally-run service without your machine being reachable at all.
+
+`make host-route`, `make host-unroute` and `make host-route-laptop` only work where
+the baseline runs; run from a laptop they stop with a message pointing at the
+`*-remote` form rather than a Compose error.
+
+When you are done with the sandbox, send that service back to the baseline:
+
+```bash
+make devhost-unroute NAME=<your-sandbox-name> SERVICE=write-service DEV_HOST=pf-dev-host
+```
+
+That drops the route only. To remove the sandbox altogether — containers, routes and
+the consumer groups that make baseline consumers skip its events — one command does
+all three:
+
+```bash
+make devhost-wipe NAME=<your-sandbox-name> DEV_HOST=pf-dev-host
+```
+
+Afterwards `X-Sandbox: <your-sandbox-name>` behaves exactly like sending no header.
+
+It refuses if a sandbox consumer still has unapplied events, because deleting its
+group loses them: baseline consumers skipped those events while the sandbox owned
+them and have already committed past that point. Drain the consumer first, or pass
+`FORCE=1` to accept the gap. Processes running on your own laptop are not covered —
+stop those yourself.
+
+Requests without `X-Sandbox` keep going to the baseline, so nobody else notices.
+
+**Pick one fixed sandbox name and use it everywhere.** It has to match on both sides —
+the `NAME=` you start the sandbox with and the `X-Sandbox:` you send — and `$USER`
+differs between your laptop and the dev host, so it silently produces two different
+names. A mismatch is not an error: `sandbox-router` finds no route and falls back to
+the baseline, so your request quietly runs against `main`.
+
+When a check counts log lines, remember Python logs to **stderr**, so
+`docker logs … 2>&1 | grep -c …` — without the redirect the count is always zero.
+
+#### Why Kafka works over a tunnel
+
+A Kafka client reconnects to whatever the broker *advertises*, not to the address it
+dialled. The broker advertises `${KAFKA_EXTERNAL_HOST}:${KAFKA_EXTERNAL_PORT}`, so
+leaving `KAFKA_EXTERNAL_HOST=localhost` is correct here: the client follows the
+advertisement straight back into the tunnel. Set it to the host's name only if you
+widen `BIND_ADDRESS` and connect without tunnels.
+
+#### Running on the host instead
+
+Some things are better off on the dev host, and `host-sandbox-up` runs them there with
+your host-side checkout bind-mounted (`BAKED=1` to skip the mount and use the image):
+
+```bash
+make host-sandbox-up NAME=<your-sandbox-name> SERVICE=write-service          # source live-mounted, ~1s reload
+make host-sandbox-up NAME=<your-sandbox-name> SERVICE=read-service ISOLATED=1 # own Postgres + prefixed ES indices
+make host-sandbox-restart NAME=<your-sandbox-name> SERVICE=read-write-consumer # workers have no reloader
+```
+
+Worth it for the compiled services (Go, Java) if you would rather not install their
+toolchains, for anything that should keep running while your laptop is closed, and
+for `ISOLATED=1` work. It needs the source on the host, so it is the secondary path.
+
+```bash
+make host-list     # routes, per service, with TTL
+make host-prune    # drop routes whose container is gone
+make host-sandbox-down NAME=<your-sandbox-name>
+```
+
+### How isolation actually works
+
+The sandbox id travels as a `sandbox-id` entry in the W3C `baggage` header, and
+`traceparent` rides along with it, so the same mechanism gives you distributed
+tracing.
+
+Routes are keyed per service (`sandbox:route:<name>:<service>`), so one sandbox
+name can override several services at once and each request is re-pointed only for
+the service it addresses. Anything you have not overridden comes from the baseline.
+
+| Hop | Carrier |
+| --- | --- |
+| client → gateway | `X-Sandbox` header, or `baggage` directly |
+| gateway → service | `baggage` (the `sandbox-router` plugin adds the entry and overrides the upstream) |
+| service → outbox row | `traceparent` / `tracestate` / `baggage` columns |
+| outbox row → Kafka | headers of the same names, via the Debezium connector's field placement |
+| Kafka → consumer | context re-attached; `sandbox-id` decides who owns the message |
+
+A baseline process owns messages with **no** sandbox id; a sandbox owns only its
+own. Exactly one side handles any message.
+
+Sandbox consumers also run under their own Kafka consumer group
+(`<group>-sbx-<name>`) and their own dedupe scope. Without that a sandbox joins the
+baseline's group and quietly steals its partitions.
+
+The group a process joins is what decides ownership — the baseline skips a
+sandbox's events only when a group named after its own plus that sandbox
+exists. `make sandbox-env` therefore pins the group in the env file, so a
+consumer you run on your laptop lands in the same group as the container it
+stands in for, whatever the code defaults say. (ai-service and webhook-service
+take a whole database URL rather than `DATABASE_*` parts, so the generator
+writes those instead.)
+
+Note that a sandbox reuses the baseline's Elastic certs: `compose.sandbox.yaml`
+declares the baseline's `certs` volume as external.
+
+Every service in `compose.sandbox.yaml` is named `sbx-<service>` and pulled in
+with `extends` rather than layered over `compose.yaml`. That is deliberate:
+Compose always adds the service name as a network alias, so reusing the
+baseline's names on the shared network would make `write-service` round-robin
+between the baseline and a sandbox, silently sending a share of untagged
+traffic into someone's sandbox.
+
+The default overlay is `compose.sandbox-live.yaml`: the service's source is
+bind-mounted from the checkout on the dev host, so a change is picked up in
+about a second instead of a ~20s image rebuild. The venv lives at `/app/.venv`,
+outside the mount, so dependencies are untouched — only first-party source is
+live. Changing a shared library under `libraries/` or a dependency still needs
+`BAKED=1` and a rebuild, and long-running workers have no reloader: they pick
+the change up on `make host-sandbox-restart`.
+
+**Datastores are shared by default, and that has two edges.** A migration under
+test would hit everyone, and so would changed *projection* logic — a sandbox
+read-service writes into the real read model, and the baseline then serves those
+documents. Kafka isolation does not help; the boundary stops at the datastore.
+
+`ISOLATED=1` is the answer for both: the sandbox gets its own Postgres (one
+instance, all four service databases created by
+`infrastructure/postgres/sandbox_init/`), its migrations run against it, and every
+Elasticsearch index is prefixed `sbx_<name>_`. `make host-sandbox-down` removes those
+volumes. Without the flag a sandbox is only safe for changes that keep writing the
+same shapes.
+
+Elasticsearch itself stays shared on the host path — the per-sandbox index
+prefix is what isolates the read side there. And because it is **one** Postgres
+instance, it takes **one** set of credentials: the per-service
+`DATABASE_USER`/`DATABASE_PASSWORD` pairs describe the baseline's four separate
+servers, and using them here builds a DSN the sandbox's own Postgres rejects.
+On the laptop the same file publishes a port, because the process that uses it
+runs natively next to Docker rather than in it, and its Compose project name
+carries the sandbox name so two of them on one machine keep separate volumes.
+
+The flag works on **both** paths, with one instance of Postgres each side:
+
+```bash
+# on the dev host — the container path
+make host-sandbox-up NAME=<name> SERVICE=ai-service ISOLATED=1
+
+# on your laptop — the primary path
+make sandbox-env NAME=<name> SERVICE=ai-service DEV_HOST=localhost ISOLATED=1
+make ai sandbox NAME=<name> ISOLATED=1     # starts and migrates it, then runs
+```
+
+`DEV_HOST=localhost` here, as everywhere else for `sandbox-env`, because the
+endpoints it writes are your tunnel's near end. The tailnet name belongs to
+`devhost-*`, which ssh somewhere; `sandbox-env` only names endpoints a local
+process dials.
+
+On the laptop the database lands on `localhost:5633` (`SANDBOX_DATABASE_PORT=`),
+deliberately clear of the tunnel band (5433-5437) and the test band (5533-5536).
+Kafka, Redis and ImmuDB stay the dev host's: event routing is what makes a sandbox
+a sandbox, so isolating the broker would cut it off from the traffic it exists to
+handle.
+
+`make ai sandbox ISOLATED=1` is a convenience over
+`make sandbox-datastores NAME=<name>`, which starts that Postgres and migrates all
+four databases. It **rebuilds the migration images from your working tree**, since
+the usual reason to want isolation is a migration that exists nowhere else yet.
+`make sandbox-datastores-down NAME=<name>` removes the database and its data.
+
+The env file records which kind it is (`SANDBOX_ISOLATED`), and asking for
+`ISOLATED=1` with a file that still points at the baseline is refused rather than
+run. Note that the laptop's database is **not** covered by `make host-wipe`,
+which runs on the dev host and cannot see it.
+
+#### Giving the baseline back what an isolated sandbox took
+
+Isolation has a cost the shared mode does not. An isolated **read-service** applies
+the events it claims into its own database, and the baseline's consumer skipped
+them, so the baseline read model is left permanently short — its write store knows
+about transactions its read store will never project. (A *shared* sandbox has no
+such problem: its consumer writes into the baseline's stores on the baseline's
+behalf, which is exactly why skipping is safe there.)
+
+When the sandbox is finished, hand those events back:
+
+```bash
+make devhost-replay NAME=<your-sandbox-name> DEV_HOST=pf-dev-host DRY_RUN=1  # look first
+make devhost-replay NAME=<your-sandbox-name> DEV_HOST=pf-dev-host
+```
+
+It reads the write outbox for rows whose `baggage` carries the sandbox id, tells
+read-service to forget it consumed exactly those, and re-publishes them with their
+**original event ids**. The ids are what make it safe to put them back on a shared
+topic: every other service still holds a dedupe row for the event it really did
+apply, so it rejects the copy. read-service is the one exception, and only for the
+ids named. The sandbox tag is stripped from the baggage on the way out, so the
+baseline claims them regardless of whether any consumer group for that sandbox is
+left; `--keep-sandbox-baggage` leaves it in place and falls back to the ADR-0003
+ownership rules instead.
+
+Replaying from the outbox rather than by resetting consumer offsets is deliberate:
+the outbox is durable, so it still works after `events.async` has aged past its
+seven-day retention, and it needs nothing stopped.
+
+Elasticsearch has its own consumer group, its own dedupe rows and its own
+applied-seq, so it is **not** covered — rebuild it afterwards with
+`backfill_elastic_from_postgres`.
+
+### Two things to know
+
+A locally-run service exports traces through the tunnelled OTLP port, so it lands in
+the host's Jaeger alongside everything else — one trace still spans your laptop and
+the baseline's consumers. It reports under the **same** `OTEL_SERVICE_NAME` as the
+baseline, on purpose — a sandbox is the same service, and splitting the name would
+split one request's trace across two service entries. Filter on the `sandbox` field
+that the log filter and baggage carry instead.
+
+The dev secrets in `.env` (`READ_AT_LEAST_HMAC_SECRET`, `ELASTIC_PASSWORD`,
+service secret keys) are shared by everyone on the host. That is acceptable for a
+dev environment and must not be carried into anything real.
+
+### Tracing
+
+Jaeger runs alongside the baseline; the UI is on `JAEGER_UI_PORT` (16686). Tracing
+stays **off** until `OTEL_EXPORTER_OTLP_ENDPOINT` is set, so running a service
+straight on your laptop emits no spans and no exporter noise. Details, endpoints
+and the Java agent are in
+[infrastructure/README.md](infrastructure/README.md) → "Tracing".
+
+## Environment
+
+`docker compose` reads **one** env file by default, but the Make targets stack
+several so a value can be set once and overridden where it matters.
+`make env-layers` prints what will be stacked, in order; `make env-resolve`
+prints the fully resolved config.
+
+Precedence, highest first:
+
+|   | Layer                                 | Example                             |
+|---|---------------------------------------|-------------------------------------|
+| 1 | shell variable                        | `WRITE_DATABASE_PASSWORD=x make up` |
+| 2 | `services/<name>/.env.compose`        | per-service override                |
+| 3 | `.env`                                | the workspace-wide values           |
+| 4 | `${VAR:-default}` in the compose file | the dev fallback                    |
+
+Stacked `--env-file` resolves later files over earlier ones and the shell beats
+every file, so the ordering falls out of the flag order. It is unambiguous only
+because every variable is prefixed by the service that owns it
+(`WRITE_DATABASE_*`, `READ_DATABASE_*`, `AI_DATABASE_*`, `WEBHOOK_DATABASE_*`) —
+an unprefixed variable in a service layer applies to the whole project, so
+shared knobs like `LOG_LEVEL` belong in `.env`. Only files that exist are
+passed: compose errors on a missing `--env-file`, so the Makefile globs rather
+than listing.
+
+**Three files, three jobs.** `.env` and `services/<name>/.env.compose` are read
+by compose and reach containers. `services/<name>/.env` is read by the service
+itself through `BASE_DIR / ".env"` when it runs directly on the host
+(`make read run`, `uv run pytest`) and never reaches a container — no compose
+file uses `env_file:`. Copy from the matching `.example`; both patterns are
+gitignored, the examples are committed.
+
+### What has to be set
+
+Every value has a working dev fallback, so the stack starts either way. Two fail
+loudly when missing and the rest fail silently, which makes the silent ones the
+dangerous group:
+
+- **Fail loudly.** `CLERK_ISSUER_URL` (Kong's `clerk-jwt` plugin fetches the
+  rotating JWKS from `<issuer>/.well-known/jwks.json`; use the *production*
+  Clerk instance, the dev one issues a different issuer) and
+  `READ_AT_LEAST_HMAC_SECRET` (shared between the gateway's `read-at-least`
+  plugin and the write side that signs `X-Write-Version` — both must hold the
+  same value and rotate together).
+- **Fail silently.** Four database passwords defaulting to `postgres`,
+  `IMMUDB_PASSWORD` to the vendor's `immudb`, `ELASTIC_PASSWORD` and
+  `KIBANA_PASSWORD` to `changeme`, and both Django `SECRET_KEY`s to
+  `dev-only-secret-key-change-me`.
+
+`docker compose config | grep -iE "changeme|dev-only-secret|PASSWORD: postgres"`
+before starting anything real.
+
+### Debezium credentials
+
+The two connector configs under `infrastructure/debezium/connectors/` are JSON
+posted to Kafka Connect's REST API, so they get no compose interpolation. They
+carry `__WRITE_DATABASE_USER__` style placeholders that the
+`write-outbox-connector` / `ai-outbox-connector` one-shots substitute at
+registration, which is why the `WRITE_`/`AI_` values reach them and no
+credential is committed. The placeholders deliberately contain no `$`: a
+`${VAR}` inside a compose `command:` is interpolated by compose before the
+container shell sees it, which would collapse both sides of the substitution to
+the same value.
+
+Changing a database password without that wiring is a quiet failure worth
+knowing: the connector cannot connect, writes still land in the outbox table,
+nothing reaches Kafka, and the read side goes stale with no error at the API.
+
+Redis is the one store with no authentication, on any of its three instances.
+That is safe only while they stay bound to loopback.
+
+ImmuDB needs `--force-admin-password` on top of `IMMUDB_PASSWORD`. Without it
+the server keeps immudb's built-in admin password while `IMMUDB_PASSWORD`
+reaches only the clients, so any custom value fails with
+`invalid user name or password`. The flag reapplies it on every start, so
+unlike Postgres the value is not frozen at first init.
+
+**Every Postgres healthcheck in this repo authenticates**, rather than calling
+`pg_isready`. `pg_isready` never authenticates, so it reports healthy while
+every login is rejected — and a server still loading its volume answers it
+before it will accept a password, which makes a migration fail on a container
+Compose already called ready. The probes pass the real credentials over the
+container's **own network address**, not loopback: `pg_hba` trusts
+`127.0.0.1`, so a loopback probe would bypass authentication and pass with any
+password.
+
 ## Tooling notes
 
 - **uv workspace** (`pyproject.toml`): `services/push-service` and
@@ -128,10 +782,22 @@ Gateway specifics (plugins, rate-limit tiers, the Read-At-Least mechanism) are i
   even when a runner passes the file path explicitly — without it, ruff strips
   the side-effectful `timestamp_pb2` import from `*_pb2.py` as "unused", breaking
   descriptor-pool loading at runtime. Excludes also cover `migrations/`,
+  `**/alembic/versions/` (Alembic's equivalent of a migrations directory),
+  `.phase-5-backup` (reference copies of removed work, not on the import path),
   `generated/`, `.venv`, `old-structure`.
+- **isort** (inside ruff) sets `combine-as-imports = true` so an `X as Y` import
+  stays in the same statement as its siblings; without it every aliased name
+  gets a `from module import (...)` block of its own.
 - **mypy** excludes `fakes.py` (test-double modules at each project root share the
   top-level name `fakes`, which mypy can't map in a single run), plus
-  `migrations/`, `__tests__/`, `generated/`, and `old-structure/`.
+  `migrations/`, `__tests__/`, `generated/`, and `old-structure/`. It also runs
+  **once per Django service** rather than once over the tree: each is its own
+  package root and both own a top-level `background_workers`, so a single run
+  sees two files claiming the same module name and refuses to check either.
+- **The pydantic mypy plugin** is enabled because pydantic-settings fills every
+  field from the environment, so a field with no default is not a required
+  constructor argument. Only that plugin knows it; without it every
+  `Settings()` call needs a `type: ignore`.
 - **pre-commit** (`.pre-commit.yaml`) delegates mypy and tests to Makefile targets
   so commands have a single source of truth, and excludes `old-structure/` from
   every hook.
@@ -139,5 +805,8 @@ Gateway specifics (plugins, rate-limit tiers, the Read-At-Least mechanism) are i
 ## Documentation
 
 - [Architecture spec](docs/architecture.md) — components, data flows, patterns.
-- [ADR-0001: fraud service on Java/Flink](docs/adr-0001-fraud-service-java-flink.md)
+- [ADR-0001: fraud service on Java/Flink](docs/adr-0001-fraud-service.md)
+- [ADR-0002: shared dev environment](docs/adr-0002-shared-dev-environment.md) — why
+  one baseline plus per-developer sandboxes, and what it costs.
+- [Dev host setup](infrastructure/dev-host/README.md) — for whoever runs the host.
 - [Infrastructure](infrastructure/README.md) — Kafka, Kong, Postgres, Debezium.

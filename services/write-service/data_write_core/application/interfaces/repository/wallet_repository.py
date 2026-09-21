@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
+from write_service.common.pagination import PageRequest
+
 from data_write_core.domain.entities import WalletEntity
 
 
@@ -21,8 +23,7 @@ class WalletRepository(ABC):
     async def get_user_wallets(
         self,
         user_id: int,
-        limit: int | None = None,
-        offset: int | None = None,
+        page: PageRequest | None = None,
     ) -> list[WalletEntity]:
         raise NotImplementedError()
 

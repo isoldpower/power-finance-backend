@@ -1,59 +1,80 @@
+import asyncio
 from dataclasses import dataclass
 from uuid import UUID
 
-from data_write_core.domain.services import collapse_ledger
+from write_service.common.pagination import PageRequest
+
+from data_write_core.domain.aggregates import TransactionAggregate
 
 from ..bootstrap import get_repository_registry
-from ..dtos import TransactionPlainDTO
-from ..interfaces import TransactionRepository, WalletRepository
+from ..dtos import TransactionDTO, container_to_dto, transaction_to_dto
+from ..interfaces import (
+    MoneyContainerRepository,
+    MoneyFlowRepository,
+    TransactionRepository,
+)
 
 
 @dataclass(frozen=True)
 class ListFallbackTransactionsQuery:
     user_id: int
-    limit: int
-    offset: int
+    page: PageRequest
 
 
 class ListFallbackTransactionsQueryHandler:
     def __init__(
         self,
+        money_flow_repository: MoneyFlowRepository | None = None,
+        container_repository: MoneyContainerRepository | None = None,
         transaction_repository: TransactionRepository | None = None,
-        wallet_repository: WalletRepository | None = None,
     ) -> None:
-        if transaction_repository is None or wallet_repository is None:
+        if (
+            money_flow_repository is None
+            or container_repository is None
+            or (transaction_repository is None)
+        ):
             registry = get_repository_registry()
+            money_flow_repository = money_flow_repository or registry.money_flow_repository
+            container_repository = container_repository or registry.money_container_repository
             transaction_repository = transaction_repository or registry.transaction_repository
-            wallet_repository = wallet_repository or registry.wallet_repository
 
+        self._money_flow_repository = money_flow_repository
+        self._container_repository = container_repository
         self._transaction_repository = transaction_repository
-        self._wallet_repository = wallet_repository
 
     async def handle(
         self, query: ListFallbackTransactionsQuery
-    ) -> tuple[list[TransactionPlainDTO], int]:
-        ledger = await self._transaction_repository.get_user_transactions(query.user_id)
-        collapsed = collapse_ledger(ledger)
-        collapsed.sort(key=lambda entry: entry.transaction.created_at, reverse=True)
+    ) -> tuple[list[TransactionDTO], int]:
+        transactions = await self._transaction_repository.get_user_transactions(
+            user_id=query.user_id,
+            page=query.page,
+        )
+        total = await self._transaction_repository.count_user_transactions(query.user_id)
 
-        total = len(collapsed)
-        page = collapsed[query.offset : query.offset + query.limit]
+        flows_by_transaction, containers = await asyncio.gather(
+            self._money_flow_repository.get_flows_for_transactions(
+                [UUID(transaction.unique_id) for transaction in transactions]
+            ),
+            self._container_repository.resolve_many(
+                [transaction.container_id for transaction in transactions],
+                user_id=query.user_id,
+            ),
+        )
+        container_dtos = {
+            str(container_id): container_to_dto(reference)
+            for container_id, reference in containers.items()
+        }
 
-        currency_by_wallet = await self._currency_by_wallet(query.user_id)
-
-        return [
-            TransactionPlainDTO(
-                id=UUID(entry.transaction.unique_id),
-                amount=entry.effective_amount,
-                currency_code=currency_by_wallet.get(str(entry.transaction.source_wallet_id), ""),
-                source_wallet_id=str(entry.transaction.source_wallet_id),
-                created_at=entry.transaction.created_at,
-                cancels_other=entry.transaction.cancels_other,
-                adjusts_other=entry.transaction.adjusts_other,
-            )
-            for entry in page
-        ], total
-
-    async def _currency_by_wallet(self, user_id: int) -> dict[str, str]:
-        wallets = await self._wallet_repository.get_user_wallets(user_id)
-        return {str(wallet.unique_id): wallet.currency_code for wallet in wallets}
+        return (
+            [
+                transaction_to_dto(
+                    TransactionAggregate(
+                        transaction_entity=transaction,
+                        flows=flows_by_transaction.get(UUID(transaction.unique_id), []),
+                    ),
+                    container_dtos[str(transaction.container_id)],
+                )
+                for transaction in transactions
+            ],
+            total,
+        )

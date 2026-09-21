@@ -10,7 +10,7 @@ import (
 
 func TestCorrelationIDMiddlewarePropagatesGatewayHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodGet, "/events", nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/notifications/stream", nil)
 	request.Header.Set(correlation.Header, "corr-123")
 
 	correlatedRequest, shouldContinue := CorrelationIDMiddleware(recorder, request)
@@ -29,7 +29,7 @@ func TestCorrelationIDMiddlewarePropagatesGatewayHeader(t *testing.T) {
 
 func TestCorrelationIDMiddlewareGeneratesFallbackID(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodGet, "/events", nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/notifications/stream", nil)
 
 	correlatedRequest, _ := CorrelationIDMiddleware(recorder, request)
 
@@ -44,7 +44,7 @@ func TestCorrelationIDMiddlewareGeneratesFallbackID(t *testing.T) {
 
 func TestGatewayAuthMiddlewareRejectsWithoutUserHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodGet, "/events", nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/notifications/stream", nil)
 
 	_, shouldContinue := GatewayAuthMiddleware(recorder, request)
 
@@ -58,7 +58,7 @@ func TestGatewayAuthMiddlewareRejectsWithoutUserHeader(t *testing.T) {
 
 func TestGatewayAuthMiddlewareRejectsBlankUserHeader(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodGet, "/events", nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/notifications/stream", nil)
 	request.Header.Set(GatewayUserHeader, "   ")
 
 	if _, shouldContinue := GatewayAuthMiddleware(recorder, request); shouldContinue {
@@ -68,7 +68,7 @@ func TestGatewayAuthMiddlewareRejectsBlankUserHeader(t *testing.T) {
 
 func TestGatewayAuthMiddlewarePutsUserIDIntoRequestContext(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodGet, "/events", nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/notifications/stream", nil)
 	request.Header.Set(GatewayUserHeader, "user_2abc")
 
 	authenticatedRequest, shouldContinue := GatewayAuthMiddleware(recorder, request)
@@ -84,7 +84,7 @@ func TestGatewayAuthMiddlewarePutsUserIDIntoRequestContext(t *testing.T) {
 
 func TestGatewayAuthMiddlewareSkipsPreflightRequests(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodOptions, "/events", nil)
+	request := httptest.NewRequest(http.MethodOptions, "/api/v1/notifications/stream", nil)
 
 	passedRequest, shouldContinue := GatewayAuthMiddleware(recorder, request)
 

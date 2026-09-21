@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+// Delivery outcomes reported on the webhook_delivery_outcomes_total counter.
 const (
 	OutcomeSuccess   = "success"
 	OutcomeRetry     = "retry"
@@ -34,8 +35,6 @@ func init() {
 	registerZeroValuedOutcomes()
 }
 
-// registerZeroValuedOutcomes initialises every outcome series at zero so they
-// are exported before the first delivery is recorded.
 func registerZeroValuedOutcomes() {
 	deliveryOutcomes.WithLabelValues(OutcomeSuccess)
 	deliveryOutcomes.WithLabelValues(OutcomeRetry)

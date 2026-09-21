@@ -1,0 +1,2 @@
+class UnknownEffectError(ValueError):
+    pass

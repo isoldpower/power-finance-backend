@@ -4,6 +4,7 @@ name = "power-finance-cqrs"
 version = "0.0.0"
 description = "Power Finance — CQRS architecture monorepo (Write, Read, Push services + shared Python libraries + infrastructure)."
 requires-python = ">=3.12"
+dependencies = []
 
 [tool.uv.workspace]
 members = [
@@ -12,11 +13,16 @@ members = [
     "libraries/auth-py",
     "libraries/correlation-py",
     "libraries/events-py",
+    "libraries/filter-grammar-py",
     "libraries/kafka-client-py",
+    "libraries/kafka-consumer-py",
     "libraries/kafka-messages-proto",
     "libraries/observability-py",
     "libraries/read-at-least-py",
+    "libraries/webhook-catalog-py",
     "libraries/saga-pattern-py",
+    "services/ai-service",
+    "infrastructure/tests/contract",
 ]
 
 # immudb-py 1.5.0 ships broken metadata: it declares a dependency on the Hive
@@ -57,6 +63,7 @@ dev = [
     "mypy>=1.13,<2.0",
     "pre-commit>=4.0,<5.0",
     "grpcio-tools>=1.66,<2.0",
+    "types-PyYAML>=6.0,<7.0",
 ]
 
 [tool.ruff]
@@ -65,6 +72,8 @@ target-version = "py312"
 force-exclude = true
 extend-exclude = [
     "**/migrations/**",
+    "**/alembic/versions/**",
+    ".phase-5-backup",
     "**/generated/**",
     ".venv",
     "old-structure",
@@ -88,12 +97,16 @@ ignore = [
 "**/__tests__/**" = ["B"]
 "**/__init__.py" = ["F401"]
 
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
 python_version = "3.12"
+plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
 check_untyped_defs = false
 warn_unused_ignores = true
@@ -102,11 +115,12 @@ explicit_package_bases = true
 namespace_packages = true
 exclude = [
     "/migrations/",
+    "/alembic/versions/",
+    "\\.phase-5-backup/",
     "/__tests__/",
     "/generated/",
     ".venv",
     "manage\\.py$",
     "fakes\\.py$",
-    "services/read-service/",
     "old-structure/",
 ]

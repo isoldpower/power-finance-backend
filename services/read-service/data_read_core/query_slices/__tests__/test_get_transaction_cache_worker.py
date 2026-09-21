@@ -3,9 +3,9 @@ import json
 from fakes import FakeRedis
 
 from data_read_core.query_slices.get_transaction.cache_worker import CacheWorker
+from data_read_core.query_slices.get_transaction.config import CacheSettings
 from data_read_core.query_slices.get_transaction.dtos import TransactionDTO
 from data_read_core.query_slices.get_transaction.infra import (
-    CACHE_TTL_SECONDS,
     get_single_cache_key,
 )
 
@@ -15,10 +15,18 @@ def _transaction(transaction_id: str = "t1", user_id: int = 7) -> TransactionDTO
         id=transaction_id,
         user_id=user_id,
         wallet_id="w1",
-        amount="100.00",
+        wallet_name="Random Credit Card",
+        name="Groceries store",
+        amount="-100.00",
         currency="USD",
+        category="Food",
+        origin="manual",
+        chain_id=None,
+        chain_sort="ffffffff-ffff-ffff-ffff-ffffffffffff",
         occurred_at="2026-01-01T00:00:00+00:00",
         created_at="2026-01-01T00:00:00+00:00",
+        updated_at=None,
+        deleted_at=None,
     )
 
 
@@ -46,7 +54,7 @@ async def test_save_writes_single_key_with_ttl(fake_redis: FakeRedis):
     assert len(fake_redis.set_calls) == 1
     key, raw_value, ttl = fake_redis.set_calls[0]
     assert key == get_single_cache_key("t1")
-    assert ttl == CACHE_TTL_SECONDS
+    assert ttl == CacheSettings.TTL_SECONDS
     assert json.loads(raw_value)["id"] == "t1"
 
 

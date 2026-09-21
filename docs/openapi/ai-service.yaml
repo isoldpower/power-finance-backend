@@ -1,0 +1,448 @@
+openapi: 3.1.0
+info:
+  title: AI Service
+  version: 0.1.0
+paths:
+  /health/live:
+    get:
+      tags:
+      - health
+      summary: Liveness
+      operationId: liveness_health_live_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatusResponse'
+  /health/ready:
+    get:
+      tags:
+      - health
+      summary: Readiness
+      operationId: readiness_health_ready_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthChecksResponse'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDegradedResponse'
+  /health/startup:
+    get:
+      tags:
+      - health
+      summary: Startup
+      operationId: startup_health_startup_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthChecksResponse'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDegradedResponse'
+  /api/v1/assistant/messages:
+    get:
+      tags:
+      - assistant
+      summary: Read the conversation
+      description: Newest first, like every collection here. A chat feed reads oldest-first,
+        so the CLIENT reverses each page for display.
+      operationId: get_messages_api_v1_assistant_messages_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Page size. Defaults to 25, clamped to 1..100 rather than refused.
+          title: Limit
+        description: Page size. Defaults to 25, clamped to 1..100 rather than refused.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Opaque cursor from a previous response's `meta.next_cursor`.
+          title: Cursor
+        description: Opaque cursor from a previous response's `meta.next_cursor`.
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageCollectionSchema'
+        '401':
+          description: Did not traverse the API gateway.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseSchema'
+        '422':
+          description: A parameter was refused.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseSchema'
+    delete:
+      tags:
+      - assistant
+      summary: Clear the conversation
+      description: 'A HARD delete of the whole conversation. There is no per-message
+        deletion: the assistant reads the history as context, and a half-deleted exchange
+        reads as a non-sequitur.'
+      operationId: delete_messages_api_v1_assistant_messages_delete
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClearedConversationResponseSchema'
+        '401':
+          description: Did not traverse the API gateway.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseSchema'
+        '422':
+          description: A parameter was refused.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseSchema'
+  /api/v1/assistant/overview:
+    get:
+      tags:
+      - assistant
+      summary: Assistant signals and prompts
+      description: Derived, cheap and safe to poll. Carries `meta.cached` like any
+        read here, though the cache is per server process.
+      operationId: get_overview_api_v1_assistant_overview_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverviewResponseSchema'
+        '401':
+          description: Did not traverse the API gateway.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseSchema'
+        '422':
+          description: A parameter was refused.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseSchema'
+components:
+  schemas:
+    CachedMetaSchema:
+      properties:
+        cached:
+          type: boolean
+          title: Cached
+          description: Whether this response was served from a cache.
+      type: object
+      required:
+      - cached
+      title: CachedMetaSchema
+    ClearedConversationResponseSchema:
+      properties:
+        data:
+          $ref: '#/components/schemas/ClearedConversationSchema'
+        meta:
+          $ref: '#/components/schemas/EmptyMetaSchema'
+      type: object
+      required:
+      - data
+      - meta
+      title: ClearedConversationResponseSchema
+    ClearedConversationSchema:
+      properties:
+        deleted:
+          type: integer
+          title: Deleted
+          description: How many messages went. `0` when it was already empty.
+      type: object
+      required:
+      - deleted
+      title: ClearedConversationSchema
+    CollectionMetaSchema:
+      properties:
+        limit:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Limit
+          description: Effective page size. Null on non-paginated endpoints.
+        total:
+          type: integer
+          title: Total
+          description: Total items matching the request, ignoring pagination.
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Opaque token for the page after this one. Null when exhausted.
+        prev_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prev Cursor
+          description: Opaque token for the page before this one. Null on the first
+            page.
+      type: object
+      required:
+      - limit
+      - total
+      - next_cursor
+      - prev_cursor
+      title: CollectionMetaSchema
+    EmptyMetaSchema:
+      properties: {}
+      type: object
+      title: EmptyMetaSchema
+      description: '`meta` is `{}` rather than absent when there is nothing to say.'
+    ErrorBodySchema:
+      properties:
+        code:
+          type: string
+          title: Code
+          description: "The `error.code` from Conventions \u2192 Error Codes."
+        message:
+          type: string
+          title: Message
+        details:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/ErrorDetailSchema'
+            type: array
+          - type: 'null'
+          title: Details
+          description: Present only for a failure that names the fields it refused.
+      type: object
+      required:
+      - code
+      - message
+      title: ErrorBodySchema
+    ErrorDetailSchema:
+      properties:
+        field:
+          type: string
+          title: Field
+        code:
+          type: string
+          title: Code
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - field
+      - code
+      - message
+      title: ErrorDetailSchema
+    ErrorMetaSchema:
+      properties:
+        request_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Request Id
+          description: The correlation id the request carried, when it carried one.
+        timestamp:
+          type: string
+          title: Timestamp
+      type: object
+      required:
+      - timestamp
+      title: ErrorMetaSchema
+    ErrorResponseSchema:
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBodySchema'
+        meta:
+          $ref: '#/components/schemas/ErrorMetaSchema'
+      type: object
+      required:
+      - error
+      - meta
+      title: ErrorResponseSchema
+    HealthChecksResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          description: Probe status ("ok" or "degraded")
+        checks:
+          additionalProperties:
+            type: string
+          type: object
+          title: Checks
+          description: Per-dependency status ("ok" or a failure description)
+      type: object
+      required:
+      - status
+      - checks
+      title: HealthChecksResponse
+    HealthDegradedResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          description: Always "degraded"
+        error:
+          type: string
+          title: Error
+          description: Failure description
+      type: object
+      required:
+      - status
+      - error
+      title: HealthDegradedResponse
+    HealthStatusResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          description: Probe status ("ok" or "degraded")
+      type: object
+      required:
+      - status
+      title: HealthStatusResponse
+    MessageCollectionSchema:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/MessageSchema'
+          type: array
+          title: Data
+        meta:
+          $ref: '#/components/schemas/CollectionMetaSchema'
+      type: object
+      required:
+      - data
+      - meta
+      title: MessageCollectionSchema
+    MessageSchema:
+      properties:
+        id:
+          type: string
+          title: Id
+        created_at:
+          type: string
+          title: Created At
+        role:
+          type: string
+          title: Role
+          description: '`user` or `assistant`.'
+        status:
+          type: string
+          title: Status
+          description: '`complete`, `streaming` while a reply is being produced, or
+            `failed`.'
+        text:
+          type: string
+          title: Text
+        refs:
+          items:
+            $ref: '#/components/schemas/ResourceReferenceSchema'
+          type: array
+          title: Refs
+          description: Always an array. Empty for a user message and for a reply that
+            cites nothing.
+      type: object
+      required:
+      - id
+      - created_at
+      - role
+      - status
+      - text
+      - refs
+      title: MessageSchema
+    OverviewResponseSchema:
+      properties:
+        data:
+          $ref: '#/components/schemas/OverviewSchema'
+        meta:
+          $ref: '#/components/schemas/CachedMetaSchema'
+      type: object
+      required:
+      - data
+      - meta
+      title: OverviewResponseSchema
+    OverviewSchema:
+      properties:
+        signals:
+          items:
+            $ref: '#/components/schemas/SignalSchema'
+          type: array
+          title: Signals
+        prompts:
+          items:
+            type: string
+          type: array
+          title: Prompts
+          description: Suggestion chips. Not a closed set and not stable between requests.
+      type: object
+      required:
+      - signals
+      - prompts
+      title: OverviewSchema
+    ResourceReferenceSchema:
+      properties:
+        type:
+          type: string
+          title: Type
+          description: "A resource name from API_TARGET.md \u2014 `transaction`, `account`."
+        id:
+          type: string
+          title: Id
+      type: object
+      required:
+      - type
+      - id
+      title: ResourceReferenceSchema
+    SignalSchema:
+      properties:
+        label:
+          type: string
+          title: Label
+        value:
+          type: string
+          title: Value
+          description: PREFORMATTED display text and the one deliberate formatting
+            exception in this API. Rendered verbatim; never parsed back into a number.
+        tone:
+          type: string
+          title: Tone
+          description: '`positive`, `negative` or `muted`.'
+      type: object
+      required:
+      - label
+      - value
+      - tone
+      title: SignalSchema

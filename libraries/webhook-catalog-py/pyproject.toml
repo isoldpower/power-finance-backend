@@ -1,0 +1,21 @@
+[project]
+name = "webhook-catalog-py"
+version = "0.0.0"
+description = "The webhook event-type catalog: the single table behind GET /webhooks/event-types, the subscription validator and the delivery publisher's outbox-event mapping. One file so an event cannot be subscribable without being deliverable, or the reverse."
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["webhook_catalog_py"]
+
+[tool.pytest.ini_options]
+testpaths = ["webhook_catalog_py"]

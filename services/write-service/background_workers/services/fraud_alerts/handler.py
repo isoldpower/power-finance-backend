@@ -2,7 +2,7 @@ import logging
 
 from kafka_client_py import ConsumedMessage, PoisonError
 
-from background_workers.services.fraud_alerts.store import (
+from .store import (
     SuspendedUser,
     SuspendedUserStore,
 )
@@ -23,8 +23,6 @@ def _parse_fraud_alert(message: ConsumedMessage) -> SuspendedUser:
 
 
 class FraudAlertHandler:
-    """Suspends the user named by each fraud alert in the suspended-user store."""
-
     def __init__(self, store: SuspendedUserStore) -> None:
         self._store = store
 

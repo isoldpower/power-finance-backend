@@ -99,4 +99,88 @@ public interface TransactionCreatedOrBuilder extends
    * <code>.google.protobuf.Timestamp created_at = 14;</code>
    */
   com.google.protobuf.TimestampOrBuilder getCreatedAtOrBuilder();
+
+  /**
+   * <code>string name = 15;</code>
+   * @return The name.
+   */
+  java.lang.String getName();
+  /**
+   * <code>string name = 15;</code>
+   * @return The bytes for name.
+   */
+  com.google.protobuf.ByteString
+      getNameBytes();
+
+  /**
+   * <code>string category = 16;</code>
+   * @return The category.
+   */
+  java.lang.String getCategory();
+  /**
+   * <code>string category = 16;</code>
+   * @return The bytes for category.
+   */
+  com.google.protobuf.ByteString
+      getCategoryBytes();
+
+  /**
+   * <code>string evidence_url = 17;</code>
+   * @return The evidenceUrl.
+   */
+  java.lang.String getEvidenceUrl();
+  /**
+   * <code>string evidence_url = 17;</code>
+   * @return The bytes for evidenceUrl.
+   */
+  com.google.protobuf.ByteString
+      getEvidenceUrlBytes();
+
+  /**
+   * <code>string origin = 18;</code>
+   * @return The origin.
+   */
+  java.lang.String getOrigin();
+  /**
+   * <code>string origin = 18;</code>
+   * @return The bytes for origin.
+   */
+  com.google.protobuf.ByteString
+      getOriginBytes();
+
+  /**
+   * <code>string chain_id = 19;</code>
+   * @return The chainId.
+   */
+  java.lang.String getChainId();
+  /**
+   * <code>string chain_id = 19;</code>
+   * @return The bytes for chainId.
+   */
+  com.google.protobuf.ByteString
+      getChainIdBytes();
+
+  /**
+   * <code>string container_kind = 20;</code>
+   * @return The containerKind.
+   */
+  java.lang.String getContainerKind();
+  /**
+   * <code>string container_kind = 20;</code>
+   * @return The bytes for containerKind.
+   */
+  com.google.protobuf.ByteString
+      getContainerKindBytes();
+
+  /**
+   * <code>string currency_code = 21;</code>
+   * @return The currencyCode.
+   */
+  java.lang.String getCurrencyCode();
+  /**
+   * <code>string currency_code = 21;</code>
+   * @return The bytes for currencyCode.
+   */
+  com.google.protobuf.ByteString
+      getCurrencyCodeBytes();
 }

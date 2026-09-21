@@ -1,6 +1,4 @@
 def parse_read_at_least(raw_value: str | None) -> int | None:
-    """Parse a Read-At-Least header value into an outbox seq."""
-
     if raw_value is None:
         return None
 

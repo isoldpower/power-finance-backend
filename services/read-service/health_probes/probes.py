@@ -21,7 +21,6 @@ class ProbeStatus(str, Enum):
 async def check_dependencies_ready(
     probes: Sequence[HealthProbe] | None = None,
 ) -> tuple[str, dict[str, str]]:
-    """Readiness: every downstream store the read path depends on is reachable."""
     probes = probes if probes is not None else _default_probes()
     results = await asyncio.gather(
         *(_probe_status(probe) for probe in probes),
@@ -36,7 +35,6 @@ async def check_dependencies_ready(
 
 
 async def check_application_started() -> tuple[str, dict[str, str]]:
-    """Startup: the database is reachable and every migration is applied."""
     postgres, migrations = await asyncio.gather(
         _probe_status(PostgresHealthProbe()),
         sync_to_async(_check_migrations, thread_sensitive=True)(),

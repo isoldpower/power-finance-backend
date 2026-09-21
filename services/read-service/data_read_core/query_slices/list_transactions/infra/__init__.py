@@ -1,6 +1,5 @@
 from .postgres_requests import count_user_transactions, fetch_user_transactions
 from .redis_connection import (
-    CACHE_TTL_SECONDS,
     get_filter_hash,
     get_list_cache_key,
     get_list_version_key,
@@ -14,5 +13,4 @@ __all__ = [
     "get_list_cache_key",
     "get_list_version_key",
     "get_redis_client",
-    "CACHE_TTL_SECONDS",
 ]

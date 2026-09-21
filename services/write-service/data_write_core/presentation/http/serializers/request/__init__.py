@@ -1,7 +1,15 @@
+from .action_serializer import ResolveActionRequestSerializer
+from .automation_serializer import (
+    CreateAutomationRequestSerializer,
+    UpdateAutomationRequestSerializer,
+)
+from .goal_serializer import CreateGoalRequestSerializer, UpdateGoalRequestSerializer
 from .notification_serializer import BatchAcknowledgeRequestSerializer
 from .transaction_serializer import (
+    AdjustTransactionRequestSerializer,
+    CreateTransactionChainRequestSerializer,
     CreateTransactionRequestSerializer,
-    UpdateTransactionRequestSerializer,
+    PatchTransactionRequestSerializer,
 )
 from .wallet_serializer import (
     CreateWalletRequestSerializer,
@@ -15,13 +23,20 @@ from .webhook_serializer import (
 )
 
 __all__ = [
+    "UpdateAutomationRequestSerializer",
+    "CreateAutomationRequestSerializer",
+    "ResolveActionRequestSerializer",
+    "CreateGoalRequestSerializer",
+    "UpdateGoalRequestSerializer",
     "BatchAcknowledgeRequestSerializer",
+    "AdjustTransactionRequestSerializer",
+    "CreateTransactionChainRequestSerializer",
     "CreateTransactionRequestSerializer",
     "CreateWalletRequestSerializer",
     "CreateWebhookRequestSerializer",
     "SubscribeWebhookToEventRequestSerializer",
     "UpdateWebhookRequestSerializer",
     "ReplaceWalletRequestSerializer",
-    "UpdateTransactionRequestSerializer",
+    "PatchTransactionRequestSerializer",
     "UpdateWalletRequestSerializer",
 ]

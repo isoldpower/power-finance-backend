@@ -1,6 +1,10 @@
 package webhook_service
 
 import (
+	"context"
+
+	"github.com/power-finance/observability-go/tracing"
+
 	"services/webhook-service/internal/health"
 	"services/webhook-service/internal/signals"
 	"services/webhook-service/webhook_service/handlers"
@@ -10,11 +14,25 @@ import (
 	"services/webhook-service/webhook_service/services"
 )
 
-// StartWebhookService wires the service and blocks until shutdown; wiring errors
-// fail fast so the readiness probe never flips green on a half-built service.
+const defaultTracingServiceName = "webhook-service"
+
+// StartWebhookService wires the service and blocks until shutdown, failing fast on a wiring error.
 func StartWebhookService(serviceConfig Config) error {
 	rootContext, stop := signals.NotifyContext()
 	defer stop()
+
+	_, shutdownTracing, tracingErr := tracing.Configure(rootContext, defaultTracingServiceName)
+	if tracingErr != nil {
+		return tracingErr
+	}
+	defer func() {
+		shutdownContext, cancelShutdown := context.WithTimeout(
+			context.Background(),
+			tracing.ShutdownTimeout(),
+		)
+		defer cancelShutdown()
+		_ = shutdownTracing(shutdownContext)
+	}()
 
 	stores, closeStores, postgresErr := postgres.Bootstrap(
 		rootContext,
@@ -54,7 +72,9 @@ func StartWebhookService(serviceConfig Config) error {
 		consumer.Run(rootContext)
 	}()
 
-	httpserver.NewServer(serviceConfig.Server, readinessProbe).
+	deliveryLog := services.NewDeliveryLogService(stores.DeliveryLogStore, stores.ConfigStore)
+	httpserver.
+		NewServer(serviceConfig.Server, readinessProbe, deliveryLog).
 		Run(rootContext)
 
 	awaitBackgroundDrainBeforeCleanup(consumerDone, schedulerDone)
@@ -62,9 +82,6 @@ func StartWebhookService(serviceConfig Config) error {
 	return nil
 }
 
-// awaitBackgroundDrainBeforeCleanup blocks until the consumer and scheduler
-// goroutines have stopped, so the deferred pool and producer cleanups in
-// StartWebhookService never run underneath an in-flight delivery.
 func awaitBackgroundDrainBeforeCleanup(consumerDone, schedulerDone <-chan struct{}) {
 	<-consumerDone
 	<-schedulerDone

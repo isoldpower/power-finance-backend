@@ -7,6 +7,8 @@ func TestWebhookEventTypeForKnownEvents(t *testing.T) {
 		"TransactionCreated": "transaction.created",
 		"TransactionUpdated": "transaction.updated",
 		"TransactionDeleted": "transaction.deleted",
+		"WalletCreated":      "wallet.created",
+		"WalletUpdated":      "wallet.updated",
 	}
 
 	for outboxType, expected := range cases {
@@ -17,7 +19,7 @@ func TestWebhookEventTypeForKnownEvents(t *testing.T) {
 }
 
 func TestWebhookEventTypeForUnknownEventIsBlank(t *testing.T) {
-	if got := WebhookEventTypeFor("WalletCreated"); got != "" {
+	if got := WebhookEventTypeFor("GoalCreated"); got != "" {
 		t.Errorf("expected blank for non-deliverable event, got %q", got)
 	}
 }

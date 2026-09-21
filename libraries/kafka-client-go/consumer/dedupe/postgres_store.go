@@ -74,7 +74,10 @@ func NewPostgresStore(
 	return store
 }
 
-func (s *PostgresStore) Seen(ctx context.Context, eventID string) (bool, error) {
+func (s *PostgresStore) Seen(
+	ctx context.Context,
+	eventID string,
+) (bool, error) {
 	var matchedRow int
 	scanErr := s.querier.
 		QueryRow(ctx, s.selectSeenEvent, s.consumerGroup, eventID).

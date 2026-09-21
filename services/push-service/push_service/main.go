@@ -2,6 +2,9 @@ package push_service
 
 import (
 	"context"
+
+	"github.com/power-finance/observability-go/tracing"
+
 	"services/push-service/push_service/presentation/http"
 
 	"services/push-service/internal/health"
@@ -14,10 +17,25 @@ import (
 	"services/push-service/push_service/types"
 )
 
+const defaultTracingServiceName = "push-service"
+
 // StartPushService wires the service and blocks until shutdown; wiring errors fail fast.
 func StartPushService(serviceConfig types.PushServiceConfig) error {
 	backgroundContext, stopBackgroundServices := context.WithCancel(context.Background())
 	defer stopBackgroundServices()
+
+	_, shutdownTracing, tracingErr := tracing.Configure(backgroundContext, defaultTracingServiceName)
+	if tracingErr != nil {
+		return tracingErr
+	}
+	defer func() {
+		shutdownContext, cancelShutdown := context.WithTimeout(
+			context.Background(),
+			tracing.ShutdownTimeout(),
+		)
+		defer cancelShutdown()
+		_ = shutdownTracing(shutdownContext)
+	}()
 
 	newHeartbeat := func() types.Heartbeat {
 		return services.NewHeartbeatService(serviceConfig.Server.HeartbeatInterval)

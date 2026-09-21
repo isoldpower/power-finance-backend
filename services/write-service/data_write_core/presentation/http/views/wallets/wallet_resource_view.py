@@ -1,9 +1,8 @@
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from decimal import Decimal
+
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.response import Response
 from write_service.common.idempotency import idempotent
-from write_service.common.logging import get_http_logger, log_request_failed
 
 from data_write_core.application.commands import (
     ReplaceWalletCommand,
@@ -13,85 +12,65 @@ from data_write_core.application.commands import (
     UpdateExistingWalletCommand,
     UpdateExistingWalletCommandHandler,
 )
-from data_write_core.domain.exceptions import WalletCurrencyImmutableError
+from data_write_core.domain.entities.wallet import UNCHANGED
 
 from ...decorators import trace_handler_flow
-from ...presenters import (
-    CommonHttpPresenter,
-    MessageResultInfo,
-    WalletHttpPresenter,
-)
+from ...presenters import WalletHttpPresenter
 from ...serializers import (
-    MessageResponseSerializer,
+    EnvelopedWalletResponseSerializer,
+    ErrorResponseSerializer,
     ReplaceWalletRequestSerializer,
     UpdateWalletRequestSerializer,
-    WalletResponseSerializer,
 )
 from ..mixins import CommandResponseMixin
 from .base import WalletView
-
-logger = get_http_logger("wallets")
+from .config import WALLET_ID_PARAMETER
 
 
 class WalletResourceView(WalletView, CommandResponseMixin):
     @extend_schema(
         operation_id="wallets_partial_update",
-        summary="Rename a wallet",
-        description="Update a wallet's display name.",
-        parameters=[
-            OpenApiParameter(
-                "id",
-                type=OpenApiTypes.UUID,
-                location=OpenApiParameter.PATH,
-                description="Wallet ID",
-            ),
-        ],
+        summary="Update a wallet",
+        description=(
+            "Partial update of a wallet's client-managed metadata. An omitted "
+            "field is left alone. Balance and currency are derived and cannot "
+            "be patched."
+        ),
+        parameters=[WALLET_ID_PARAMETER],
         request=UpdateWalletRequestSerializer,
         responses={
-            200: WalletResponseSerializer,
-            500: MessageResponseSerializer,
+            200: EnvelopedWalletResponseSerializer,
+            404: ErrorResponseSerializer,
+            422: ErrorResponseSerializer,
         },
     )
     @idempotent(required=False)
     @trace_handler_flow
-    async def patch(self, request, pk=None):
+    async def patch(self, request, wallet_id=None):
         serializer = UpdateWalletRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        try:
-            validated = serializer.validated_data
-            handler = UpdateExistingWalletCommandHandler()
-            updated_wallet, write_version = await handler.handle(
-                UpdateExistingWalletCommand(
-                    user_id=int(request.user.unique_id),
-                    user_external_id=request.user.external_id,
-                    wallet_id=pk,
-                    new_name=validated["new_name"],
-                )
+        validated = serializer.validated_data
+        updated_wallet, write_version = await UpdateExistingWalletCommandHandler().handle(
+            UpdateExistingWalletCommand(
+                user_id=int(request.user.unique_id),
+                user_external_id=request.user.external_id,
+                wallet_id=wallet_id,
+                new_name=validated.get("name", UNCHANGED),
+                category=validated.get("category", UNCHANGED),
+                color=validated.get("color", UNCHANGED),
+                favorite=validated.get("favorite", UNCHANGED),
+                zero_balance=validated.get("zero_balance", UNCHANGED),
             )
+        )
 
-            payload = WalletHttpPresenter.present_one(updated_wallet)
-            return self.form_write_response(
-                status_code=status.HTTP_200_OK,
-                response_body=payload,
-                write_version=write_version,
-            )
-        except Exception as exc:
-            log_request_failed(
-                logger,
-                "update_wallet",
-                exc,
-                wallet_id=pk,
-                user_id=request.user.unique_id,
-            )
-            payload = CommonHttpPresenter.present_message_result(
-                MessageResultInfo(
-                    message=f"Failed to update wallet with ID {pk}: {exc}",
-                    resource_id=str(pk),
-                )
-            )
-
-            return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return self.form_write_response(
+            status_code=status.HTTP_200_OK,
+            response_body=await WalletHttpPresenter.present_one(
+                updated_wallet,
+            ),
+            write_version=write_version,
+        )
 
     @extend_schema(
         operation_id="wallets_replace",
@@ -101,129 +80,73 @@ class WalletResourceView(WalletView, CommandResponseMixin):
             "Balance is derived from the transaction history and the currency "
             "is fixed at creation — sending a different currency is rejected."
         ),
-        parameters=[
-            OpenApiParameter(
-                "id",
-                type=OpenApiTypes.UUID,
-                location=OpenApiParameter.PATH,
-                description="Wallet ID",
-            ),
-        ],
+        parameters=[WALLET_ID_PARAMETER],
         request=ReplaceWalletRequestSerializer,
         responses={
-            200: WalletResponseSerializer,
-            400: MessageResponseSerializer,
-            500: MessageResponseSerializer,
+            200: EnvelopedWalletResponseSerializer,
+            404: ErrorResponseSerializer,
+            422: ErrorResponseSerializer,
         },
     )
     @idempotent(required=False)
     @trace_handler_flow
-    async def put(self, request, pk=None):
+    async def put(self, request, wallet_id=None):
         serializer = ReplaceWalletRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        validated = serializer.validated_data
 
-        try:
-            validated = serializer.validated_data
-            handler = ReplaceWalletCommandHandler()
-            replaced_wallet, write_version = await handler.handle(
-                ReplaceWalletCommand(
-                    user_id=int(request.user.unique_id),
-                    user_external_id=request.user.external_id,
-                    wallet_id=pk,
-                    name=validated["name"],
-                    currency_code=validated["currency"],
-                )
+        replaced_wallet, write_version = await ReplaceWalletCommandHandler().handle(
+            ReplaceWalletCommand(
+                user_id=int(request.user.unique_id),
+                user_external_id=request.user.external_id,
+                wallet_id=wallet_id,
+                name=validated["name"],
+                currency_code=validated["currency"],
+                category=validated["category"],
+                color=validated["color"],
+                favorite=validated["favorite"],
+                zero_balance=validated["zero_balance"] or Decimal("0"),
             )
+        )
 
-            payload = WalletHttpPresenter.present_one(replaced_wallet)
-            return self.form_write_response(
-                status_code=status.HTTP_200_OK,
-                response_body=payload,
-                write_version=write_version,
-            )
-        except WalletCurrencyImmutableError as exc:
-            payload = CommonHttpPresenter.present_message_result(
-                MessageResultInfo(
-                    message=str(exc),
-                    resource_id=str(pk),
-                )
-            )
-
-            return Response(payload, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as exc:
-            log_request_failed(
-                logger,
-                "replace_wallet",
-                exc,
-                wallet_id=pk,
-                user_id=request.user.unique_id,
-            )
-            payload = CommonHttpPresenter.present_message_result(
-                MessageResultInfo(
-                    message=f"Failed to replace wallet with ID {pk}: {exc}",
-                    resource_id=str(pk),
-                )
-            )
-
-            return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return self.form_write_response(
+            status_code=status.HTTP_200_OK,
+            response_body=await WalletHttpPresenter.present_one(
+                replaced_wallet,
+            ),
+            write_version=write_version,
+        )
 
     @extend_schema(
         operation_id="wallets_delete",
         summary="Soft-delete a wallet",
         description=(
-            "Marks the wallet as deleted (sets deleted_at). The row is "
-            "preserved so transaction history remains queryable."
+            "Closes the wallet (sets deleted_at). The row is preserved so "
+            "transaction history remains queryable, but the wallet leaves lists "
+            "and search. Only a settled wallet closes: its balance must sit "
+            "exactly on `zero_balance`, otherwise 409 `wallet_not_empty`. "
+            "Repeating the call is a no-op that returns the same body."
         ),
-        parameters=[
-            OpenApiParameter(
-                "id",
-                type=OpenApiTypes.UUID,
-                location=OpenApiParameter.PATH,
-                description="Wallet ID",
-            ),
-        ],
+        parameters=[WALLET_ID_PARAMETER],
         responses={
-            200: MessageResponseSerializer,
-            500: MessageResponseSerializer,
+            200: EnvelopedWalletResponseSerializer,
+            404: ErrorResponseSerializer,
+            409: ErrorResponseSerializer,
         },
     )
     @idempotent(required=False)
     @trace_handler_flow
-    async def delete(self, request, pk=None):
-        try:
-            handler = SoftDeleteWalletCommandHandler()
-            deleted_wallet, write_version = await handler.handle(
-                SoftDeleteWalletCommand(
-                    user_id=int(request.user.unique_id),
-                    user_external_id=request.user.external_id,
-                    wallet_id=pk,
-                )
+    async def delete(self, request, wallet_id=None):
+        deleted_wallet, write_version = await SoftDeleteWalletCommandHandler().handle(
+            SoftDeleteWalletCommand(
+                user_id=int(request.user.unique_id),
+                user_external_id=request.user.external_id,
+                wallet_id=wallet_id,
             )
+        )
 
-            payload = CommonHttpPresenter.present_message_result(
-                MessageResultInfo(
-                    message=f"Deleted wallet with ID {deleted_wallet.id}",
-                    resource_id=str(deleted_wallet.id),
-                )
-            )
-            return self.form_write_response(
-                status_code=status.HTTP_200_OK,
-                response_body=payload,
-                write_version=write_version,
-            )
-        except Exception as exc:
-            log_request_failed(
-                logger,
-                "delete_wallet",
-                exc,
-                wallet_id=pk,
-                user_id=request.user.unique_id,
-            )
-            payload = CommonHttpPresenter.present_message_result(
-                MessageResultInfo(
-                    message=f"Failed to delete wallet with ID {pk}: {exc}",
-                    resource_id=str(pk),
-                )
-            )
-
-            return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return self.form_write_response(
+            status_code=status.HTTP_200_OK,
+            response_body=await WalletHttpPresenter.present_one(deleted_wallet),
+            write_version=write_version,
+        )

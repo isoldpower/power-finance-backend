@@ -1,11 +1,3 @@
-"""Error-detail header helpers shared by RetryPublisher and DLQPublisher.
-
-Truncation is byte-based (not character-based) and never splits a UTF-8
-sequence, matching kafka-client-go exactly: both libraries cap the same
-header at the same byte budget and always emit decodable UTF-8, so a
-consumer in either language can read headers produced by the other.
-"""
-
 import traceback
 
 ERROR_MESSAGE_MAX_BYTES = 1024

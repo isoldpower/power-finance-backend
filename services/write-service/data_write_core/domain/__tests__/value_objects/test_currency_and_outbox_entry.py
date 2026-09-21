@@ -1,5 +1,3 @@
-"""Small value objects: Currency (ISO 4217 record) and OutboxEntry."""
-
 from __future__ import annotations
 
 from datetime import UTC, datetime

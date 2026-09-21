@@ -1,5 +1,7 @@
 package com.powerfinance.antifraud.config;
 
+import com.powerfinance.antifraud.sandbox.SandboxIdentity;
+
 /** Immutable runtime configuration for the antifraud Flink job. */
 public record AntifraudConfig(
         String kafkaBootstrapServers,
@@ -14,7 +16,10 @@ public record AntifraudConfig(
         return new AntifraudConfig(
                 environmentValue("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
                 environmentValue("KAFKA_OUTBOX_TOPIC", "events.async"),
-                environmentValue("KAFKA_GROUP_ID", "antifraud-service"),
+                SandboxIdentity.scopeGroupId(
+                        environmentValue("KAFKA_GROUP_ID", "antifraud-service"),
+                        SandboxIdentity.resolveOwnId()
+                ),
                 environmentValue("KAFKA_ALERTS_TOPIC", "fraud.alerts"),
                 Double.parseDouble(environmentValue("FRAUD_SCORE_THRESHOLD", "4.0"))
         );

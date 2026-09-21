@@ -1,8 +1,7 @@
 from elastic_transport import TransportError
+from kafka_consumer_py.health import HealthProbe
 
 from data_read_core.shared.elasticsearch import get_elasticsearch
-
-from .health_probe import HealthProbe
 
 ELASTICSEARCH_CONNECTIVITY_ERRORS: tuple[type[BaseException], ...] = (
     TransportError,
@@ -11,8 +10,6 @@ ELASTICSEARCH_CONNECTIVITY_ERRORS: tuple[type[BaseException], ...] = (
 
 
 class ElasticsearchHealthProbe(HealthProbe):
-    """`HealthProbe` backed by an Elasticsearch ping."""
-
     @property
     def name(self) -> str:
         return "elasticsearch"

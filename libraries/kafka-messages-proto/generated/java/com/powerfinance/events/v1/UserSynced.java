@@ -6,14 +6,6 @@
 package com.powerfinance.events.v1;
 
 /**
- * <pre>
- * Emitted by the write service when an internal user is first synced from a
- * gateway identity. Lets the read service project the same external -&gt; internal
- * id mapping into its own user table, so read-side ownership checks resolve to
- * the same internal user_id the write service stamped on wallet/transaction
- * events.
- * </pre>
- *
  * Protobuf type {@code power_finance.events.v1.UserSynced}
  */
 @com.google.protobuf.Generated
@@ -390,14 +382,6 @@ private static final long serialVersionUID = 0L;
     return builder;
   }
   /**
-   * <pre>
-   * Emitted by the write service when an internal user is first synced from a
-   * gateway identity. Lets the read service project the same external -&gt; internal
-   * id mapping into its own user table, so read-side ownership checks resolve to
-   * the same internal user_id the write service stamped on wallet/transaction
-   * events.
-   * </pre>
-   *
    * Protobuf type {@code power_finance.events.v1.UserSynced}
    */
   public static final class Builder extends

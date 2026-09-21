@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -10,8 +9,7 @@ import (
 	"services/webhook-service/cmd/types"
 )
 
-// RootCommand is the top-level CLI for the webhook-service control plane. It owns
-// the cobra command tree and dispatches to the registered subcommands.
+// RootCommand is the top-level CLI for the webhook-service control plane.
 type RootCommand struct {
 	commandInstance *cobra.Command
 }
@@ -46,7 +44,7 @@ func NewCommand() *RootCommand {
 func (c *RootCommand) Execute() error {
 	if err := c.commandInstance.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		slog.Error("cli execution failed", "error", err)
+		logCLIExecutionFailed(err)
 
 		return err
 	}

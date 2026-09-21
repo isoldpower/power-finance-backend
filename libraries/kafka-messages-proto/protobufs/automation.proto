@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package power_finance.events.v1;
+
+option go_package = "github.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1";
+option java_package = "com.powerfinance.events.v1";
+option java_multiple_files = true;
+option java_outer_classname = "AutomationProto";
+
+import "google/protobuf/timestamp.proto";
+
+
+message AutomationEffect {
+  string effect_type = 101;
+  string params_json = 102;
+}
+
+message AutomationTrigger {
+  string trigger_type = 101;
+  string event = 102;
+  string schedule = 103;
+  string filter_body_json = 104;
+}
+
+message AutomationCreated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string automation_id = 101;
+  string user_external_id = 102;
+  int32 user_id = 103;
+  string name = 104;
+  string icon = 105;
+  bool enabled = 106;
+  AutomationTrigger trigger = 107;
+  repeated AutomationEffect effects = 108;
+
+  // Reserved for future expansion.
+  reserved 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119;
+
+  google.protobuf.Timestamp created_at = 120;
+}
+
+message AutomationUpdated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string automation_id = 101;
+  string user_external_id = 102;
+  int32 user_id = 103;
+  string name = 104;
+  string icon = 105;
+  bool enabled = 106;
+  AutomationTrigger trigger = 107;
+  repeated AutomationEffect effects = 108;
+
+  // Reserved for future expansion.
+  reserved 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119;
+
+  google.protobuf.Timestamp updated_at = 120;
+}
+
+message AutomationDeleted {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string automation_id = 101;
+  string user_external_id = 102;
+  int32 user_id = 103;
+
+  // Reserved for future expansion.
+  reserved 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119;
+
+  google.protobuf.Timestamp deleted_at = 120;
+}
+
+message AutomationRan {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string automation_id = 101;
+  string user_external_id = 102;
+  int32 user_id = 103;
+  int32 runs = 104;
+
+  // Reserved for future expansion.
+  reserved 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119;
+
+  google.protobuf.Timestamp last_run_at = 120;
+}

@@ -4,9 +4,6 @@ local cjson = require "cjson.safe"
 
 
 --- Extract the bearer token from an `Authorization` header value.
--- Accepts the canonical `Bearer <token>` form, case-insensitive on
--- the scheme. Anything else (missing header, wrong scheme, no token
--- body) yields nil so the caller can fail fast with a 401.
 --
 -- @param auth_header string|nil  raw `Authorization` header value
 -- @return string|nil  the opaque token portion, or nil if absent / malformed
@@ -20,14 +17,16 @@ local extract_bearer = function(auth_header)
         return nil
     end
 
-    return token
+    local trimmed_token = token:match("^%s*(.-)%s*$")
+    if trimmed_token == "" then
+        return nil
+    end
+
+    return trimmed_token
 end
 
 
---- Parse a JWT string into a resty.jwt object without verifying its
--- signature. Used to read the `kid` header so the caller can pick
--- the right JWKS entry before the (expensive) signature verify pass.
--- Returns nil for any garbage that does not decode as a valid JWT.
+--- Parse a JWT string into a resty.jwt object without verifying its signature.
 --
 -- @param jwt_token string  the raw JWT compact-serialized string
 -- @return table|nil  resty.jwt object (header / payload / signature), or nil
@@ -41,9 +40,7 @@ local load_unverified_jwt = function(jwt_token)
 end
 
 
---- Read the `kid` (key id) claim from a JWT header. Clerk always sets
--- this for session tokens; absence indicates a malformed token and
--- callers should reject rather than guessing a key.
+--- Read the `kid` (key id) claim from a JWT header.
 --
 -- @param unverified_jwt table  object produced by `load_unverified_jwt`
 -- @return string|nil  the `kid` header value, or nil if missing
@@ -53,10 +50,6 @@ end
 
 
 --- Look up a JWK entry inside a JWKS document by its `kid`.
---
--- Clerk always issues with a kid header. Missing kid is malformed; we
--- refuse rather than guessing the first JWKS entry (which would
--- silently mask schema bugs in multi-key responses).
 --
 -- @param jwks table  decoded JWKS document with a `keys` array
 -- @param kid string|nil  key id from the unverified JWT header
@@ -81,11 +74,6 @@ end
 
 --- Convert a JWK dict into a PEM-encoded public key suitable for
 -- `resty.jwt:verify_jwt_obj`.
---
--- lua-resty-openssl.pkey.new takes the JWK dict as a JSON-encoded
--- string under `format = "JWK"`. The dict must keep the canonical
--- JWK keys (kty, n, e) — passing a hand-built table with a
--- different schema silently produces a key that fails verification.
 --
 -- @param jwk_keys table  single JWK dict as returned by the issuer
 -- @return string|nil  PEM-encoded public key on success
@@ -113,11 +101,6 @@ end
 
 
 --- Verify a previously parsed JWT against a PEM public key.
---
--- Always requires the `exp` claim. When `options.issuer_url` is set
--- the `iss` claim must match exactly. When `options.clock_skew_seconds`
--- is a positive number it is forwarded as `lifetime_grace_period`,
--- absorbing minor clock drift between the issuer and Kong.
 --
 -- @param pem_token string  PEM-encoded public key from `encode_jwk_as_pem`
 -- @param unverified_jwt table  object produced by `load_unverified_jwt`
@@ -149,12 +132,6 @@ end
 
 --- Check the `azp` (authorized party) claim against an allow-list.
 --
--- An empty or nil allow-list disables the check (returns true). With
--- a non-empty list, the token's `azp` must exactly match one entry —
--- this binds tokens to a specific frontend origin and prevents a
--- token issued for another Clerk app on the same issuer from being
--- accepted by this gateway.
---
 -- @param verified_jwt table  resty.jwt object from `get_verified_jwt`
 -- @param allowed_azp_parties table|nil  array of allowed `azp` values
 -- @return boolean  true if check passes (or is disabled), false on mismatch
@@ -163,13 +140,13 @@ local check_authorized_party = function(verified_jwt, allowed_azp_parties)
         return true
     end
 
-    local azp = verified_jwt.payload and verified_jwt.payload.azp
-    if not azp then
+    local parties = verified_jwt.payload and verified_jwt.payload.azp
+    if not parties then
         return false
     end
 
     for _, allowed in ipairs(allowed_azp_parties) do
-        if azp == allowed then
+        if parties == allowed then
             return true
         end
     end
@@ -178,8 +155,32 @@ local check_authorized_party = function(verified_jwt, allowed_azp_parties)
 end
 
 
+--- Extract the bearer token offered as a WebSocket subprotocol.
+--
+-- @param protocol_header string|nil  raw `Sec-WebSocket-Protocol` value
+-- @param marker string  subprotocol name that flags the pair as a token offer
+-- @return string|nil  the token portion, or nil if absent / malformed
+local extract_subprotocol_token = function(protocol_header, marker)
+    if not protocol_header or protocol_header == "" then
+        return nil
+    end
+
+    local offered = {}
+    for entry in protocol_header:gmatch("[^,]+") do
+        offered[#offered + 1] = entry:match("^%s*(.-)%s*$")
+    end
+
+    if #offered ~= 2 or offered[1] ~= marker or offered[2] == "" then
+        return nil
+    end
+
+    return offered[2]
+end
+
+
 local exports = {
     extract_bearer         = extract_bearer,
+    extract_subprotocol_token = extract_subprotocol_token,
     load_unverified_jwt    = load_unverified_jwt,
     get_kid_from_jwt       = get_kid_from_jwt,
     find_key_for_kid       = find_key_for_kid,

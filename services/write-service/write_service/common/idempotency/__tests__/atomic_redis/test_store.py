@@ -1,6 +1,3 @@
-"""RedisIdempotencyStore: NX-set lock with TTL, fetch-and-classify and completed-
-response overwrite, exercised against a small Redis stub."""
-
 from __future__ import annotations
 
 from typing import Any
@@ -19,8 +16,6 @@ from write_service.common.idempotency.exceptions import StoreUnavailable
 
 
 class _FakeRedis:
-    """Mimics asyncio Redis: set(nx, ex), get, delete. Tracks calls for assertions."""
-
     def __init__(self) -> None:
         self.storage: dict[str, str] = {}
         self.set_calls: list[dict[str, Any]] = []

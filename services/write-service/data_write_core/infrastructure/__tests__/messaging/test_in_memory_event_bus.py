@@ -1,5 +1,3 @@
-"""InMemoryEventBus: subscribers receive only events of their subscribed type."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

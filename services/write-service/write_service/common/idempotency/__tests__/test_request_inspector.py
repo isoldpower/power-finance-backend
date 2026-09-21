@@ -1,13 +1,11 @@
-"""RequestInspector: extract idempotency key + user id from a request."""
-
 from __future__ import annotations
 
 from types import SimpleNamespace
 
 from django.test import SimpleTestCase
 
+from write_service.common.idempotency.config import HeaderName
 from write_service.common.idempotency.request_inspector import (
-    IDEMPOTENCY_HEADER,
     RequestInspector,
 )
 
@@ -22,18 +20,22 @@ class ExtractIdempotencyKeyTests(SimpleTestCase):
 
     def test_returns_none_for_empty_header(self) -> None:
         self.assertIsNone(
-            RequestInspector.extract_idempotency_key(_request(headers={IDEMPOTENCY_HEADER: ""}))
+            RequestInspector.extract_idempotency_key(
+                _request(headers={HeaderName.IDEMPOTENCY_KEY: ""})
+            )
         )
 
     def test_returns_none_for_whitespace_only_header(self) -> None:
         self.assertIsNone(
-            RequestInspector.extract_idempotency_key(_request(headers={IDEMPOTENCY_HEADER: "   "}))
+            RequestInspector.extract_idempotency_key(
+                _request(headers={HeaderName.IDEMPOTENCY_KEY: "   "})
+            )
         )
 
     def test_trims_surrounding_whitespace(self) -> None:
         self.assertEqual(
             RequestInspector.extract_idempotency_key(
-                _request(headers={IDEMPOTENCY_HEADER: "  abc  "})
+                _request(headers={HeaderName.IDEMPOTENCY_KEY: "  abc  "})
             ),
             "abc",
         )
@@ -41,7 +43,7 @@ class ExtractIdempotencyKeyTests(SimpleTestCase):
     def test_truncates_to_255_chars(self) -> None:
         very_long = "x" * 1000
         key = RequestInspector.extract_idempotency_key(
-            _request(headers={IDEMPOTENCY_HEADER: very_long})
+            _request(headers={HeaderName.IDEMPOTENCY_KEY: very_long})
         )
 
         self.assertEqual(key, "x" * 255)

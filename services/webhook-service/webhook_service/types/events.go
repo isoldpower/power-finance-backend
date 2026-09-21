@@ -1,5 +1,6 @@
 package types
 
+// OutboxEvent is a decoded outbox row as the services layer dispatches on it.
 type OutboxEvent struct {
 	EventID        string
 	EventType      string
@@ -8,17 +9,7 @@ type OutboxEvent struct {
 	Payload        []byte
 }
 
-// WebhookEventTypeFor maps a domain outbox event type to the webhook
-// subscription type, or blank when the event is not webhook-deliverable.
+// WebhookEventTypeFor maps an outbox event type to its subscription type, or blank when undeliverable.
 func WebhookEventTypeFor(outboxEventType string) string {
-	switch outboxEventType {
-	case "TransactionCreated":
-		return "transaction.created"
-	case "TransactionUpdated":
-		return "transaction.updated"
-	case "TransactionDeleted":
-		return "transaction.deleted"
-	default:
-		return ""
-	}
+	return eventByOutboxType[outboxEventType]
 }

@@ -47,7 +47,10 @@ type MessageHandler struct {
 	sleep          func(ctx context.Context, duration time.Duration) error
 }
 
-func NewMessageHandler(userHandler UserHandler, config MessageHandlerConfig) *MessageHandler {
+func NewMessageHandler(
+	userHandler UserHandler,
+	config MessageHandlerConfig,
+) *MessageHandler {
 	logger := config.Logger
 	if logger == nil {
 		logger = slog.Default()
@@ -72,7 +75,10 @@ func NewMessageHandler(userHandler UserHandler, config MessageHandlerConfig) *Me
 	}
 }
 
-func (h *MessageHandler) Handle(ctx context.Context, message kafkaclient.ConsumedMessage) error {
+func (h *MessageHandler) Handle(
+	ctx context.Context,
+	message kafkaclient.ConsumedMessage,
+) error {
 	alreadyProcessed, dedupeErr := h.dedupeGate.AlreadyProcessed(ctx, message)
 	if dedupeErr != nil {
 		return dedupeErr
@@ -106,7 +112,10 @@ func (h *MessageHandler) Handle(ctx context.Context, message kafkaclient.Consume
 
 // markProcessedBestEffort records a handled event for dedupe; a mark failure is
 // logged not returned, since the handler succeeded and redelivery would reprocess it.
-func (h *MessageHandler) markProcessedBestEffort(ctx context.Context, message kafkaclient.ConsumedMessage) error {
+func (h *MessageHandler) markProcessedBestEffort(
+	ctx context.Context,
+	message kafkaclient.ConsumedMessage,
+) error {
 	if markErr := h.dedupeGate.MarkProcessed(ctx, message); markErr != nil {
 		h.logger.WarnContext(ctx, "kafka.dedupe.mark_failed", slog.String("error", markErr.Error()))
 	}
@@ -157,7 +166,10 @@ func (h *MessageHandler) runInProcessAttempts(
 	return outcomeRetryableExhausted, lastRetryable, nil
 }
 
-func isShutdownInProgress(ctx context.Context, handlerError error) bool {
+func isShutdownInProgress(
+	ctx context.Context,
+	handlerError error,
+) bool {
 	return ctx.Err() != nil || errors.Is(handlerError, context.Canceled)
 }
 
@@ -166,7 +178,10 @@ func inProcessBackoffForAttempt(attemptNumber int) time.Duration {
 	return min(backoff, inProcessBackoffCeiling)
 }
 
-func sleepUnlessCancelled(ctx context.Context, duration time.Duration) error {
+func sleepUnlessCancelled(
+	ctx context.Context,
+	duration time.Duration,
+) error {
 	if duration <= 0 {
 		return nil
 	}

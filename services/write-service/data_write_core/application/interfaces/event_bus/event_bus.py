@@ -15,9 +15,6 @@ EventHandler = AsyncEventHandler
 
 
 class EventBus(ABC):
-    """In-process pub/sub for committed domain events: cross-aggregate
-    reactions only, never inter-service messaging (that goes via the outbox)."""
-
     @abstractmethod
     async def publish(self, events: list[DomainEvent]) -> None:
         raise NotImplementedError()

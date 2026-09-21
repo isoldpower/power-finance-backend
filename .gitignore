@@ -121,6 +121,8 @@ schema.yml
 schema.yaml
 openapi.json
 .claude
+.sandbox/
+.codegraph
 
 # =============================================================================
 # Kafka Connect / Debezium local working directories

@@ -1,5 +1,3 @@
-"""build_outbox_entry: envelope stamping for proto messages → OutboxEntry."""
-
 from __future__ import annotations
 
 from datetime import UTC, datetime

@@ -3,18 +3,47 @@ include:
   - ../../infrastructure/kafka/compose.yaml
   - ./compose.elastic.yaml
 
+x-read-database-env: &read-database-env
+  DJANGO_SETTINGS_MODULE: read_service.settings.local
+  SECRET_KEY: ${READ_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+  DATABASE_HOST: postgres-read
+  DATABASE_PORT: 5432
+  DATABASE_NAME: ${READ_DATABASE_NAME:-power_finance_read}
+  DATABASE_USER: ${READ_DATABASE_USER:-postgres}
+  DATABASE_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
+
 x-elasticsearch-env: &elasticsearch-env
-  ELASTICSEARCH_HOSTS: https://es01:9200
-  ELASTICSEARCH_USERNAME: elastic
+  ELASTICSEARCH_HOSTS: ${ELASTICSEARCH_HOSTS:-https://es01:9200}
+  ELASTICSEARCH_USERNAME: ${ELASTICSEARCH_USERNAME:-elastic}
   ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD:-changeme}
-  ELASTICSEARCH_CA_CERTS: /certs/ca/ca.crt
-  ELASTICSEARCH_VERIFY_CERTS: "true"
+  ELASTICSEARCH_CA_CERTS: ${ELASTICSEARCH_CA_CERTS-/certs/ca/ca.crt}
+  ELASTICSEARCH_VERIFY_CERTS: "${ELASTICSEARCH_VERIFY_CERTS:-true}"
 
 services:
   setup:
+    profiles: ["local-elastic"]
     healthcheck:
       interval: 250ms
       start_period: 0s
+
+  es01:
+    profiles: ["local-elastic"]
+
+  kibana:
+    profiles: ["local-elastic"]
+
+  read-migrate:
+    build:
+      context: ../..
+      dockerfile: services/read-service/Dockerfile
+    image: power-finance/read-service:dev
+    restart: "no"
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    environment:
+      <<: *read-database-env
+    depends_on:
+      postgres-read:
+        condition: service_healthy
 
   read-service:
     build:
@@ -36,18 +65,23 @@ services:
       DATABASE_USER: ${READ_DATABASE_USER:-postgres}
       DATABASE_PASSWORD: ${READ_DATABASE_PASSWORD:-postgres}
       REDIS_URL: ${READ_REDIS_URL:-redis://read-redis:6379/0}
+      EXCHANGE_RATES_PROVIDER: ${EXCHANGE_RATES_PROVIDER:-open-er-api}
+      EXCHANGE_RATES_BASE_URL: ${EXCHANGE_RATES_BASE_URL:-https://open.er-api.com/v6/latest}
+      EXCHANGE_RATES_TTL_SECONDS: ${EXCHANGE_RATES_TTL_SECONDS:-900}
+      EXCHANGE_RATES_MAX_AGE_SECONDS: ${EXCHANGE_RATES_MAX_AGE_SECONDS:-172800}
       <<: *elasticsearch-env
     volumes:
       - certs:/certs:ro
     depends_on:
       postgres-read:
         condition: service_healthy
+      read-migrate:
+        condition: service_completed_successfully
       read-redis:
         condition: service_healthy
-      read-es-init:
-        condition: service_completed_successfully
 
   read-es-init:
+    profiles: ["local-elastic"]
     build:
       context: ../..
       dockerfile: services/read-service/Dockerfile
@@ -91,10 +125,10 @@ services:
         condition: service_healthy
       postgres-read:
         condition: service_healthy
+      read-migrate:
+        condition: service_completed_successfully
       read-redis:
         condition: service_healthy
-      read-es-init:
-        condition: service_completed_successfully
     stop_grace_period: 30s
 
   postgres-read:
@@ -110,7 +144,10 @@ services:
     volumes:
       - postgres_read_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${READ_DATABASE_USER:-postgres} -d ${READ_DATABASE_NAME:-power_finance_read}"]
+      test:
+        - CMD-SHELL
+        - PGPASSWORD="$$POSTGRES_PASSWORD" psql -h "$$(hostname -i | awk '{print $$1}')" -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -c 'select 1' >/dev/null
+      start_period: 20s
       interval: 5s
       timeout: 3s
       retries: 10
@@ -121,7 +158,10 @@ services:
     volumes:
       - redis_read_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      test: [
+        "CMD-SHELL",
+        "redis-cli ping | grep -q PONG",
+      ]
       interval: 5s
       timeout: 3s
       retries: 10

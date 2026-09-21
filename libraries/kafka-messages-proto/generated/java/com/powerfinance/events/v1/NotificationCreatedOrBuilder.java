@@ -62,55 +62,40 @@ public interface NotificationCreatedOrBuilder extends
   int getUserId();
 
   /**
-   * <code>string short = 12;</code>
-   * @return The short.
+   * <code>string title = 12;</code>
+   * @return The title.
    */
-  java.lang.String getShort();
+  java.lang.String getTitle();
   /**
-   * <code>string short = 12;</code>
-   * @return The bytes for short.
-   */
-  com.google.protobuf.ByteString
-      getShortBytes();
-
-  /**
-   * <code>string message = 13;</code>
-   * @return The message.
-   */
-  java.lang.String getMessage();
-  /**
-   * <code>string message = 13;</code>
-   * @return The bytes for message.
+   * <code>string title = 12;</code>
+   * @return The bytes for title.
    */
   com.google.protobuf.ByteString
-      getMessageBytes();
+      getTitleBytes();
 
   /**
-   * <pre>
-   * Free-form context attached to the notification (deep links, resource
-   * ids, …). Optional — absent when the producer has nothing to attach.
-   * </pre>
-   *
+   * <code>string body = 13;</code>
+   * @return The body.
+   */
+  java.lang.String getBody();
+  /**
+   * <code>string body = 13;</code>
+   * @return The bytes for body.
+   */
+  com.google.protobuf.ByteString
+      getBodyBytes();
+
+  /**
    * <code>.google.protobuf.Struct payload = 14;</code>
    * @return Whether the payload field is set.
    */
   boolean hasPayload();
   /**
-   * <pre>
-   * Free-form context attached to the notification (deep links, resource
-   * ids, …). Optional — absent when the producer has nothing to attach.
-   * </pre>
-   *
    * <code>.google.protobuf.Struct payload = 14;</code>
    * @return The payload.
    */
   com.google.protobuf.Struct getPayload();
   /**
-   * <pre>
-   * Free-form context attached to the notification (deep links, resource
-   * ids, …). Optional — absent when the producer has nothing to attach.
-   * </pre>
-   *
    * <code>.google.protobuf.Struct payload = 14;</code>
    */
   com.google.protobuf.StructOrBuilder getPayloadOrBuilder();
@@ -129,4 +114,51 @@ public interface NotificationCreatedOrBuilder extends
    * <code>.google.protobuf.Timestamp created_at = 15;</code>
    */
   com.google.protobuf.TimestampOrBuilder getCreatedAtOrBuilder();
+
+  /**
+   * <code>.power_finance.events.v1.NotificationSeverity severity = 16;</code>
+   * @return The enum numeric value on the wire for severity.
+   */
+  int getSeverityValue();
+  /**
+   * <code>.power_finance.events.v1.NotificationSeverity severity = 16;</code>
+   * @return The severity.
+   */
+  com.powerfinance.events.v1.NotificationSeverity getSeverity();
+
+  /**
+   * <code>string subject_type = 17;</code>
+   * @return The subjectType.
+   */
+  java.lang.String getSubjectType();
+  /**
+   * <code>string subject_type = 17;</code>
+   * @return The bytes for subjectType.
+   */
+  com.google.protobuf.ByteString
+      getSubjectTypeBytes();
+
+  /**
+   * <code>string subject_id = 18;</code>
+   * @return The subjectId.
+   */
+  java.lang.String getSubjectId();
+  /**
+   * <code>string subject_id = 18;</code>
+   * @return The bytes for subjectId.
+   */
+  com.google.protobuf.ByteString
+      getSubjectIdBytes();
+
+  /**
+   * <code>string user_external_id = 19;</code>
+   * @return The userExternalId.
+   */
+  java.lang.String getUserExternalId();
+  /**
+   * <code>string user_external_id = 19;</code>
+   * @return The bytes for userExternalId.
+   */
+  com.google.protobuf.ByteString
+      getUserExternalIdBytes();
 }

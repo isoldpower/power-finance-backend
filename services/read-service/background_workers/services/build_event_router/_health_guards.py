@@ -4,7 +4,7 @@ from data_read_core.shared.health_guard import (
     REDIS_CONNECTIVITY_ERRORS,
     HealthGuardedHandler,
 )
-from data_read_core.shared.kafka_updates import (
+from kafka_consumer_py import (
     ExecutionPlan,
     Handler,
 )
@@ -13,8 +13,6 @@ from ._types import ProbesDictionary
 
 
 def guard_all(plan: ExecutionPlan, probes: ProbesDictionary) -> Handler:
-    """Block consumption on any downstream outage instead of losing the event.
-    Each store's connectivity errors pause the loop until that store recovers."""
     guarded: Handler = HealthGuardedHandler(
         plan,
         probes.postgres_probe,

@@ -3,6 +3,7 @@ from data_write_core.application.interfaces import EventBus
 from ._gates import skip_without_infra
 from .event_bus import initialize_event_bus
 from .immudb import initialize_immudb
+from .lazy_registry import LazyRegistry
 from .repositories import initialize_repositories
 from .state import (
     ApplicationEnvironment,
@@ -30,6 +31,7 @@ def bootstrap_application(environment: ApplicationEnvironment) -> ApplicationSta
         repository_registry=repository_registry,
         event_bus=event_bus,
     )
+
     return _application
 
 
@@ -51,6 +53,7 @@ __all__ = [
     "ApplicationEnvironment",
     "ApplicationState",
     "ImmudbConnection",
+    "LazyRegistry",
     "RepositoryRegistry",
     "bootstrap_application",
     "get_application_state",

@@ -1,5 +1,5 @@
 from .entry_classifier import EntryClassifier
-from .entry_codec import STATE_COMPLETED, STATE_IN_FLIGHT, EntryCodec
+from .entry_codec import EntryCodec
 from .outcomes import (
     Acquired,
     AcquireResult,
@@ -11,8 +11,6 @@ from .outcomes import (
 from .store import RedisIdempotencyStore
 
 __all__ = [
-    "STATE_COMPLETED",
-    "STATE_IN_FLIGHT",
     "Acquired",
     "AcquireResult",
     "AlreadyCompleted",

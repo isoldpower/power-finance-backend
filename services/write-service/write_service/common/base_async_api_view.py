@@ -1,6 +1,3 @@
-"""Service-wide async APIView overriding DRF's sync `dispatch` to await async
-handlers, so views can be written as `async def get(...)`."""
-
 from asgiref.sync import iscoroutinefunction, sync_to_async
 from rest_framework import exceptions
 from rest_framework.views import APIView

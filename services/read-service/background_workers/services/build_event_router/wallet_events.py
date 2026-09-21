@@ -1,19 +1,21 @@
-from data_read_core.shared.kafka_updates import (
-    EventRouter,
-    ExecutionPlan,
-    SyncProcessGroup,
-)
 from data_read_core.write_reactions import (
+    BumpTransactionListVersion,
     BumpWalletListVersion,
     CreateWalletReadModel,
     EvictWalletCache,
     IndexWalletDocument,
     RemoveWalletDocument,
     RemoveWalletReadModel,
+    RenameWalletInTransactions,
     TrackAppliedSeq,
     TrackEsAppliedSeq,
     UpdateWalletDocument,
     UpdateWalletReadModel,
+)
+from kafka_consumer_py import (
+    EventRouter,
+    ExecutionPlan,
+    SyncProcessGroup,
 )
 from kafka_messages import (
     WalletCreated,
@@ -36,9 +38,12 @@ def subscribe_wallet_deleted(
                     TrackAppliedSeq(RemoveWalletReadModel(), WalletDeleted),
                     EvictWalletCache(),
                     BumpWalletListVersion(WalletDeleted),
-                ]
+                ],
+                atomic=True,
             ),
-            SyncProcessGroup([TrackEsAppliedSeq(RemoveWalletDocument(), WalletDeleted)]),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(RemoveWalletDocument(), WalletDeleted)], atomic=True
+            ),
         ]
     )
 
@@ -57,11 +62,16 @@ def subscribe_wallet_updated(
             SyncProcessGroup(
                 [
                     TrackAppliedSeq(UpdateWalletReadModel(), WalletUpdated),
+                    RenameWalletInTransactions(),
                     EvictWalletCache(WalletUpdated),
                     BumpWalletListVersion(WalletUpdated),
-                ]
+                    BumpTransactionListVersion(WalletUpdated),
+                ],
+                atomic=True,
             ),
-            SyncProcessGroup([TrackEsAppliedSeq(UpdateWalletDocument(), WalletUpdated)]),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(UpdateWalletDocument(), WalletUpdated)], atomic=True
+            ),
         ]
     )
 
@@ -81,9 +91,12 @@ def subscribe_wallet_created(
                 [
                     TrackAppliedSeq(CreateWalletReadModel(), WalletCreated),
                     BumpWalletListVersion(WalletCreated),
-                ]
+                ],
+                atomic=True,
             ),
-            SyncProcessGroup([TrackEsAppliedSeq(IndexWalletDocument(), WalletCreated)]),
+            SyncProcessGroup(
+                [TrackEsAppliedSeq(IndexWalletDocument(), WalletCreated)], atomic=True
+            ),
         ]
     )
 

@@ -11,19 +11,11 @@ public interface EventEnvelopeOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <pre>
-   * UUID. Idempotency key — consumers dedupe on this.
-   * </pre>
-   *
    * <code>string event_id = 1;</code>
    * @return The eventId.
    */
   java.lang.String getEventId();
   /**
-   * <pre>
-   * UUID. Idempotency key — consumers dedupe on this.
-   * </pre>
-   *
    * <code>string event_id = 1;</code>
    * @return The bytes for eventId.
    */
@@ -31,39 +23,21 @@ public interface EventEnvelopeOrBuilder extends
       getEventIdBytes();
 
   /**
-   * <pre>
-   * Wall-clock time the producer decided this event happened.
-   * </pre>
-   *
    * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
    * @return Whether the occurredAt field is set.
    */
   boolean hasOccurredAt();
   /**
-   * <pre>
-   * Wall-clock time the producer decided this event happened.
-   * </pre>
-   *
    * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
    * @return The occurredAt.
    */
   com.google.protobuf.Timestamp getOccurredAt();
   /**
-   * <pre>
-   * Wall-clock time the producer decided this event happened.
-   * </pre>
-   *
    * <code>.google.protobuf.Timestamp occurred_at = 2;</code>
    */
   com.google.protobuf.TimestampOrBuilder getOccurredAtOrBuilder();
 
   /**
-   * <pre>
-   * Bump on any breaking change to a concrete event's payload. Consumers
-   * that can't handle a higher version should route the message to the
-   * DLQ rather than partially process it.
-   * </pre>
-   *
    * <code>int32 schema_version = 3;</code>
    * @return The schemaVersion.
    */

@@ -1,6 +1,16 @@
 .DEFAULT_GOAL := help
-
 COMPOSE := docker compose -f compose.yaml
+REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../..)
+SANDBOX_RUNNER := $(REPO_ROOT)/infrastructure/dev-host/run_sandbox_service.sh
+SANDBOX_NAME ?= $(NAME)
+SANDBOX_ENV_FILE = $(REPO_ROOT)/.sandbox/$(SANDBOX_NAME)-read-service.env
+PORT ?= 8100
+READ_PROCESSES = \
+	"edge=uv run uvicorn read_service.asgi:application --port $(PORT) --reload" \
+	"projection=uv run python manage.py run_write_message_consumer"
+READ_REQUIRED = DATABASE_HOST DATABASE_PORT DATABASE_NAME DATABASE_USER \
+	DATABASE_PASSWORD KAFKA_BOOTSTRAP_SERVERS REDIS_HOST REDIS_PORT ELASTICSEARCH_HOSTS
+
 
 .PHONY: help
 help: ## Show available targets
@@ -11,8 +21,8 @@ run: ## Run the Kafka consumer locally (no docker; needs Kafka + postgres-read r
 	uv run python manage.py run_write_message_consumer
 
 .PHONY: test
-test: ## Run Read Service tests (postgres-read on host port 5434)
-	uv run python manage.py test --settings=read_service.settings.test
+test: ## Run Read Service tests (pytest; needs `make test-datastores` at the repo root, port 5534)
+	uv run pytest -q
 
 .PHONY: build-image
 build-image: ## Build the Read Service Docker image (context = repo root)
@@ -25,3 +35,14 @@ up: ## Start the Read Service stack (read-write-consumer + postgres-read + kafka
 .PHONY: down
 down: ## Stop the Read Service stack (read-write-consumer + postgres-read + kafka)
 	$(COMPOSE) down
+
+guard-NAME:
+	@if [ -z "$(SANDBOX_NAME)" ]; then \
+		echo "Missing required variable: NAME (the sandbox to run as)"; \
+		exit 1; \
+	fi
+
+.PHONY: sandbox
+sandbox: guard-NAME ## Run the whole service for a sandbox — edge + projection consumer: NAME= [PORT=8100] [ISOLATED=1]
+	@$(if $(ISOLATED),$(MAKE) --no-print-directory -C $(REPO_ROOT) sandbox-datastores NAME=$(SANDBOX_NAME),:)
+	@ISOLATED=$(ISOLATED) $(SANDBOX_RUNNER) "$(SANDBOX_ENV_FILE)" - "$(READ_REQUIRED)" $(READ_PROCESSES)

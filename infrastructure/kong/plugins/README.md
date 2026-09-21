@@ -1,0 +1,252 @@
+# Custom plugins
+
+Five in-tree Kong plugins. What each one does at the pipeline level, and how the
+two rate-limit tiers interact, is in [../../README.md](../../README.md) → "Kong
+gateway"; this file is the per-plugin detail — why each exists as custom Lua at
+all, and why it sits where it does in the chain.
+
+They are copied into the image at build time, one directory per plugin under
+`/usr/local/share/lua/5.1/kong/plugins/`, and enabled through `KONG_PLUGINS`.
+
+## Priority chain
+
+Kong runs access-phase plugins from highest priority to lowest. The order here
+is not cosmetic: each plugin below `clerk-jwt` reads the verified claims that
+`clerk-jwt` stashes in `kong.ctx.shared.clerk_claims`, so it has to run after
+it.
+
+| priority | plugin | why there |
+| --- | --- | --- |
+| 901 | `rate-limiting` (bundled) | the IP floor runs before JWT verification, so spraying invalid tokens hits the cap rather than burning verification CPU |
+| 801 | `clerk-jwt` | deliberately below the IP floor, above everything that needs claims |
+| 750 | `sandbox-router` | needs nothing from the claims, but sitting under `clerk-jwt` means an unauthenticated request is never routed into a sandbox; sitting above `read-fallback` means the request that plugin forwards is already pointed at the right upstream |
+| 700 | `read-at-least` | needs `clerk_claims` |
+| 700 | `write-ral-version` | mirrors `read-at-least` so the pair sits at the same relative position |
+| 650 | `read-fallback` | below both, so `X-User-Id` and the resolved `Read-At-Least` are already on the request it forwards |
+| 600 | `user-tier-rate-limit` | needs `clerk_claims` |
+
+## clerk-jwt
+
+Validates Clerk-issued session JWTs and forwards the caller's identity as
+`X-User-Id`.
+
+Custom because Clerk uses a **rotating RS256 JWKS**, and Kong's bundled `jwt`
+plugin only takes static keys. This one fetches the JWKS over HTTP and caches it
+in Redis under `{redis_key_prefix}{issuer_url}` (see `clerk-jwt/redis_cache.lua`),
+shared across Kong workers and instances. The single-flight fetch lock is the
+one thing that needs node-local memory rather than Redis, so it uses an nginx
+shared dict:
+
+    lua_shared_dict clerk_jwks_locks 1m;
+
+which the image sets via `KONG_NGINX_HTTP_LUA_SHARED_DICT`.
+
+Failure modes return 401 with no body leak. The only things that cross the
+gateway are `X-User-Id` (the `sub` claim) and the unchanged `Authorization`
+header, kept so a downstream service can re-introspect if it needs to.
+
+### WebSocket upgrades
+
+A browser cannot put an `Authorization` header on an upgrade, so when that
+header is absent the plugin falls back to `Sec-WebSocket-Protocol`. The client
+offers exactly two protocols — the marker `clerk` and the raw JWT — which is
+legal because RFC 6455 protocol names are tokens and a JWT's alphabet already
+fits. Anything else (one entry, three entries, a different marker) is treated as
+no token at all.
+
+On success the forwarded header is rewritten to just `clerk`, so the upstream
+never receives the JWT. The service must echo that name back when it accepts,
+because a browser closes a socket whose server selected a protocol it did not
+offer. A query parameter would have worked too and was rejected: it puts a live
+session token in the proxy access log.
+
+The fallback is deliberately WebSocket-only. The SSE stream needs nothing
+equivalent — a fetch-based reader sets `Authorization` normally — so this path
+exists purely because the `WebSocket` constructor exposes no header channel.
+
+User preferences (`X-User-Currency`, `X-User-Timezone`, `X-User-Language`) are
+forwarded off the same verified token. They live on the Clerk user record in
+`unsafeMetadata`, which is **client-writable** — forwarding them off the token
+is what makes them attributable at all. Services still treat the values as
+untrusted and fall back per field.
+
+## read-at-least
+
+The request half of the Read-At-Least header. The response half — signing
+`X-Write-Version` on write routes and recording the per-user offset — is
+`write-ral-version`, kept separate so the two can attach to their own routes
+without cross-coupling.
+
+- When the client **supplies** a `Read-At-Least` header, it is validated as
+  `<offset>:<hex-hmac-sha256>` against a gateway-internal secret. This is what
+  stops a client forging an arbitrary offset to force Read Service 507
+  fallbacks.
+- When the client **omits** it, the user's latest write offset is looked up in
+  Redis (`ral:user:{sub}`, populated by `write-ral-version`) and a freshly
+  signed header is injected. Falls **open** — no header, free read — on a Redis
+  miss or any lookup failure.
+
+"Offset" here is the Postgres outbox seq id (`BIGSERIAL`), not the Kafka offset.
+See `write-ral-version/redis_writer.lua` for how the value gets into Redis.
+
+## write-ral-version
+
+The response-side counterpart to `read-at-least`, attached to write routes. It
+runs across two phases, and the split is forced by OpenResty:
+
+- **`header_filter`** — reads the raw outbox seq the Write Service emitted in
+  `X-Write-Version`, HMAC-signs it, and rewrites the header in place so the
+  client sees `{seq}:{hex-hmac-sha256}`: exactly the shape it must send back as
+  `Read-At-Least`. HMAC is CPU-only, so it is safe in this phase.
+- **`log`** — best-effort writes `(user_id, seq)` to `gateway-redis` under
+  `ral:user:{sub}` through a monotonic Lua script, so the gateway can inject a
+  default header for that user's later reads. The Redis call cannot live in
+  `header_filter`: OpenResty forbids cosocket APIs (TCP, Redis, HTTP) there and
+  throws *"API disabled in the context of header_filter_by_lua"*. The `log`
+  phase runs after the response is fully sent and explicitly supports cosockets.
+
+The point of all of it is that Write Service stays ignorant of the HMAC secret,
+of the Redis side-channel, and of the `Read-At-Least` wire format. It just
+returns the `BIGSERIAL` outbox row id as a plain integer.
+
+## read-fallback
+
+Transparent read-your-writes fallback, attached to the Read Service route.
+
+It proxies each read itself, and when Read Service answers `fallback_status`
+(507 — its projection is behind the client's `Read-At-Least`) it re-issues the
+request against the Write Service's always-consistent fallback-read endpoint and
+returns that instead. The client sees one response and never the 507.
+
+Self-proxying in the access phase is the only way to do this: it is the one
+phase that both sees the upstream status and still permits an HTTP call.
+
+Not every gated read has a counterpart — accounts live in ai-service's database,
+metrics needs the whole aggregate — so some reroutes land on a path Write Service
+does not route. Those are detected by the answer being a 404 that is **not** JSON:
+every API response, success or failure, is JSON in the shared envelope, while an
+unrouted path gets Django's own HTML 404. On that signal the plugin returns Read
+Service's 507 instead, so the client gets a retryable staleness error rather than
+a resource reported missing. A genuine 404 from a fallback endpoint that does
+exist is JSON, and passes through untouched.
+
+### read-fallback and sandboxes
+
+`read-fallback` forwards every GET itself, so a target set by `sandbox-router` is
+never used. It therefore resolves the sandbox route for **both** of its legs —
+`read-service` for the primary request and `write-service` for the fallback — from
+the same Redis keys, and falls back to its configured URLs whenever there is no
+sandbox, no route, or Redis misbehaves. Without this, read-side sandboxing looks
+wired up and silently serves baseline data.
+
+## user-tier-rate-limit
+
+The per-user ceiling that sits on top of the bundled IP floor. No claims means
+an anonymous request, and the plugin is a no-op — the IP floor still applies.
+
+Custom because Kong's bundled `rate-limiting` plugin allows only **one instance
+per scope**, and two tiers are needed at once: the IP floor and the per-user
+ceiling. A second tier therefore has to be a separate plugin class.
+
+Counting uses a **sliding window** — two buckets per window in Redis, the
+previous one weighted by the fraction of it the window still covers — so a
+caller cannot spend a full allowance either side of a boundary and get twice the
+limit in two seconds. The check and the increment run as one Redis script
+(`window_script.lua`), so concurrent requests cannot both read a count below the
+limit and both pass, and a rejected request spends no budget. `Retry-After` is
+computed from when the estimate decays back under the limit, usually well before
+the next boundary. Failure modes are fail-open.
+
+## sandbox-router
+
+Routes a request to a developer's sandbox instead of the baseline upstream. This
+is the gateway half of the shared dev environment.
+
+**Resolving the sandbox id**, in order:
+
+1. the `sandbox-id` entry of the W3C `baggage` header;
+2. the `X-Sandbox` header;
+3. the `sandbox` query argument.
+
+The order is deliberate. Baggage is a decision already taken by an upstream hop and
+outranks anything a client asserts; between the other two, a header and a URL come
+from the same place, so either could be the weaker — the URL is treated as such.
+
+The query argument exists for **WebSockets**. A browser cannot set headers on a
+handshake: `new WebSocket(url, protocols)` takes a URL and a subprotocol list and
+nothing else, which is also why the Clerk token rides the subprotocol list rather
+than `Authorization`. A third subprotocol pair is not available for the sandbox
+either — `clerk-jwt` accepts that list only when it holds exactly two entries — so
+the id travels in the URL: `wss://…/api/v1/chat/advice?sandbox=<name>`.
+
+It is accepted on every route, not only upgrades. Anyone can therefore pin a request
+to a sandbox by editing a URL, which was already true of `X-Sandbox`; this is a
+development gateway and neither is a privilege boundary. Note that the id lands in
+the access log as part of the request line.
+
+No sandbox id means no routing — the request goes to the baseline upstream, which
+is what every ordinary request does.
+
+**Propagating it.** When the id arrived in `X-Sandbox` or the query argument rather
+than in baggage, the plugin appends `sandbox-id=<id>` to the `baggage` header it
+forwards (disable with `propagate_baggage: false`). That is what lets Python, Go and Java consumers
+downstream see the sandbox on events the request produces, without any of them
+knowing about `X-Sandbox`.
+
+**Choosing the upstream.** The key is **per service**:
+`{redis_key_prefix}{sandbox_id}:{service}`, where `{service}` is the Kong service the
+router matched (`kong.router.get_service().name`). Its value is a plain `host:port`.
+On a hit the plugin calls `kong.service.set_target`; `make host-sandbox-up` writes those
+keys. Scoping by service is what lets one sandbox name override several services at
+once — `alice` can run both `write-service` and `read-service`, and a request is
+re-pointed only for the service it actually addresses.
+
+**It publishes `kong.ctx.shared.sandbox_id`** for plugins that forward requests
+themselves rather than letting Kong proxy to the target. `read-fallback` is one, and
+it must consult this or a sandboxed GET is silently served by the baseline.
+
+**It fails open.** A Redis error or timeout is logged as a warning and the request
+proceeds to the baseline; a sandbox with no override for the matched service is a
+debug line, not a warning, because running one service of a sandbox and letting the
+rest come from the baseline is the normal case. A broken sandbox route must never
+take the shared environment down with it.
+
+| config | default | meaning |
+| --- | --- | --- |
+| `redis_host` | required | same instance the `read-at-least` pair uses |
+| `redis_port` | `6379` | |
+| `redis_database` | `0` | |
+| `redis_password` | unset | optional AUTH |
+| `redis_timeout_ms` | `100` | tight on purpose; it fails open rather than blocking |
+| `redis_key_prefix` | `sandbox:route:` | must match what the Makefile writes |
+| `propagate_baggage` | `true` | add `sandbox-id` to the forwarded `baggage` header |
+
+The Redis lookup itself lives in `shared/lua/sandbox_routes.lua` so that
+`read-fallback` can resolve the same keys without duplicating it.
+
+### Layout
+
+| Module | Holds |
+| --- | --- |
+| `handler.lua` | the `access` phase only — the order of the fail-open steps |
+| `sandbox_resolver.lua` | reading the id off the request, and appending it to outbound baggage |
+| `baggage_parser.lua` | parsing and building `baggage` entries, with no Kong objects involved |
+| `sandbox_lookup.lua` | the seam onto `shared/lua/sandbox_routes.lua` |
+| `logger_shortcuts.lua` | every line the plugin logs |
+| `config.lua` | header, baggage-entry and query-argument names |
+| `schema.lua` | the Kong config schema |
+
+`resolve_sandbox()` returns a table (`sandbox_id`, `baggage_value`,
+`from_baggage`) rather than three positional values, so a caller reading only
+the id does not have to know the order of the rest.
+
+There is no `messages.lua` — unlike the other plugins this one never writes a
+response, it only re-points the upstream or stands aside. `logger_shortcuts.lua`
+takes that place: because the plugin fails open, a log line is the only trace a
+request that quietly went to the baseline leaves behind, so the wording of all
+four lines is kept in one file.
+
+`__tests__/` runs under the gateway's own LuaJIT via
+`infrastructure/kong/run_plugin_tests.sh`: `resolve_sandbox_spec.lua` pins the
+precedence of the three channels, `route_target_spec.lua` pins each fail-open
+branch and the baggage propagation.

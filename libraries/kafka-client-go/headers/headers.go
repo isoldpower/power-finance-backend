@@ -111,7 +111,10 @@ func Merge(base KafkaHeaders, additions ...Header) KafkaHeaders {
 
 	mergedHeaders := make(KafkaHeaders, 0, len(keyOrder))
 	for _, key := range keyOrder {
-		mergedHeaders = append(mergedHeaders, Header{Key: key, Value: valueByKey[key]})
+		mergedHeaders = append(
+			mergedHeaders,
+			Header{Key: key, Value: valueByKey[key]},
+		)
 	}
 
 	return mergedHeaders

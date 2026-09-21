@@ -14,6 +14,9 @@ class DjangoOutboxRepository(OutboxRepository):
             event_type=entry.event_type,
             payload=entry.payload,
             occurred_at=entry.occurred_at,
+            traceparent=entry.propagation_context.traceparent,
+            tracestate=entry.propagation_context.tracestate,
+            baggage=entry.propagation_context.baggage,
         )
         return row.id
 

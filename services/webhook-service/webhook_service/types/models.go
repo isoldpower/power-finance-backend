@@ -2,14 +2,39 @@ package types
 
 import "time"
 
+// DeliveryStatus is the lifecycle state of one queued delivery.
 type DeliveryStatus string
 
+// The states a delivery moves through, from enqueue to a terminal outcome.
 const (
-	DeliveryPending DeliveryStatus = "pending"
-	DeliverySuccess DeliveryStatus = "success"
-	DeliveryFailed  DeliveryStatus = "failed"
+	DeliveryPending        DeliveryStatus = "pending"
+	DeliveryInProgress     DeliveryStatus = "in_progress"
+	DeliveryRetryScheduled DeliveryStatus = "retry_scheduled"
+	DeliverySuccess        DeliveryStatus = "success"
+	DeliveryFailed         DeliveryStatus = "failed"
 )
 
+// DeliveryStatuses is the closed vocabulary the delivery log filters on.
+var DeliveryStatuses = []DeliveryStatus{
+	DeliveryPending,
+	DeliveryInProgress,
+	DeliveryRetryScheduled,
+	DeliverySuccess,
+	DeliveryFailed,
+}
+
+// IsKnownDeliveryStatus reports whether a `status` filter names a real status.
+func IsKnownDeliveryStatus(candidate string) bool {
+	for _, status := range DeliveryStatuses {
+		if string(status) == candidate {
+			return true
+		}
+	}
+
+	return false
+}
+
+// WebhookEndpoint is one projected customer endpoint.
 type WebhookEndpoint struct {
 	ID             string
 	UserID         int
@@ -17,9 +42,35 @@ type WebhookEndpoint struct {
 	Title          string
 	URL            string
 	Secret         string
+	SecretVersion  int
 	IsActive       bool
 }
 
+// EndpointSecrets is what an endpoint may sign with: the live secret and, in grace, the previous one.
+type EndpointSecrets struct {
+	Secret                  string
+	SecretVersion           int
+	PreviousSecret          string
+	PreviousSecretVersion   int
+	PreviousSecretExpiresAt *time.Time
+}
+
+// For returns the secret that signs a delivery pinned to secretVersion.
+func (s EndpointSecrets) For(secretVersion int, now time.Time) string {
+	if secretVersion == s.SecretVersion || s.PreviousSecret == "" {
+		return s.Secret
+	}
+	if secretVersion != s.PreviousSecretVersion {
+		return s.Secret
+	}
+	if s.PreviousSecretExpiresAt == nil || now.After(*s.PreviousSecretExpiresAt) {
+		return s.Secret
+	}
+
+	return s.PreviousSecret
+}
+
+// WebhookSubscription binds an endpoint to one event type.
 type WebhookSubscription struct {
 	ID        string
 	WebhookID string
@@ -27,6 +78,7 @@ type WebhookSubscription struct {
 	EventType string
 }
 
+// Delivery is one queued attempt to reach an endpoint with an event.
 type Delivery struct {
 	ID             string
 	WebhookID      string
@@ -38,6 +90,19 @@ type Delivery struct {
 	Payload        []byte
 	Status         DeliveryStatus
 	Attempts       int
-	NextAttemptAt  time.Time
+	SecretVersion  int
+	NextAttemptAt  *time.Time
 	LastError      string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// SecretRotation is what a WebhookSecretRotated event installs: a secret and a grace window.
+type SecretRotation struct {
+	WebhookID               string
+	Secret                  string
+	SecretVersion           int
+	PreviousSecret          string
+	PreviousSecretVersion   int
+	PreviousSecretExpiresAt *time.Time
 }

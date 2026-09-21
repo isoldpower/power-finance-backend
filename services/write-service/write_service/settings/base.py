@@ -1,5 +1,9 @@
-"""Base settings shared by all environments; concrete environments extend and
-override. Env vars load via django-environ from a `.env` file."""
+"""Base settings shared by all environments. Concrete environments (local,
+production, test) extend this module and override values that differ.
+
+Environment variables are loaded via django-environ from a `.env` file at the
+service root. See `.env.example` for the full list of recognised keys.
+"""
 
 from pathlib import Path
 
@@ -36,6 +40,8 @@ env = environ.Env(
     KAFKA_FRAUD_ALERTS_GROUP_ID=(str, "write-service.fraud-alerts"),
     KAFKA_NOTIFICATIONS_INBOUND_TOPIC=(str, "notifications.inbound"),
     KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID=(str, "write-service.notifications-inbound"),
+    KAFKA_AUTOMATION_ENGINE_GROUP_ID=(str, "write-service.automation-engine"),
+    AUTOMATION_SCHEDULE_INTERVAL_SECONDS=(int, 300),
     CORRELATION_ID_HEADER=(str, "X-Correlation-ID"),
 )
 if ENV_FILE.exists():
@@ -48,6 +54,7 @@ APP_NAME = env("APP_NAME")
 API_VERSION = env("API_VERSION")
 
 ROOT_URLCONF = "write_service.urls"
+APPEND_SLASH = False
 WSGI_APPLICATION = "write_service.wsgi.application"
 ASGI_APPLICATION = "write_service.asgi.application"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -61,6 +68,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "health_probes.apps.HealthProbesConfig",
     "data_write_core.apps.DataWriteCoreConfig",
+    "write_service.observability_setup.apps.WriteServiceObservabilityConfig",
     "write_service.common.apps.WriteServiceCommonConfig",
     "background_workers.apps.BackgroundWorkersConfig",
 ]
@@ -137,17 +145,24 @@ KAFKA = {
     "FRAUD_ALERTS_GROUP_ID": env("KAFKA_FRAUD_ALERTS_GROUP_ID"),
     "NOTIFICATIONS_INBOUND_TOPIC": env("KAFKA_NOTIFICATIONS_INBOUND_TOPIC"),
     "NOTIFICATIONS_INBOUND_GROUP_ID": env("KAFKA_NOTIFICATIONS_INBOUND_GROUP_ID"),
+    "AUTOMATION_ENGINE_GROUP_ID": env("KAFKA_AUTOMATION_ENGINE_GROUP_ID"),
+}
+
+AUTOMATION_SCHEDULE = {
+    "INTERVAL_SECONDS": env("AUTOMATION_SCHEDULE_INTERVAL_SECONDS"),
 }
 
 CORRELATION_ID_HEADER = env("CORRELATION_ID_HEADER")
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "EXCEPTION_HANDLER": "data_write_core.presentation.http.exception_handler.write_exception_handler",
+    "DATETIME_FORMAT": "iso-8601",
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "data_write_core.presentation.http.gateway_authentication.GatewayUserHeaderAuthentication",
+        "data_write_core.presentation.http.auth.GatewayUserHeaderAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        "data_write_core.presentation.http.gateway_authentication.IsGatewayAuthenticated",
+        "data_write_core.presentation.http.auth.IsGatewayAuthenticated",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
@@ -158,6 +173,11 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "0.1.0",
     "SCHEMA_PATH_PREFIX": r"/api/v[0-9]+/",
     "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "AutomationTriggerType": "data_write_core.domain.automations.TRIGGER_TYPE_CHOICES",
+        "AutomationEffectType": "data_write_core.domain.automations.EFFECT_TYPE_CHOICES",
+        "TransactionType": "data_write_core.domain.value_objects.TRANSACTION_TYPE_CHOICES",
+    },
 }
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
@@ -174,10 +194,14 @@ LOGGING = {
     "disable_existing_loggers": False,
     "filters": {
         "correlation_id": {"()": "correlation.CorrelationIDFilter"},
+        "trace_context": {"()": "observability.TraceContextFilter"},
     },
     "formatters": {
         "verbose": {
-            "format": "{levelname} {asctime} cid={correlation_id} {name} {message}",
+            "format": (
+                "{levelname} {asctime} cid={correlation_id} trace={trace_id} "
+                "sandbox={sandbox_id} {name} {message}"
+            ),
             "style": "{",
         },
     },
@@ -186,7 +210,7 @@ LOGGING = {
             "level": "DEBUG",
             "class": "logging.StreamHandler",
             "formatter": "verbose",
-            "filters": ["correlation_id"],
+            "filters": ["correlation_id", "trace_context"],
         },
     },
     "loggers": {
@@ -196,5 +220,6 @@ LOGGING = {
         "data_write_core": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
         "http": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
         "background_workers": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "kafka_consumer_py": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
     },
 }

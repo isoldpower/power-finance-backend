@@ -1,35 +1,20 @@
 from rest_framework import serializers
 
-
-class WalletBalanceResponseSerializer(serializers.Serializer):
-    amount = serializers.DecimalField(max_digits=20, decimal_places=2)
-    currency = serializers.CharField()
+from data_read_core.shared.rest_framework import MoneySerializer, collection_response
 
 
-class WalletMetaResponseSerializer(serializers.Serializer):
-    id = serializers.UUIDField()
-    created_at = serializers.DateTimeField()
-    updated_at = serializers.DateTimeField(allow_null=True)
-
-
-class WalletResponseSerializer(serializers.Serializer):
+class WalletPreviewSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
-    balance = WalletBalanceResponseSerializer()
-    meta = WalletMetaResponseSerializer()
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField(allow_null=True)
+    deleted_at = serializers.DateTimeField(allow_null=True)
+    category = serializers.CharField(allow_blank=True)
+    currency = serializers.CharField()
+    money = MoneySerializer(help_text="The spendable balance, not what the user owns.")
+    zero_balance = MoneySerializer()
+    favorite = serializers.BooleanField()
+    color = serializers.CharField(allow_blank=True)
 
 
-class PaginationMetaSerializer(serializers.Serializer):
-    limit = serializers.IntegerField()
-    offset = serializers.IntegerField()
-    total = serializers.IntegerField()
-
-
-class PaginatedWalletResponseSerializer(serializers.Serializer):
-    data = WalletResponseSerializer(many=True)
-    meta = PaginationMetaSerializer()
-
-
-class MessageResponseSerializer(serializers.Serializer):
-    message = serializers.CharField()
-    resource_id = serializers.CharField(allow_null=True)
+PaginatedWalletPreviewSerializer = collection_response(WalletPreviewSerializer)

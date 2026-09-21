@@ -1,12 +1,10 @@
-"""Shared write-reaction helpers: payload decoding and DB-error swallowing."""
-
 import pytest
 from django.db import DataError, IntegrityError
 from fakes import make_event
 from kafka_client_py import PoisonError
+from kafka_consumer_py import EventMessage
 from kafka_messages import WalletCreated
 
-from data_read_core.shared.kafka_updates import EventMessage
 from data_read_core.write_reactions._utilities import decode_payload, handle_database_errors
 
 

@@ -38,7 +38,7 @@ class WebhookDeliveryStatusChanged(_message.Message):
     def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., delivery_id: _Optional[str] = ..., endpoint_id: _Optional[str] = ..., user_id: _Optional[int] = ..., status: _Optional[_Union[WebhookDeliveryStatus, str]] = ...) -> None: ...
 
 class WebhookEndpointCreated(_message.Message):
-    __slots__ = ("event_id", "occurred_at", "schema_version", "webhook_id", "user_id", "title", "url", "secret", "created_at")
+    __slots__ = ("event_id", "occurred_at", "schema_version", "webhook_id", "user_id", "title", "url", "secret", "created_at", "secret_version", "enabled")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
     SCHEMA_VERSION_FIELD_NUMBER: _ClassVar[int]
@@ -48,6 +48,8 @@ class WebhookEndpointCreated(_message.Message):
     URL_FIELD_NUMBER: _ClassVar[int]
     SECRET_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    SECRET_VERSION_FIELD_NUMBER: _ClassVar[int]
+    ENABLED_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     occurred_at: _timestamp_pb2.Timestamp
     schema_version: int
@@ -57,10 +59,12 @@ class WebhookEndpointCreated(_message.Message):
     url: str
     secret: str
     created_at: _timestamp_pb2.Timestamp
-    def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., webhook_id: _Optional[str] = ..., user_id: _Optional[int] = ..., title: _Optional[str] = ..., url: _Optional[str] = ..., secret: _Optional[str] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    secret_version: int
+    enabled: bool
+    def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., webhook_id: _Optional[str] = ..., user_id: _Optional[int] = ..., title: _Optional[str] = ..., url: _Optional[str] = ..., secret: _Optional[str] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., secret_version: _Optional[int] = ..., enabled: bool = ...) -> None: ...
 
 class WebhookEndpointUpdated(_message.Message):
-    __slots__ = ("event_id", "occurred_at", "schema_version", "webhook_id", "user_id", "title", "url", "updated_at")
+    __slots__ = ("event_id", "occurred_at", "schema_version", "webhook_id", "user_id", "title", "url", "updated_at", "enabled")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
     SCHEMA_VERSION_FIELD_NUMBER: _ClassVar[int]
@@ -69,6 +73,7 @@ class WebhookEndpointUpdated(_message.Message):
     TITLE_FIELD_NUMBER: _ClassVar[int]
     URL_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    ENABLED_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     occurred_at: _timestamp_pb2.Timestamp
     schema_version: int
@@ -77,7 +82,8 @@ class WebhookEndpointUpdated(_message.Message):
     title: str
     url: str
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., webhook_id: _Optional[str] = ..., user_id: _Optional[int] = ..., title: _Optional[str] = ..., url: _Optional[str] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    enabled: bool
+    def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., webhook_id: _Optional[str] = ..., user_id: _Optional[int] = ..., title: _Optional[str] = ..., url: _Optional[str] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., enabled: bool = ...) -> None: ...
 
 class WebhookEndpointDeleted(_message.Message):
     __slots__ = ("event_id", "occurred_at", "schema_version", "webhook_id", "user_id", "deleted_at")
@@ -96,7 +102,7 @@ class WebhookEndpointDeleted(_message.Message):
     def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., webhook_id: _Optional[str] = ..., user_id: _Optional[int] = ..., deleted_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class WebhookSecretRotated(_message.Message):
-    __slots__ = ("event_id", "occurred_at", "schema_version", "webhook_id", "user_id", "secret", "rotated_at")
+    __slots__ = ("event_id", "occurred_at", "schema_version", "webhook_id", "user_id", "secret", "rotated_at", "previous_secret", "secret_version", "previous_secret_version", "previous_secret_expires_at")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
     SCHEMA_VERSION_FIELD_NUMBER: _ClassVar[int]
@@ -104,6 +110,10 @@ class WebhookSecretRotated(_message.Message):
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     SECRET_FIELD_NUMBER: _ClassVar[int]
     ROTATED_AT_FIELD_NUMBER: _ClassVar[int]
+    PREVIOUS_SECRET_FIELD_NUMBER: _ClassVar[int]
+    SECRET_VERSION_FIELD_NUMBER: _ClassVar[int]
+    PREVIOUS_SECRET_VERSION_FIELD_NUMBER: _ClassVar[int]
+    PREVIOUS_SECRET_EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     occurred_at: _timestamp_pb2.Timestamp
     schema_version: int
@@ -111,7 +121,11 @@ class WebhookSecretRotated(_message.Message):
     user_id: int
     secret: str
     rotated_at: _timestamp_pb2.Timestamp
-    def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., webhook_id: _Optional[str] = ..., user_id: _Optional[int] = ..., secret: _Optional[str] = ..., rotated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    previous_secret: str
+    secret_version: int
+    previous_secret_version: int
+    previous_secret_expires_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., webhook_id: _Optional[str] = ..., user_id: _Optional[int] = ..., secret: _Optional[str] = ..., rotated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., previous_secret: _Optional[str] = ..., secret_version: _Optional[int] = ..., previous_secret_version: _Optional[int] = ..., previous_secret_expires_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class WebhookSubscriptionAdded(_message.Message):
     __slots__ = ("event_id", "occurred_at", "schema_version", "subscription_id", "webhook_id", "user_id", "event_type", "created_at")

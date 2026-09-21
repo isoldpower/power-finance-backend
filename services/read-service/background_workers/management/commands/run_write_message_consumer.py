@@ -1,9 +1,10 @@
 import asyncio
 import logging
 
-from data_read_core.shared.kafka_updates import ConsumerConfig
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from kafka_consumer_py import ConsumerConfig, resolve_sandbox_scoped_group_id
+from observability import resolve_own_sandbox_id
 
 from background_workers.services.build_event_router import build_event_router
 
@@ -37,7 +38,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options) -> None:
-        topics = options["topics"] or [settings.KAFKA["OUTBOX_TOPIC"]]
+        topics = options["topics"] or [
+            settings.KAFKA["OUTBOX_TOPIC"],
+            settings.KAFKA["RETRY_TOPIC"],
+        ]
         config = self._build_consumer_config(options, topics)
 
         self.stdout.write(
@@ -55,7 +59,10 @@ class Command(BaseCommand):
     def _build_consumer_config(self, options, topics) -> ConsumerConfig:
         return ConsumerConfig(
             bootstrap_servers=options["bootstrap_servers"],
-            group_id=options["group_id"],
+            group_id=resolve_sandbox_scoped_group_id(
+                options["group_id"],
+                resolve_own_sandbox_id(),
+            ),
             topics=topics,
             auto_offset_reset="earliest" if options["from_beginning"] else "latest",
         )

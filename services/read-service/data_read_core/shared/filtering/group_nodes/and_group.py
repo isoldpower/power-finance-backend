@@ -3,8 +3,8 @@ from operator import and_
 from typing import Any
 
 from django.db.models import Q
+from filter_grammar_py import GroupOperator
 
-from ..entities import GroupOperator
 from .abstraction import GroupTreeNode
 
 

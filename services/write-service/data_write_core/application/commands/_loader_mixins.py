@@ -1,19 +1,31 @@
 import asyncio
 from uuid import UUID
 
-from data_write_core.domain.aggregates import TransactionAggregate, WalletAggregate
+from data_write_core.domain.aggregates import (
+    GoalAggregate,
+    MoneyContainerAggregate,
+    TransactionAggregate,
+    WalletAggregate,
+)
+from data_write_core.domain.value_objects import MoneyContainerKind
 
-from ..dtos import WalletDTO, wallet_to_dto
-from ..interfaces import TransactionRepository, WalletRepository
+from ..dtos import MoneyContainerDTO, WalletDTO, container_to_dto, wallet_to_dto
+from ..interfaces import (
+    GoalRepository,
+    MoneyContainerRepository,
+    MoneyFlowRepository,
+    TransactionRepository,
+    WalletRepository,
+)
 
 
 class LoadWalletMixin:
     def __init__(
         self,
         wallet_repository: WalletRepository,
-        transaction_repository: TransactionRepository,
+        money_flow_repository: MoneyFlowRepository,
     ) -> None:
-        self._transaction_repository = transaction_repository
+        self._money_flow_repository = money_flow_repository
         self._wallet_repository = wallet_repository
 
     async def load_wallet_aggregate(self, wallet_id: UUID, user_id: int) -> WalletAggregate:
@@ -22,10 +34,10 @@ class LoadWalletMixin:
                 wallet_id=wallet_id,
                 user_id=user_id,
             ),
-            self._transaction_repository.get_checkpoint(wallet_id),
+            self._money_flow_repository.get_checkpoint(wallet_id),
         )
         settled_at = checkpoint.created_at.isoformat() if checkpoint else None
-        unsettled_transactions = await self._transaction_repository.get_unsettled_transactions(
+        unsettled_transactions = await self._money_flow_repository.get_unsettled_flows(
             wallet_id,
             settled_at,
         )
@@ -37,26 +49,10 @@ class LoadWalletMixin:
         )
 
     async def load_wallet_dto(self, wallet_id: UUID, user_id: int) -> WalletDTO:
-        wallet_entity, checkpoint = await asyncio.gather(
-            self._wallet_repository.get_user_wallet_by_id(
-                wallet_id=wallet_id,
-                user_id=user_id,
-            ),
-            self._transaction_repository.get_checkpoint(wallet_id),
-        )
-        settled_at = checkpoint.created_at.isoformat() if checkpoint else None
-        unsettled_transactions = await self._transaction_repository.get_unsettled_transactions(
-            wallet_id,
-            settled_at,
-        )
-        wallet_aggregate = WalletAggregate(
-            wallet_entity=wallet_entity,
-            unsettled_transactions=unsettled_transactions,
-            balance_checkpoint=checkpoint,
-        )
+        wallet_aggregate = await self.load_wallet_aggregate(wallet_id, user_id)
 
         return wallet_to_dto(
-            wallet_entity,
+            wallet_aggregate.root,
             balance_amount=wallet_aggregate.balance,
         )
 
@@ -65,24 +61,84 @@ class LoadTransactionMixin:
     def __init__(
         self,
         transaction_repository: TransactionRepository,
+        money_flow_repository: MoneyFlowRepository,
     ):
         self._transaction_repository = transaction_repository
+        self._money_flow_repository = money_flow_repository
 
     async def load_transaction_aggregate(
-        self, transaction_id: UUID, user_id: int
+        self,
+        transaction_id: UUID,
+        user_id: int,
     ) -> TransactionAggregate:
-        current_transaction = await self._transaction_repository.get_user_transaction_by_id(
-            user_id=user_id,
-            transaction_id=transaction_id,
-        )
-        cancelled_by, adjusted_by = await asyncio.gather(
-            self._transaction_repository.get_cancelling_transaction(transaction_id),
-            self._transaction_repository.get_adjusting_transaction(transaction_id),
-        )
-        transaction_aggregate = TransactionAggregate(
-            transaction_entity=current_transaction,
-            cancelled_by=cancelled_by,
-            adjusted_by=adjusted_by,
+        transaction, flows = await asyncio.gather(
+            self._transaction_repository.get_user_transaction_by_id(
+                transaction_id=transaction_id,
+                user_id=user_id,
+            ),
+            self._money_flow_repository.get_flows_for_transaction(transaction_id),
         )
 
-        return transaction_aggregate
+        return TransactionAggregate(transaction_entity=transaction, flows=flows)
+
+
+class LoadContainerMixin:
+    def __init__(
+        self,
+        container_repository: MoneyContainerRepository,
+        wallet_repository: WalletRepository,
+        goal_repository: GoalRepository,
+        money_flow_repository: MoneyFlowRepository,
+    ) -> None:
+        self._container_repository = container_repository
+        self._container_wallet_repository = wallet_repository
+        self._container_goal_repository = goal_repository
+        self._container_flow_repository = money_flow_repository
+
+    async def load_container_aggregate(
+        self,
+        container_id: UUID,
+        user_id: int,
+    ) -> MoneyContainerAggregate:
+        reference = await self._container_repository.resolve(container_id, user_id)
+        checkpoint = await self._container_flow_repository.get_checkpoint(container_id)
+        settled_at = checkpoint.created_at.isoformat() if checkpoint else None
+        unsettled = await self._container_flow_repository.get_unsettled_flows(
+            container_id,
+            settled_at,
+        )
+
+        if reference.kind is MoneyContainerKind.GOAL:
+            goal = await self._container_goal_repository.get_user_goal_by_id(
+                goal_id=container_id,
+                user_id=user_id,
+            )
+
+            return GoalAggregate(
+                goal_entity=goal,
+                unsettled_flows=unsettled,
+                balance_checkpoint=checkpoint,
+            )
+
+        wallet = await self._container_wallet_repository.get_user_wallet_by_id(
+            wallet_id=container_id,
+            user_id=user_id,
+        )
+
+        return WalletAggregate(
+            wallet_entity=wallet,
+            unsettled_transactions=unsettled,
+            balance_checkpoint=checkpoint,
+        )
+
+    async def load_container_dto(
+        self,
+        container_id: UUID,
+        user_id: int,
+    ) -> MoneyContainerDTO:
+        reference = await self._container_repository.resolve(
+            container_id,
+            user_id,
+        )
+
+        return container_to_dto(reference)

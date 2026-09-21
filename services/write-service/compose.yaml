@@ -1,8 +1,30 @@
 # See ./README.md → "Stack" and "Debezium outbox"
 include:
-  - ../../infrastructure/kafka/compose.yaml
+  - ../../infrastructure/debezium/compose.yaml
+
+x-write-database-env: &write-database-env
+  DJANGO_SETTINGS_MODULE: write_service.settings.local
+  SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+  DATABASE_HOST: postgres-write
+  DATABASE_PORT: 5432
+  DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+  DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+  DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
 
 services:
+  write-migrate:
+    build:
+      context: ../..
+      dockerfile: services/write-service/Dockerfile
+    image: power-finance/write-service:dev
+    restart: "no"
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    environment:
+      <<: *write-database-env
+    depends_on:
+      postgres-write:
+        condition: service_healthy
+
   write-service:
     build:
       context: ../..
@@ -19,9 +41,9 @@ services:
 
       DATABASE_HOST: postgres-write
       DATABASE_PORT: 5432
-      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
-      DATABASE_USER: ${DATABASE_USER:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
 
       IMMUDB_HOST: immudb
       IMMUDB_PORT: 3322
@@ -33,6 +55,8 @@ services:
     depends_on:
       postgres-write:
         condition: service_healthy
+      write-migrate:
+        condition: service_completed_successfully
       immudb:
         condition: service_started
       write-redis:
@@ -59,9 +83,9 @@ services:
 
       DATABASE_HOST: postgres-write
       DATABASE_PORT: 5432
-      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
-      DATABASE_USER: ${DATABASE_USER:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
 
       IMMUDB_HOST: immudb
       IMMUDB_PORT: 3322
@@ -75,6 +99,8 @@ services:
         condition: service_healthy
       postgres-write:
         condition: service_healthy
+      write-migrate:
+        condition: service_completed_successfully
       immudb:
         condition: service_started
       write-redis:
@@ -101,9 +127,9 @@ services:
 
       DATABASE_HOST: postgres-write
       DATABASE_PORT: 5432
-      DATABASE_NAME: ${DATABASE_NAME:-power_finance_write}
-      DATABASE_USER: ${DATABASE_USER:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
 
       IMMUDB_HOST: immudb
       IMMUDB_PORT: 3322
@@ -118,6 +144,131 @@ services:
         condition: service_healthy
       postgres-write:
         condition: service_healthy
+      write-migrate:
+        condition: service_completed_successfully
+      immudb:
+        condition: service_started
+      write-redis:
+        condition: service_healthy
+
+  write-action-expiry-sweeper:
+    build:
+      context: ../..
+      dockerfile: services/write-service/Dockerfile
+    image: power-finance/write-service:dev
+    restart: unless-stopped
+    command: ["python", "manage.py", "run_action_expiry_sweeper"]
+    healthcheck:
+      disable: true
+    environment:
+      DJANGO_SETTINGS_MODULE: write_service.settings.local
+      SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+      DEBUG: "true"
+      ALLOWED_HOSTS: "*"
+
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+      DATABASE_HOST: postgres-write
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
+
+      IMMUDB_HOST: immudb
+      IMMUDB_PORT: 3322
+      IMMUDB_USER: ${IMMUDB_USER:-immudb}
+      IMMUDB_PASSWORD: ${IMMUDB_PASSWORD:-immudb}
+
+      REDIS_HOST: write-redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres-write:
+        condition: service_healthy
+      write-migrate:
+        condition: service_completed_successfully
+      write-redis:
+        condition: service_healthy
+
+  write-automation-engine:
+    build:
+      context: ../..
+      dockerfile: services/write-service/Dockerfile
+    image: power-finance/write-service:dev
+    restart: unless-stopped
+    command: ["python", "manage.py", "run_automation_engine"]
+    healthcheck:
+      disable: true
+    environment:
+      DJANGO_SETTINGS_MODULE: write_service.settings.local
+      SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+      DEBUG: "true"
+      ALLOWED_HOSTS: "*"
+
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_OUTBOX_TOPIC: ${KAFKA_OUTBOX_TOPIC:-events.async}
+      KAFKA_AUTOMATION_ENGINE_GROUP_ID: ${KAFKA_AUTOMATION_ENGINE_GROUP_ID:-write-service.automation-engine}
+
+      DATABASE_HOST: postgres-write
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
+
+      IMMUDB_HOST: immudb
+      IMMUDB_PORT: 3322
+      IMMUDB_USER: ${IMMUDB_USER:-immudb}
+      IMMUDB_PASSWORD: ${IMMUDB_PASSWORD:-immudb}
+
+      REDIS_HOST: write-redis
+      REDIS_PORT: 6379
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres-write:
+        condition: service_healthy
+      write-migrate:
+        condition: service_completed_successfully
+      immudb:
+        condition: service_started
+      write-redis:
+        condition: service_healthy
+
+  write-automation-scheduler:
+    build:
+      context: ../..
+      dockerfile: services/write-service/Dockerfile
+    image: power-finance/write-service:dev
+    restart: unless-stopped
+    command: ["python", "manage.py", "run_automation_scheduler"]
+    healthcheck:
+      disable: true
+    environment:
+      DJANGO_SETTINGS_MODULE: write_service.settings.local
+      SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:-dev-only-secret-key-change-me}
+      DEBUG: "true"
+      ALLOWED_HOSTS: "*"
+
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      AUTOMATION_SCHEDULE_INTERVAL_SECONDS: ${AUTOMATION_SCHEDULE_INTERVAL_SECONDS:-300}
+
+      DATABASE_HOST: postgres-write
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
+      DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
+
+      IMMUDB_HOST: immudb
+      IMMUDB_PORT: 3322
+      IMMUDB_USER: ${IMMUDB_USER:-immudb}
+      IMMUDB_PASSWORD: ${IMMUDB_PASSWORD:-immudb}
+
+      REDIS_HOST: write-redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres-write:
+        condition: service_healthy
+      write-migrate:
+        condition: service_completed_successfully
       immudb:
         condition: service_started
       write-redis:
@@ -137,11 +288,11 @@ services:
     image: postgres:18.3
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${DATABASE_PORT:-5433}:5432"
+      - "127.0.0.1:${WRITE_DATABASE_PORT:-5433}:5432"
     environment:
-      POSTGRES_DB: ${DATABASE_NAME:-power_finance_write}
-      POSTGRES_USER: ${DATABASE_USER:-postgres}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${WRITE_DATABASE_NAME:-power_finance_write}
+      POSTGRES_USER: ${WRITE_DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_write_data:/var/lib/postgresql/data
@@ -152,7 +303,10 @@ services:
       - "-c"
       - "config_file=/etc/postgresql/postgresql.conf"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-power_finance_write}"]
+      test:
+        - CMD-SHELL
+        - PGPASSWORD="$$POSTGRES_PASSWORD" psql -h "$$(hostname -i | awk '{print $$1}')" -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -c 'select 1' >/dev/null
+      start_period: 20s
       interval: 5s
       timeout: 3s
       retries: 10
@@ -160,58 +314,41 @@ services:
   immudb:
     image: codenotary/immudb:1.10
     restart: unless-stopped
+    command: ["--force-admin-password"]
+    environment:
+      IMMUDB_ADMIN_PASSWORD: ${IMMUDB_PASSWORD:-immudb}
     expose:
       - "3322"
       - "9497"
     volumes:
       - immudb_data:/var/lib/immudb
 
-  kafka-connect:
-    image: debezium/connect:2.7.3.Final
-    restart: unless-stopped
-    depends_on:
-      kafka:
-        condition: service_healthy
-      postgres-write:
-        condition: service_healthy
-    environment:
-      BOOTSTRAP_SERVERS: "kafka:9092"
-      GROUP_ID: "outbox-connect-cluster"
-      CONFIG_STORAGE_TOPIC: "connect_configs"
-      OFFSET_STORAGE_TOPIC: "connect_offsets"
-      STATUS_STORAGE_TOPIC: "connect_statuses"
-      CONFIG_STORAGE_REPLICATION_FACTOR: "1"
-      OFFSET_STORAGE_REPLICATION_FACTOR: "1"
-      STATUS_STORAGE_REPLICATION_FACTOR: "1"
-      KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
-      VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
-      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
-      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
-    expose:
-      - "8083"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/ >/dev/null"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 40s
-
-  debezium-bootstrap:
+  write-outbox-connector:
     image: curlimages/curl:8.9.1
+    restart: "no"
     depends_on:
       kafka-connect:
         condition: service_healthy
-    restart: "no"
+      postgres-write:
+        condition: service_healthy
     volumes:
       - ../../infrastructure/debezium/connectors:/connectors:ro
+    environment:
+      WRITE_DATABASE_USER: ${WRITE_DATABASE_USER:-postgres}
+      WRITE_DATABASE_PASSWORD: ${WRITE_DATABASE_PASSWORD:-postgres}
+      WRITE_DATABASE_NAME: ${WRITE_DATABASE_NAME:-power_finance_write}
     entrypoint: ["sh", "-c"]
     command:
       - |
         set -eu
         echo "Registering outbox-connector"
+        sed -e "s|__WRITE_DATABASE_USER__|$$WRITE_DATABASE_USER|g" \
+            -e "s|__WRITE_DATABASE_PASSWORD__|$$WRITE_DATABASE_PASSWORD|g" \
+            -e "s|__WRITE_DATABASE_NAME__|$$WRITE_DATABASE_NAME|g" \
+            /connectors/outbox-connector.json > /tmp/outbox-connector.json
         curl -fsS -X PUT \
           -H "Content-Type: application/json" \
-          --data @/connectors/outbox-connector.json \
+          --data @/tmp/outbox-connector.json \
           http://kafka-connect:8083/connectors/outbox-connector/config
         echo
         echo "OK"

@@ -1,10 +1,3 @@
-"""Postgres projection effects — exercised against the real read models.
-
-Marked ``django_db(transaction=True)`` because the effects open
-``aatomic()`` blocks and use ``select_for_update`` / ``F`` expressions that
-must run on a real connection.
-"""
-
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -13,6 +6,7 @@ from django.contrib.auth import get_user_model
 from fakes import make_event
 from google.protobuf.timestamp_pb2 import Timestamp
 from kafka_messages import (
+    TransactionCreated,
     TransactionDeleted,
     TransactionUpdated,
     UserSynced,
@@ -21,8 +15,13 @@ from kafka_messages import (
     WalletUpdated,
 )
 
-from data_read_core.shared.postgres_orm import TransactionReadModel, WalletReadModel
+from data_read_core.shared.postgres_orm import (
+    NO_CHAIN_SENTINEL,
+    TransactionReadModel,
+    WalletReadModel,
+)
 from data_read_core.write_reactions import (
+    CreateTransactionReadModel,
     CreateWalletReadModel,
     ProjectUserReadModel,
     RemoveTransactionReadModel,
@@ -55,13 +54,15 @@ async def _make_wallet(*, balance: Decimal = Decimal("0"), currency: str = "USD"
     )
 
 
-async def _make_transaction(amount: Decimal) -> None:
+async def _make_transaction(amount: Decimal, chain_id: str | None = None) -> None:
     await TransactionReadModel.objects.acreate(
         id=TX_ID,
         wallet_id=WALLET_ID,
         user_id=7,
         amount=amount,
         currency_code="USD",
+        chain_id=chain_id,
+        chain_sort=chain_id or NO_CHAIN_SENTINEL,
         occurred_at=datetime.now(UTC),
         created_at=datetime.now(UTC),
     )
@@ -102,12 +103,21 @@ async def test_update_missing_wallet_is_a_noop():
     assert not await WalletReadModel.objects.filter(id=WALLET_ID).aexists()
 
 
-async def test_remove_wallet_deletes_row():
+async def test_remove_wallet_closes_row_without_dropping_it():
     await _make_wallet()
 
-    await RemoveWalletReadModel().apply(make_event(WalletDeleted(wallet_id=WALLET_ID, user_id=7)))
+    await RemoveWalletReadModel().apply(
+        make_event(
+            WalletDeleted(
+                wallet_id=WALLET_ID,
+                user_id=7,
+                deleted_at=_ts(datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)),
+            )
+        )
+    )
 
-    assert not await WalletReadModel.objects.filter(id=WALLET_ID).aexists()
+    wallet = await WalletReadModel.objects.aget(id=WALLET_ID)
+    assert wallet.deleted_at == datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
 
 
 async def test_update_transaction_adjusts_wallet_balance_by_delta():
@@ -128,6 +138,51 @@ async def test_update_transaction_adjusts_wallet_balance_by_delta():
     assert wallet.balance == Decimal("130")
 
 
+async def test_an_update_releases_the_transaction_from_its_chain():
+    chain_id = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+    await _make_wallet(balance=Decimal("100"))
+    await _make_transaction(Decimal("40"), chain_id=chain_id)
+
+    await UpdateTransactionReadModel().apply(
+        make_event(
+            TransactionUpdated(
+                transaction_id=TX_ID,
+                wallet_id=WALLET_ID,
+                user_id=7,
+                previous_amount="40",
+                new_amount="40",
+                chain_id="",
+            )
+        )
+    )
+
+    transaction = await TransactionReadModel.objects.aget(id=TX_ID)
+    assert transaction.chain_id is None
+    assert transaction.chain_sort == NO_CHAIN_SENTINEL
+
+
+async def test_an_update_carrying_a_chain_records_the_membership():
+    chain_id = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+    await _make_wallet(balance=Decimal("100"))
+    await _make_transaction(Decimal("40"))
+
+    await UpdateTransactionReadModel().apply(
+        make_event(
+            TransactionUpdated(
+                transaction_id=TX_ID,
+                wallet_id=WALLET_ID,
+                user_id=7,
+                new_amount="40",
+                chain_id=chain_id,
+            )
+        )
+    )
+
+    transaction = await TransactionReadModel.objects.aget(id=TX_ID)
+    assert str(transaction.chain_id) == chain_id
+    assert str(transaction.chain_sort) == chain_id
+
+
 async def test_update_transaction_to_same_amount_leaves_balance():
     await _make_wallet(balance=Decimal("100"))
     await _make_transaction(Decimal("40"))
@@ -144,17 +199,66 @@ async def test_update_transaction_to_same_amount_leaves_balance():
     assert wallet.balance == Decimal("100")
 
 
-async def test_remove_transaction_reverses_wallet_balance():
+async def test_remove_transaction_cancels_it_and_reverses_the_balance():
     await _make_wallet(balance=Decimal("100"))
     await _make_transaction(Decimal("40"))
 
     await RemoveTransactionReadModel().apply(
-        make_event(TransactionDeleted(transaction_id=TX_ID, wallet_id=WALLET_ID, user_id=7))
+        make_event(
+            TransactionDeleted(
+                transaction_id=TX_ID,
+                wallet_id=WALLET_ID,
+                user_id=7,
+                deleted_at=_ts(datetime(2026, 2, 1, tzinfo=UTC)),
+            )
+        )
     )
 
     wallet = await WalletReadModel.objects.aget(id=WALLET_ID)
-    assert not await TransactionReadModel.objects.filter(id=TX_ID).aexists()
+    transaction = await TransactionReadModel.objects.aget(id=TX_ID)
+    assert transaction.deleted_at == datetime(2026, 2, 1, tzinfo=UTC)
+    assert transaction.amount == Decimal("40")
     assert wallet.balance == Decimal("60")
+
+
+async def test_cancelling_twice_does_not_reverse_the_balance_twice():
+    await _make_wallet(balance=Decimal("100"))
+    await _make_transaction(Decimal("40"))
+    event = make_event(
+        TransactionDeleted(
+            transaction_id=TX_ID,
+            wallet_id=WALLET_ID,
+            user_id=7,
+            deleted_at=_ts(datetime(2026, 2, 1, tzinfo=UTC)),
+        )
+    )
+
+    await RemoveTransactionReadModel().apply(event)
+    await RemoveTransactionReadModel().apply(event)
+
+    wallet = await WalletReadModel.objects.aget(id=WALLET_ID)
+    assert wallet.balance == Decimal("60")
+
+
+async def test_creating_twice_does_not_apply_the_balance_twice():
+    await _make_wallet(balance=Decimal("100"))
+    event = make_event(
+        TransactionCreated(
+            transaction_id=TX_ID,
+            wallet_id=WALLET_ID,
+            user_id=7,
+            amount="40",
+            name="Groceries",
+            created_at=_ts(datetime(2026, 2, 1, tzinfo=UTC)),
+        )
+    )
+
+    await CreateTransactionReadModel().apply(event)
+    await CreateTransactionReadModel().apply(event)
+
+    wallet = await WalletReadModel.objects.aget(id=WALLET_ID)
+    assert wallet.balance == Decimal("140")
+    assert await TransactionReadModel.objects.filter(id=TX_ID).acount() == 1
 
 
 async def test_remove_missing_transaction_is_a_noop():

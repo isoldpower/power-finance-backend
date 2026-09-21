@@ -1,6 +1,6 @@
 from typing import Any
 
-from .entry_codec import STATE_COMPLETED
+from ..config import EntryState
 from .outcomes import (
     AcquireResult,
     AlreadyCompleted,
@@ -23,7 +23,7 @@ class EntryClassifier:
         if stored_hash and stored_hash != request_hash:
             return Mismatch(stored_hash=stored_hash)
 
-        if existing_entry.get("state") == STATE_COMPLETED:
+        if existing_entry.get("state") == EntryState.COMPLETED:
             return AlreadyCompleted(
                 response=StoredResponse(
                     status_code=int(existing_entry["status_code"]),

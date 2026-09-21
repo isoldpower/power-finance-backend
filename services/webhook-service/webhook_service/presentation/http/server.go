@@ -1,36 +1,50 @@
 package http
 
 import (
+	"github.com/power-finance/observability-go/tracing"
+
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
+	"services/webhook-service/webhook_service/presentation/http/contract"
 	"time"
 
 	"services/webhook-service/internal/health"
 	"services/webhook-service/internal/metrics"
 )
 
+// Server is the HTTP listener serving the delivery log.
 type Server struct {
 	server         *http.Server
 	readinessProbe *health.Probe
+	deliveryLog    deliveryLogReader
 }
 
-func NewServer(serverConfig Config, readinessProbe *health.Probe) *Server {
+// NewServer builds the listener and mounts its routes.
+func NewServer(
+	serverConfig contract.Config,
+	readinessProbe *health.Probe,
+	deliveryLog deliveryLogReader,
+) *Server {
 	router := http.NewServeMux()
 	httpServer := &Server{
 		server: &http.Server{
 			Addr:              fmt.Sprintf("%s:%d", serverConfig.Host, serverConfig.Port),
-			Handler:           router,
+			Handler:           tracing.WrapHTTPHandler(router, "webhook-service"),
 			ReadHeaderTimeout: 5 * time.Second,
 		},
 		readinessProbe: readinessProbe,
+		deliveryLog:    deliveryLog,
 	}
 
 	router.HandleFunc("GET /healthz", httpServer.handleHealthCheck)
 	router.HandleFunc("GET /readyz", httpServer.handleReadinessCheck)
 	router.Handle("GET /metrics", metrics.Handler())
+	router.HandleFunc(
+		"GET /api/v1/webhooks/{webhookID}/deliveries",
+		httpServer.handleDeliveryLog,
+	)
 
 	return httpServer
 }
@@ -38,9 +52,10 @@ func NewServer(serverConfig Config, readinessProbe *health.Probe) *Server {
 // Run serves until the context is cancelled, then shuts down gracefully.
 func (s *Server) Run(ctx context.Context) {
 	go func() {
-		slog.Info("http server listening", "addr", s.server.Addr)
-		if serveErr := s.server.ListenAndServe(); serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
-			slog.Error("http listener serve failed", "error", serveErr)
+		logServerListening(s.server.Addr)
+		serveErr := s.server.ListenAndServe()
+		if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
+			logListenerServeFailed(serveErr)
 		}
 	}()
 
@@ -48,7 +63,7 @@ func (s *Server) Run(ctx context.Context) {
 	shutdownContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if shutdownErr := s.server.Shutdown(shutdownContext); shutdownErr != nil {
-		slog.Error("http server shutdown failed", "error", shutdownErr)
+		logServerShutdownFailed(shutdownErr)
 	}
 }
 

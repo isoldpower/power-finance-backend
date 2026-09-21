@@ -1,6 +1,3 @@
-"""EventCollector collect / pull / close semantics: pull is destructive,
-close_after locks writes, and pull still drains a closed collector."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

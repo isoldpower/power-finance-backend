@@ -1,68 +1,83 @@
-from datetime import datetime
+from write_service.common.timestamps import to_iso
 
 from data_write_core.application.dtos import (
+    ActionDTO,
+    AutomationDTO,
     NotificationDTO,
-    TransactionPlainDTO,
+    TransactionDTO,
     WalletDTO,
     WebhookDTO,
     WebhookSubscriptionDTO,
 )
+from data_write_core.application.money_scales import money_at_scale
+from data_write_core.application.queries import (
+    FallbackNotificationCounts,
+    FallbackWalletDetail,
+)
+
+from ...presenters import (
+    ActionHttpPresenter,
+    AutomationHttpPresenter,
+    NotificationHttpPresenter,
+    TransactionHttpPresenter,
+    WebhookHttpPresenter,
+)
 
 
-def _iso(value: datetime | None) -> str | None:
-    return value.isoformat() if value is not None else None
-
-
-def present_wallet(wallet: WalletDTO) -> dict:
+async def present_wallet(wallet: WalletDTO) -> dict:
     return {
         "id": str(wallet.id),
         "name": wallet.name,
-        "balance": {
-            "amount": str(wallet.balance_amount),
-            "currency": wallet.currency,
-        },
-        "meta": {
-            "id": str(wallet.id),
-            "created_at": _iso(wallet.created_at),
-            "updated_at": _iso(wallet.updated_at),
-        },
+        "created_at": to_iso(wallet.created_at),
+        "updated_at": to_iso(wallet.updated_at),
+        "deleted_at": to_iso(wallet.deleted_at),
+        "category": wallet.category,
+        "currency": wallet.currency,
+        "money": await money_at_scale(
+            wallet.balance_amount,
+            wallet.currency,
+        ),
+        "zero_balance": await money_at_scale(
+            wallet.zero_balance,
+            wallet.currency,
+        ),
+        "favorite": wallet.favorite,
+        "color": wallet.color,
     }
 
 
-def present_wallets(wallets: list[WalletDTO]) -> list[dict]:
-    return [present_wallet(wallet) for wallet in wallets]
+async def present_wallets(wallets: list[WalletDTO]) -> list[dict]:
+    return [await present_wallet(wallet) for wallet in wallets]
 
 
-def present_transaction(transaction: TransactionPlainDTO) -> dict:
+async def present_wallet_detail(detail: FallbackWalletDetail) -> dict:
+    currency = detail.wallet.currency
+
     return {
-        "id": str(transaction.id),
-        "wallet_id": str(transaction.source_wallet_id),
-        "amount": str(transaction.amount),
-        "currency": transaction.currency_code,
-        "meta": {
-            "id": str(transaction.id),
-            "occurred_at": _iso(transaction.created_at),
-            "created_at": _iso(transaction.created_at),
+        **await present_wallet(detail.wallet),
+        "period": {
+            "inflow": await money_at_scale(
+                detail.inflow,
+                currency,
+            ),
+            "outflow": await money_at_scale(
+                detail.outflow,
+                currency,
+            ),
         },
     }
 
 
-def present_transactions(transactions: list[TransactionPlainDTO]) -> list[dict]:
-    return [present_transaction(transaction) for transaction in transactions]
+async def present_transaction(transaction: TransactionDTO) -> dict:
+    return await TransactionHttpPresenter.present_one(transaction)
+
+
+async def present_transactions(transactions: list[TransactionDTO]) -> list[dict]:
+    return [await present_transaction(transaction) for transaction in transactions]
 
 
 def present_webhook(webhook: WebhookDTO) -> dict:
-    return {
-        "id": str(webhook.id),
-        "title": webhook.title,
-        "url": webhook.url,
-        "is_active": webhook.is_active,
-        "meta": {
-            "id": str(webhook.id),
-            "created_at": _iso(webhook.created_at),
-            "updated_at": _iso(webhook.updated_at),
-        },
-    }
+    return WebhookHttpPresenter.present_one(webhook)
 
 
 def present_webhooks(webhooks: list[WebhookDTO]) -> list[dict]:
@@ -70,13 +85,7 @@ def present_webhooks(webhooks: list[WebhookDTO]) -> list[dict]:
 
 
 def present_webhook_subscription(subscription: WebhookSubscriptionDTO) -> dict:
-    return {
-        "id": str(subscription.id),
-        "webhook_id": str(subscription.webhook_id),
-        "event_type": subscription.event_type,
-        "is_active": subscription.is_active,
-        "created_at": _iso(subscription.created_at),
-    }
+    return WebhookHttpPresenter.present_subscription(subscription)
 
 
 def present_webhook_subscriptions(
@@ -86,15 +95,31 @@ def present_webhook_subscriptions(
 
 
 def present_notification(notification: NotificationDTO) -> dict:
-    return {
-        "id": str(notification.id),
-        "short": notification.short,
-        "message": notification.message,
-        "payload": notification.payload,
-        "is_read": notification.is_read,
-        "created_at": _iso(notification.created_at),
-    }
+    return NotificationHttpPresenter.present_one(notification)
 
 
 def present_notifications(notifications: list[NotificationDTO]) -> list[dict]:
     return [present_notification(notification) for notification in notifications]
+
+
+def present_notification_counts(counts: FallbackNotificationCounts) -> dict:
+    return {
+        "unacknowledged": counts.unacknowledged,
+        "total": counts.total,
+    }
+
+
+def present_action(action: ActionDTO) -> dict:
+    return ActionHttpPresenter.present_one(action)
+
+
+def present_actions(actions: list[ActionDTO]) -> list[dict]:
+    return [present_action(action) for action in actions]
+
+
+def present_automation(automation: AutomationDTO) -> dict:
+    return AutomationHttpPresenter.present_one(automation)
+
+
+def present_automations(automations: list[AutomationDTO]) -> list[dict]:
+    return [present_automation(automation) for automation in automations]

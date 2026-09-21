@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"services/push-service/internal/server"
+	"services/push-service/internal/utilities"
 	"testing"
 )
 
@@ -35,7 +37,13 @@ func rejectingMiddleware(writer http.ResponseWriter, request *http.Request) (*ht
 func newServerForMiddlewareTests(t *testing.T) *HTTPServer {
 	t.Helper()
 
-	testedServer, serverErr := NewHTTPServer(EstablishHTTPProcessConfig(HTTPProcessConfig{}))
+	// Port 0 asks the kernel for a free port: a fixed one collides with the dev
+	// stack's gateway whenever it is running.
+	testedServer, serverErr := NewHTTPServer(EstablishHTTPProcessConfig(HTTPProcessConfig{
+		ProcessConfig: server.ProcessConfig{
+			Port: utilities.BuildOption(0),
+		},
+	}))
 	if serverErr != nil {
 		t.Fatal(serverErr)
 	}

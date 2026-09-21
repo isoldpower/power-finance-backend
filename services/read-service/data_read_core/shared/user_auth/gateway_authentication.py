@@ -3,7 +3,9 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.request import Request
 
+from .gateway_user import GatewayUser
 from .headers import GATEWAY_USER_HEADER
+from .preferences import resolve_preferences
 
 
 class GatewayUserHeaderAuthentication(BaseAuthentication):
@@ -18,14 +20,19 @@ class GatewayUserHeaderAuthentication(BaseAuthentication):
         external_user_id = request.headers.get(GATEWAY_USER_HEADER, "").strip()
         if not external_user_id:
             raise AuthenticationFailed(
-                f"Missing {GATEWAY_USER_HEADER} header " f"— request must traverse the API gateway."
+                f"Missing {GATEWAY_USER_HEADER} header — request must traverse the API gateway."
             )
 
         internal_user = await self._user_model.objects.filter(username=external_user_id).afirst()
         if internal_user is None:
             raise AuthenticationFailed("User is not yet provisioned in the read store.")
 
-        return internal_user, None
+        caller_user = GatewayUser(
+            internal=internal_user,
+            preferences=await resolve_preferences(request),
+        )
+
+        return caller_user, None
 
     def authenticate_header(self, request: Request) -> str:
         return "Bearer"

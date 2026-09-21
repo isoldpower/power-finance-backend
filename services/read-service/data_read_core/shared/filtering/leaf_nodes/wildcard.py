@@ -1,4 +1,5 @@
-from ..entities import ComparisonOperator
+from filter_grammar_py import ComparisonOperator
+
 from .abstraction import WildcardLeafTreeNode
 
 

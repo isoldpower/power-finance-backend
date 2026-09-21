@@ -1,9 +1,18 @@
 from contextvars import ContextVar, Token
 
-_correlation_id: ContextVar[str | None] = ContextVar("correlation_id", default=None)
+from observability import current_trace_id_hex
+
+_correlation_id: ContextVar[str | None] = ContextVar(
+    "correlation_id",
+    default=None,
+)
 
 
 def get_correlation_id() -> str | None:
+    return current_trace_id_hex() or _correlation_id.get()
+
+
+def get_bound_correlation_id() -> str | None:
     return _correlation_id.get()
 
 

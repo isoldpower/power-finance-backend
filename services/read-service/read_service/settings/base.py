@@ -1,8 +1,13 @@
 """Base settings shared by all environments. Concrete environments (local,
-production) extend this module and override values that differ.
+production, test) extend this module and override values that differ.
 
-Environment variables are loaded via django-environ from a `.env` file at
-the service root. See `.env.example` for the full list of recognised keys.
+Environment variables are loaded via django-environ from a `.env` file at the
+service root. See `.env.example` for the full list of recognised keys.
+
+`KAFKA_READ_GROUP_ID` must match services/read-service/compose.yaml: the
+baseline names a sandbox's group by deriving it from its own, so a process that
+falls back to a different default is invisible to it and both would project the
+same events.
 """
 
 from pathlib import Path
@@ -22,13 +27,20 @@ env = environ.Env(
     DATABASE_PASSWORD=(str, "postgres"),
     KAFKA_BOOTSTRAP_SERVERS=(str, "localhost:9092"),
     KAFKA_OUTBOX_TOPIC=(str, "events.async"),
-    KAFKA_READ_GROUP_ID=(str, "read-service.test-consumer"),
+    KAFKA_READ_GROUP_ID=(str, "read-service.write-consumer"),
+    KAFKA_RETRY_TOPIC=(str, "read-service.retry"),
+    KAFKA_DLQ_TOPIC=(str, "read-service.dlq"),
     REDIS_URL=(str, "redis://localhost:6379/0"),
     ELASTICSEARCH_HOSTS=(list, ["https://localhost:9200"]),
     ELASTICSEARCH_USERNAME=(str, "elastic"),
     ELASTICSEARCH_PASSWORD=(str, "changeme"),
     ELASTICSEARCH_CA_CERTS=(str, ""),
     ELASTICSEARCH_VERIFY_CERTS=(bool, True),
+    EXCHANGE_RATES_PROVIDER=(str, "open-er-api"),
+    EXCHANGE_RATES_BASE_URL=(str, "https://open.er-api.com/v6/latest"),
+    EXCHANGE_RATES_TIMEOUT_SECONDS=(float, 5.0),
+    EXCHANGE_RATES_TTL_SECONDS=(int, 900),
+    EXCHANGE_RATES_MAX_AGE_SECONDS=(int, 172800),
     LOG_LEVEL=(str, "INFO"),
 )
 if ENV_FILE.exists():
@@ -42,6 +54,7 @@ DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
 ROOT_URLCONF = "read_service.urls"
+APPEND_SLASH = False
 WSGI_APPLICATION = "read_service.wsgi.application"
 ASGI_APPLICATION = "read_service.asgi.application"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -55,6 +68,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "read_service.observability_setup.apps.ReadServiceObservabilityConfig",
     "data_read_core",
     "background_workers",
 ]
@@ -113,8 +127,18 @@ ELASTICSEARCH = {
     "VERIFY_CERTS": env("ELASTICSEARCH_VERIFY_CERTS"),
 }
 
+EXCHANGE_RATES = {
+    "PROVIDER": env("EXCHANGE_RATES_PROVIDER"),
+    "BASE_URL": env("EXCHANGE_RATES_BASE_URL"),
+    "TIMEOUT_SECONDS": env("EXCHANGE_RATES_TIMEOUT_SECONDS"),
+    "TTL_SECONDS": env("EXCHANGE_RATES_TTL_SECONDS"),
+    "MAX_AGE_SECONDS": env("EXCHANGE_RATES_MAX_AGE_SECONDS"),
+}
+
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "EXCEPTION_HANDLER": "data_read_core.shared.http_contract.api_exception_handler",
+    "DATETIME_FORMAT": "iso-8601",
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "data_read_core.shared.user_auth.GatewayUserHeaderAuthentication",
     ],
@@ -135,6 +159,8 @@ KAFKA = {
     "BOOTSTRAP_SERVERS": env("KAFKA_BOOTSTRAP_SERVERS"),
     "OUTBOX_TOPIC": env("KAFKA_OUTBOX_TOPIC"),
     "READ_GROUP_ID": env("KAFKA_READ_GROUP_ID"),
+    "RETRY_TOPIC": env("KAFKA_RETRY_TOPIC"),
+    "DLQ_TOPIC": env("KAFKA_DLQ_TOPIC"),
 }
 
 LOGGING = {
@@ -142,10 +168,14 @@ LOGGING = {
     "disable_existing_loggers": False,
     "filters": {
         "correlation_id": {"()": "correlation.CorrelationIDFilter"},
+        "trace_context": {"()": "observability.TraceContextFilter"},
     },
     "formatters": {
         "standard": {
-            "format": "{levelname} {asctime} cid={correlation_id} {name} {message}",
+            "format": (
+                "{levelname} {asctime} cid={correlation_id} trace={trace_id} "
+                "sandbox={sandbox_id} {name} {message}"
+            ),
             "style": "{",
         },
     },
@@ -153,11 +183,16 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "standard",
-            "filters": ["correlation_id"],
+            "filters": ["correlation_id", "trace_context"],
         },
     },
     "loggers": {
         "background_workers": {
+            "handlers": ["console"],
+            "level": env("LOG_LEVEL"),
+            "propagate": False,
+        },
+        "kafka_consumer_py": {
             "handlers": ["console"],
             "level": env("LOG_LEVEL"),
             "propagate": False,

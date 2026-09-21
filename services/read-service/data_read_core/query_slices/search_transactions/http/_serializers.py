@@ -1,35 +1,16 @@
 from rest_framework import serializers
 
+from data_read_core.shared.rest_framework import collection_response, transaction_preview_fields
+
 
 class FilterTransactionsRequestSerializer(serializers.Serializer):
     filter_body = serializers.JSONField(allow_null=False, required=True)
 
 
-class TransactionMetaResponseSerializer(serializers.Serializer):
-    id = serializers.UUIDField()
-    occurred_at = serializers.DateTimeField(allow_null=True)
-    created_at = serializers.DateTimeField()
+class TransactionSearchResultSerializer(serializers.Serializer):
+    pass
 
 
-class TransactionResponseSerializer(serializers.Serializer):
-    id = serializers.UUIDField()
-    wallet_id = serializers.UUIDField()
-    amount = serializers.DecimalField(max_digits=20, decimal_places=2)
-    currency = serializers.CharField()
-    meta = TransactionMetaResponseSerializer()
+TransactionSearchResultSerializer._declared_fields.update(transaction_preview_fields())
 
-
-class PaginationMetaSerializer(serializers.Serializer):
-    limit = serializers.IntegerField()
-    offset = serializers.IntegerField()
-    total = serializers.IntegerField()
-
-
-class PaginatedTransactionResponseSerializer(serializers.Serializer):
-    data = TransactionResponseSerializer(many=True)
-    meta = PaginationMetaSerializer()
-
-
-class MessageResponseSerializer(serializers.Serializer):
-    message = serializers.CharField()
-    resource_id = serializers.CharField(allow_null=True)
+PaginatedTransactionSearchResultSerializer = collection_response(TransactionSearchResultSerializer)

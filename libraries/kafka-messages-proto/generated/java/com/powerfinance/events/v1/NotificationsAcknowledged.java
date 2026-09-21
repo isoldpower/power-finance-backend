@@ -133,11 +133,6 @@ private static final long serialVersionUID = 0L;
   private com.google.protobuf.LazyStringArrayList notificationIds_ =
       com.google.protobuf.LazyStringArrayList.emptyList();
   /**
-   * <pre>
-   * Every notification the user acknowledged in this mutation; a single
-   * ack is a one-element batch.
-   * </pre>
-   *
    * <code>repeated string notification_ids = 10;</code>
    * @return A list containing the notificationIds.
    */
@@ -146,11 +141,6 @@ private static final long serialVersionUID = 0L;
     return notificationIds_;
   }
   /**
-   * <pre>
-   * Every notification the user acknowledged in this mutation; a single
-   * ack is a one-element batch.
-   * </pre>
-   *
    * <code>repeated string notification_ids = 10;</code>
    * @return The count of notificationIds.
    */
@@ -158,11 +148,6 @@ private static final long serialVersionUID = 0L;
     return notificationIds_.size();
   }
   /**
-   * <pre>
-   * Every notification the user acknowledged in this mutation; a single
-   * ack is a one-element batch.
-   * </pre>
-   *
    * <code>repeated string notification_ids = 10;</code>
    * @param index The index of the element to return.
    * @return The notificationIds at the given index.
@@ -171,11 +156,6 @@ private static final long serialVersionUID = 0L;
     return notificationIds_.get(index);
   }
   /**
-   * <pre>
-   * Every notification the user acknowledged in this mutation; a single
-   * ack is a one-element batch.
-   * </pre>
-   *
    * <code>repeated string notification_ids = 10;</code>
    * @param index The index of the value to return.
    * @return The bytes of the notificationIds at the given index.
@@ -917,11 +897,6 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x00000008;
     }
     /**
-     * <pre>
-     * Every notification the user acknowledged in this mutation; a single
-     * ack is a one-element batch.
-     * </pre>
-     *
      * <code>repeated string notification_ids = 10;</code>
      * @return A list containing the notificationIds.
      */
@@ -931,11 +906,6 @@ private static final long serialVersionUID = 0L;
       return notificationIds_;
     }
     /**
-     * <pre>
-     * Every notification the user acknowledged in this mutation; a single
-     * ack is a one-element batch.
-     * </pre>
-     *
      * <code>repeated string notification_ids = 10;</code>
      * @return The count of notificationIds.
      */
@@ -943,11 +913,6 @@ private static final long serialVersionUID = 0L;
       return notificationIds_.size();
     }
     /**
-     * <pre>
-     * Every notification the user acknowledged in this mutation; a single
-     * ack is a one-element batch.
-     * </pre>
-     *
      * <code>repeated string notification_ids = 10;</code>
      * @param index The index of the element to return.
      * @return The notificationIds at the given index.
@@ -956,11 +921,6 @@ private static final long serialVersionUID = 0L;
       return notificationIds_.get(index);
     }
     /**
-     * <pre>
-     * Every notification the user acknowledged in this mutation; a single
-     * ack is a one-element batch.
-     * </pre>
-     *
      * <code>repeated string notification_ids = 10;</code>
      * @param index The index of the value to return.
      * @return The bytes of the notificationIds at the given index.
@@ -970,11 +930,6 @@ private static final long serialVersionUID = 0L;
       return notificationIds_.getByteString(index);
     }
     /**
-     * <pre>
-     * Every notification the user acknowledged in this mutation; a single
-     * ack is a one-element batch.
-     * </pre>
-     *
      * <code>repeated string notification_ids = 10;</code>
      * @param index The index to set the value at.
      * @param value The notificationIds to set.
@@ -990,11 +945,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Every notification the user acknowledged in this mutation; a single
-     * ack is a one-element batch.
-     * </pre>
-     *
      * <code>repeated string notification_ids = 10;</code>
      * @param value The notificationIds to add.
      * @return This builder for chaining.
@@ -1009,11 +959,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Every notification the user acknowledged in this mutation; a single
-     * ack is a one-element batch.
-     * </pre>
-     *
      * <code>repeated string notification_ids = 10;</code>
      * @param values The notificationIds to add.
      * @return This builder for chaining.
@@ -1028,11 +973,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Every notification the user acknowledged in this mutation; a single
-     * ack is a one-element batch.
-     * </pre>
-     *
      * <code>repeated string notification_ids = 10;</code>
      * @return This builder for chaining.
      */
@@ -1044,11 +984,6 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <pre>
-     * Every notification the user acknowledged in this mutation; a single
-     * ack is a one-element batch.
-     * </pre>
-     *
      * <code>repeated string notification_ids = 10;</code>
      * @param value The bytes of the notificationIds to add.
      * @return This builder for chaining.

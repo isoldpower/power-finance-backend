@@ -11,9 +11,6 @@ local JWKS_LOCK_KEY   = "jwks"
 
 
 --- Remove any trailing forward slashes from a URL.
--- Issuer URLs are supplied by operators and may or may not end with
--- a slash; we strip them so concatenation with the well-known path
--- never produces a double slash (`//.well-known/...`).
 --
 -- @param url string  any URL or URL prefix
 -- @return string  the input with all trailing slashes removed
@@ -23,9 +20,6 @@ end
 
 
 --- Perform the actual JWKS HTTP GET and decode the body.
--- Returns nil + a human-readable error on any failure mode: transport
--- error, non-200 status, or malformed JSON body. The caller is
--- responsible for further structural validation (presence of `keys`).
 --
 -- @param http_connection table  resty.http client instance
 -- @param issuer_url string  issuer base URL (slashes will be stripped)
@@ -54,8 +48,6 @@ end
 
 
 --- Fetch and structurally validate a JWKS document from the issuer.
--- Validates that the response is a table containing a `keys` array;
--- anything else is treated as a malformed payload.
 --
 -- @param issuer_url string  issuer base URL
 -- @param timeout_ms number|nil  HTTP timeout in milliseconds (default 5000)
@@ -76,9 +68,7 @@ local fetch_jwks = function(issuer_url, timeout_ms)
 end
 
 
---- Fetch JWKS from the issuer and write the result into the shared
--- cache. Used as the inner step of `fetch_and_cache_jwks`, and as
--- the fallback path when the lock dict is missing.
+--- Fetch JWKS from the issuer and write the result into the shared cache.
 --
 -- @param config table  plugin config (issuer_url, http_timeout_ms, jwks_ttl_seconds)
 -- @return table|nil  the freshly fetched JWKS
@@ -95,15 +85,6 @@ end
 
 
 --- Single-flight JWKS fetch via lua-resty-lock.
---
--- Only one worker at a time fetches JWKS for a given key; queued
--- workers re-read the cache after the holder finishes so they reuse
--- the fresh value instead of hammering Clerk.
---
--- Requires shared dict `clerk_jwks_locks` declared in nginx.conf.
--- If the dict is missing we still serve the request (degraded) but
--- log loudly — under load this allows a thundering herd against
--- Clerk's JWKS endpoint.
 --
 -- @param config table  plugin config
 -- @return table|nil  the JWKS document
@@ -140,11 +121,6 @@ end
 
 --- Return the JWKS document, preferring the shared cache.
 --
--- The third return value tells the caller whether the value came
--- from cache — important because a kid miss on a *cached* response
--- may indicate key rotation and should trigger a refetch, while a
--- miss on a freshly fetched response is genuinely unknown.
---
 -- @param config table  plugin config
 -- @return table|nil  the JWKS document
 -- @return boolean  true if served from cache, false if just fetched
@@ -165,12 +141,6 @@ end
 
 
 --- Resolve the JWK that matches a given kid, refetching on miss.
---
--- Clerk rotates signing keys; a cached JWKS may miss the kid on a
--- freshly issued token. On miss against a cached response we
--- invalidate and refetch once, then look up the kid again. On miss
--- against an already-fresh response we give up — refetching would
--- not help.
 --
 -- @param config table  plugin config
 -- @param kid string  the `kid` header value from the unverified JWT

@@ -7,9 +7,7 @@ local KEEPALIVE_TIMEOUT_MS = 60000
 local KEEPALIVE_POOL_SIZE  = 100
 
 
---- Build the per-issuer Redis key. JWKS documents are issuer-scoped,
--- so multiple clerk-jwt instances (e.g. staging + prod) sharing the
--- same Redis never collide on the cache.
+--- Build the per-issuer Redis key. JWKS documents are issuer-scoped to avoid collisions.
 --
 -- @param config table  plugin config record
 -- @return string  fully-qualified Redis key
@@ -20,9 +18,6 @@ end
 
 
 --- Open a connection to Redis using values from the plugin config.
--- Selects database and authenticates when configured. On any failure
--- the caller is expected to fall through to a fresh JWKS HTTP fetch
--- rather than 401 the request.
 --
 -- @param config table  plugin config record
 -- @return table|nil  resty.redis client on success
@@ -56,8 +51,7 @@ local connect_to_redis = function(config)
 end
 
 
---- Return the Redis client to the keepalive pool for reuse on
--- subsequent requests. Avoids a TCP handshake per auth check.
+--- Return the Redis client to the keepalive pool for reuse on subsequent requests.
 --
 -- @param client table  resty.redis client previously returned by `connect_to_redis`
 local release = function(client)
@@ -69,10 +63,6 @@ end
 
 
 --- Read the cached JWKS document from Redis.
--- Returns nil for any "no cache" state (miss, malformed value,
--- connection failure) so the caller can transparently fall through to
--- a fresh HTTP fetch. Connection failures are logged but otherwise
--- not surfaced — the request proceeds.
 --
 -- @param config table  plugin config record
 -- @return table|nil  the decoded JWKS document, or nil on miss
@@ -107,8 +97,6 @@ end
 
 
 --- Encode and write a JWKS document to Redis with TTL.
--- TTL comes from `config.jwks_ttl_seconds`; after expiry the next
--- `get_cache_value` will return nil and trigger a refetch.
 --
 -- @param config table  plugin config, must contain `jwks_ttl_seconds`
 -- @param fresh_value table  the JWKS document to persist
@@ -144,9 +132,6 @@ end
 
 
 --- Drop the cached JWKS entry.
--- Called when a token's `kid` is absent from the cached JWKS but the
--- cache was populated — likely indicates issuer key rotation, so the
--- next request will re-fetch.
 --
 -- @param config table  plugin config record
 -- @return boolean|nil  true on success, nil on transport failure

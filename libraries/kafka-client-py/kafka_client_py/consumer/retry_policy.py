@@ -22,7 +22,19 @@ class RetryPolicy:
             return False
         if isinstance(exception, TransientError):
             return True
-        return isinstance(exception, self.retryable)
+        if isinstance(exception, self.retryable):
+            return True
+        if isinstance(exception, BaseExceptionGroup):
+            return self._group_is_retryable(exception)
+        return False
+
+    def _group_is_retryable(self, group: BaseExceptionGroup) -> bool:
+        if group.subgroup(PoisonError) is not None:
+            return False
+
+        retryable_types: tuple[type[BaseException], ...] = (TransientError, *self.retryable)
+
+        return group.subgroup(retryable_types) is not None
 
     def compute_backoff(self, retry_topic_attempt: int) -> timedelta:
         if retry_topic_attempt < 1:

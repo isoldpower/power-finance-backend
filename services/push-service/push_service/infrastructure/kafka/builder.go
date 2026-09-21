@@ -3,11 +3,14 @@ package kafka
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	kafkaclient "github.com/power-finance/kafka-client-go"
 	"github.com/power-finance/kafka-client-go/envelope"
 	"github.com/power-finance/kafka-client-go/headers"
+	"github.com/power-finance/observability-go/messaging"
+	"github.com/power-finance/observability-go/tracing"
 	"github.com/twmb/franz-go/pkg/kgo"
 
 	"services/push-service/internal/health"
@@ -44,7 +47,22 @@ func BuildNotificationsConsumerLoop(
 }
 
 func newEventsSinkHandler(eventsSink chan<- types.OutboxEvent) MessageHandlerFunc {
+	messageContext := messaging.BuildKafkaMessageContextComponents()
+
 	return func(ctx context.Context, message kafkaclient.ConsumedMessage) error {
+		ctx = messageContext.ContextBinder.Bind(ctx, message.Headers)
+		messageSandboxID := messageContext.ContextBinder.ReadSandboxID(message.Headers)
+		if !messageContext.TrafficPolicy.IsOwnedTraffic(messageSandboxID) {
+			logForeignSandboxMessageSkipped(
+				messageSandboxID,
+				messageContext.TrafficPolicy.OwnSandboxID(),
+			)
+			return nil
+		}
+
+		ctx, endSpan := tracing.StartConsumerSpan(ctx, "notifications fanout consume", message.Topic)
+		defer endSpan()
+
 		select {
 		case eventsSink <- outboxEventFromMessage(message):
 			return nil
@@ -52,6 +70,14 @@ func newEventsSinkHandler(eventsSink chan<- types.OutboxEvent) MessageHandlerFun
 			return ctx.Err()
 		}
 	}
+}
+
+func logForeignSandboxMessageSkipped(messageSandboxID string, ownSandboxID string) {
+	slog.Debug(
+		"kafka message belongs to another sandbox, skipping",
+		"messageSandbox", messageSandboxID,
+		"ownSandbox", ownSandboxID,
+	)
 }
 
 func outboxEventFromMessage(message kafkaclient.ConsumedMessage) types.OutboxEvent {

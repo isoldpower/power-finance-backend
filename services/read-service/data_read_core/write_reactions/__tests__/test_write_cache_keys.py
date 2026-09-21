@@ -1,11 +1,11 @@
-"""Cache-key builders used by the write-side eviction/version effects.
-
-The read path builds the same keys; pinning the format here guards against a
-silent divergence that would orphan cache entries.
-"""
-
+from data_read_core.query_slices.get_account.infra import (
+    get_single_cache_key as get_read_single_account_key,
+)
 from data_read_core.query_slices.get_webhook.infra import (
     get_single_cache_key as get_read_single_webhook_key,
+)
+from data_read_core.query_slices.list_accounts.infra import (
+    get_list_version_key as get_read_account_list_version_key,
 )
 from data_read_core.query_slices.list_webhook_events.infra import (
     get_events_cache_key as get_read_webhook_events_key,
@@ -13,7 +13,13 @@ from data_read_core.query_slices.list_webhook_events.infra import (
 from data_read_core.query_slices.list_webhooks.infra import (
     get_list_version_key as get_read_webhook_list_version_key,
 )
+from data_read_core.shared.metrics import (
+    get_account_version_key as get_metrics_account_version_key,
+    get_transaction_version_key as get_metrics_transaction_version_key,
+)
 from data_read_core.write_reactions._cache_keys import (
+    get_account_list_version_key,
+    get_single_account_key,
     get_single_transaction_key,
     get_single_wallet_key,
     get_single_webhook_key,
@@ -25,11 +31,11 @@ from data_read_core.write_reactions._cache_keys import (
 
 
 def test_single_wallet_key():
-    assert get_single_wallet_key("w1") == "read:wallet:w1"
+    assert get_single_wallet_key("w1") == "read:wallet:s2:w1"
 
 
 def test_single_transaction_key():
-    assert get_single_transaction_key("t1") == "read:transaction:t1"
+    assert get_single_transaction_key("t1") == "read:transaction:s2:t1"
 
 
 def test_wallet_list_version_key_is_per_user():
@@ -61,3 +67,26 @@ def test_webhook_write_keys_match_read_side_keys():
     assert get_single_webhook_key("wh1") == get_read_single_webhook_key("wh1")
     assert get_webhook_list_version_key(7) == get_read_webhook_list_version_key(7)
     assert get_webhook_events_key("wh1") == get_read_webhook_events_key("wh1")
+
+
+def test_account_list_version_key_is_per_user():
+    assert get_account_list_version_key(7) == "ver:accounts:7"
+
+
+def test_single_account_key_is_per_account():
+    assert get_single_account_key("a1") == "read:account:s1:a1"
+
+
+def test_account_write_keys_match_read_side_keys():
+    assert get_account_list_version_key(7) == get_read_account_list_version_key(7)
+    assert get_single_account_key("a1") == get_read_single_account_key("a1")
+
+
+def test_account_namespaces_do_not_collide_with_wallets_or_transactions():
+    assert get_account_list_version_key(7) != get_wallet_list_version_key(7)
+    assert get_account_list_version_key(7) != get_transaction_list_version_key(7)
+
+
+def test_metrics_read_the_same_version_counters_the_reactions_bump():
+    assert get_metrics_transaction_version_key(7) == get_transaction_list_version_key(7)
+    assert get_metrics_account_version_key(7) == get_account_list_version_key(7)

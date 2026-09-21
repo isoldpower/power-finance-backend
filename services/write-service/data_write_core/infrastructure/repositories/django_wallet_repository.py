@@ -1,5 +1,11 @@
 from uuid import UUID
 
+from write_service.common.pagination import (
+    FAVORITE_CREATED_AT_DESC,
+    PageRequest,
+    apply_keyset,
+)
+
 from data_write_core.application.interfaces import WalletRepository
 from data_write_core.domain.entities import WalletEntity
 
@@ -9,8 +15,10 @@ from .mappers import WalletMapper
 
 class DjangoWalletRepository(WalletRepository):
     async def get_user_wallet_by_id(self, wallet_id: UUID, user_id: int) -> WalletEntity:
-        requested_wallet: WalletModel = await WalletModel.objects.select_related("currency").aget(
-            id=wallet_id, user_id=user_id
+        requested_wallet: WalletModel = await (
+            WalletModel.objects.with_deleted()
+            .select_related("currency")
+            .aget(id=wallet_id, user_id=user_id)
         )
 
         return WalletMapper.to_domain(requested_wallet)
@@ -18,29 +26,24 @@ class DjangoWalletRepository(WalletRepository):
     async def get_user_wallets(
         self,
         user_id: int,
-        limit: int | None = None,
-        offset: int | None = None,
+        page: PageRequest | None = None,
     ) -> list[WalletEntity]:
-        queryset = (
-            WalletModel.objects.select_related("currency")
-            .filter(user_id=user_id)
-            .order_by("-created_at")
+        queryset = WalletModel.objects.select_related("currency").filter(user_id=user_id)
+        rows = (
+            apply_keyset(queryset, page)
+            if page
+            else queryset.order_by(*FAVORITE_CREATED_AT_DESC.django_ordering)
         )
 
-        start = offset or 0
-        if limit is not None:
-            queryset = queryset[start : start + limit]
-        elif offset is not None:
-            queryset = queryset[start:]
-
-        return [WalletMapper.to_domain(wallet) async for wallet in queryset]
+        return [WalletMapper.to_domain(wallet) async for wallet in rows]
 
     async def count_user_wallets(self, user_id: int) -> int:
         return await WalletModel.objects.filter(user_id=user_id).acount()
 
     async def get_user_wallet_for_update(self, wallet_id: UUID, user_id: int) -> WalletEntity:
         requested_wallet: WalletModel = await (
-            WalletModel.objects.select_for_update()
+            WalletModel.objects.with_deleted()
+            .select_for_update()
             .select_related("currency")
             .aget(id=wallet_id, user_id=user_id)
         )

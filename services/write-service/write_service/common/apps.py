@@ -1,6 +1,3 @@
-"""AppConfig wiring for `write_service.common`; bootstraps the idempotency
-Redis client (service infrastructure, not business logic)."""
-
 from django.apps import AppConfig
 from django.conf import settings
 

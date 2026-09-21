@@ -7,9 +7,6 @@ from health_probes.domain.entities import ProbeStatus
 
 
 class HealthCheckPresenter:
-    """Serializes probe DTOs into the JSON shape returned to Kubernetes /
-    Kong. Kept thin — DTOs already carry everything the response needs."""
-
     @staticmethod
     def present_degraded(exception: Exception) -> dict:
         return {

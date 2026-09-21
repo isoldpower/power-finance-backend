@@ -1,7 +1,6 @@
 from django.contrib.auth import get_user_model
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import UserSynced
-
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 
 from .._logger_shortcuts import log_user_projected
 from .._utilities import decode_payload, handle_database_errors

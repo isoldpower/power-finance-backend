@@ -1,6 +1,8 @@
 import asyncio
 from dataclasses import dataclass
 
+from write_service.common.pagination import PageRequest
+
 from ..bootstrap import get_repository_registry
 from ..dtos import WebhookDTO, webhook_to_dto
 from ..interfaces import WebhookRepository
@@ -9,8 +11,8 @@ from ..interfaces import WebhookRepository
 @dataclass(frozen=True)
 class ListFallbackWebhooksQuery:
     user_id: int
-    limit: int
-    offset: int
+    page: PageRequest
+    enabled: bool | None = None
 
 
 class ListFallbackWebhooksQueryHandler:
@@ -23,10 +25,10 @@ class ListFallbackWebhooksQueryHandler:
         webhooks, total = await asyncio.gather(
             self._webhook_repository.get_user_webhooks(
                 user_id=query.user_id,
-                limit=query.limit,
-                offset=query.offset,
+                page=query.page,
+                enabled=query.enabled,
             ),
-            self._webhook_repository.count_user_webhooks(query.user_id),
+            self._webhook_repository.count_user_webhooks(query.user_id, query.enabled),
         )
 
         return [webhook_to_dto(webhook) for webhook in webhooks], total

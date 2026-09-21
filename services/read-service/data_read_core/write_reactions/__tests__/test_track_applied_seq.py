@@ -3,9 +3,9 @@ from datetime import UTC, datetime
 import pytest
 from fakes import make_event
 from google.protobuf.timestamp_pb2 import Timestamp
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import WalletCreated, WalletDeleted
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import WalletReadModel
 from data_read_core.shared.read_at_least import DjangoAppliedSeqReader
 from data_read_core.write_reactions import CreateWalletReadModel, TrackAppliedSeq

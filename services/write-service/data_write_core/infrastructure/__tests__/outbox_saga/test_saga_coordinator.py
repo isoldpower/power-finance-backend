@@ -1,6 +1,3 @@
-"""FinalizedSagaCoordinator forward execution + rollback contract: ordered
-steps, reverse compensation on failure, swallowed compensation errors."""
-
 from __future__ import annotations
 
 from unittest import IsolatedAsyncioTestCase

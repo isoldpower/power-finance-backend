@@ -20,11 +20,13 @@ type notificationRequest struct {
 	Payload        map[string]any `json:"payload,omitempty"`
 }
 
+// Producer publishes notification requests back to write-service.
 type Producer struct {
 	publisher                 *publisher.KafkaPublisher
 	notificationsInboundTopic string
 }
 
+// NewProducer builds a producer for the notifications inbound topic.
 func NewProducer(bootstrapServers, notificationsInboundTopic string) *Producer {
 	config := publisher.DefaultProducerConfig(bootstrapServers)
 	config.ClientID = clientID
@@ -35,16 +37,17 @@ func NewProducer(bootstrapServers, notificationsInboundTopic string) *Producer {
 	}
 }
 
+// Start opens the broker connection.
 func (p *Producer) Start(ctx context.Context) error {
 	return p.publisher.Start(ctx)
 }
 
+// Stop flushes and closes the broker connection.
 func (p *Producer) Stop() {
 	p.publisher.Stop()
 }
 
-// RequestNotification asks the write-service to create a user-facing
-// notification describing a delivery outcome.
+// RequestNotification asks the write-service to create a user-facing notification describing a delivery outcome.
 func (p *Producer) RequestNotification(
 	ctx context.Context,
 	delivery types.Delivery,

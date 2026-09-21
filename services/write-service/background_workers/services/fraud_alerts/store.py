@@ -4,7 +4,7 @@ from typing import cast
 
 from redis.asyncio import Redis
 
-from background_workers.services.fraud_alerts.config import FraudAlertsConsumerConfig
+from .config import FraudAlertsConsumerConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,8 +14,6 @@ class SuspendedUser:
 
 
 class SuspendedUserStore:
-    """Records users suspended for fraud in a Redis hash keyed by Clerk id."""
-
     SUSPENDED_USERS_KEY = "fraud:suspended"
 
     def __init__(self, client: Redis) -> None:

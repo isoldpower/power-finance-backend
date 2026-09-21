@@ -1,6 +1,6 @@
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import WebhookSubscriptionRemoved
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import WebhookSubscriptionReadModel
 
 from .._logger_shortcuts import log_webhook_subscription_postgres_removed

@@ -1,9 +1,7 @@
-"""Mappers for wallet/currency/user: ORM model ⇄ domain entity. Thin but
-load-bearing — every read path goes through them."""
-
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from types import SimpleNamespace
 
 from django.test import SimpleTestCase
@@ -30,6 +28,10 @@ class WalletMapperToDomainTests(SimpleTestCase):
             "created_at": datetime(2026, 1, 1, 12),
             "updated_at": datetime(2026, 1, 2, 12),
             "deleted_at": None,
+            "category": "Savings",
+            "color": "#FF0000",
+            "favorite": False,
+            "zero_balance": Decimal("0"),
         }
         defaults.update(overrides)
         return SimpleNamespace(**defaults)
@@ -83,6 +85,10 @@ class WalletMapperApplyToModelTests(SimpleTestCase):
             "created_at": datetime(2026, 1, 1, 12),
             "updated_at": datetime(2026, 1, 2, 12),
             "deleted_at": None,
+            "category": "Savings",
+            "color": "#FF0000",
+            "favorite": False,
+            "zero_balance": Decimal("0"),
         }
         defaults.update(overrides)
         return WalletEntity(

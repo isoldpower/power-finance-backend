@@ -6,8 +6,6 @@ from elasticsearch import AsyncElasticsearch
 
 @lru_cache(maxsize=1)
 def get_elasticsearch() -> AsyncElasticsearch:
-    """Return the process-wide async Elasticsearch client."""
-
     client_kwargs: dict = {
         "hosts": settings.ELASTICSEARCH["HOSTS"],
         "basic_auth": (

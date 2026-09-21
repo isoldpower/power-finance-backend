@@ -1,17 +1,17 @@
 package config
 
 import (
-	"log/slog"
 	"os"
+	httpserver "services/webhook-service/webhook_service/presentation/http/contract"
 	"strings"
 	"time"
 
+	"github.com/power-finance/observability-go/sandbox"
 	"github.com/spf13/viper"
 
 	"services/webhook-service/webhook_service"
 	"services/webhook-service/webhook_service/infrastructure/kafka"
 	"services/webhook-service/webhook_service/infrastructure/postgres"
-	httpserver "services/webhook-service/webhook_service/presentation/http"
 	"services/webhook-service/webhook_service/services"
 )
 
@@ -45,7 +45,7 @@ func Load() webhook_service.Config {
 	configPath := resolveConfigPath()
 	ResolveViper(viperInstance, configPath)
 	if resolveErr := TryResolveConfig(viperInstance); resolveErr != nil {
-		slog.Warn("failed to read config file", "path", configPath, "error", resolveErr)
+		logConfigFileUnreadable(configPath, resolveErr)
 	}
 
 	return webhook_service.Config{
@@ -54,9 +54,12 @@ func Load() webhook_service.Config {
 			Port: viperInstance.GetInt(serverPortKey),
 		},
 		Kafka: kafka.Config{
-			BootstrapServers:          viperInstance.GetString(bootstrapServersKey),
-			OutboxTopics:              splitTopics(viperInstance.GetString(outboxTopicKey)),
-			GroupID:                   viperInstance.GetString(groupIDKey),
+			BootstrapServers: viperInstance.GetString(bootstrapServersKey),
+			OutboxTopics:     splitTopics(viperInstance.GetString(outboxTopicKey)),
+			GroupID: sandbox.ScopeGroupID(
+				viperInstance.GetString(groupIDKey),
+				sandbox.ResolveOwnID(),
+			),
 			RetryTopic:                viperInstance.GetString(retryTopicKey),
 			DLQTopic:                  viperInstance.GetString(dlqTopicKey),
 			NotificationsInboundTopic: viperInstance.GetString(notificationsInboundTopicKey),
@@ -65,10 +68,12 @@ func Load() webhook_service.Config {
 			DSN: viperInstance.GetString(postgresDSNKey),
 		},
 		Delivery: services.DeliveryConfig{
-			Timeout:           time.Duration(viperInstance.GetInt(deliveryTimeoutKey)) * time.Second,
-			MaxAttempts:       viperInstance.GetInt(deliveryMaxAttemptsKey),
-			RetryBackoff:      time.Duration(viperInstance.GetInt(deliveryRetryBackoffKey)) * time.Second,
-			SchedulerInterval: time.Duration(viperInstance.GetInt(deliverySchedulerIntervalKey)) * time.Second,
+			Timeout:      time.Duration(viperInstance.GetInt(deliveryTimeoutKey)) * time.Second,
+			MaxAttempts:  viperInstance.GetInt(deliveryMaxAttemptsKey),
+			RetryBackoff: time.Duration(viperInstance.GetInt(deliveryRetryBackoffKey)) * time.Second,
+			SchedulerInterval: time.Duration(
+				viperInstance.GetInt(deliverySchedulerIntervalKey),
+			) * time.Second,
 		},
 	}
 }

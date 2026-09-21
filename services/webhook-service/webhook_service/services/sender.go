@@ -3,16 +3,12 @@ package services
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"net/url"
-	"syscall"
+	"strconv"
 	"time"
 
 	"services/webhook-service/webhook_service/types"
@@ -22,6 +18,7 @@ const (
 	signatureHeader = "X-Webhook-Signature"
 	eventTypeHeader = "X-Webhook-Event"
 	deliveryHeader  = "X-Webhook-Delivery"
+	timestampHeader = "X-Webhook-Timestamp"
 
 	dialTimeout = 10 * time.Second
 )
@@ -35,18 +32,19 @@ type senderOptions struct {
 // SenderOption customises an HTTPSender.
 type SenderOption func(*senderOptions)
 
-// WithAllowPrivateAddresses disables the SSRF address guard. It exists for tests
-// that target loopback httptest servers and must not be used in production.
+// WithAllowPrivateAddresses disables the SSRF address guard.
 func WithAllowPrivateAddresses() SenderOption {
 	return func(options *senderOptions) {
 		options.allowPrivateAddresses = true
 	}
 }
 
+// HTTPSender POSTs signed payloads to customer endpoints.
 type HTTPSender struct {
 	client *http.Client
 }
 
+// NewHTTPSender builds a sender with an SSRF address guard enabled by default.
 func NewHTTPSender(timeout time.Duration, opts ...SenderOption) *HTTPSender {
 	var options senderOptions
 	for _, opt := range opts {
@@ -78,9 +76,13 @@ func NewHTTPSender(timeout time.Duration, opts ...SenderOption) *HTTPSender {
 	}
 }
 
-// Send signs the payload with the endpoint secret and POSTs it, returning an
-// error on transport failure or a non-2xx response.
-func (s *HTTPSender) Send(ctx context.Context, delivery types.Delivery, secret string) error {
+// Send signs the payload and POSTs it, erroring on transport failure or a non-2xx.
+func (s *HTTPSender) Send(
+	ctx context.Context,
+	delivery types.Delivery,
+	secret string,
+	at time.Time,
+) error {
 	if schemeErr := validateTargetScheme(delivery.TargetURL); schemeErr != nil {
 		return schemeErr
 	}
@@ -95,10 +97,12 @@ func (s *HTTPSender) Send(ctx context.Context, delivery types.Delivery, secret s
 		return fmt.Errorf("sender: build request: %w", requestErr)
 	}
 
+	timestamp := strconv.FormatInt(at.Unix(), 10)
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set(signatureHeader, signPayload(secret, delivery.Payload))
+	request.Header.Set(timestampHeader, timestamp)
+	request.Header.Set(signatureHeader, signPayload(secret, timestamp, delivery.Payload))
 	request.Header.Set(eventTypeHeader, delivery.EventType)
-	request.Header.Set(deliveryHeader, delivery.ID)
+	request.Header.Set(deliveryHeader, delivery.EventID)
 
 	response, sendErr := s.client.Do(request)
 	if sendErr != nil {
@@ -114,53 +118,4 @@ func (s *HTTPSender) Send(ctx context.Context, delivery types.Delivery, secret s
 	}
 
 	return nil
-}
-
-func validateTargetScheme(targetURL string) error {
-	parsed, parseErr := url.Parse(targetURL)
-	if parseErr != nil {
-		return fmt.Errorf("sender: parse target url: %w", parseErr)
-	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return fmt.Errorf("sender: unsupported target scheme %q", parsed.Scheme)
-	}
-
-	return nil
-}
-
-// guardDialAddress rejects connections to loopback, private, link-local and
-// unspecified addresses. It runs on every dial (including redirects, which are
-// blocked anyway) against the already-resolved IP, so it also defeats
-// DNS-rebinding to an internal target.
-func guardDialAddress(_ string, address string, _ syscall.RawConn) error {
-	host, _, splitErr := net.SplitHostPort(address)
-	if splitErr != nil {
-		return fmt.Errorf("sender: parse dial address: %w", splitErr)
-	}
-
-	ip := net.ParseIP(host)
-	if ip == nil {
-		return fmt.Errorf("sender: unresolved dial address %q", host)
-	}
-	if isBlockedAddress(ip) {
-		return fmt.Errorf("sender: blocked target address %s", ip)
-	}
-
-	return nil
-}
-
-func isBlockedAddress(ip net.IP) bool {
-	return ip.IsLoopback() ||
-		ip.IsPrivate() ||
-		ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() ||
-		ip.IsInterfaceLocalMulticast() ||
-		ip.IsUnspecified()
-}
-
-func signPayload(secret string, payload []byte) string {
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(payload)
-
-	return "v1=" + hex.EncodeToString(mac.Sum(nil))
 }

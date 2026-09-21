@@ -1,12 +1,18 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from uuid import UUID
+
+from write_service.common.pagination import PageRequest
 
 from data_write_core.domain.entities import NotificationEntity
 
 
 class NotificationRepository(ABC):
     @abstractmethod
-    async def create_notification(self, notification: NotificationEntity) -> NotificationEntity:
+    async def create_notification(
+        self,
+        notification: NotificationEntity,
+    ) -> NotificationEntity:
         raise NotImplementedError()
 
     @abstractmethod
@@ -29,17 +35,35 @@ class NotificationRepository(ABC):
     async def get_user_notifications(
         self,
         user_id: int,
-        limit: int | None = None,
-        offset: int | None = None,
+        page: PageRequest | None = None,
     ) -> list[NotificationEntity]:
         raise NotImplementedError()
 
     @abstractmethod
-    async def count_user_notifications(self, user_id: int) -> int:
+    async def count_user_notifications(
+        self,
+        user_id: int,
+    ) -> int:
         raise NotImplementedError()
 
     @abstractmethod
-    async def mark_notifications_read(
+    async def count_notification_badge(
+        self,
+        user_id: int,
+    ) -> tuple[int, int]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def acknowledge_notifications(
+        self,
+        notification_ids: list[UUID],
+        user_id: int,
+        acknowledged_at: datetime,
+    ) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def unacknowledge_notifications(
         self,
         notification_ids: list[UUID],
         user_id: int,
@@ -47,13 +71,8 @@ class NotificationRepository(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    async def mark_notifications_unread(
+    async def hard_delete_notification(
         self,
-        notification_ids: list[UUID],
-        user_id: int,
+        notification_id: UUID,
     ) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    async def hard_delete_notification(self, notification_id: UUID) -> None:
         raise NotImplementedError()

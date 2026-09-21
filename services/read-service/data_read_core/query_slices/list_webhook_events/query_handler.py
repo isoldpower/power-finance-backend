@@ -1,5 +1,7 @@
 from redis.asyncio import Redis
 
+from data_read_core.shared.query_results import FetchedRows
+
 from .cache_worker import CacheWorker
 from .dtos import ListWebhookEventsQuery, WebhookSubscriptionDTO
 from .exceptions import WebhookNotFoundError
@@ -14,20 +16,26 @@ class ListWebhookEventsQueryHandler:
         self._redis_client = redis_client
         self._cache_worker = CacheWorker(redis_client)
 
-    async def handle(self, query: ListWebhookEventsQuery) -> list[WebhookSubscriptionDTO]:
+    async def handle(self, query: ListWebhookEventsQuery) -> FetchedRows:
         if not await webhook_is_owned(query.user_id, query.webhook_id):
-            raise WebhookNotFoundError(
-                f"Webhook {query.webhook_id} not found for user {query.user_id}"
-            )
+            raise WebhookNotFoundError()
 
         cached_value = await self._cache_worker.try_serve_from_cache(query.webhook_id)
         if cached_value is not None:
             log_served_from_cache(query.webhook_id)
-            return cached_value
+            return FetchedRows(
+                rows=cached_value,
+                total=len(cached_value),
+                cached=True,
+            )
 
         subscriptions = await fetch_webhook_subscriptions(query.webhook_id)
         dtos = [WebhookSubscriptionDTO.from_read_model(entry) for entry in subscriptions]
         await self._cache_worker.save_to_cache(query.webhook_id, dtos)
 
         log_served_from_store(query.webhook_id, len(dtos))
-        return dtos
+        return FetchedRows(
+            rows=dtos,
+            total=len(dtos),
+            cached=False,
+        )

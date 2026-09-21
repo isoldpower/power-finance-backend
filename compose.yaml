@@ -5,6 +5,8 @@ include:
   - services/push-service/compose.yaml
   - services/webhook-service/compose.yaml
   - services/antifraud-service/compose.yaml
+  - services/ai-service/compose.yaml
+  - infrastructure/observability/compose.yaml
 
 services:
   api-gateway:
@@ -25,17 +27,22 @@ services:
       KONG_NGINX_PROXY_PROXY_BUFFERING: "off"
       KONG_NGINX_PROXY_PROXY_READ_TIMEOUT: "3600s"
       KONG_NGINX_PROXY_PROXY_SEND_TIMEOUT: "3600s"
-      KONG_PLUGINS: "bundled,clerk-jwt,read-at-least,write-ral-version,user-tier-rate-limit,read-fallback"
+      KONG_PLUGINS: "bundled,clerk-jwt,read-at-least,write-ral-version,user-tier-rate-limit,read-fallback,sandbox-router"
       KONG_NGINX_HTTP_LUA_SHARED_DICT: "clerk_jwks_locks 1m"
       CLERK_ISSUER_URL: ${CLERK_ISSUER_URL:-}
       READ_AT_LEAST_HMAC_SECRET: ${READ_AT_LEAST_HMAC_SECRET:-}
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-http://jaeger:4318/v1/traces}
+      KONG_TRACING_INSTRUMENTATIONS: ${KONG_TRACING_INSTRUMENTATIONS:-all}
+      KONG_TRACING_SAMPLING_RATE: ${KONG_TRACING_SAMPLING_RATE:-1.0}
     volumes:
       - ./infrastructure/kong/kong.yml:/etc/kong/kong.yml:ro
+      - ./infrastructure/kong/plugins/sandbox-router:/usr/local/share/lua/5.1/kong/plugins/sandbox-router:ro
       - ./infrastructure/kong/plugins/clerk-jwt:/usr/local/share/lua/5.1/kong/plugins/clerk-jwt:ro
       - ./infrastructure/kong/plugins/read-at-least:/usr/local/share/lua/5.1/kong/plugins/read-at-least:ro
       - ./infrastructure/kong/plugins/write-ral-version:/usr/local/share/lua/5.1/kong/plugins/write-ral-version:ro
       - ./infrastructure/kong/plugins/user-tier-rate-limit:/usr/local/share/lua/5.1/kong/plugins/user-tier-rate-limit:ro
       - ./infrastructure/kong/plugins/read-fallback:/usr/local/share/lua/5.1/kong/plugins/read-fallback:ro
+      - ./infrastructure/kong/shared/lua:/usr/local/share/lua/5.1/power_finance:ro
     ports:
       - "${GATEWAY_PROXY_PORT:-8080}:8000"
       - "${GATEWAY_ADMIN_PORT:-8001}:8001"

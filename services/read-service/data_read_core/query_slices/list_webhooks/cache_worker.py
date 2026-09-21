@@ -2,9 +2,10 @@ import json
 
 from redis.asyncio import Redis
 
+from .config import CacheSettings
 from .dtos import CacheOperationData, WebhookDTO
 from .infra import (
-    CACHE_TTL_SECONDS,
+    get_filter_hash,
     get_list_cache_key,
     get_list_version_key,
 )
@@ -37,7 +38,7 @@ class CacheWorker:
         await self._redis_client.set(
             cache_key,
             json.dumps(payload),
-            ex=CACHE_TTL_SECONDS,
+            ex=int(CacheSettings.TTL_SECONDS),
         )
 
     async def _build_cache_key(self, context: CacheOperationData) -> str:
@@ -46,8 +47,9 @@ class CacheWorker:
         return get_list_cache_key(
             user_id=context.user_id,
             version=version,
+            filter_hash=get_filter_hash(context.filters),
             limit=context.limit,
-            offset=context.offset,
+            cursor=context.cursor,
         )
 
     async def _current_version(self, user_id: int) -> int:

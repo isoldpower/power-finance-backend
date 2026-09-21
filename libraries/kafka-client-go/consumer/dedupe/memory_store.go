@@ -14,7 +14,10 @@ func NewInMemoryStore() *InMemoryStore {
 	return &InMemoryStore{seenEventIDs: make(map[string]struct{})}
 }
 
-func (s *InMemoryStore) Seen(ctx context.Context, eventID string) (bool, error) {
+func (s *InMemoryStore) Seen(
+	ctx context.Context,
+	eventID string,
+) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

@@ -1,10 +1,69 @@
 from rest_framework import serializers
+from write_service.common.money import MoneyAmountField
+
+from data_write_core.domain.services.config import ChainSettings
+from data_write_core.domain.value_objects import (
+    CLIENT_ORIGINS,
+    TransactionOrigin,
+    TransactionType,
+)
+
+from .config import HelpText
 
 
-class CreateTransactionRequestSerializer(serializers.Serializer):
-    source_wallet_id = serializers.UUIDField()
-    amount = serializers.DecimalField(max_digits=18, decimal_places=2)
+class EvidenceSerializer(serializers.Serializer):
+    url = serializers.URLField(max_length=2048)
 
 
-class UpdateTransactionRequestSerializer(serializers.Serializer):
-    new_amount = serializers.DecimalField(max_digits=18, decimal_places=2)
+class TransactionFieldsMixin(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    wallet_id = serializers.UUIDField()
+    currency = serializers.CharField(max_length=8)
+    amount = MoneyAmountField(help_text=HelpText.AMOUNT)
+    type = serializers.ChoiceField(
+        choices=[transaction_type.value for transaction_type in TransactionType]
+    )
+    origin = serializers.ChoiceField(
+        choices=[origin.value for origin in CLIENT_ORIGINS],
+        required=False,
+        default=TransactionOrigin.MANUAL.value,
+    )
+    category = serializers.CharField(max_length=255, required=False, allow_null=True)
+    evidence = EvidenceSerializer(required=False, allow_null=True)
+
+
+class CreateTransactionRequestSerializer(TransactionFieldsMixin):
+    pass
+
+
+class ChainEntryRequestSerializer(TransactionFieldsMixin):
+    temporary_id = serializers.CharField(max_length=64)
+    after = serializers.CharField(max_length=64, required=False, allow_null=True)
+
+
+class CreateTransactionChainRequestSerializer(serializers.Serializer):
+    transactions = serializers.ListField(
+        child=ChainEntryRequestSerializer(),
+        min_length=1,
+        max_length=ChainSettings.MAX_CHAIN_LENGTH,
+        help_text=(
+            f"At most {ChainSettings.MAX_CHAIN_LENGTH} entries. The whole chain commits in one "
+            "transaction, so the bound keeps the lock window predictable."
+        ),
+    )
+
+
+class PatchTransactionRequestSerializer(serializers.Serializer):
+    """Metadata only. The money lives in an append-only ledger no request body
+    in this API can reach."""
+
+    name = serializers.CharField(max_length=255, required=False)
+    category = serializers.CharField(max_length=255, required=False, allow_null=True)
+    evidence = EvidenceSerializer(required=False, allow_null=True)
+
+
+class AdjustTransactionRequestSerializer(serializers.Serializer):
+    """Restate a transaction's amount. `amount` is the NEW TOTAL, not a delta, and
+    a positive magnitude like everywhere else."""
+
+    amount = MoneyAmountField(help_text=HelpText.AMOUNT)

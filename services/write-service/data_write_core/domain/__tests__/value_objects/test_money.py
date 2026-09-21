@@ -1,6 +1,3 @@
-"""Money / NonNegativeMoney arithmetic and currency-binding rules: cross-currency
-ops raise, negative NonNegativeMoney is rejected, precision is preserved."""
-
 from __future__ import annotations
 
 from decimal import Decimal

@@ -2,6 +2,8 @@ from immudb import ImmudbClient
 from immudb.datatypesv2 import DatabaseSettingsV2
 from immudb.handler.useDatabase import dbUseResponse
 
+_TRANSACTIONS_ADDED_COLUMNS: tuple[tuple[str, str], ...] = (("transaction_id", "VARCHAR[36]"),)
+
 
 def build_database(
     client: ImmudbClient,
@@ -24,6 +26,7 @@ def _initialize_schema(client: ImmudbClient) -> None:
         CREATE TABLE IF NOT EXISTS transactions ( \
         id                  VARCHAR[36]  NOT NULL, \
         user_id             INTEGER      NOT NULL, \
+        transaction_id      VARCHAR[36]  NOT NULL, \
         source_wallet_id    VARCHAR[36]  NOT NULL, \
         amount              VARCHAR[32]  NOT NULL, \
         created_at          VARCHAR[32]  NOT NULL, \
@@ -33,9 +36,12 @@ def _initialize_schema(client: ImmudbClient) -> None:
     "
     )
 
+    _add_missing_columns(client, "transactions", _TRANSACTIONS_ADDED_COLUMNS)
+
     client.sqlExec(
         "\
         CREATE INDEX IF NOT EXISTS ON transactions(user_id); \
+        CREATE INDEX IF NOT EXISTS ON transactions(transaction_id); \
         CREATE INDEX IF NOT EXISTS ON transactions(source_wallet_id); \
         CREATE INDEX IF NOT EXISTS ON transactions(cancels_other); \
     "
@@ -51,3 +57,15 @@ def _initialize_schema(client: ImmudbClient) -> None:
         PRIMARY KEY   wallet_id \
     );"
     )
+
+
+def _add_missing_columns(
+    client: ImmudbClient,
+    table: str,
+    columns: tuple[tuple[str, str], ...],
+) -> None:
+    existing = {row[1] for row in client.sqlQuery(f"SELECT * FROM COLUMNS('{table}');")}
+
+    for name, definition in columns:
+        if name not in existing:
+            client.sqlExec(f"ALTER TABLE {table} ADD COLUMN {name} {definition};")

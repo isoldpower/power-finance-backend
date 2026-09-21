@@ -2,10 +2,6 @@ from django.db import models
 
 
 class WebhookReadModel(models.Model):
-    """Denormalised webhook endpoint projection. The signing secret is
-    deliberately NOT projected — reads never expose it; only the
-    webhook-service consumes it from the config events."""
-
     id = models.UUIDField(primary_key=True)
     user_id = models.BigIntegerField()
     title = models.CharField(max_length=120)
@@ -18,8 +14,8 @@ class WebhookReadModel(models.Model):
         db_table = "read_webhooks"
         indexes = [
             models.Index(
-                fields=["user_id", "-created_at"],
-                name="rwh_user_created_idx",
+                fields=["user_id", "-created_at", "-id"],
+                name="rwh_user_keyset_idx",
             ),
         ]
 
@@ -40,7 +36,7 @@ class WebhookSubscriptionReadModel(models.Model):
         db_table = "read_webhook_subscriptions"
         indexes = [
             models.Index(
-                fields=["webhook", "created_at"],
-                name="rwhs_webhook_created_idx",
+                fields=["webhook", "-created_at", "-id"],
+                name="rwhs_webhook_keyset_idx",
             ),
         ]

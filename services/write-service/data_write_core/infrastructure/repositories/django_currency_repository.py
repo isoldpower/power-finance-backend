@@ -10,3 +10,6 @@ class DjangoCurrencyRepository(CurrencyRepository):
 
     async def currency_code_exists(self, currency_code: str) -> bool:
         return await CurrencyModel.objects.filter(code=currency_code).aexists()
+
+    async def get_decimals_by_code(self) -> dict[str, int]:
+        return {currency.code: currency.digits async for currency in CurrencyModel.objects.all()}

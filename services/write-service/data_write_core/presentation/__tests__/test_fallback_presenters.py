@@ -1,8 +1,16 @@
 from datetime import datetime
 from decimal import Decimal
+from unittest.mock import patch
 from uuid import UUID
 
-from data_write_core.application.dtos import TransactionPlainDTO, WalletDTO
+import pytest
+
+from data_write_core.application.dtos import MoneyContainerDTO, TransactionDTO, WalletDTO
+from data_write_core.domain.value_objects import (
+    MoneyContainerKind,
+    TransactionOrigin,
+    TransactionType,
+)
 from data_write_core.presentation.http.views.fallback_read._presenters import (
     present_transaction,
     present_wallet,
@@ -11,8 +19,19 @@ from data_write_core.presentation.http.views.fallback_read._presenters import (
 WALLET_ID = UUID("11111111-1111-1111-1111-111111111111")
 TX_ID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 
+SCALES = {"USD": 2, "EUR": 2, "JPY": 0}
 
-def test_present_wallet_matches_read_service_shape():
+
+@pytest.fixture(autouse=True)
+def _static_currency_scales():
+    with patch(
+        "data_write_core.application.money_scales.load_scales",
+        return_value=SCALES,
+    ):
+        yield
+
+
+async def test_present_wallet_matches_read_service_shape():
     wallet = WalletDTO(
         id=WALLET_ID,
         user_id=7,
@@ -21,39 +40,64 @@ def test_present_wallet_matches_read_service_shape():
         currency="USD",
         created_at=datetime(2026, 1, 1, 12, 0, 0),
         updated_at=datetime(2026, 1, 2, 12, 0, 0),
+        category="Savings",
+        color="#FF0000",
+        favorite=True,
+        zero_balance=Decimal("100.00"),
     )
 
-    assert present_wallet(wallet) == {
+    assert await present_wallet(wallet) == {
         "id": str(WALLET_ID),
         "name": "Vacation",
-        "balance": {"amount": "130.00", "currency": "USD"},
-        "meta": {
-            "id": str(WALLET_ID),
-            "created_at": "2026-01-01T12:00:00",
-            "updated_at": "2026-01-02T12:00:00",
-        },
+        "created_at": "2026-01-01T12:00:00+00:00",
+        "updated_at": "2026-01-02T12:00:00+00:00",
+        "deleted_at": None,
+        "category": "Savings",
+        "currency": "USD",
+        "money": {"amount": "130.00", "currency": "USD"},
+        "zero_balance": {"amount": "100.00", "currency": "USD"},
+        "favorite": True,
+        "color": "#FF0000",
     }
 
 
-def test_present_transaction_matches_read_service_shape():
-    transaction = TransactionPlainDTO(
+def _transaction(amount: str, currency: str = "EUR") -> TransactionDTO:
+    return TransactionDTO(
         id=TX_ID,
-        amount=Decimal("12.50"),
-        currency_code="EUR",
-        source_wallet_id=str(WALLET_ID),
+        user_id=7,
+        name="Groceries store",
+        amount=Decimal(amount),
+        currency_code=currency,
+        transaction_type=TransactionType.EXPENSE,
+        origin=TransactionOrigin.MANUAL,
+        container=MoneyContainerDTO(
+            id=WALLET_ID,
+            name="Random Credit Card",
+            currency=currency,
+            kind=MoneyContainerKind.WALLET,
+        ),
         created_at=datetime(2026, 1, 1, 9, 30, 0),
+        category="Food",
     )
 
-    presented = present_transaction(transaction)
 
-    assert presented == {
+async def test_present_transaction_matches_read_service_shape():
+    assert await present_transaction(_transaction("12.50")) == {
         "id": str(TX_ID),
-        "wallet_id": str(WALLET_ID),
-        "amount": "12.50",
-        "currency": "EUR",
-        "meta": {
-            "id": str(TX_ID),
-            "occurred_at": "2026-01-01T09:30:00",
-            "created_at": "2026-01-01T09:30:00",
-        },
+        "name": "Groceries store",
+        "created_at": "2026-01-01T09:30:00+00:00",
+        "updated_at": None,
+        "deleted_at": None,
+        "money": {"amount": "12.50", "currency": "EUR"},
+        "type": "expense",
+        "origin": "manual",
+        "wallet": {"id": str(WALLET_ID), "name": "Random Credit Card"},
+        "category": "Food",
+        "chain_id": None,
     }
+
+
+async def test_amounts_are_emitted_at_the_currency_scale():
+    presented = await present_transaction(_transaction("90", currency="JPY"))
+
+    assert presented["money"] == {"amount": "90", "currency": "JPY"}

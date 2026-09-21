@@ -20,7 +20,12 @@ services:
       kafka:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8001/readyz"]
+      test: [
+        "CMD",
+        "wget",
+        "-qO-",
+        "http://127.0.0.1:8001/readyz",
+      ]
       interval: 10s
       timeout: 3s
       retries: 5

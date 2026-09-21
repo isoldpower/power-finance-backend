@@ -23,6 +23,7 @@ from .logger_shortcuts import (
     warn_store_unavailable_on_acquire,
     warn_store_unavailable_on_store,
 )
+from .replay_marker import mark_replay
 from .replay_response import ReplayResponseBuilder
 from .request_hash import fingerprint
 from .request_inspector import RequestInspector
@@ -80,10 +81,16 @@ class IdempotencyWorkflow:
         store = self._store
 
         user_id = RequestInspector.extract_user_id(self._request)
-        request_hash = fingerprint(self._request.method, self._request.path, self._request.data)
-
+        request_hash = fingerprint(
+            self._request.method,
+            self._request.path,
+            self._request.data,
+        )
         acquire_outcome = await self._try_acquire_or_fallback(
-            store, user_id, idempotency_key, request_hash
+            store,
+            user_id,
+            idempotency_key,
+            request_hash,
         )
         if acquire_outcome is None:
             return await self._invoke_view()
@@ -96,7 +103,12 @@ class IdempotencyWorkflow:
             raise IdempotencyKeyReused()
 
         assert isinstance(acquire_outcome, Acquired)
-        return await self._invoke_and_persist(store, user_id, idempotency_key, request_hash)
+        return await self._invoke_and_persist(
+            store,
+            user_id,
+            idempotency_key,
+            request_hash,
+        )
 
     async def _try_acquire_or_fallback(
         self,
@@ -106,7 +118,11 @@ class IdempotencyWorkflow:
         request_hash: str,
     ) -> AcquireResult | None:
         try:
-            return await store.try_acquire(user_id, idempotency_key, request_hash)
+            return await store.try_acquire(
+                user_id,
+                idempotency_key,
+                request_hash,
+            )
         except StoreUnavailable as exc:
             warn_store_unavailable_on_acquire(exc, self._required)
             if self._required:
@@ -128,7 +144,11 @@ class IdempotencyWorkflow:
 
         if _is_successful_status(view_response.status_code):
             await self._cache_response_best_effort(
-                store, view_response, user_id, idempotency_key, request_hash
+                store,
+                view_response,
+                user_id,
+                idempotency_key,
+                request_hash,
             )
         else:
             await store.release_lock(user_id, idempotency_key)
@@ -155,6 +175,11 @@ class IdempotencyWorkflow:
             warn_store_unavailable_on_store(exc)
 
     async def _invoke_view(self) -> Response:
-        return await self._view_callable(
-            self._view_self, self._request, *self._args, **self._kwargs
+        response = await self._view_callable(
+            self._view_self,
+            self._request,
+            *self._args,
+            **self._kwargs,
         )
+
+        return mark_replay(response, replayed=False)

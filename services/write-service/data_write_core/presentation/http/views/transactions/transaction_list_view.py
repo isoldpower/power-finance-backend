@@ -1,8 +1,6 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.response import Response
 from write_service.common.idempotency import idempotent
-from write_service.common.logging import get_http_logger, log_request_failed
 
 from data_write_core.application.commands import (
     CreateTransactionCommand,
@@ -10,31 +8,34 @@ from data_write_core.application.commands import (
 )
 
 from ...decorators import trace_handler_flow
-from ...presenters import (
-    CommonHttpPresenter,
-    MessageResultInfo,
-    TransactionHttpPresenter,
-)
+from ...presenters import TransactionHttpPresenter
 from ...serializers import (
     CreateTransactionRequestSerializer,
-    MessageResponseSerializer,
-    TransactionResponseSerializer,
+    EnvelopedTransactionResponseSerializer,
+    ErrorResponseSerializer,
 )
 from ..mixins import CommandResponseMixin
+from ._command_inputs import evidence_url_of, origin_of, transaction_type_of
 from .base import TransactionView
-
-logger = get_http_logger("transactions")
 
 
 class TransactionListView(TransactionView, CommandResponseMixin):
     @extend_schema(
         operation_id="transactions_create",
         summary="Create a new transaction",
-        description="Append a new transaction to the source wallet's history.",
+        description=(
+            "Record one money flow against a wallet. `amount` is a positive "
+            "magnitude and `type` states the direction. Requires an "
+            "Idempotency-Key header: without one, a dropped response or a "
+            "double-tapped button creates a duplicate the API has no way to "
+            "detect after the fact."
+        ),
         request=CreateTransactionRequestSerializer,
         responses={
-            201: TransactionResponseSerializer,
-            500: MessageResponseSerializer,
+            201: EnvelopedTransactionResponseSerializer,
+            400: ErrorResponseSerializer,
+            409: ErrorResponseSerializer,
+            422: ErrorResponseSerializer,
         },
     )
     @idempotent(required=True)
@@ -42,37 +43,26 @@ class TransactionListView(TransactionView, CommandResponseMixin):
     async def post(self, request):
         serializer = CreateTransactionRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        validated = serializer.validated_data
 
-        try:
-            validated = serializer.validated_data
-            handler = CreateTransactionCommandHandler()
-            created_transaction, write_version = await handler.handle(
-                CreateTransactionCommand(
-                    user_id=int(request.user.unique_id),
-                    user_external_id=request.user.external_id,
-                    source_wallet_id=validated["source_wallet_id"],
-                    amount=validated["amount"],
-                )
+        created_transaction, write_version = await CreateTransactionCommandHandler().handle(
+            CreateTransactionCommand(
+                user_id=int(request.user.unique_id),
+                user_external_id=request.user.external_id,
+                wallet_id=validated["wallet_id"],
+                amount=validated["amount"],
+                name=validated["name"],
+                transaction_type=transaction_type_of(validated),
+                origin=origin_of(validated),
+                category=validated.get("category"),
+                evidence_url=evidence_url_of(validated),
             )
+        )
 
-            payload = TransactionHttpPresenter.present_one(created_transaction)
-            return self.form_write_response(
-                status_code=status.HTTP_201_CREATED,
-                response_body=payload,
-                write_version=write_version,
-            )
-        except Exception as exc:
-            log_request_failed(
-                logger,
-                "create_transaction",
-                exc,
-                user_id=request.user.unique_id,
-            )
-            payload = CommonHttpPresenter.present_message_result(
-                MessageResultInfo(
-                    message=f"Failed to create transaction: {exc}",
-                    resource_id=None,
-                )
-            )
-
-            return Response(payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return self.form_write_response(
+            status_code=status.HTTP_201_CREATED,
+            response_body=await TransactionHttpPresenter.present_one(
+                created_transaction,
+            ),
+            write_version=write_version,
+        )

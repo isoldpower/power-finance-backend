@@ -1,5 +1,3 @@
-"""aatomic — async transaction wrapper commits on success, rolls back on error."""
-
 from datetime import UTC, datetime
 
 import pytest

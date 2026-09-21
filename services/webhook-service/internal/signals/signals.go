@@ -6,8 +6,7 @@ import (
 	"syscall"
 )
 
-// NotifyContext returns a context cancelled on SIGINT/SIGTERM, driving
-// graceful shutdown of the consumer loop and HTTP server.
+// NotifyContext returns a context cancelled on SIGINT/SIGTERM, driving graceful shutdown.
 func NotifyContext() (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 }

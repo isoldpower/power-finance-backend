@@ -1,0 +1,173 @@
+# See README.md → "Shared dev environment"
+x-sandbox-env: &sandbox-env
+  SANDBOX_ID: ${SANDBOX_ID:?SANDBOX_ID is required — use `make host-sandbox-up NAME=...`}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+  OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
+  OTEL_DEPLOYMENT_ENVIRONMENT: sandbox
+
+x-flink-sandbox-env: &flink-sandbox-env
+  - SANDBOX_ID=${SANDBOX_ID:?SANDBOX_ID is required — use `make host-sandbox-up NAME=...`}
+  - OTEL_JAVAAGENT_ENABLED=true
+  - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+  - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+  - OTEL_METRICS_EXPORTER=none
+  - OTEL_LOGS_EXPORTER=none
+
+volumes:
+  certs:
+    name: ${BASELINE_CERTS_VOLUME:-pf-baseline_certs}
+    external: true
+
+networks:
+  default:
+    name: ${BASELINE_NETWORK_NAME:-pf-baseline_default}
+    external: true
+
+services:
+  sbx-write-service:
+    extends:
+      file: services/write-service/compose.yaml
+      service: write-service
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-env
+      OTEL_SERVICE_NAME: write-service
+    networks:
+      default:
+        aliases:
+          - sbx-${SANDBOX_ID}-write-service
+    ports: !reset []
+
+  sbx-write-inbound-notifications-consumer:
+    extends:
+      file: services/write-service/compose.yaml
+      service: write-inbound-notifications-consumer
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-env
+      OTEL_SERVICE_NAME: write-inbound-notifications-consumer
+
+  sbx-write-fraud-alerts-consumer:
+    extends:
+      file: services/write-service/compose.yaml
+      service: write-fraud-alerts-consumer
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-env
+      OTEL_SERVICE_NAME: write-fraud-alerts-consumer
+
+  sbx-write-automation-engine:
+    extends:
+      file: services/write-service/compose.yaml
+      service: write-automation-engine
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-env
+      OTEL_SERVICE_NAME: write-automation-engine
+
+  sbx-write-automation-scheduler:
+    extends:
+      file: services/write-service/compose.yaml
+      service: write-automation-scheduler
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-env
+      OTEL_SERVICE_NAME: write-automation-scheduler
+
+  sbx-write-action-expiry-sweeper:
+    extends:
+      file: services/write-service/compose.yaml
+      service: write-action-expiry-sweeper
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-env
+      OTEL_SERVICE_NAME: write-action-expiry-sweeper
+
+  sbx-read-service:
+    extends:
+      file: services/read-service/compose.yaml
+      service: read-service
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-env
+      OTEL_SERVICE_NAME: read-service
+    networks:
+      default:
+        aliases:
+          - sbx-${SANDBOX_ID}-read-service
+    ports: !reset []
+
+  sbx-read-write-consumer:
+    extends:
+      file: services/read-service/compose.yaml
+      service: read-write-consumer
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-env
+      OTEL_SERVICE_NAME: read-write-consumer
+
+  sbx-ai-service:
+    extends:
+      file: services/ai-service/compose.yaml
+      service: ai-service
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-env
+      OTEL_SERVICE_NAME: ai-service
+    networks:
+      default:
+        aliases:
+          - sbx-${SANDBOX_ID}-ai-service
+    ports: !reset []
+
+  sbx-ai-dispatcher:
+    extends:
+      file: services/ai-service/compose.yaml
+      service: ai-dispatcher
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-env
+      OTEL_SERVICE_NAME: ai-dispatcher
+
+  sbx-push-service:
+    extends:
+      file: services/push-service/compose.yaml
+      service: push-service
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-env
+      OTEL_SERVICE_NAME: push-service
+    networks:
+      default:
+        aliases:
+          - sbx-${SANDBOX_ID}-push-service
+    ports: !reset []
+
+  sbx-webhook-service:
+    extends:
+      file: services/webhook-service/compose.yaml
+      service: webhook-service
+    depends_on: !reset {}
+    environment:
+      <<: *sandbox-env
+      OTEL_SERVICE_NAME: webhook-service
+    networks:
+      default:
+        aliases:
+          - sbx-${SANDBOX_ID}-webhook-service
+    ports: !reset []
+
+  sbx-antifraud-jobmanager:
+    extends:
+      file: services/antifraud-service/compose.yaml
+      service: antifraud-jobmanager
+    depends_on: !reset {}
+    environment: *flink-sandbox-env
+    ports: !reset []
+
+  sbx-antifraud-taskmanager:
+    extends:
+      file: services/antifraud-service/compose.yaml
+      service: antifraud-taskmanager
+    depends_on: !reset {}
+    environment: *flink-sandbox-env

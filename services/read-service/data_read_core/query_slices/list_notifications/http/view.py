@@ -1,90 +1,86 @@
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import status
-from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema
 
+from data_read_core.shared.http_contract import ok
 from data_read_core.shared.logging import (
     get_query_logger,
-    log_request_failed,
     log_request_received,
     log_request_served,
 )
+from data_read_core.shared.pagination import CREATED_AT_DESC, PageRequest, build_page
 from data_read_core.shared.read_at_least import read_at_least_gate
 from data_read_core.shared.rest_framework import (
-    StandardResultsPagination,
+    CURSOR_PARAMETER,
+    LIMIT_PARAMETER,
+    ErrorResponseSerializer,
     async_api_view,
 )
 
+from ..config import ACKNOWLEDGED_PARAMETER, SEVERITY_PARAMETER
 from ..dtos import ListNotificationsQuery
 from ..query_handler import ListNotificationsQueryHandler
+from ._filters import read_filters
 from ._presenters import present_many
-from ._serializers import (
-    MessageResponseSerializer,
-    PaginatedNotificationResponseSerializer,
-)
+from ._serializers import PaginatedNotificationPreviewSerializer
 
 
 @extend_schema(
     operation_id="notifications_list",
     summary="List notifications",
-    description="Retrieve a paginated list of your notifications, newest first.",
+    description=(
+        "Retrieve a page of your notifications, newest first.\n\n"
+        "Ordering is the global default — `created_at DESC, id DESC`. Unlike "
+        "the actions queue this is a feed to be read rather than a list to be "
+        "worked through, so a `critical` notification from Tuesday does NOT "
+        "outrank an `info` from this morning."
+    ),
     parameters=[
-        OpenApiParameter(
-            "limit",
-            type=OpenApiTypes.INT,
-            location=OpenApiParameter.QUERY,
-            description="Maximum number of notifications to return.",
-        ),
-        OpenApiParameter(
-            "offset",
-            type=OpenApiTypes.INT,
-            location=OpenApiParameter.QUERY,
-            description="Number of notifications to skip.",
-        ),
-        OpenApiParameter(
-            "only_unread",
-            type=OpenApiTypes.BOOL,
-            location=OpenApiParameter.QUERY,
-            description="Return only unacknowledged notifications.",
-        ),
+        LIMIT_PARAMETER,
+        CURSOR_PARAMETER,
+        ACKNOWLEDGED_PARAMETER,
+        SEVERITY_PARAMETER,
     ],
     responses={
-        200: PaginatedNotificationResponseSerializer,
-        400: MessageResponseSerializer,
+        200: PaginatedNotificationPreviewSerializer,
+        422: ErrorResponseSerializer,
     },
 )
 @async_api_view(["GET"])
 @read_at_least_gate
 async def list_notifications(request):
     logger = get_query_logger("list_notifications")
+    log_request_received(
+        logger,
+        "list_notifications",
+        user_id=request.user.id,
+    )
 
-    try:
-        log_request_received(logger, "list_notifications", user_id=request.user.id)
-
-        paginator = StandardResultsPagination()
-        paginator.limit = paginator.get_limit(request)
-        paginator.offset = paginator.get_offset(request)
-        only_unread = request.query_params.get("only_unread") in ("1", "true", "True")
-
-        notifications, total = await ListNotificationsQueryHandler().handle(
-            ListNotificationsQuery(
-                user_id=request.user.id,
-                limit=paginator.limit,
-                offset=paginator.offset,
-                filters={"only_unread": only_unread} if only_unread else {},
-            )
+    filters_list = read_filters(request)
+    page_request = PageRequest.from_request(
+        request,
+        CREATED_AT_DESC,
+        query_material=filters_list.as_cache_material(),
+    )
+    fetched = await ListNotificationsQueryHandler().handle(
+        ListNotificationsQuery(
+            user_id=request.user.id,
+            page=page_request,
+            filters=filters_list,
         )
+    )
 
-        paginator.count = total
-        log_request_served(logger, "list_notifications", user_id=request.user.id, total=total)
+    notifications_page = build_page(
+        fetched.rows,
+        fetched.total,
+        page_request,
+    )
+    log_request_served(
+        logger,
+        "list_notifications",
+        user_id=request.user.id,
+        total=notifications_page.total,
+    )
 
-        payload = present_many(notifications)
-        return paginator.get_paginated_response(payload)
-    except Exception as error:
-        log_request_failed(logger, "list_notifications", error, user_id=request.user.id)
-        payload = {
-            "message": f"Failed to list owned notifications: {error}",
-            "resource_id": None,
-        }
-
-        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+    return ok(
+        present_many(notifications_page.items),
+        notifications_page.meta(cached=fetched.cached),
+    )

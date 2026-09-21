@@ -1,72 +1,86 @@
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import status
-from rest_framework.response import Response
 
+from data_read_core.shared.http_contract import ok
 from data_read_core.shared.logging import (
     get_query_logger,
-    log_request_failed,
     log_request_received,
     log_request_served,
 )
+from data_read_core.shared.pagination import TRANSACTION_FEED, PageRequest, build_page
 from data_read_core.shared.read_at_least import read_at_least_gate
-from data_read_core.shared.rest_framework import async_api_view
+from data_read_core.shared.rest_framework import (
+    CURSOR_PARAMETER,
+    LIMIT_PARAMETER,
+    ErrorResponseSerializer,
+    async_api_view,
+)
 
+from ..config import PERIOD_PARAMETER, CacheNamespace, ParamsList
 from ..dtos import GetWalletQuery
-from ..exceptions import WalletNotFoundError
 from ..query_handler import GetWalletQueryHandler
 from ._presenters import present_one
-from ._serializers import MessageResponseSerializer, WalletResponseSerializer
+from ._query_params import resolve_period
+from ._serializers import EnvelopedWalletDetailSerializer
 
 
 @extend_schema(
     operation_id="wallets_retrieve",
     summary="Get wallet details",
-    description="Retrieve detailed information about a specific wallet.",
+    description=(
+        "Retrieve a specific wallet, including its inflow and outflow over the "
+        "requested `period` and a page of its recent transactions. `limit` and "
+        "`cursor` paginate `recent`, reported under `meta.recent`; the window "
+        "is echoed in `meta.period`. A closed wallet still resolves by id — "
+        "DELETE removes it from lists and search, not from existence."
+    ),
     parameters=[
         OpenApiParameter(
             "id",
             type=OpenApiTypes.UUID,
             location=OpenApiParameter.PATH,
             description="Wallet ID",
-        )
+        ),
+        LIMIT_PARAMETER,
+        CURSOR_PARAMETER,
+        PERIOD_PARAMETER,
     ],
     responses={
-        200: WalletResponseSerializer,
-        400: MessageResponseSerializer,
-        404: MessageResponseSerializer,
+        200: EnvelopedWalletDetailSerializer,
+        404: ErrorResponseSerializer,
     },
 )
 @async_api_view(["GET"])
 @read_at_least_gate
-async def get_wallet(request, pk=None):
+async def get_wallet(request, wallet_id=None):
     logger = get_query_logger("get_wallet")
+    log_request_received(
+        logger,
+        "get_wallet",
+        id=wallet_id,
+        user_id=request.user.id,
+    )
 
-    try:
-        log_request_received(logger, "get_wallet", id=pk, user_id=request.user.id)
-
-        retrieved_wallet = await GetWalletQueryHandler().handle(
-            GetWalletQuery(
-                user_id=request.user.id,
-                wallet_id=pk,
-            )
+    recent_request = PageRequest.from_request(request, TRANSACTION_FEED)
+    period = resolve_period(request)
+    fetched = await GetWalletQueryHandler().handle(
+        GetWalletQuery(
+            user_id=request.user.id,
+            wallet_id=wallet_id,
+            zone=request.user.preferences.zone,
+            recent_page=recent_request,
+            period=period,
         )
-        payload = present_one(retrieved_wallet)
-        log_request_served(logger, "get_wallet", id=pk)
+    )
+    detail = fetched.resource
+    recent_page = build_page(detail.recent, detail.recent_total, recent_request)
+    log_request_served(logger, "get_wallet", id=wallet_id)
 
-        return Response(payload, status=status.HTTP_200_OK)
-    except WalletNotFoundError:
-        logger.info("get_wallet: wallet not found (id=%s, user_id=%s)", pk, request.user.id)
-        payload = {
-            "message": f"Wallet with ID {pk} not found.",
-            "resource_id": f"{pk}",
-        }
-        return Response(payload, status=status.HTTP_404_NOT_FOUND)
-    except Exception as error:
-        payload = {
-            "message": f"Failed to retrieve wallet with ID {pk}: {error}",
-            "resource_id": f"{pk}",
-        }
-        log_request_failed(logger, "get_wallet", error, id=pk, user_id=request.user.id)
-
-        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+    return ok(
+        await present_one(detail, recent_page.items),
+        {
+            **recent_page.meta(namespace=CacheNamespace.RECENT),
+            ParamsList.PERIOD: str(period),
+            "cached": fetched.cached,
+        },
+    )

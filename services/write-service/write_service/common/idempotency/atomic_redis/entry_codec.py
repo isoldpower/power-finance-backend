@@ -3,15 +3,14 @@ from typing import Any
 
 from rest_framework.utils.encoders import JSONEncoder
 
-STATE_IN_FLIGHT = "in_flight"
-STATE_COMPLETED = "completed"
+from ..config import EntryState
 
 
 class EntryCodec:
     @staticmethod
     def encode_lock_entry(request_hash: str) -> str:
         return json.dumps(
-            {"state": STATE_IN_FLIGHT, "request_hash": request_hash},
+            {"state": EntryState.IN_FLIGHT, "request_hash": request_hash},
             separators=(",", ":"),
         )
 
@@ -25,7 +24,7 @@ class EntryCodec:
     ) -> str:
         return json.dumps(
             {
-                "state": STATE_COMPLETED,
+                "state": EntryState.COMPLETED,
                 "request_hash": request_hash,
                 "status_code": status_code,
                 "body": body,
@@ -48,7 +47,5 @@ class EntryCodec:
 
 
 __all__ = [
-    "STATE_COMPLETED",
-    "STATE_IN_FLIGHT",
     "EntryCodec",
 ]

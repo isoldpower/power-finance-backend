@@ -9,6 +9,7 @@ option java_outer_classname = "WalletProto";
 
 import "google/protobuf/timestamp.proto";
 
+
 message WalletCreated {
   string event_id = 1;
   google.protobuf.Timestamp occurred_at = 2;
@@ -19,6 +20,11 @@ message WalletCreated {
   string title = 12;
   string currency_code = 13;
   google.protobuf.Timestamp created_at = 14;
+
+  string category = 15;
+  string color = 16;
+  bool favorite = 17;
+  string zero_balance = 18;
 }
 
 message WalletDeleted {
@@ -41,4 +47,9 @@ message WalletUpdated {
   string previous_title = 12;
   string new_title = 13;
   google.protobuf.Timestamp updated_at = 14;
+
+  string category = 15;
+  string color = 16;
+  bool favorite = 17;
+  string zero_balance = 18;
 }

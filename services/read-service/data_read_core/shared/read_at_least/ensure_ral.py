@@ -14,8 +14,6 @@ type AsyncView = Callable[..., Awaitable]
 
 
 def read_at_least_gate(view: AsyncView) -> AsyncView:
-    """Enforce the Read-At-Least gate before the wrapped query view runs."""
-
     @wraps(view)
     async def gated_view(request: Request, *args, **kwargs):
         await ensure_read_at_least(request)
@@ -25,8 +23,6 @@ def read_at_least_gate(view: AsyncView) -> AsyncView:
 
 
 async def ensure_read_at_least(request: Request) -> None:
-    """Enforce the inbound Read-At-Least header for the authenticated user."""
-
     minimum_version = parse_read_at_least(request.headers.get(READ_AT_LEAST_HEADER))
     if minimum_version is None:
         return

@@ -1,17 +1,73 @@
-from ..dtos import WalletDTO
+from collections.abc import Mapping
+from decimal import Decimal
+
+from data_read_core.shared.chains import fetch_chain_sizes, present_chain
+from data_read_core.shared.money import money_at_scale
+
+from ..dtos import RecentTransactionDTO, WalletDetailDTO
 
 
-def present_one(wallet: WalletDTO) -> dict:
+async def present_one(
+    detail: WalletDetailDTO,
+    recent: list[RecentTransactionDTO] | None = None,
+) -> dict:
+    wallet = detail.wallet
+    currency = wallet.currency
+    recent_rows = detail.recent if recent is None else recent
+    chain_sizes = await fetch_chain_sizes(row.chain_id for row in recent_rows)
+
     return {
         "id": wallet.id,
         "name": wallet.name,
-        "balance": {
-            "amount": wallet.balance_amount,
-            "currency": wallet.currency,
+        "created_at": wallet.created_at,
+        "updated_at": wallet.updated_at,
+        "deleted_at": wallet.deleted_at,
+        "category": wallet.category,
+        "currency": currency,
+        "money": await money_at_scale(
+            wallet.balance_amount,
+            currency,
+        ),
+        "zero_balance": await money_at_scale(
+            wallet.zero_balance_amount,
+            currency,
+        ),
+        "favorite": wallet.favorite,
+        "color": wallet.color,
+        "period": {
+            "inflow": await money_at_scale(
+                detail.period.inflow,
+                currency,
+            ),
+            "outflow": await money_at_scale(
+                detail.period.outflow,
+                currency,
+            ),
         },
-        "meta": {
-            "id": wallet.id,
-            "created_at": wallet.created_at,
-            "updated_at": wallet.updated_at,
+        "recent": [await _present_recent(row, chain_sizes) for row in recent_rows],
+    }
+
+
+async def _present_recent(
+    transaction: RecentTransactionDTO,
+    chain_sizes: Mapping[str, int],
+) -> dict:
+    return {
+        "id": transaction.id,
+        "name": transaction.name,
+        "created_at": transaction.created_at,
+        "updated_at": transaction.updated_at,
+        "deleted_at": transaction.deleted_at,
+        "money": await money_at_scale(
+            abs(Decimal(transaction.amount)),
+            transaction.currency,
+        ),
+        "type": ("expense" if Decimal(transaction.amount) < 0 else "income"),
+        "origin": transaction.origin,
+        "wallet": {
+            "id": transaction.wallet_id,
+            "name": transaction.wallet_name,
         },
+        "category": transaction.category,
+        "chain": present_chain(transaction.chain_id, chain_sizes),
     }

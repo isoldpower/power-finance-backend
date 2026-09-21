@@ -47,7 +47,14 @@ func (f *fakeDeliveryStore) MarkFailed(_ context.Context, deliveryID string, _ i
 	return nil
 }
 
-func (f *fakeDeliveryStore) Reschedule(_ context.Context, deliveryID string, attempts int, lastError string, nextAttemptAt time.Time, _ time.Time) error {
+func (f *fakeDeliveryStore) Reschedule(
+	_ context.Context,
+	deliveryID string,
+	attempts int,
+	lastError string,
+	nextAttemptAt time.Time,
+	_ time.Time,
+) error {
 	f.rescheduled = append(f.rescheduled, rescheduleCall{
 		deliveryID:    deliveryID,
 		attempts:      attempts,
@@ -58,14 +65,20 @@ func (f *fakeDeliveryStore) Reschedule(_ context.Context, deliveryID string, att
 }
 
 type fakeSecretResolver struct {
-	secret string
-	err    error
-	calls  int
+	secret   string
+	secrets  types.EndpointSecrets
+	err      error
+	calls    int
+	versions []int
 }
 
-func (f *fakeSecretResolver) EndpointSecret(_ context.Context, _ string) (string, error) {
+func (f *fakeSecretResolver) EndpointSecrets(_ context.Context, _ string) (types.EndpointSecrets, error) {
 	f.calls++
-	return f.secret, f.err
+	if f.secrets.Secret != "" || f.secrets.PreviousSecret != "" {
+		return f.secrets, f.err
+	}
+
+	return types.EndpointSecrets{Secret: f.secret, SecretVersion: 1}, f.err
 }
 
 type fakeSender struct {
@@ -74,7 +87,7 @@ type fakeSender struct {
 	err        error
 }
 
-func (f *fakeSender) Send(_ context.Context, delivery types.Delivery, secret string) error {
+func (f *fakeSender) Send(_ context.Context, delivery types.Delivery, secret string, _ time.Time) error {
 	f.deliveries = append(f.deliveries, delivery)
 	f.secrets = append(f.secrets, secret)
 	return f.err
@@ -102,7 +115,11 @@ type fakeEndpointResolver struct {
 	calls     int
 }
 
-func (f *fakeEndpointResolver) ActiveEndpointsForEvent(_ context.Context, _ int, _ string) ([]types.WebhookEndpoint, error) {
+func (f *fakeEndpointResolver) ActiveEndpointsForEvent(
+	_ context.Context,
+	_ int,
+	_ string,
+) ([]types.WebhookEndpoint, error) {
 	f.calls++
 	return f.endpoints, f.err
 }
@@ -133,48 +150,5 @@ type signalingAttempter struct {
 
 func (s *signalingAttempter) Attempt(_ context.Context, delivery types.Delivery, _ string) error {
 	s.attempted <- delivery
-	return nil
-}
-
-type fakeConfigStore struct {
-	upserted    []types.WebhookEndpoint
-	updated     []string
-	rotated     []string
-	deleted     []string
-	addedSubs   []types.WebhookSubscription
-	removedSubs []string
-	err         error
-}
-
-func (f *fakeConfigStore) UpsertEndpoint(_ context.Context, endpoint types.WebhookEndpoint, _ time.Time) error {
-	if f.err != nil {
-		return f.err
-	}
-	f.upserted = append(f.upserted, endpoint)
-	return nil
-}
-
-func (f *fakeConfigStore) UpdateEndpoint(_ context.Context, webhookID, _, _ string, _ time.Time) error {
-	f.updated = append(f.updated, webhookID)
-	return nil
-}
-
-func (f *fakeConfigStore) RotateSecret(_ context.Context, webhookID, _ string, _ time.Time) error {
-	f.rotated = append(f.rotated, webhookID)
-	return nil
-}
-
-func (f *fakeConfigStore) DeleteEndpoint(_ context.Context, webhookID string) error {
-	f.deleted = append(f.deleted, webhookID)
-	return nil
-}
-
-func (f *fakeConfigStore) AddSubscription(_ context.Context, subscription types.WebhookSubscription, _ time.Time) error {
-	f.addedSubs = append(f.addedSubs, subscription)
-	return nil
-}
-
-func (f *fakeConfigStore) RemoveSubscription(_ context.Context, subscriptionID string) error {
-	f.removedSubs = append(f.removedSubs, subscriptionID)
 	return nil
 }

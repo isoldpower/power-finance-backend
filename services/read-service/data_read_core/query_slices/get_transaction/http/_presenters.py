@@ -1,15 +1,51 @@
+from decimal import Decimal
+
+from data_read_core.shared.chains import fetch_chain_sizes, present_chain
+from data_read_core.shared.money import money_at_scale
+
 from ..dtos import TransactionDTO
 
 
-def present_one(transaction: TransactionDTO) -> dict:
+async def present_one(transaction: TransactionDTO) -> dict:
+    chain_sizes = await fetch_chain_sizes([transaction.chain_id])
+
     return {
         "id": transaction.id,
-        "wallet_id": transaction.wallet_id,
-        "amount": transaction.amount,
-        "currency": transaction.currency,
-        "meta": {
-            "id": transaction.id,
-            "occurred_at": transaction.occurred_at,
-            "created_at": transaction.created_at,
+        "name": transaction.name,
+        "created_at": transaction.created_at,
+        "updated_at": transaction.updated_at,
+        "deleted_at": transaction.deleted_at,
+        "money": await money_at_scale(
+            abs(Decimal(transaction.amount)),
+            transaction.currency,
+        ),
+        "type": ("expense" if Decimal(transaction.amount) < 0 else "income"),
+        "origin": transaction.origin,
+        "wallet": {
+            "id": transaction.wallet_id,
+            "name": transaction.wallet_name,
         },
+        "category": transaction.category,
+        "chain": present_chain(transaction.chain_id, chain_sizes),
+        "evidence": ({"url": transaction.evidence_url} if transaction.evidence_url else None),
+        "postings": [
+            await _present_posting(posting, transaction.currency)
+            for posting in transaction.postings
+        ],
+        "analysis": transaction.analysis,
+    }
+
+
+async def _present_posting(posting: dict, fallback_currency: str) -> dict:
+    return {
+        "id": posting["id"],
+        "account_id": posting["account_id"],
+        "title": posting["title"],
+        "icon": posting["icon"],
+        "debit": posting["debit"],
+        "position": posting["position"],
+        "money": await money_at_scale(
+            Decimal(posting["amount"]),
+            posting["currency_code"] or fallback_currency,
+        ),
     }

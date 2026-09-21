@@ -1,4 +1,11 @@
+from .action_views import FallbackActionListView
+from .automation_views import (
+    FallbackAutomationListView,
+    FallbackAutomationResourceView,
+)
+from .goal_views import FallbackGoalListView, FallbackGoalResourceView
 from .notification_views import (
+    FallbackNotificationCountView,
     FallbackNotificationListView,
     FallbackNotificationResourceView,
 )
@@ -14,6 +21,12 @@ from .webhook_views import (
 )
 
 __all__ = [
+    "FallbackActionListView",
+    "FallbackAutomationListView",
+    "FallbackAutomationResourceView",
+    "FallbackGoalListView",
+    "FallbackGoalResourceView",
+    "FallbackNotificationCountView",
     "FallbackNotificationListView",
     "FallbackNotificationResourceView",
     "FallbackTransactionListView",

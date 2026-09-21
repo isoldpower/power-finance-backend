@@ -50,23 +50,11 @@ public interface NotificationRequestedOrBuilder extends
   int getUserId();
 
   /**
-   * <pre>
-   * The user's external (Clerk) id — becomes the partition key of the
-   * resulting outbox event so per-user ordering and push-service auth keep
-   * working downstream.
-   * </pre>
-   *
    * <code>string user_external_id = 11;</code>
    * @return The userExternalId.
    */
   java.lang.String getUserExternalId();
   /**
-   * <pre>
-   * The user's external (Clerk) id — becomes the partition key of the
-   * resulting outbox event so per-user ordering and push-service auth keep
-   * working downstream.
-   * </pre>
-   *
    * <code>string user_external_id = 11;</code>
    * @return The bytes for userExternalId.
    */
@@ -74,28 +62,28 @@ public interface NotificationRequestedOrBuilder extends
       getUserExternalIdBytes();
 
   /**
-   * <code>string short = 12;</code>
-   * @return The short.
+   * <code>string title = 12;</code>
+   * @return The title.
    */
-  java.lang.String getShort();
+  java.lang.String getTitle();
   /**
-   * <code>string short = 12;</code>
-   * @return The bytes for short.
+   * <code>string title = 12;</code>
+   * @return The bytes for title.
    */
   com.google.protobuf.ByteString
-      getShortBytes();
+      getTitleBytes();
 
   /**
-   * <code>string message = 13;</code>
-   * @return The message.
+   * <code>string body = 13;</code>
+   * @return The body.
    */
-  java.lang.String getMessage();
+  java.lang.String getBody();
   /**
-   * <code>string message = 13;</code>
-   * @return The bytes for message.
+   * <code>string body = 13;</code>
+   * @return The bytes for body.
    */
   com.google.protobuf.ByteString
-      getMessageBytes();
+      getBodyBytes();
 
   /**
    * <code>.google.protobuf.Struct payload = 14;</code>
@@ -111,4 +99,39 @@ public interface NotificationRequestedOrBuilder extends
    * <code>.google.protobuf.Struct payload = 14;</code>
    */
   com.google.protobuf.StructOrBuilder getPayloadOrBuilder();
+
+  /**
+   * <code>.power_finance.events.v1.NotificationSeverity severity = 16;</code>
+   * @return The enum numeric value on the wire for severity.
+   */
+  int getSeverityValue();
+  /**
+   * <code>.power_finance.events.v1.NotificationSeverity severity = 16;</code>
+   * @return The severity.
+   */
+  com.powerfinance.events.v1.NotificationSeverity getSeverity();
+
+  /**
+   * <code>string subject_type = 17;</code>
+   * @return The subjectType.
+   */
+  java.lang.String getSubjectType();
+  /**
+   * <code>string subject_type = 17;</code>
+   * @return The bytes for subjectType.
+   */
+  com.google.protobuf.ByteString
+      getSubjectTypeBytes();
+
+  /**
+   * <code>string subject_id = 18;</code>
+   * @return The subjectId.
+   */
+  java.lang.String getSubjectId();
+  /**
+   * <code>string subject_id = 18;</code>
+   * @return The bytes for subjectId.
+   */
+  com.google.protobuf.ByteString
+      getSubjectIdBytes();
 }

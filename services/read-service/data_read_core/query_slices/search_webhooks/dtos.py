@@ -1,16 +1,16 @@
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
 
+from data_read_core.shared.pagination import PageRequest
 from data_read_core.shared.postgres_orm import WebhookReadModel
+from data_read_core.shared.timestamps import to_iso
 
 
 @dataclass(frozen=True)
 class SearchWebhooksQuery:
     user_id: int
     filter_body: dict[str, Any]
-    limit: int
-    offset: int
+    page: PageRequest
 
 
 @dataclass(frozen=True)
@@ -31,10 +31,6 @@ class WebhookDTO:
             title=model.title,
             url=model.url,
             is_active=model.is_active,
-            created_at=_to_iso(model.created_at),
-            updated_at=_to_iso(model.updated_at),
+            created_at=to_iso(model.created_at),
+            updated_at=to_iso(model.updated_at),
         )
-
-
-def _to_iso(value: datetime | None) -> str | None:
-    return value.isoformat() if value is not None else None

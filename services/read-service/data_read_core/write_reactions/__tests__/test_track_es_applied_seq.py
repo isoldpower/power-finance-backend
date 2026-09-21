@@ -1,8 +1,8 @@
 import pytest
 from fakes import make_event
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import WalletCreated
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.read_at_least import (
     DjangoAppliedSeqReader,
     DjangoEsAppliedSeqReader,

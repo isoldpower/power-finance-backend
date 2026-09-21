@@ -41,6 +41,11 @@ public final class TransactionProto extends com.google.protobuf.GeneratedFile {
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_power_finance_events_v1_TransactionUpdated_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_power_finance_events_v1_TransactionMetadataUpdated_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_power_finance_events_v1_TransactionMetadataUpdated_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -51,30 +56,41 @@ public final class TransactionProto extends com.google.protobuf.GeneratedFile {
   static {
     java.lang.String[] descriptorData = {
       "\n\021transaction.proto\022\027power_finance.event" +
-      "s.v1\032\037google/protobuf/timestamp.proto\"\353\001" +
+      "s.v1\032\037google/protobuf/timestamp.proto\"\370\002" +
       "\n\022TransactionCreated\022\020\n\010event_id\030\001 \001(\t\022/" +
       "\n\013occurred_at\030\002 \001(\0132\032.google.protobuf.Ti" +
       "mestamp\022\026\n\016schema_version\030\003 \001(\005\022\026\n\016trans" +
       "action_id\030\n \001(\t\022\021\n\twallet_id\030\013 \001(\t\022\017\n\007us" +
       "er_id\030\014 \001(\005\022\016\n\006amount\030\r \001(\t\022.\n\ncreated_a" +
-      "t\030\016 \001(\0132\032.google.protobuf.Timestamp\"\361\001\n\022" +
-      "TransactionDeleted\022\020\n\010event_id\030\001 \001(\t\022/\n\013" +
-      "occurred_at\030\002 \001(\0132\032.google.protobuf.Time" +
-      "stamp\022\026\n\016schema_version\030\003 \001(\005\022\026\n\016transac" +
-      "tion_id\030\n \001(\t\022\021\n\twallet_id\030\013 \001(\t\022\017\n\007user" +
-      "_id\030\014 \001(\005\022\016\n\006amount\030\r \001(\t\022.\n\ncreated_at\030" +
-      "\017 \001(\0132\032.google.protobuf.TimestampJ\004\010\016\020\017\"" +
-      "\210\002\n\022TransactionUpdated\022\020\n\010event_id\030\001 \001(\t" +
-      "\022/\n\013occurred_at\030\002 \001(\0132\032.google.protobuf." +
-      "Timestamp\022\026\n\016schema_version\030\003 \001(\005\022\026\n\016tra" +
-      "nsaction_id\030\n \001(\t\022\021\n\twallet_id\030\013 \001(\t\022\017\n\007" +
-      "user_id\030\014 \001(\005\022\027\n\017previous_amount\030\r \001(\t\022\022" +
-      "\n\nnew_amount\030\016 \001(\t\022.\n\nupdated_at\030\017 \001(\0132\032" +
-      ".google.protobuf.TimestampB\177\n\032com.powerf" +
-      "inance.events.v1B\020TransactionProtoP\001ZMgi" +
-      "thub.com/power-finance/kafka-messages-pr" +
-      "oto/generated/go/events/v1;eventsv1b\006pro" +
-      "to3"
+      "t\030\016 \001(\0132\032.google.protobuf.Timestamp\022\014\n\004n" +
+      "ame\030\017 \001(\t\022\020\n\010category\030\020 \001(\t\022\024\n\014evidence_" +
+      "url\030\021 \001(\t\022\016\n\006origin\030\022 \001(\t\022\020\n\010chain_id\030\023 " +
+      "\001(\t\022\026\n\016container_kind\030\024 \001(\t\022\025\n\rcurrency_" +
+      "code\030\025 \001(\tJ\004\010\026\020\027\"\241\002\n\022TransactionDeleted\022" +
+      "\020\n\010event_id\030\001 \001(\t\022/\n\013occurred_at\030\002 \001(\0132\032" +
+      ".google.protobuf.Timestamp\022\026\n\016schema_ver" +
+      "sion\030\003 \001(\005\022\026\n\016transaction_id\030\n \001(\t\022\021\n\twa" +
+      "llet_id\030\013 \001(\t\022\017\n\007user_id\030\014 \001(\005\022\016\n\006amount" +
+      "\030\r \001(\t\022.\n\ncreated_at\030\017 \001(\0132\032.google.prot" +
+      "obuf.Timestamp\022.\n\ndeleted_at\030\020 \001(\0132\032.goo" +
+      "gle.protobuf.TimestampJ\004\010\016\020\017\"\210\002\n\022Transac" +
+      "tionUpdated\022\020\n\010event_id\030\001 \001(\t\022/\n\013occurre" +
+      "d_at\030\002 \001(\0132\032.google.protobuf.Timestamp\022\026" +
+      "\n\016schema_version\030\003 \001(\005\022\026\n\016transaction_id" +
+      "\030\n \001(\t\022\021\n\twallet_id\030\013 \001(\t\022\017\n\007user_id\030\014 \001" +
+      "(\005\022\027\n\017previous_amount\030\r \001(\t\022\022\n\nnew_amoun" +
+      "t\030\016 \001(\t\022.\n\nupdated_at\030\017 \001(\0132\032.google.pro" +
+      "tobuf.Timestamp\"\206\002\n\032TransactionMetadataU" +
+      "pdated\022\020\n\010event_id\030\001 \001(\t\022/\n\013occurred_at\030" +
+      "\002 \001(\0132\032.google.protobuf.Timestamp\022\026\n\016sch" +
+      "ema_version\030\003 \001(\005\022\026\n\016transaction_id\030\n \001(" +
+      "\t\022\017\n\007user_id\030\013 \001(\005\022\014\n\004name\030\014 \001(\t\022\020\n\010cate" +
+      "gory\030\r \001(\t\022\024\n\014evidence_url\030\016 \001(\t\022.\n\nupda" +
+      "ted_at\030\017 \001(\0132\032.google.protobuf.Timestamp" +
+      "B\177\n\032com.powerfinance.events.v1B\020Transact" +
+      "ionProtoP\001ZMgithub.com/power-finance/kaf" +
+      "ka-messages-proto/generated/go/events/v1" +
+      ";eventsv1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -86,19 +102,25 @@ public final class TransactionProto extends com.google.protobuf.GeneratedFile {
     internal_static_power_finance_events_v1_TransactionCreated_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_power_finance_events_v1_TransactionCreated_descriptor,
-        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "TransactionId", "WalletId", "UserId", "Amount", "CreatedAt", });
+        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "TransactionId", "WalletId", "UserId", "Amount", "CreatedAt", "Name", "Category", "EvidenceUrl", "Origin", "ChainId", "ContainerKind", "CurrencyCode", });
     internal_static_power_finance_events_v1_TransactionDeleted_descriptor =
       getDescriptor().getMessageType(1);
     internal_static_power_finance_events_v1_TransactionDeleted_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_power_finance_events_v1_TransactionDeleted_descriptor,
-        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "TransactionId", "WalletId", "UserId", "Amount", "CreatedAt", });
+        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "TransactionId", "WalletId", "UserId", "Amount", "CreatedAt", "DeletedAt", });
     internal_static_power_finance_events_v1_TransactionUpdated_descriptor =
       getDescriptor().getMessageType(2);
     internal_static_power_finance_events_v1_TransactionUpdated_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_power_finance_events_v1_TransactionUpdated_descriptor,
         new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "TransactionId", "WalletId", "UserId", "PreviousAmount", "NewAmount", "UpdatedAt", });
+    internal_static_power_finance_events_v1_TransactionMetadataUpdated_descriptor =
+      getDescriptor().getMessageType(3);
+    internal_static_power_finance_events_v1_TransactionMetadataUpdated_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_power_finance_events_v1_TransactionMetadataUpdated_descriptor,
+        new java.lang.String[] { "EventId", "OccurredAt", "SchemaVersion", "TransactionId", "UserId", "Name", "Category", "EvidenceUrl", "UpdatedAt", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
   }

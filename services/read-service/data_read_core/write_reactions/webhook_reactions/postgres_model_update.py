@@ -1,8 +1,8 @@
 from datetime import UTC
 
+from kafka_consumer_py import Effect, EventMessage
 from kafka_messages import WebhookEndpointUpdated
 
-from data_read_core.shared.kafka_updates import Effect, EventMessage
 from data_read_core.shared.postgres_orm import WebhookReadModel
 
 from .._logger_shortcuts import log_webhook_postgres_updated
@@ -22,6 +22,7 @@ class UpdateWebhookReadModel(Effect):
         updated = await WebhookReadModel.objects.filter(id=payload.webhook_id).aupdate(
             title=payload.title,
             url=payload.url,
+            is_active=payload.enabled,
             updated_at=payload.updated_at.ToDatetime(tzinfo=UTC),
         )
         log_webhook_postgres_updated(payload.webhook_id, updated)

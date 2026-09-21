@@ -4,7 +4,7 @@ from collections.abc import Callable
 from rest_framework.response import Response
 
 from .atomic_redis import RedisIdempotencyStore
-from .request_inspector import IDEMPOTENCY_HEADER
+from .config import HeaderName
 from .workflow import AsyncViewMethod, IdempotencyWorkflow
 
 _store: RedisIdempotencyStore | None = None
@@ -40,7 +40,7 @@ def idempotent(*, required: bool) -> Callable[[AsyncViewMethod], AsyncViewMethod
 
 
 __all__ = [
-    "IDEMPOTENCY_HEADER",
+    "HeaderName",
     "get_store",
     "idempotent",
     "set_store",

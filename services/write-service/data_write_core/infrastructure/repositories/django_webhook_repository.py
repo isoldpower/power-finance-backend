@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from write_service.common.pagination import PageRequest, apply_keyset
+
 from data_write_core.application.interfaces import WebhookRepository
 from data_write_core.domain.entities import WebhookEntity, WebhookSubscriptionEntity
 
@@ -27,21 +29,24 @@ class DjangoWebhookRepository(WebhookRepository):
     async def get_user_webhooks(
         self,
         user_id: int,
-        limit: int | None = None,
-        offset: int | None = None,
+        page: PageRequest | None = None,
+        enabled: bool | None = None,
     ) -> list[WebhookEntity]:
-        queryset = WebhookModel.objects.filter(user_id=user_id).order_by("-created_at")
+        queryset = self._owned_queryset(user_id, enabled)
+        rows = apply_keyset(queryset, page) if page else queryset.order_by("-created_at", "-id")
 
-        start = offset or 0
-        if limit is not None:
-            queryset = queryset[start : start + limit]
-        elif offset is not None:
-            queryset = queryset[start:]
+        return [WebhookMapper.to_domain(webhook) async for webhook in rows]
 
-        return [WebhookMapper.to_domain(webhook) async for webhook in queryset]
+    async def count_user_webhooks(self, user_id: int, enabled: bool | None = None) -> int:
+        return await self._owned_queryset(user_id, enabled).acount()
 
-    async def count_user_webhooks(self, user_id: int) -> int:
-        return await WebhookModel.objects.filter(user_id=user_id).acount()
+    @staticmethod
+    def _owned_queryset(user_id: int, enabled: bool | None):
+        queryset = WebhookModel.objects.filter(user_id=user_id)
+        if enabled is not None:
+            queryset = queryset.filter(is_active=enabled)
+
+        return queryset
 
     async def save_webhook(self, webhook: WebhookEntity) -> WebhookEntity:
         saved_webhook = await WebhookModel.objects.aget(id=webhook.unique_id)

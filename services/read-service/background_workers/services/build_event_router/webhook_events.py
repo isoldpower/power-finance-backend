@@ -1,8 +1,3 @@
-from data_read_core.shared.kafka_updates import (
-    EventRouter,
-    ExecutionPlan,
-    SyncProcessGroup,
-)
 from data_read_core.write_reactions import (
     BumpWebhookListVersion,
     CreateWebhookReadModel,
@@ -13,6 +8,11 @@ from data_read_core.write_reactions import (
     RemoveWebhookSubscriptionReadModel,
     TrackAppliedSeq,
     UpdateWebhookReadModel,
+)
+from kafka_consumer_py import (
+    EventRouter,
+    ExecutionPlan,
+    SyncProcessGroup,
 )
 from kafka_messages import (
     WebhookEndpointCreated,
@@ -36,7 +36,8 @@ def subscribe_webhook_created(
                 [
                     TrackAppliedSeq(CreateWebhookReadModel(), WebhookEndpointCreated),
                     BumpWebhookListVersion(WebhookEndpointCreated),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -58,7 +59,8 @@ def subscribe_webhook_updated(
                     TrackAppliedSeq(UpdateWebhookReadModel(), WebhookEndpointUpdated),
                     EvictWebhookCache(WebhookEndpointUpdated),
                     BumpWebhookListVersion(WebhookEndpointUpdated),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -81,7 +83,8 @@ def subscribe_webhook_deleted(
                     EvictWebhookCache(WebhookEndpointDeleted),
                     EvictWebhookEventsCache(WebhookEndpointDeleted),
                     BumpWebhookListVersion(WebhookEndpointDeleted),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -105,7 +108,8 @@ def subscribe_webhook_subscription_added(
                         WebhookSubscriptionAdded,
                     ),
                     EvictWebhookEventsCache(WebhookSubscriptionAdded),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )
@@ -129,7 +133,8 @@ def subscribe_webhook_subscription_removed(
                         WebhookSubscriptionRemoved,
                     ),
                     EvictWebhookEventsCache(WebhookSubscriptionRemoved),
-                ]
+                ],
+                atomic=True,
             ),
         ]
     )

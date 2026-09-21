@@ -1,13 +1,7 @@
-from enum import Enum
+from webhook_catalog_py import event_values, is_known_event
+
+WEBHOOK_EVENT_TYPES: frozenset[str] = event_values()
 
 
-class WebhookType(str, Enum):
-    """Event types a webhook endpoint can subscribe to."""
-
-    TransactionCreate = "transaction.created"
-    TransactionUpdate = "transaction.updated"
-    TransactionDelete = "transaction.deleted"
-
-    @classmethod
-    def is_supported(cls, raw: str) -> bool:
-        return raw in {member.value for member in cls}
+def is_subscribable_event(event: str) -> bool:
+    return is_known_event(event)

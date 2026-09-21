@@ -283,6 +283,17 @@ private static final long serialVersionUID = 0L;
     return updatedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : updatedAt_;
   }
 
+  public static final int ENABLED_FIELD_NUMBER = 15;
+  private boolean enabled_ = false;
+  /**
+   * <code>bool enabled = 15;</code>
+   * @return The enabled.
+   */
+  @java.lang.Override
+  public boolean getEnabled() {
+    return enabled_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -321,6 +332,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(14, getUpdatedAt());
     }
+    if (enabled_ != false) {
+      output.writeBool(15, enabled_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -357,6 +371,10 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(14, getUpdatedAt());
+    }
+    if (enabled_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(15, enabled_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -395,6 +413,8 @@ private static final long serialVersionUID = 0L;
       if (!getUpdatedAt()
           .equals(other.getUpdatedAt())) return false;
     }
+    if (getEnabled()
+        != other.getEnabled()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -426,6 +446,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + UPDATED_AT_FIELD_NUMBER;
       hash = (53 * hash) + getUpdatedAt().hashCode();
     }
+    hash = (37 * hash) + ENABLED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getEnabled());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -580,6 +603,7 @@ private static final long serialVersionUID = 0L;
         updatedAtBuilder_.dispose();
         updatedAtBuilder_ = null;
       }
+      enabled_ = false;
       return this;
     }
 
@@ -644,6 +668,9 @@ private static final long serialVersionUID = 0L;
             : updatedAtBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.enabled_ = enabled_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -690,6 +717,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasUpdatedAt()) {
         mergeUpdatedAt(other.getUpdatedAt());
+      }
+      if (other.getEnabled() != false) {
+        setEnabled(other.getEnabled());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -761,6 +791,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 114
+            case 120: {
+              enabled_ = input.readBool();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 120
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1370,6 +1405,38 @@ private static final long serialVersionUID = 0L;
         updatedAt_ = null;
       }
       return updatedAtBuilder_;
+    }
+
+    private boolean enabled_ ;
+    /**
+     * <code>bool enabled = 15;</code>
+     * @return The enabled.
+     */
+    @java.lang.Override
+    public boolean getEnabled() {
+      return enabled_;
+    }
+    /**
+     * <code>bool enabled = 15;</code>
+     * @param value The enabled to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEnabled(boolean value) {
+
+      enabled_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool enabled = 15;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEnabled() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      enabled_ = false;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:power_finance.events.v1.WebhookEndpointUpdated)

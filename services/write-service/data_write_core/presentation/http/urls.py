@@ -1,6 +1,14 @@
 from django.urls import path
 
+from .views.actions import ActionResolveView
+from .views.automations import AutomationListView, AutomationResourceView
 from .views.fallback_read import (
+    FallbackActionListView,
+    FallbackAutomationListView,
+    FallbackAutomationResourceView,
+    FallbackGoalListView,
+    FallbackGoalResourceView,
+    FallbackNotificationCountView,
     FallbackNotificationListView,
     FallbackNotificationResourceView,
     FallbackTransactionListView,
@@ -11,12 +19,21 @@ from .views.fallback_read import (
     FallbackWebhookListView,
     FallbackWebhookResourceView,
 )
+from .views.goals import GoalListView, GoalResourceView
 from .views.notifications import (
     NotificationAckView,
     NotificationBatchAckView,
     NotificationResourceView,
 )
-from .views.transactions import TransactionListView, TransactionResourceView
+from .views.transaction_chains import (
+    TransactionChainListView,
+    TransactionChainResourceView,
+)
+from .views.transactions import (
+    TransactionAdjustView,
+    TransactionListView,
+    TransactionResourceView,
+)
 from .views.wallets import WalletListView, WalletResourceView
 from .views.webhooks import (
     WebhookEventListView,
@@ -28,107 +45,177 @@ from .views.webhooks import (
 
 urlpatterns = [
     path(
-        "webhooks/",
+        "automations",
+        AutomationListView.as_view(),
+        name="automations-list",
+    ),
+    path(
+        "automations/<uuid:automation_id>",
+        AutomationResourceView.as_view(),
+        name="automations-resource",
+    ),
+    path(
+        "actions/<uuid:action_id>/resolve",
+        ActionResolveView.as_view(),
+        name="actions-resolve",
+    ),
+    path(
+        "webhooks",
         WebhookListView.as_view(),
         name="webhooks-list",
     ),
     path(
-        "webhooks/<uuid:pk>/",
+        "webhooks/<uuid:webhook_id>",
         WebhookResourceView.as_view(),
         name="webhooks-resource",
     ),
     path(
-        "webhooks/<uuid:pk>/secret/",
+        "webhooks/<uuid:webhook_id>/secret",
         WebhookSecretView.as_view(),
         name="webhooks-secret",
     ),
     path(
-        "webhooks/<uuid:pk>/events/",
+        "webhooks/<uuid:webhook_id>/events",
         WebhookEventListView.as_view(),
         name="webhooks-event-list",
     ),
     path(
-        "webhooks/<uuid:pk>/events/<uuid:subscription_id>/",
+        "webhooks/<uuid:webhook_id>/events/<uuid:subscription_id>",
         WebhookEventResourceView.as_view(),
         name="webhooks-event-resource",
     ),
     path(
-        "notifications/ack/",
+        "notifications/ack",
         NotificationBatchAckView.as_view(),
         name="notifications-batch-ack",
     ),
     path(
-        "notifications/<uuid:notification_id>/ack/",
+        "notifications/<uuid:notification_id>/ack",
         NotificationAckView.as_view(),
         name="notifications-ack",
     ),
     path(
-        "notifications/<uuid:pk>/",
+        "notifications/<uuid:notification_id>",
         NotificationResourceView.as_view(),
         name="notifications-resource",
     ),
     path(
-        "transactions/",
+        "transactions",
         TransactionListView.as_view(),
         name="transactions-list",
     ),
     path(
-        "transactions/<uuid:pk>/",
+        "transactions/chains",
+        TransactionChainListView.as_view(),
+        name="transaction-chains-list",
+    ),
+    path(
+        "transactions/chains/<uuid:chain_id>",
+        TransactionChainResourceView.as_view(),
+        name="transaction-chains-resource",
+    ),
+    path(
+        "transactions/<uuid:transaction_id>",
         TransactionResourceView.as_view(),
         name="transactions-resource",
     ),
     path(
-        "wallets/",
+        "transactions/<uuid:transaction_id>/adjust",
+        TransactionAdjustView.as_view(),
+        name="transactions-adjust",
+    ),
+    path(
+        "goals",
+        GoalListView.as_view(),
+        name="goals-list",
+    ),
+    path(
+        "goals/<uuid:goal_id>",
+        GoalResourceView.as_view(),
+        name="goals-resource",
+    ),
+    path(
+        "fallback-reads/goals",
+        FallbackGoalListView.as_view(),
+        name="fallback-goals-list",
+    ),
+    path(
+        "fallback-reads/goals/<uuid:goal_id>",
+        FallbackGoalResourceView.as_view(),
+        name="fallback-goals-resource",
+    ),
+    path(
+        "wallets",
         WalletListView.as_view(),
         name="wallets-list",
     ),
     path(
-        "wallets/<uuid:pk>/",
+        "wallets/<uuid:wallet_id>",
         WalletResourceView.as_view(),
         name="wallets-resource",
     ),
     path(
-        "fallback-reads/wallets/",
+        "fallback-reads/wallets",
         FallbackWalletListView.as_view(),
         name="fallback-wallets-list",
     ),
     path(
-        "fallback-reads/wallets/<uuid:pk>/",
+        "fallback-reads/wallets/<uuid:wallet_id>",
         FallbackWalletResourceView.as_view(),
         name="fallback-wallets-resource",
     ),
     path(
-        "fallback-reads/transactions/",
+        "fallback-reads/transactions",
         FallbackTransactionListView.as_view(),
         name="fallback-transactions-list",
     ),
     path(
-        "fallback-reads/transactions/<uuid:pk>/",
+        "fallback-reads/transactions/<uuid:transaction_id>",
         FallbackTransactionResourceView.as_view(),
         name="fallback-transactions-resource",
     ),
     path(
-        "fallback-reads/webhooks/",
+        "fallback-reads/webhooks",
         FallbackWebhookListView.as_view(),
         name="fallback-webhooks-list",
     ),
     path(
-        "fallback-reads/webhooks/<uuid:pk>/",
+        "fallback-reads/webhooks/<uuid:webhook_id>",
         FallbackWebhookResourceView.as_view(),
         name="fallback-webhooks-resource",
     ),
     path(
-        "fallback-reads/webhooks/<uuid:pk>/events/",
+        "fallback-reads/webhooks/<uuid:webhook_id>/events",
         FallbackWebhookEventListView.as_view(),
         name="fallback-webhooks-event-list",
     ),
     path(
-        "fallback-reads/notifications/",
+        "fallback-reads/actions",
+        FallbackActionListView.as_view(),
+        name="fallback-actions-list",
+    ),
+    path(
+        "fallback-reads/automations",
+        FallbackAutomationListView.as_view(),
+        name="fallback-automations-list",
+    ),
+    path(
+        "fallback-reads/automations/<uuid:automation_id>",
+        FallbackAutomationResourceView.as_view(),
+        name="fallback-automations-resource",
+    ),
+    path(
+        "fallback-reads/notifications",
         FallbackNotificationListView.as_view(),
         name="fallback-notifications-list",
     ),
     path(
-        "fallback-reads/notifications/<uuid:pk>/",
+        "fallback-reads/notifications/count",
+        FallbackNotificationCountView.as_view(),
+        name="fallback-notifications-count",
+    ),
+    path(
+        "fallback-reads/notifications/<uuid:notification_id>",
         FallbackNotificationResourceView.as_view(),
         name="fallback-notifications-resource",
     ),

@@ -1,11 +1,7 @@
 from collections.abc import Callable
 
-from data_read_core.shared.kafka_updates import (
-    ConsumerConfig,
-    EventRouter,
-    KafkaEventRouter,
-    build_consumer_loop,
-)
+from data_read_core.shared.kafka_dedupe import DjangoDedupeStore
+from django.conf import settings
 from kafka_client_py import (
     AsyncPublisher,
     DLQPublisher,
@@ -13,8 +9,35 @@ from kafka_client_py import (
     RetryPolicy,
     RetryPublisher,
 )
+from kafka_consumer_py import (
+    ConsumerConfig,
+    EventRouter,
+    KafkaEventRouter,
+    build_consumer_loop,
+    build_sandbox_traffic_policy,
+)
+from observability import build_kafka_message_context_components
 
 from ._types import ProbesDictionary
+from .account_events import (
+    subscribe_account_created,
+    subscribe_account_posting_created,
+    subscribe_account_posting_deleted,
+    subscribe_account_postings_dispatched,
+    subscribe_account_updated,
+)
+from .action_events import subscribe_action_raised, subscribe_action_resolved
+from .automation_events import (
+    subscribe_automation_created,
+    subscribe_automation_deleted,
+    subscribe_automation_ran,
+    subscribe_automation_updated,
+)
+from .goal_events import (
+    subscribe_goal_created,
+    subscribe_goal_deleted,
+    subscribe_goal_updated,
+)
 from .notification_events import (
     subscribe_notification_created,
     subscribe_notification_deleted,
@@ -23,6 +46,7 @@ from .notification_events import (
 from .transaction_events import (
     subscribe_transaction_created,
     subscribe_transaction_deleted,
+    subscribe_transaction_metadata_updated,
     subscribe_transaction_updated,
 )
 from .user_events import subscribe_user_synced
@@ -41,11 +65,26 @@ from .webhook_events import (
 
 _KNOWN_HANDLERS: list[Callable[[EventRouter, ProbesDictionary], None]] = [
     subscribe_user_synced,
+    subscribe_account_created,
+    subscribe_account_updated,
+    subscribe_action_raised,
+    subscribe_action_resolved,
+    subscribe_automation_created,
+    subscribe_automation_updated,
+    subscribe_automation_deleted,
+    subscribe_automation_ran,
+    subscribe_account_posting_created,
+    subscribe_account_posting_deleted,
+    subscribe_account_postings_dispatched,
     subscribe_wallet_deleted,
     subscribe_wallet_updated,
     subscribe_wallet_created,
+    subscribe_goal_created,
+    subscribe_goal_updated,
+    subscribe_goal_deleted,
     subscribe_transaction_created,
     subscribe_transaction_updated,
+    subscribe_transaction_metadata_updated,
     subscribe_transaction_deleted,
     subscribe_notification_created,
     subscribe_notifications_acknowledged,
@@ -62,6 +101,7 @@ async def build_event_router(config: ConsumerConfig) -> None:
     router = KafkaEventRouter()
     _subscribe_all_events(router)
 
+    message_context = build_kafka_message_context_components()
     publisher = AsyncPublisher(ProducerConfig(bootstrap_servers=config.bootstrap_servers))
     await publisher.start()
 
@@ -70,8 +110,13 @@ async def build_event_router(config: ConsumerConfig) -> None:
             config=config,
             router=router,
             retry_policy=RetryPolicy(),
-            retry_publisher=RetryPublisher(publisher),
-            dlq_publisher=DLQPublisher(publisher),
+            retry_publisher=RetryPublisher(publisher, topic=settings.KAFKA["RETRY_TOPIC"]),
+            dlq_publisher=DLQPublisher(publisher, topic=settings.KAFKA["DLQ_TOPIC"]),
+            context_binder=message_context.context_binder,
+            traffic_policy=build_sandbox_traffic_policy(
+                config, message_context.traffic_policy.own_sandbox_id
+            ),
+            dedupe_store=DjangoDedupeStore(consumer_group=config.group_id),
         )
         await consumer_loop.run()
     finally:

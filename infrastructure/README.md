@@ -1,8 +1,9 @@
 # Infrastructure
 
 Shared infrastructure for the CQRS workspace: the Kafka broker + topic
-inventory, the Kong API gateway (custom image + in-tree plugins), the write-side
-Postgres tuned for logical replication, and the Debezium outbox connector.
+inventory, the Kong API gateway (custom image + in-tree plugins), the per-service
+Postgres instances tuned for logical replication, and the Debezium outbox
+connector.
 
 ## Kafka broker
 
@@ -28,25 +29,55 @@ nodes.
 
 ## Kafka topics
 
-`kafka/topics.yml` is a catalogue, not a provisioning manifest. The dev broker
-runs with `KAFKA_AUTO_CREATE_TOPICS_ENABLE=true`, so topics are created on first
-produce/consume; a production cluster would turn auto-create off and provision
-these explicitly with per-topic partition/retention settings.
+`kafka/topics.yml` catalogues every stream and the services on each end of it:
+producers (and whether they publish directly or through a Debezium connector),
+consumers with their group ids, the message key, and the settings a real cluster
+should provision.
 
-- `events.async` — primary event stream. Debezium's Outbox Event Router
-  publishes every write-service outbox row here, keyed by the owning user's
-  external (Clerk) id for per-user ordering. Consumed by read-service
-  (projections), push-service (SSE fan-out) and webhook-service (config
-  projection + delivery dispatch).
-- `notifications.inbound` — inbound notification requests. Other services (e.g.
-  webhook-service after a delivery) produce `NotificationRequested` here; the
-  write-service inbound-notifications consumer persists each one, which re-enters
-  `events.async` as a `NotificationCreated` event through the outbox.
-- `events.retry` / `events.dlq` — shared retry/DLQ topics for the kafka-client
-  retry pipeline.
-- `webhooks.retry` / `webhooks.dlq` — webhook-service's own retry/DLQ topics,
-  kept separate from the shared `events.*` ones so webhook delivery backpressure
-  can't interfere with the read/push projection pipelines.
+Nothing reads the file. The dev broker runs with
+`KAFKA_AUTO_CREATE_TOPICS_ENABLE=true`, so a topic is created on first
+produce/consume with broker defaults and works whether or not it is listed —
+which is exactly why the catalogue has to be maintained by hand, and why the
+`settings` blocks describe an intended shape rather than a running one. A
+production cluster would turn auto-create off and provision from this file.
+
+The graph it records:
+
+| Topic | Produced by | Consumed by |
+| --- | --- | --- |
+| `events.async` | write-service, ai-service (both via Debezium) | read-service, ai-service, webhook-service, antifraud-service, push-service |
+| `notifications.inbound` | webhook-service | write-service |
+| `fraud.alerts` | antifraud-service | write-service |
+| `read-service.retry` | read-service | read-service |
+| `read-service.dlq` | read-service | — (terminal) |
+| `ai-service.retry` | ai-service | ai-service |
+| `ai-service.dlq` | ai-service | — (terminal) |
+| `webhooks.retry` | webhook-service | webhook-service |
+| `webhooks.dlq` | webhook-service | — (terminal) |
+
+`events.async` is the only topic with more than one producer — every service
+owning an outbox routes onto it through its own connector, stamping the same
+headers, so a consumer cannot tell which database a message came out of.
+
+**Retries are per service, not shared.** `kafka-client-py` still defaults to
+`events.retry`/`events.dlq`, but no service uses those defaults: read-service and
+ai-service subscribe to the same event types, so a shared retry topic would hand
+each of them the other's failures to reprocess — a re-dispatch that publishes a
+fresh set of postings, in ai-service's case. Each service therefore publishes to
+and consumes from its own pair, the way webhook-service always has.
+
+A retry topic is consumed by the same loop that reads `events.async`, and the
+loop holds a message back until its `x-retry-at` falls due: it rewinds the
+partition to that message's own offset and pauses it, so every other partition
+keeps moving and nothing behind it on the retry partition runs first. Sleeping
+instead would stall the consumer and, past `max_poll_interval_ms`, drop it out of
+its group. The DLQs stay terminal on purpose — a poison message waits there for a
+human.
+
+Kafka Connect's own `connect_configs`, `connect_offsets` and `connect_statuses`
+are deliberately not catalogued: Connect creates them through its admin client
+using the replication factors in `debezium/compose.yaml`, so they neither depend
+on auto-create nor carry domain events.
 
 ## Kong gateway
 
@@ -55,11 +86,41 @@ by their docker-compose service names on the internal network.
 
 ### Custom image
 
-`kong/Dockerfile` bundles `lua-resty-jwt` (not in the upstream `kong:3.7` image)
-so the in-tree `clerk-jwt` plugin can `require "resty.jwt"`. The rockspec is
-installed directly from GitHub (cdbattags, the current upstream maintainer)
-because luarocks.org's root manifest blows past Lua 5.1's 64KB constant limit and
-fails to load.
+`kong/Dockerfile` builds from `kong:3.7` with a build context of
+`./infrastructure/kong`.
+
+### Plugin tests
+
+`kong/run_plugin_tests.sh` runs the Lua plugin suite under the **same LuaJIT
+the gateway ships**, inside that image, rather than a separately installed
+interpreter. The image is already pulled for the baseline, and matching
+runtimes is the point of testing the plugins at all.
+
+It bundles `lua-resty-jwt` (not in the upstream image) so the in-tree
+`clerk-jwt` plugin can `require "resty.jwt"`. The rockspec is installed directly
+from GitHub (cdbattags, the current upstream maintainer) because luarocks.org's
+root manifest blows past Lua 5.1's 64KB constant limit and fails to load.
+
+Everything the gateway needs is **baked into the image** — the declarative
+config, the five custom plugins and the shared Lua — so it is deploy-ready with
+no bind mounts. Only secrets and ports come from the runtime environment:
+
+| copied | to |
+| --- | --- |
+| `kong.yml` | `/etc/kong/kong.yml` |
+| `plugins/<name>` | `/usr/local/share/lua/5.1/kong/plugins/<name>` |
+| `shared/lua` | `/usr/local/share/lua/5.1/power_finance` |
+
+The shared library — the API error envelope several plugins render through — is
+installed **outside** `kong/plugins/` on purpose. Anything under that directory
+is something Kong will try to load as a plugin, and this is not one. It lands
+under the namespace the plugins require it by: `power_finance.envelope`.
+
+The static, non-secret configuration is baked as `ENV` so the image runs
+standalone: `KONG_DATABASE=off` with `KONG_DECLARATIVE_CONFIG`, the
+`KONG_PLUGINS` allowlist (`bundled` plus the five custom ones), logs to
+stdout/stderr, the proxy and admin listens, buffering off and the 1-hour proxy
+timeouts the long-lived routes need, and the `clerk_jwks_locks` shared dict.
 
 ### Plugin pipeline
 
@@ -92,20 +153,123 @@ fails to load.
   user-tier plugin so clients see one consistent set of numbers.
 - **Tier 2 — per-user ceiling** (`user-tier-rate-limit`): stricter, for
   authenticated callers; for normal traffic this is what actually bites. Read
-  limits are tuned wide because read UIs are pagination-heavy.
+  limits are tuned wide because read UIs are pagination-heavy. It counts on a
+  SLIDING window — two buckets per window in Redis, the previous one weighted by
+  the fraction of it the window still covers — so a caller cannot spend a full
+  allowance either side of a boundary and get twice the limit in two seconds.
+  The check and the increment run as one Redis script, so concurrent requests
+  cannot both read a count below the limit and both pass, and a rejected request
+  spends no budget. `Retry-After` is computed from when the estimate decays back
+  under the limit, which is usually well before the next boundary.
 
-`/events` (push-service SSE) has **no** rate limiting: SSE is connection-bound,
+`/api/v1/notifications/stream` (push-service SSE) has **no** rate limiting: SSE is connection-bound,
 not request-bound, so a per-request counter would fire after the first event.
 Concurrent-connection limits belong on Push Service itself. Its route also uses
 1-hour proxy timeouts (SSE is long-lived) with nginx proxy buffering disabled
 (`KONG_NGINX_PROXY_PROXY_BUFFERING=off`).
 
-Read routes allow `POST` on `/api/v1/reads` for the search endpoints
-(wallets/transactions/webhooks `/search/`), which carry a filter tree in the
-request body; all other read endpoints are GET.
+`/api/v1/chat` (ai-service WebSocket) is rate-limited the same way, which is to
+say not at all, and for the same reason: a socket is one request no matter how
+many messages cross it, so the per-request counters would only ever cap how
+often a client reconnects. Per-message limits belong on AI Service — worth
+having there once the socket does anything expensive, since an assistant turn
+costs far more than a notification. Being long-lived in the same way, it gets
+the same 1-hour proxy timeouts rather than the request-shaped ones the read
+and write routes use.
+
+The browser WebSocket API cannot set request headers, so the token reaches
+`clerk-jwt` as a **subprotocol** instead: a client opens the socket with
+`new WebSocket(url, ["clerk", token])`, and the plugin reads the second offered
+protocol when `Authorization` is absent. Kong forwards only `clerk` upstream, so
+AI Service never sees the JWT, and it echoes that name back on accept — a
+browser drops a socket whose server selected a protocol it did not offer.
+
+`/api/v1/notifications/stream` needs no such fallback and does not have one. A
+stream is only unreachable to a client that cannot set headers, and that is a
+property of `EventSource`, not of SSE: a fetch-based reader sends
+`Authorization` like any other request and works against the gateway as it
+stands. The constraint the WebSocket hits is narrower than it looks — the
+`WebSocket` constructor exposes no header channel at all and has no
+fetch-shaped alternative, which is why only that route needed the gateway to
+change.
+
+There is one public surface, `/api/v1`, and the read/write split lives in the
+router rather than in the paths a client types: reads and writes of the same
+resource share a URL and differ only by method. `GET` goes to the Read Service,
+`POST`/`PUT`/`PATCH`/`DELETE` to the Write Service.
+
+Four kinds of route beat that bare prefix by being longer:
+
+- the search endpoints (`/api/v1/{wallets,transactions,webhooks}/search`), which
+  are reads that arrive as `POST` because a filter tree does not survive a query
+  string. Their longer path outranks the write route's bare `/api/v1`, which is
+  what keeps them on the read side without inventing a separate URL space for
+  them;
+- `/api/v1/notifications/stream`, which is routed to Push Service;
+- `/api/v1/chat`, which is routed to AI Service. A WebSocket handshake arrives
+  as a `GET`, so without the longer path the upgrade would be offered to Read
+  Service, which does not speak it;
+- `/api/v1/assistant`, the conversation's REST edge, also on AI Service. Being
+  longer than read-service's bare `/api/v1` is what stops the history being
+  served by a projection that does not have it — the messages live in AI
+  Service's own Postgres.
+
+`/api/v1/fallback-reads/…` is internal to the `read-fallback` plugin and is
+never a public path.
 
 Global plugins: `correlation-id` (X-Correlation-ID, echoed downstream) and
 `cors`.
+
+## Tracing
+
+`observability/compose.yaml` runs **Jaeger all-in-one** and nothing else. There is
+no OpenTelemetry Collector: Jaeger accepts OTLP natively on 4317 (gRPC) and 4318
+(HTTP), and on a single-host dev box a collector would be a second hop buying
+nothing.
+
+| Producer | Transport | Endpoint |
+| --- | --- | --- |
+| Python services (`observability-py`) | OTLP/gRPC | `OTEL_EXPORTER_OTLP_ENDPOINT`, `http://jaeger:4317` |
+| Kong (`opentelemetry` plugin) | OTLP/HTTP | `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `http://jaeger:4318/v1/traces` |
+| antifraud-service (OTel Java agent) | OTLP/gRPC | `OTEL_EXPORTER_OTLP_ENDPOINT` |
+
+The UI is on `JAEGER_UI_PORT` (default 16686). Spans live in Badger on a named
+volume with `JAEGER_SPAN_TTL` (default 72h), so restarts keep history without
+growing unbounded.
+
+**Nothing traces until an endpoint is set.** `observability-py` treats an unset
+`OTEL_EXPORTER_OTLP_ENDPOINT` as "tracing off", so a service run straight on a
+laptop emits no spans and no exporter errors. The baseline and sandbox compose
+profiles set it.
+
+### Traps this setup already hit
+
+- **Kong 3.7's `opentelemetry` plugin field is `endpoint`, not `traces_endpoint`.**
+  The later name is a newer Kong. A wrong key makes the whole declarative config
+  fail to load and the gateway will not boot. Validate changes with
+  `kong config parse /etc/kong/kong.yml` inside the **built** gateway image — the
+  plain `kong:3.7` image lacks `resty.jwt` and fails for an unrelated reason.
+- **Jaeger's Badger volume needs an owner.** Jaeger runs as uid 10001, and a fresh
+  named volume mounts root-owned, so it dies with
+  `mkdir /badger/key: permission denied`. `jaeger-storage-init` chowns it to
+  `10001:0` and Jaeger waits on that container completing.
+- **The Java agent jar must be world-traversable.** Flink's entrypoint drops
+  privileges to the `flink` user, so `ADD --chmod=644` — which also applies 644 to
+  the `/opt/otel` directory it creates — leaves the JVM unable to traverse it and
+  the container crash-loops on `Error opening zip file or JAR manifest missing`.
+  The Dockerfile uses `--chmod=755`.
+- **The Java agent defaults to `http/protobuf`.** Pointed at the gRPC port 4317 it
+  warns and exports nothing, so the Flink services set
+  `OTEL_EXPORTER_OTLP_PROTOCOL=grpc`.
+- **Rebuild the antifraud image when enabling tracing.** `FLINK_ENV_JAVA_OPTS`
+  names the agent jar, so a stale image without it crash-loops rather than starting
+  untraced.
+
+Kong needs `KONG_TRACING_INSTRUMENTATIONS=all` and `KONG_TRACING_SAMPLING_RATE`
+in addition to the plugin: the plugin exports spans, those settings decide whether
+the gateway produces any. The Java agent jar ships at
+`/opt/otel/opentelemetry-javaagent.jar` inside the antifraud image and is switched
+on with `FLINK_ENV_JAVA_OPTS`, so the image is usable with tracing off.
 
 ## Write-side Postgres
 
@@ -118,7 +282,66 @@ includes first) to enable logical replication for Debezium:
 - `max_slot_wal_keep_size = '2GB'` — bounds WAL retained for an idle/stalled
   replication slot.
 
+## AI-side Postgres
+
+`postgres/ai_config/postgresql.conf` is the same override applied to ai-service's
+own Postgres, which owns the chart of accounts and the derived entries. Its WAL
+has no reader today: the settings are in place ahead of ai-service's outbox so
+enabling one is a connector registration rather than a database recreation —
+`wal_level` cannot be changed without a restart, and a slot cannot be created
+retroactively for WAL that was never written.
+
 ## Debezium
 
-`debezium/connectors/outbox-connector.json` configures the Outbox Event Router
-that publishes write-service outbox rows to `events.async`.
+### Propagation columns
+
+Both outbox connectors copy three extra columns onto every Kafka record as
+headers of the same names, via
+`transforms.outbox.table.fields.additional.placement`:
+
+| column | header |
+| --- | --- |
+| `traceparent` | `traceparent` |
+| `tracestate` | `tracestate` |
+| `baggage` | `baggage` |
+
+This is the hop that used to lose context. Debezium publishes rows asynchronously,
+so nothing in-process survives it — the producing request writes its trace context
+into the outbox row, and the connector turns those columns into the headers the
+consumer extracts. Without them a consumer starts a brand-new trace and never sees
+`sandbox-id`.
+
+Adding a column to an outbox table is not enough on its own; the placement string
+has to name it too.
+
+`debezium/compose.yaml` runs the single Kafka Connect cluster
+(`outbox-connect-cluster`). It lives here rather than in a service stack because
+more than one service now has an outbox, and each of them `include:`s this file;
+it depends on nothing but the broker, so any stack can bring it up alone.
+
+Registering a connector, though, belongs to the service that owns the table.
+Each stack contributes its own one-shot — `write-outbox-connector`,
+`ai-outbox-connector` — which waits for both Connect and its own Postgres before
+`PUT`ing its config. That is what keeps a single-service stack runnable: bringing
+up ai-service alone never tries to register a connector against a
+`postgres-write` that isn't there.
+
+`debezium/connectors/` holds one Outbox Event Router config per outbox:
+
+| Connector                  | Database         | Table                     | Slot / publication                                 |
+|----------------------------|------------------|---------------------------|----------------------------------------------------|
+| `outbox-connector.json`    | `postgres-write` | `public.outbox_events`    | `dbz_outbox_slot` / `dbz_outbox_publication`       |
+| `ai-outbox-connector.json` | `postgres-ai`    | `public.ai_outbox_events` | `dbz_ai_outbox_slot` / `dbz_ai_outbox_publication` |
+
+Both route to the same topic, `events.async`, keyed by `partitionkey` and
+carrying the same four headers (`event_id`, `aggregate_type`, `event_type`,
+`outbox_seq`), so a consumer cannot tell which database a message came out of —
+which is the point. The slot, publication and `topic.prefix` must differ per
+connector: a replication slot is per-database and Connect will not share one.
+
+Each connector needs its table to exist before its task can start —
+`publication.autocreate.mode: filtered` fails with "No table filters found" if
+`table.include.list` matches nothing. Run the service's migrations first
+(`ai-outbox-connector` waits on `ai-migrate` for exactly this reason); if a task
+does fail that way, `POST /connectors/<name>/tasks/0/restart` picks it up once
+the table is there.

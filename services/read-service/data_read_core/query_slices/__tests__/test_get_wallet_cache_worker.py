@@ -3,9 +3,9 @@ import json
 from fakes import FakeRedis
 
 from data_read_core.query_slices.get_wallet.cache_worker import CacheWorker
+from data_read_core.query_slices.get_wallet.config import CacheSettings
 from data_read_core.query_slices.get_wallet.dtos import WalletDTO
 from data_read_core.query_slices.get_wallet.infra import (
-    CACHE_TTL_SECONDS,
     get_single_cache_key,
 )
 
@@ -16,9 +16,14 @@ def _wallet(wallet_id: str = "w1", user_id: int = 7) -> WalletDTO:
         user_id=user_id,
         name="Main",
         balance_amount="100.00",
+        zero_balance_amount="0.00",
         currency="USD",
         created_at="2026-01-01T00:00:00+00:00",
         updated_at=None,
+        deleted_at=None,
+        category="",
+        color="",
+        favorite=False,
     )
 
 
@@ -46,7 +51,7 @@ async def test_save_writes_single_key_with_ttl(fake_redis: FakeRedis):
     assert len(fake_redis.set_calls) == 1
     key, raw_value, ttl = fake_redis.set_calls[0]
     assert key == get_single_cache_key("w1")
-    assert ttl == CACHE_TTL_SECONDS
+    assert ttl == CacheSettings.TTL_SECONDS
     assert json.loads(raw_value)["id"] == "w1"
 
 

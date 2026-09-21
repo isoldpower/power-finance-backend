@@ -19,8 +19,13 @@ class PublicApiTests(unittest.TestCase):
             {
                 "CorrelationIDFilter",
                 "CorrelationIDMiddleware",
+                "RequestScopeBinder",
+                "RequestScopeBinding",
+                "TraceContextFilter",
+                "get_bound_correlation_id",
                 "get_correlation_id",
                 "resolve_header_name",
+                "resolve_sandbox_header_name",
             },
         )
 
@@ -43,3 +48,18 @@ class PublicApiTests(unittest.TestCase):
         from correlation.utilities import resolve_header_name
 
         self.assertIs(correlation.resolve_header_name, resolve_header_name)
+
+    def test_resolve_sandbox_header_name_is_re_exported(self) -> None:
+        from correlation.utilities import resolve_sandbox_header_name
+
+        self.assertIs(correlation.resolve_sandbox_header_name, resolve_sandbox_header_name)
+
+    def test_request_scope_binder_is_re_exported(self) -> None:
+        from correlation.request_scope import RequestScopeBinder
+
+        self.assertIs(correlation.RequestScopeBinder, RequestScopeBinder)
+
+    def test_trace_context_filter_is_re_exported_from_observability(self) -> None:
+        from observability import TraceContextFilter
+
+        self.assertIs(correlation.TraceContextFilter, TraceContextFilter)

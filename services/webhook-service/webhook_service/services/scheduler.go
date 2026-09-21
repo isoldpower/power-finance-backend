@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"services/webhook-service/webhook_service/types"
@@ -17,6 +16,7 @@ type deliveryAttempter interface {
 	Attempt(ctx context.Context, delivery types.Delivery, secret string) error
 }
 
+// RetryScheduler drains due deliveries on a tick and on demand.
 type RetryScheduler struct {
 	deliveries deliveryStore
 	attempter  deliveryAttempter
@@ -24,6 +24,7 @@ type RetryScheduler struct {
 	wake       chan struct{}
 }
 
+// NewRetryScheduler wires the scheduler over its delivery store and attempter.
 func NewRetryScheduler(
 	deliveries deliveryStore,
 	attempter deliveryAttempter,
@@ -37,8 +38,7 @@ func NewRetryScheduler(
 	}
 }
 
-// Wake asks the scheduler to run a delivery pass promptly. It coalesces with any
-// already-pending wake and never blocks, so dispatch stays off the hot path.
+// Wake asks the scheduler to run a delivery pass promptly.
 func (s *RetryScheduler) Wake() {
 	select {
 	case s.wake <- struct{}{}:
@@ -46,17 +46,16 @@ func (s *RetryScheduler) Wake() {
 	}
 }
 
-// Run blocks until the context is cancelled, draining due deliveries on each
-// tick and whenever woken by a freshly dispatched delivery.
+// Run drains due deliveries on each tick and on wake, until the context is cancelled.
 func (s *RetryScheduler) Run(ctx context.Context) {
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
-	slog.Info("webhook retry scheduler started", "interval", s.interval)
+	logSchedulerStarted(s.interval)
 
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("webhook retry scheduler stopped")
+			logSchedulerStopped()
 			return
 		case <-ticker.C:
 			s.runOnce(ctx)
@@ -66,8 +65,6 @@ func (s *RetryScheduler) Run(ctx context.Context) {
 	}
 }
 
-// runOnce drains every currently-due delivery in batches, so a single wake or
-// tick fully catches up rather than leaving a backlog for the next one.
 func (s *RetryScheduler) runOnce(ctx context.Context) {
 	for {
 		if ctx.Err() != nil {
@@ -77,7 +74,7 @@ func (s *RetryScheduler) runOnce(ctx context.Context) {
 		now := time.Now().UTC()
 		due, claimErr := s.deliveries.ClaimDue(ctx, now, claimLease, scheduledBatchSize)
 		if claimErr != nil {
-			slog.Error("retry scheduler: claim due deliveries failed", "error", claimErr)
+			logClaimDueFailed(claimErr)
 			return
 		}
 
@@ -96,12 +93,6 @@ func (s *RetryScheduler) runOnce(ctx context.Context) {
 
 func (s *RetryScheduler) attempt(ctx context.Context, delivery types.Delivery) {
 	if attemptErr := s.attempter.Attempt(ctx, delivery, ""); attemptErr != nil {
-		slog.Error(
-			"retry scheduler: attempt bookkeeping failed",
-			"delivery_id",
-			delivery.ID,
-			"error",
-			attemptErr,
-		)
+		logAttemptBookkeepingFailed(delivery.ID, attemptErr)
 	}
 }

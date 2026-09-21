@@ -31,6 +31,7 @@ private static final long serialVersionUID = 0L;
     eventId_ = "";
     webhookId_ = "";
     secret_ = "";
+    previousSecret_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -243,6 +244,105 @@ private static final long serialVersionUID = 0L;
     return rotatedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : rotatedAt_;
   }
 
+  public static final int PREVIOUS_SECRET_FIELD_NUMBER = 14;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object previousSecret_ = "";
+  /**
+   * <pre>
+   * The replaced secret stays valid until `previous_secret_expires_at` so a
+   * rotation does not break deliveries already signed with it. Only ever two
+   * are live: a second rotation inside the window drops the older one.
+   * </pre>
+   *
+   * <code>string previous_secret = 14;</code>
+   * @return The previousSecret.
+   */
+  @java.lang.Override
+  public java.lang.String getPreviousSecret() {
+    java.lang.Object ref = previousSecret_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      previousSecret_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * The replaced secret stays valid until `previous_secret_expires_at` so a
+   * rotation does not break deliveries already signed with it. Only ever two
+   * are live: a second rotation inside the window drops the older one.
+   * </pre>
+   *
+   * <code>string previous_secret = 14;</code>
+   * @return The bytes for previousSecret.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getPreviousSecretBytes() {
+    java.lang.Object ref = previousSecret_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      previousSecret_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int SECRET_VERSION_FIELD_NUMBER = 15;
+  private int secretVersion_ = 0;
+  /**
+   * <code>int32 secret_version = 15;</code>
+   * @return The secretVersion.
+   */
+  @java.lang.Override
+  public int getSecretVersion() {
+    return secretVersion_;
+  }
+
+  public static final int PREVIOUS_SECRET_VERSION_FIELD_NUMBER = 16;
+  private int previousSecretVersion_ = 0;
+  /**
+   * <code>int32 previous_secret_version = 16;</code>
+   * @return The previousSecretVersion.
+   */
+  @java.lang.Override
+  public int getPreviousSecretVersion() {
+    return previousSecretVersion_;
+  }
+
+  public static final int PREVIOUS_SECRET_EXPIRES_AT_FIELD_NUMBER = 17;
+  private com.google.protobuf.Timestamp previousSecretExpiresAt_;
+  /**
+   * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+   * @return Whether the previousSecretExpiresAt field is set.
+   */
+  @java.lang.Override
+  public boolean hasPreviousSecretExpiresAt() {
+    return ((bitField0_ & 0x00000004) != 0);
+  }
+  /**
+   * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+   * @return The previousSecretExpiresAt.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Timestamp getPreviousSecretExpiresAt() {
+    return previousSecretExpiresAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : previousSecretExpiresAt_;
+  }
+  /**
+   * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.TimestampOrBuilder getPreviousSecretExpiresAtOrBuilder() {
+    return previousSecretExpiresAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : previousSecretExpiresAt_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -278,6 +378,18 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(13, getRotatedAt());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(previousSecret_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 14, previousSecret_);
+    }
+    if (secretVersion_ != 0) {
+      output.writeInt32(15, secretVersion_);
+    }
+    if (previousSecretVersion_ != 0) {
+      output.writeInt32(16, previousSecretVersion_);
+    }
+    if (((bitField0_ & 0x00000004) != 0)) {
+      output.writeMessage(17, getPreviousSecretExpiresAt());
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -311,6 +423,21 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(13, getRotatedAt());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(previousSecret_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(14, previousSecret_);
+    }
+    if (secretVersion_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(15, secretVersion_);
+    }
+    if (previousSecretVersion_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(16, previousSecretVersion_);
+    }
+    if (((bitField0_ & 0x00000004) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(17, getPreviousSecretExpiresAt());
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -347,6 +474,17 @@ private static final long serialVersionUID = 0L;
       if (!getRotatedAt()
           .equals(other.getRotatedAt())) return false;
     }
+    if (!getPreviousSecret()
+        .equals(other.getPreviousSecret())) return false;
+    if (getSecretVersion()
+        != other.getSecretVersion()) return false;
+    if (getPreviousSecretVersion()
+        != other.getPreviousSecretVersion()) return false;
+    if (hasPreviousSecretExpiresAt() != other.hasPreviousSecretExpiresAt()) return false;
+    if (hasPreviousSecretExpiresAt()) {
+      if (!getPreviousSecretExpiresAt()
+          .equals(other.getPreviousSecretExpiresAt())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -375,6 +513,16 @@ private static final long serialVersionUID = 0L;
     if (hasRotatedAt()) {
       hash = (37 * hash) + ROTATED_AT_FIELD_NUMBER;
       hash = (53 * hash) + getRotatedAt().hashCode();
+    }
+    hash = (37 * hash) + PREVIOUS_SECRET_FIELD_NUMBER;
+    hash = (53 * hash) + getPreviousSecret().hashCode();
+    hash = (37 * hash) + SECRET_VERSION_FIELD_NUMBER;
+    hash = (53 * hash) + getSecretVersion();
+    hash = (37 * hash) + PREVIOUS_SECRET_VERSION_FIELD_NUMBER;
+    hash = (53 * hash) + getPreviousSecretVersion();
+    if (hasPreviousSecretExpiresAt()) {
+      hash = (37 * hash) + PREVIOUS_SECRET_EXPIRES_AT_FIELD_NUMBER;
+      hash = (53 * hash) + getPreviousSecretExpiresAt().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -508,6 +656,7 @@ private static final long serialVersionUID = 0L;
               .alwaysUseFieldBuilders) {
         internalGetOccurredAtFieldBuilder();
         internalGetRotatedAtFieldBuilder();
+        internalGetPreviousSecretExpiresAtFieldBuilder();
       }
     }
     @java.lang.Override
@@ -528,6 +677,14 @@ private static final long serialVersionUID = 0L;
       if (rotatedAtBuilder_ != null) {
         rotatedAtBuilder_.dispose();
         rotatedAtBuilder_ = null;
+      }
+      previousSecret_ = "";
+      secretVersion_ = 0;
+      previousSecretVersion_ = 0;
+      previousSecretExpiresAt_ = null;
+      if (previousSecretExpiresAtBuilder_ != null) {
+        previousSecretExpiresAtBuilder_.dispose();
+        previousSecretExpiresAtBuilder_ = null;
       }
       return this;
     }
@@ -590,6 +747,21 @@ private static final long serialVersionUID = 0L;
             : rotatedAtBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.previousSecret_ = previousSecret_;
+      }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.secretVersion_ = secretVersion_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.previousSecretVersion_ = previousSecretVersion_;
+      }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.previousSecretExpiresAt_ = previousSecretExpiresAtBuilder_ == null
+            ? previousSecretExpiresAt_
+            : previousSecretExpiresAtBuilder_.build();
+        to_bitField0_ |= 0x00000004;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -631,6 +803,20 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasRotatedAt()) {
         mergeRotatedAt(other.getRotatedAt());
+      }
+      if (!other.getPreviousSecret().isEmpty()) {
+        previousSecret_ = other.previousSecret_;
+        bitField0_ |= 0x00000080;
+        onChanged();
+      }
+      if (other.getSecretVersion() != 0) {
+        setSecretVersion(other.getSecretVersion());
+      }
+      if (other.getPreviousSecretVersion() != 0) {
+        setPreviousSecretVersion(other.getPreviousSecretVersion());
+      }
+      if (other.hasPreviousSecretExpiresAt()) {
+        mergePreviousSecretExpiresAt(other.getPreviousSecretExpiresAt());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -697,6 +883,28 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000040;
               break;
             } // case 106
+            case 114: {
+              previousSecret_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 114
+            case 120: {
+              secretVersion_ = input.readInt32();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 120
+            case 128: {
+              previousSecretVersion_ = input.readInt32();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 128
+            case 138: {
+              input.readMessage(
+                  internalGetPreviousSecretExpiresAtFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 138
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1234,6 +1442,293 @@ private static final long serialVersionUID = 0L;
         rotatedAt_ = null;
       }
       return rotatedAtBuilder_;
+    }
+
+    private java.lang.Object previousSecret_ = "";
+    /**
+     * <pre>
+     * The replaced secret stays valid until `previous_secret_expires_at` so a
+     * rotation does not break deliveries already signed with it. Only ever two
+     * are live: a second rotation inside the window drops the older one.
+     * </pre>
+     *
+     * <code>string previous_secret = 14;</code>
+     * @return The previousSecret.
+     */
+    public java.lang.String getPreviousSecret() {
+      java.lang.Object ref = previousSecret_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        previousSecret_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The replaced secret stays valid until `previous_secret_expires_at` so a
+     * rotation does not break deliveries already signed with it. Only ever two
+     * are live: a second rotation inside the window drops the older one.
+     * </pre>
+     *
+     * <code>string previous_secret = 14;</code>
+     * @return The bytes for previousSecret.
+     */
+    public com.google.protobuf.ByteString
+        getPreviousSecretBytes() {
+      java.lang.Object ref = previousSecret_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        previousSecret_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The replaced secret stays valid until `previous_secret_expires_at` so a
+     * rotation does not break deliveries already signed with it. Only ever two
+     * are live: a second rotation inside the window drops the older one.
+     * </pre>
+     *
+     * <code>string previous_secret = 14;</code>
+     * @param value The previousSecret to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPreviousSecret(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      previousSecret_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The replaced secret stays valid until `previous_secret_expires_at` so a
+     * rotation does not break deliveries already signed with it. Only ever two
+     * are live: a second rotation inside the window drops the older one.
+     * </pre>
+     *
+     * <code>string previous_secret = 14;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPreviousSecret() {
+      previousSecret_ = getDefaultInstance().getPreviousSecret();
+      bitField0_ = (bitField0_ & ~0x00000080);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The replaced secret stays valid until `previous_secret_expires_at` so a
+     * rotation does not break deliveries already signed with it. Only ever two
+     * are live: a second rotation inside the window drops the older one.
+     * </pre>
+     *
+     * <code>string previous_secret = 14;</code>
+     * @param value The bytes for previousSecret to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPreviousSecretBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      previousSecret_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+
+    private int secretVersion_ ;
+    /**
+     * <code>int32 secret_version = 15;</code>
+     * @return The secretVersion.
+     */
+    @java.lang.Override
+    public int getSecretVersion() {
+      return secretVersion_;
+    }
+    /**
+     * <code>int32 secret_version = 15;</code>
+     * @param value The secretVersion to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSecretVersion(int value) {
+
+      secretVersion_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 secret_version = 15;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSecretVersion() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      secretVersion_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private int previousSecretVersion_ ;
+    /**
+     * <code>int32 previous_secret_version = 16;</code>
+     * @return The previousSecretVersion.
+     */
+    @java.lang.Override
+    public int getPreviousSecretVersion() {
+      return previousSecretVersion_;
+    }
+    /**
+     * <code>int32 previous_secret_version = 16;</code>
+     * @param value The previousSecretVersion to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPreviousSecretVersion(int value) {
+
+      previousSecretVersion_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 previous_secret_version = 16;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPreviousSecretVersion() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      previousSecretVersion_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.Timestamp previousSecretExpiresAt_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> previousSecretExpiresAtBuilder_;
+    /**
+     * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+     * @return Whether the previousSecretExpiresAt field is set.
+     */
+    public boolean hasPreviousSecretExpiresAt() {
+      return ((bitField0_ & 0x00000400) != 0);
+    }
+    /**
+     * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+     * @return The previousSecretExpiresAt.
+     */
+    public com.google.protobuf.Timestamp getPreviousSecretExpiresAt() {
+      if (previousSecretExpiresAtBuilder_ == null) {
+        return previousSecretExpiresAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : previousSecretExpiresAt_;
+      } else {
+        return previousSecretExpiresAtBuilder_.getMessage();
+      }
+    }
+    /**
+     * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+     */
+    public Builder setPreviousSecretExpiresAt(com.google.protobuf.Timestamp value) {
+      if (previousSecretExpiresAtBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        previousSecretExpiresAt_ = value;
+      } else {
+        previousSecretExpiresAtBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+     */
+    public Builder setPreviousSecretExpiresAt(
+        com.google.protobuf.Timestamp.Builder builderForValue) {
+      if (previousSecretExpiresAtBuilder_ == null) {
+        previousSecretExpiresAt_ = builderForValue.build();
+      } else {
+        previousSecretExpiresAtBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+     */
+    public Builder mergePreviousSecretExpiresAt(com.google.protobuf.Timestamp value) {
+      if (previousSecretExpiresAtBuilder_ == null) {
+        if (((bitField0_ & 0x00000400) != 0) &&
+          previousSecretExpiresAt_ != null &&
+          previousSecretExpiresAt_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
+          getPreviousSecretExpiresAtBuilder().mergeFrom(value);
+        } else {
+          previousSecretExpiresAt_ = value;
+        }
+      } else {
+        previousSecretExpiresAtBuilder_.mergeFrom(value);
+      }
+      if (previousSecretExpiresAt_ != null) {
+        bitField0_ |= 0x00000400;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+     */
+    public Builder clearPreviousSecretExpiresAt() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      previousSecretExpiresAt_ = null;
+      if (previousSecretExpiresAtBuilder_ != null) {
+        previousSecretExpiresAtBuilder_.dispose();
+        previousSecretExpiresAtBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+     */
+    public com.google.protobuf.Timestamp.Builder getPreviousSecretExpiresAtBuilder() {
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return internalGetPreviousSecretExpiresAtFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+     */
+    public com.google.protobuf.TimestampOrBuilder getPreviousSecretExpiresAtOrBuilder() {
+      if (previousSecretExpiresAtBuilder_ != null) {
+        return previousSecretExpiresAtBuilder_.getMessageOrBuilder();
+      } else {
+        return previousSecretExpiresAt_ == null ?
+            com.google.protobuf.Timestamp.getDefaultInstance() : previousSecretExpiresAt_;
+      }
+    }
+    /**
+     * <code>.google.protobuf.Timestamp previous_secret_expires_at = 17;</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        internalGetPreviousSecretExpiresAtFieldBuilder() {
+      if (previousSecretExpiresAtBuilder_ == null) {
+        previousSecretExpiresAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>(
+                getPreviousSecretExpiresAt(),
+                getParentForChildren(),
+                isClean());
+        previousSecretExpiresAt_ = null;
+      }
+      return previousSecretExpiresAtBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:power_finance.events.v1.WebhookSecretRotated)

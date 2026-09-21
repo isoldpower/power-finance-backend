@@ -11,3 +11,7 @@ class CurrencyRepository(ABC):
     @abstractmethod
     async def currency_code_exists(self, currency_code: str) -> bool:
         raise NotImplementedError()
+
+    @abstractmethod
+    async def get_decimals_by_code(self) -> dict[str, int]:
+        raise NotImplementedError()

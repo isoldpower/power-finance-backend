@@ -1,6 +1,8 @@
 package http
 
 import (
+	"github.com/power-finance/observability-go/tracing"
+
 	"context"
 	"errors"
 	"fmt"
@@ -43,7 +45,7 @@ func NewHTTPServer(basicConfig EstablishedHTTPProcessConfig) (*HTTPServer, error
 		listener:    listener,
 		server: &http.Server{
 			Addr:    serveAddress,
-			Handler: router,
+			Handler: tracing.WrapHTTPHandler(router, "push-service"),
 			BaseContext: func(net.Listener) context.Context {
 				return baseContext
 			},

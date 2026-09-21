@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package power_finance.events.v1;
+
+option go_package = "github.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1";
+option java_package = "com.powerfinance.events.v1";
+option java_multiple_files = true;
+option java_outer_classname = "PostingProto";
+
+import "google/protobuf/timestamp.proto";
+
+
+message AccountPostingCreated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string posting_id = 101;
+  string dispatch_id = 102;
+  string account_id = 103;
+  string transaction_id = 104;
+  string user_external_id = 105;
+  int32 user_id = 106;
+
+  string amount = 107;
+  string title = 108;
+  string icon = 109;
+  bool debit = 110;
+  string currency_code = 111;
+  int32 position = 112;
+
+  // Reserved for future expansion.
+  reserved 113, 114, 115, 116, 117, 118, 119;
+
+  google.protobuf.Timestamp created_at = 120;
+}
+
+message AccountPostingDeleted {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string posting_id = 101;
+  string dispatch_id = 102;
+  string account_id = 103;
+  string transaction_id = 104;
+  string user_external_id = 105;
+  int32 user_id = 106;
+
+  // Reserved for future expansion.
+  reserved 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119;
+
+  google.protobuf.Timestamp deleted_at = 120;
+}
+
+message AccountPostingsDispatched {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string dispatch_id = 101;
+  string transaction_id = 102;
+  string user_external_id = 103;
+  int32 user_id = 104;
+
+  int32 deleted_count = 105;
+  int32 created_count = 106;
+  bool balanced = 107;
+  string comment = 108;
+  string backend = 109;
+
+  // Reserved for future expansion.
+  reserved 110, 111, 112, 113, 114, 115, 116, 117, 118, 119;
+
+  google.protobuf.Timestamp dispatched_at = 120;
+}

@@ -6,8 +6,6 @@ from immudb import ImmudbClient
 
 
 class ResilientImmudbClient:
-    """Proxy around ImmudbClient that re-logins when the session token expires"""
-
     _EXPIRED_TOKEN_HINT = "token has expired"
 
     def __init__(

@@ -1,8 +1,8 @@
 from google.protobuf.message import Message
+from kafka_consumer_py import EventMessage
+from kafka_consumer_py.processing import Effect
 from kafka_messages import WalletDeleted
 
-from data_read_core.shared.kafka_updates import EventMessage
-from data_read_core.shared.kafka_updates.processing import Effect
 from data_read_core.shared.redis_cache import get_redis
 
 from .._cache_keys import get_single_wallet_key
@@ -11,8 +11,6 @@ from .._utilities import decode_payload
 
 
 class EvictWalletCache(Effect):
-    """Evict the single-wallet cache entry keyed by wallet id."""
-
     def __init__(self, payload_type: type[Message] = WalletDeleted) -> None:
         self._payload_type = payload_type
 

@@ -3,12 +3,12 @@ import json
 from fakes import FakeRedis
 
 from data_read_core.query_slices.list_transactions.cache_worker import CacheWorker
+from data_read_core.query_slices.list_transactions.config import CacheSettings
 from data_read_core.query_slices.list_transactions.dtos import (
     CacheOperationData,
     TransactionDTO,
 )
 from data_read_core.query_slices.list_transactions.infra import (
-    CACHE_TTL_SECONDS,
     get_filter_hash,
     get_list_cache_key,
     get_list_version_key,
@@ -20,10 +20,18 @@ def _transaction(transaction_id: str = "t1", user_id: int = 7) -> TransactionDTO
         id=transaction_id,
         user_id=user_id,
         wallet_id="w1",
-        amount="25.00",
+        wallet_name="Random Credit Card",
+        name="Groceries store",
+        amount="-25.00",
         currency="USD",
+        category="Food",
+        origin="manual",
+        chain_id=None,
+        chain_sort="ffffffff-ffff-ffff-ffff-ffffffffffff",
         occurred_at="2026-01-01T00:00:00+00:00",
         created_at="2026-01-01T00:00:00+00:00",
+        updated_at=None,
+        deleted_at=None,
     )
 
 
@@ -31,13 +39,13 @@ def _operation(
     user_id: int = 7,
     filters: dict | None = None,
     limit: int = 20,
-    offset: int = 0,
+    cursor: str = "first",
 ) -> CacheOperationData:
     return CacheOperationData(
         user_id=user_id,
         filters=filters if filters is not None else {},
         limit=limit,
-        offset=offset,
+        cursor=cursor,
     )
 
 
@@ -47,7 +55,7 @@ def _expected_key(operation: CacheOperationData, version: int) -> str:
         version=version,
         filter_hash=get_filter_hash(operation.filters),
         limit=operation.limit,
-        offset=operation.offset,
+        cursor=operation.cursor,
     )
 
 
@@ -70,7 +78,7 @@ async def test_save_then_serve_round_trips(fake_redis: FakeRedis):
 
 async def test_save_writes_versioned_key_with_ttl(fake_redis: FakeRedis):
     worker = CacheWorker(fake_redis)
-    operation = _operation(user_id=7, limit=10, offset=5)
+    operation = _operation(user_id=7, limit=10, cursor="Y3Vyc29y")
 
     await worker.save_to_cache(context=operation, transactions=[_transaction()], total=1)
 
@@ -79,7 +87,7 @@ async def test_save_writes_versioned_key_with_ttl(fake_redis: FakeRedis):
     key, raw_value, ttl = fake_redis.set_calls[0]
     assert key == expected_key
     assert key.startswith("read:transactions:")
-    assert ttl == CACHE_TTL_SECONDS
+    assert ttl == CacheSettings.TTL_SECONDS
     payload = json.loads(raw_value)
     assert payload["total"] == 1
     assert payload["transactions"][0]["id"] == "t1"

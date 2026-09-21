@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"services/webhook-service/webhook_service/types"
@@ -12,17 +11,19 @@ import (
 
 type configStore interface {
 	UpsertEndpoint(ctx context.Context, endpoint types.WebhookEndpoint, at time.Time) error
-	UpdateEndpoint(ctx context.Context, webhookID, title, url string, at time.Time) error
-	RotateSecret(ctx context.Context, webhookID, secret string, at time.Time) error
+	UpdateEndpoint(ctx context.Context, webhookID, title, url string, enabled bool, at time.Time) error
+	RotateSecret(ctx context.Context, rotation types.SecretRotation, at time.Time) error
 	DeleteEndpoint(ctx context.Context, webhookID string) error
 	AddSubscription(ctx context.Context, subscription types.WebhookSubscription, at time.Time) error
 	RemoveSubscription(ctx context.Context, subscriptionID string) error
 }
 
+// ConfigProjection applies webhook configuration events to the local store.
 type ConfigProjection struct {
 	store configStore
 }
 
+// NewConfigProjection builds the projection over its config store.
 func NewConfigProjection(store configStore) *ConfigProjection {
 	return &ConfigProjection{store: store}
 }
@@ -42,6 +43,7 @@ func (p *ConfigProjection) Handles(eventType string) bool {
 	}
 }
 
+// Apply projects one configuration event, ignoring types it does not own.
 func (p *ConfigProjection) Apply(ctx context.Context, event types.OutboxEvent) error {
 	now := time.Now().UTC()
 
@@ -63,54 +65,30 @@ func (p *ConfigProjection) Apply(ctx context.Context, event types.OutboxEvent) e
 	}
 }
 
-func (p *ConfigProjection) applyEndpointCreated(ctx context.Context, event types.OutboxEvent, now time.Time) error {
-	var payload webhookEndpointCreatedPayload
-	if err := json.Unmarshal(event.Payload, &payload); err != nil {
-		return fmt.Errorf("config projection: decode endpoint created: %w", err)
-	}
-
-	endpoint := types.WebhookEndpoint{
-		ID:             payload.WebhookID,
-		UserID:         payload.UserID,
-		UserExternalID: event.UserExternalID,
-		Title:          payload.Title,
-		URL:            payload.URL,
-		Secret:         payload.Secret,
-		IsActive:       true,
-	}
-	if err := p.store.UpsertEndpoint(ctx, endpoint, now); err != nil {
-		return err
-	}
-
-	slog.Debug("projected webhook endpoint created", "webhook_id", payload.WebhookID)
-	return nil
-}
-
-func (p *ConfigProjection) applyEndpointUpdated(ctx context.Context, event types.OutboxEvent, now time.Time) error {
-	var payload webhookEndpointUpdatedPayload
-	if err := json.Unmarshal(event.Payload, &payload); err != nil {
-		return fmt.Errorf("config projection: decode endpoint updated: %w", err)
-	}
-
-	return p.store.UpdateEndpoint(ctx, payload.WebhookID, payload.Title, payload.URL, now)
-}
-
-func (p *ConfigProjection) applyEndpointDeleted(ctx context.Context, event types.OutboxEvent) error {
-	var payload webhookEndpointDeletedPayload
-	if err := json.Unmarshal(event.Payload, &payload); err != nil {
-		return fmt.Errorf("config projection: decode endpoint deleted: %w", err)
-	}
-
-	return p.store.DeleteEndpoint(ctx, payload.WebhookID)
-}
-
 func (p *ConfigProjection) applySecretRotated(ctx context.Context, event types.OutboxEvent, now time.Time) error {
 	var payload webhookSecretRotatedPayload
 	if err := json.Unmarshal(event.Payload, &payload); err != nil {
 		return fmt.Errorf("config projection: decode secret rotated: %w", err)
 	}
 
-	return p.store.RotateSecret(ctx, payload.WebhookID, payload.Secret, now)
+	rotation := types.SecretRotation{
+		WebhookID:               payload.WebhookID,
+		Secret:                  payload.Secret,
+		SecretVersion:           normalisedSecretVersion(payload.SecretVersion),
+		PreviousSecret:          payload.PreviousSecret,
+		PreviousSecretVersion:   payload.PreviousSecretVersion,
+		PreviousSecretExpiresAt: payload.PreviousSecretExpiresAt,
+	}
+
+	return p.store.RotateSecret(ctx, rotation, now)
+}
+
+func normalisedSecretVersion(version int) int {
+	if version < 1 {
+		return 1
+	}
+
+	return version
 }
 
 func (p *ConfigProjection) applySubscriptionAdded(ctx context.Context, event types.OutboxEvent, now time.Time) error {

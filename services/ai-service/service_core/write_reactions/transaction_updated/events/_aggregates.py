@@ -1,0 +1,2 @@
+ACCOUNT_AGGREGATE = "account"
+POSTING_AGGREGATE = "posting"

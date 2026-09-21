@@ -22,11 +22,59 @@ taking precedence over file keys.
 
 The Kafka consumer never performs HTTP delivery inline. On each domain event the
 dispatcher durably enqueues one `webhook_deliveries` row per subscribed endpoint
-and wakes the retry scheduler; the scheduler claims due `pending` rows
+and wakes the retry scheduler; the scheduler claims due rows
 (`FOR UPDATE SKIP LOCKED`) and runs every HTTP attempt. This keeps consumption
 decoupled from endpoint latency, and means a delivery is sent exactly once per
 terminal transition — a Kafka redelivery only re-enqueues idempotently and never
 re-sends an already-succeeded or exhausted delivery.
+
+A delivery moves `pending` → `in_progress` (claimed, under a `lease_expires_at`
+so a replica that dies mid-attempt releases it) → `success`, `failed`, or
+`retry_scheduled` with a future `next_attempt_at`. `next_attempt_at` is only
+ever the user-facing "when will this be tried again"; the claim lease is a
+separate column so the two cannot be confused.
+
+## Which events are deliverable
+
+The subscribable event catalog lives in
+`libraries/webhook-catalog-py/webhook_catalog_py/catalog.json`, which is the
+single source read-service serves at `GET /webhooks/event-types` and
+write-service validates subscriptions against. `webhook_service/types/catalog.go`
+mirrors it because Go cannot import a Python package, and
+`catalog_test.go` fails if the two ever differ — so an event cannot become
+subscribable without also becoming deliverable. Adding one means editing the
+JSON and the Go table together.
+
+## Delivery contract
+
+Each attempt is a `POST` of
+`{"id", "event", "created_at", "data"}` carrying:
+
+- `X-Webhook-Event` — the catalog event name.
+- `X-Webhook-Delivery` — the **event id**, stable across every retry, which is
+  what a receiver deduplicates on.
+- `X-Webhook-Timestamp` — Unix seconds.
+- `X-Webhook-Signature` — `v1=` + hex HMAC-SHA256 of `"{timestamp}.{raw body}"`
+  keyed by the endpoint secret. The timestamp is inside the signed material so a
+  captured request stops verifying once it is stale.
+
+Rotating a secret keeps the replaced one usable for 24 hours: the endpoint
+stores both with their versions, and each delivery records the version it was
+enqueued under, so a rotation never orphans an in-flight delivery. A second
+rotation inside the window drops the older secret at once — only two are ever
+live.
+
+## Delivery log API
+
+`GET /api/v1/webhooks/{id}/deliveries` is served from here rather than from the
+read-service projection, because the log lives in this service's Postgres. It
+takes `limit`, `cursor`, `status` and `event`, and answers in the same envelope,
+keyset-cursor and error shapes as the Python services. Authentication is the
+gateway's `X-User-Id` header, as in push-service; the route is declared in
+`infrastructure/kong/kong.yml`.
+
+The stored payload is never returned. The log outlives its endpoint, so a
+deleted webhook's history stays readable by the user who owned it.
 
 ## Database migrations
 
@@ -68,6 +116,7 @@ The HTTP server exposes:
 
 - `GET /healthz` — liveness.
 - `GET /readyz` — readiness (`503` until the Kafka consumer is running).
+- `GET /api/v1/webhooks/{id}/deliveries` — the delivery log (see above).
 - `GET /metrics` — Prometheus exposition. Alongside the default Go/process
   collectors it publishes:
   - `webhook_delivery_attempts_total` — HTTP delivery attempts.

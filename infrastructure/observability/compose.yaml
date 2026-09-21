@@ -1,0 +1,41 @@
+# See ../README.md → "Tracing"
+volumes:
+  jaeger_data:
+
+services:
+  jaeger-storage-init:
+    image: alpine:3.20
+    restart: "no"
+    command:
+      - sh
+      - -c
+      - mkdir -p /badger/key /badger/data && chown -R 10001:0 /badger
+    volumes:
+      - jaeger_data:/badger
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE: badger
+      BADGER_EPHEMERAL: "false"
+      BADGER_DIRECTORY_VALUE: /badger/data
+      BADGER_DIRECTORY_KEY: /badger/key
+      BADGER_SPAN_STORE_TTL: ${JAEGER_SPAN_TTL:-72h}
+      MEMORY_MAX_TRACES: ${JAEGER_MAX_TRACES:-20000}
+    volumes:
+      - jaeger_data:/badger
+    depends_on:
+      jaeger-storage-init:
+        condition: service_completed_successfully
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686"
+    expose:
+      - "4317"
+      - "4318"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:14269/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
