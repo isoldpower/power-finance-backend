@@ -52,13 +52,21 @@ class DeleteTransactionChainCommandHandler(
         goal_repository: GoalRepository | None = None,
         container_repository: MoneyContainerRepository | None = None,
     ) -> None:
-        registry = get_repository_registry()
-        transaction_repository = transaction_repository or registry.transaction_repository
-        money_flow_repository = money_flow_repository or registry.money_flow_repository
-        wallet_repository = wallet_repository or registry.wallet_repository
-        outbox_repository = outbox_repository or registry.outbox_repository
-        goal_repository = goal_repository or registry.goal_repository
-        container_repository = container_repository or registry.money_container_repository
+        if (
+            transaction_repository is None
+            or money_flow_repository is None
+            or wallet_repository is None
+            or outbox_repository is None
+            or goal_repository is None
+            or container_repository is None
+        ):
+            registry = get_repository_registry()
+            transaction_repository = transaction_repository or registry.transaction_repository
+            money_flow_repository = money_flow_repository or registry.money_flow_repository
+            wallet_repository = wallet_repository or registry.wallet_repository
+            outbox_repository = outbox_repository or registry.outbox_repository
+            goal_repository = goal_repository or registry.goal_repository
+            container_repository = container_repository or registry.money_container_repository
 
         LoadContainerMixin.__init__(
             self,

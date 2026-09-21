@@ -66,26 +66,8 @@ func NewConsumer(
 		return nil, fmt.Errorf("kafka: retry/dlq publisher: %w", startErr)
 	}
 
-	messageContext := messaging.BuildKafkaMessageContextComponents()
-	decodeAndHandle := func(ctx context.Context, message kafkaclient.ConsumedMessage) error {
-		ctx = messageContext.ContextBinder.Bind(ctx, message.Headers)
-		messageSandboxID := messageContext.ContextBinder.ReadSandboxID(message.Headers)
-		if !messageContext.TrafficPolicy.IsOwnedTraffic(messageSandboxID) {
-			logForeignSandboxMessageSkipped(
-				messageSandboxID,
-				messageContext.TrafficPolicy.OwnSandboxID(),
-			)
-			return nil
-		}
-
-		ctx, endSpan := tracing.StartConsumerSpan(ctx, "webhook deliveries consume", message.Topic)
-		defer endSpan()
-
-		return eventHandler.Handle(ctx, OutboxEventFromMessage(message))
-	}
-
 	messageHandler := consumer.NewMessageHandler(
-		decodeAndHandle,
+		newOutboxEventHandler(eventHandler),
 		consumer.MessageHandlerConfig{
 			Policy:         consumer.DefaultRetryPolicy(),
 			RetryPublisher: publisher.NewRetryPublisher(retryDLQPublisher, kafkaConfig.RetryTopic),
@@ -157,6 +139,32 @@ func (c *Consumer) logFetchErrors(fetches kgo.Fetches) {
 
 		logFetchFailed(topic, partition, fetchErr)
 	})
+}
+
+// newOutboxEventHandler is what each fetched record is run through.
+//
+// Named rather than inlined into NewConsumer so the sandbox decision can be
+// tested without a broker: this is the point at which a message that belongs
+// to somebody else's sandbox is dropped, and getting it wrong is silent.
+func newOutboxEventHandler(eventHandler EventHandler) consumer.UserHandler {
+	messageContext := messaging.BuildKafkaMessageContextComponents()
+
+	return func(ctx context.Context, message kafkaclient.ConsumedMessage) error {
+		ctx = messageContext.ContextBinder.Bind(ctx, message.Headers)
+		messageSandboxID := messageContext.ContextBinder.ReadSandboxID(message.Headers)
+		if !messageContext.TrafficPolicy.IsOwnedTraffic(messageSandboxID) {
+			logForeignSandboxMessageSkipped(
+				messageSandboxID,
+				messageContext.TrafficPolicy.OwnSandboxID(),
+			)
+			return nil
+		}
+
+		ctx, endSpan := tracing.StartConsumerSpan(ctx, "webhook deliveries consume", message.Topic)
+		defer endSpan()
+
+		return eventHandler.Handle(ctx, OutboxEventFromMessage(message))
+	}
 }
 
 func extractEventID(message kafkaclient.ConsumedMessage) (string, bool) {

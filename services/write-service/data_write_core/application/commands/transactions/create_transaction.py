@@ -55,13 +55,21 @@ class CreateTransactionCommandHandler(CommandHandlerBase[TransactionDTO], LoadCo
         goal_repository: GoalRepository | None = None,
         container_repository: MoneyContainerRepository | None = None,
     ) -> None:
-        registry = get_repository_registry()
-        wallet_repository = wallet_repository or registry.wallet_repository
-        money_flow_repository = money_flow_repository or registry.money_flow_repository
-        outbox_repository = outbox_repository or registry.outbox_repository
-        transaction_repository = transaction_repository or registry.transaction_repository
-        goal_repository = goal_repository or registry.goal_repository
-        container_repository = container_repository or registry.money_container_repository
+        if (
+            wallet_repository is None
+            or money_flow_repository is None
+            or outbox_repository is None
+            or transaction_repository is None
+            or goal_repository is None
+            or container_repository is None
+        ):
+            registry = get_repository_registry()
+            wallet_repository = wallet_repository or registry.wallet_repository
+            money_flow_repository = money_flow_repository or registry.money_flow_repository
+            outbox_repository = outbox_repository or registry.outbox_repository
+            transaction_repository = transaction_repository or registry.transaction_repository
+            goal_repository = goal_repository or registry.goal_repository
+            container_repository = container_repository or registry.money_container_repository
 
         LoadContainerMixin.__init__(
             self,

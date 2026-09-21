@@ -46,10 +46,11 @@ class UpdateExistingGoalCommandHandler(CommandHandlerBase[GoalDTO], LoadGoalMixi
         money_flow_repository: MoneyFlowRepository | None = None,
         outbox_repository: OutboxRepository | None = None,
     ) -> None:
-        registry = get_repository_registry()
-        goal_repository = goal_repository or registry.goal_repository
-        money_flow_repository = money_flow_repository or registry.money_flow_repository
-        outbox_repository = outbox_repository or registry.outbox_repository
+        if goal_repository is None or money_flow_repository is None or outbox_repository is None:
+            registry = get_repository_registry()
+            goal_repository = goal_repository or registry.goal_repository
+            money_flow_repository = money_flow_repository or registry.money_flow_repository
+            outbox_repository = outbox_repository or registry.outbox_repository
 
         LoadGoalMixin.__init__(self, goal_repository, money_flow_repository)
 

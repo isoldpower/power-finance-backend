@@ -17,7 +17,12 @@ local extract_bearer = function(auth_header)
         return nil
     end
 
-    return token
+    local trimmed_token = token:match("^%s*(.-)%s*$")
+    if trimmed_token == "" then
+        return nil
+    end
+
+    return trimmed_token
 end
 
 

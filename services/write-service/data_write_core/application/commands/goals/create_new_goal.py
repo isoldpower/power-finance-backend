@@ -51,10 +51,11 @@ class CreateNewGoalCommandHandler(CommandHandlerBase[GoalDTO]):
         currency_repository: CurrencyRepository | None = None,
         outbox_repository: OutboxRepository | None = None,
     ) -> None:
-        registry = get_repository_registry()
-        self._goal_repository = goal_repository or registry.goal_repository
-        self._currency_repository = currency_repository or registry.currency_repository
-        self._outbox_repository = outbox_repository or registry.outbox_repository
+        if goal_repository is None or currency_repository is None or outbox_repository is None:
+            registry = get_repository_registry()
+            self._goal_repository = goal_repository or registry.goal_repository
+            self._currency_repository = currency_repository or registry.currency_repository
+            self._outbox_repository = outbox_repository or registry.outbox_repository
 
     async def handle(self, command: CreateNewGoalCommand) -> tuple[GoalDTO, int]:
         currency_code = command.currency.upper()

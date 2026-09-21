@@ -270,6 +270,8 @@ def make_checkpoint(wallet_id: str, balance: str, settled_at: datetime) -> Balan
 class FakeWalletRepository:
     def __init__(self, wallets: list[WalletEntity] | None = None) -> None:
         self._wallets = {str(wallet.unique_id): wallet for wallet in (wallets or [])}
+        self.saved: list[WalletEntity] = []
+        self.hard_deleted: list[str] = []
 
     async def get_user_wallet_by_id(self, wallet_id, user_id: int) -> WalletEntity:
         wallet = self._wallets.get(str(wallet_id))
@@ -298,6 +300,22 @@ class FakeWalletRepository:
     async def count_user_wallets(self, user_id: int) -> int:
         return len(self._wallets)
 
+    async def get_user_wallet_for_update(self, wallet_id, user_id: int) -> WalletEntity:
+        return await self.get_user_wallet_by_id(wallet_id, user_id)
+
+    async def save_wallet(self, wallet: WalletEntity) -> WalletEntity:
+        self._wallets[str(wallet.unique_id)] = wallet
+        self.saved.append(wallet)
+
+        return wallet
+
+    async def create_wallet(self, wallet: WalletEntity) -> WalletEntity:
+        return await self.save_wallet(wallet)
+
+    async def hard_delete_wallet(self, wallet_id) -> None:
+        self._wallets.pop(str(wallet_id), None)
+        self.hard_deleted.append(str(wallet_id))
+
     def as_containers(self) -> "FakeMoneyContainerRepository":
         return FakeMoneyContainerRepository(list(self._wallets.values()))
 
@@ -305,6 +323,22 @@ class FakeWalletRepository:
 class FakeGoalRepository:
     def __init__(self, goals: list[GoalEntity] | None = None) -> None:
         self._goals = {str(goal.unique_id): goal for goal in (goals or [])}
+        self.saved: list[GoalEntity] = []
+
+    async def save_goal(self, goal: GoalEntity) -> GoalEntity:
+        self._goals[str(goal.unique_id)] = goal
+        self.saved.append(goal)
+
+        return goal
+
+    async def create_goal(self, goal: GoalEntity) -> GoalEntity:
+        return await self.save_goal(goal)
+
+    async def get_user_goal_for_update(self, goal_id, user_id: int) -> GoalEntity:
+        return await self.get_user_goal_by_id(goal_id, user_id)
+
+    async def hard_delete_goal(self, goal_id) -> None:
+        self._goals.pop(str(goal_id), None)
 
     async def get_user_goal_by_id(self, goal_id, user_id: int) -> GoalEntity:
         goal = self._goals.get(str(goal_id))

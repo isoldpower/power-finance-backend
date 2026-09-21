@@ -39,10 +39,11 @@ class SoftDeleteWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWalletMi
         money_flow_repository: MoneyFlowRepository | None = None,
         outbox_repository: OutboxRepository | None = None,
     ) -> None:
-        registry = get_repository_registry()
-        wallet_repository = wallet_repository or registry.wallet_repository
-        money_flow_repository = money_flow_repository or registry.money_flow_repository
-        outbox_repository = outbox_repository or registry.outbox_repository
+        if wallet_repository is None or money_flow_repository is None or outbox_repository is None:
+            registry = get_repository_registry()
+            wallet_repository = wallet_repository or registry.wallet_repository
+            money_flow_repository = money_flow_repository or registry.money_flow_repository
+            outbox_repository = outbox_repository or registry.outbox_repository
 
         LoadWalletMixin.__init__(self, wallet_repository, money_flow_repository)
 
