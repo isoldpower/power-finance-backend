@@ -4,7 +4,7 @@ COMPOSE      := docker compose -f compose.yaml
 UVICORN_HOST := 0.0.0.0
 UVICORN_PORT := 8000
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../..)
-SANDBOX_RUNNER := $(REPO_ROOT)/infrastructure/dev-host/run_sandbox_service.sh
+SANDBOX_RUNNER := $(REPO_ROOT)/infrastructure/deploy/sandbox/run_sandbox_service.sh
 SANDBOX_NAME ?= $(NAME)
 SANDBOX_ENV_FILE = $(REPO_ROOT)/.sandbox/$(SANDBOX_NAME)-write-service.env
 PORT ?= 8102
@@ -29,8 +29,8 @@ run: ## Start the Write Service locally with uvicorn (autoreload, no docker)
 		--reload --host $(UVICORN_HOST) --port $(UVICORN_PORT)
 
 .PHONY: test
-test: ## Run Write Service tests (pytest, sqlite, hermetic)
-	uv run pytest -q
+test: ## Run Write Service tests (brings up the repo's test datastores if none are running, port 5533)
+	@$(REPO_ROOT)/infrastructure/tests/with_test_datastores.sh uv run pytest -q
 
 .PHONY: build-image
 build-image: ## Build the Write Service Docker image (context = repo root)

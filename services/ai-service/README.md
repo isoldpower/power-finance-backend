@@ -324,8 +324,8 @@ setting.
 
 `make ai test` runs against `AI_TEST_DATABASE_URL`, which defaults to port
 **5536, not 5436**: the latter is the dev host's `postgres-ai` whenever sandbox
-tunnels are open. `make test-datastores` at the repo root starts what the
-default expects.
+tunnels are open. `make ai test` starts that instance itself when none is
+running, and drops it afterwards.
 
 ## Build & Docker
 

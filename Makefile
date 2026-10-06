@@ -90,7 +90,11 @@ clean: | $(HOOK_SENTINEL) ## Remove __pycache__ and bytecode artefacts
 	find . -type f -name '*.pyc' -delete 2>/dev/null || true
 
 .PHONY: test
-test: test-correlation test-libraries test-write test-read test-ai test-go test-java test-contract test-gateway ## Run every test suite
+test: | $(HOOK_SENTINEL) ## Run every test suite (starts the test datastores once, drops them after)
+	@$(TEST_DATASTORES_RUNNER) $(MAKE) --no-print-directory test-every-suite
+
+.PHONY: test-every-suite
+test-every-suite: test-correlation test-libraries test-write test-read test-ai test-go test-java test-contract test-gateway
 
 .PHONY: test-correlation
 test-correlation: | $(HOOK_SENTINEL) ## Run correlation-py library tests (unittest)
@@ -107,15 +111,15 @@ test-libraries: | $(HOOK_SENTINEL) ## Run the pytest library suites (observabili
 	cd $(WEBHOOK_CATALOG_LIB_DIR) && uv run pytest -q
 
 .PHONY: test-write
-test-write: | $(HOOK_SENTINEL) ## Run Write Service tests (pytest; needs `make test-datastores`, port 5533)
-	cd $(WRITE_SERVICE_DIR) && uv run pytest -q
+test-write: | $(HOOK_SENTINEL) ## Run Write Service tests (pytest; brings up the test datastores if none are running, port 5533)
+	@$(MAKE) --no-print-directory -C $(WRITE_SERVICE_DIR) test
 
 .PHONY: test-read
-test-read: | $(HOOK_SENTINEL) ## Run Read Service tests (pytest; needs `make test-datastores`, port 5534)
-	cd $(READ_SERVICE_DIR) && uv run pytest -q
+test-read: | $(HOOK_SENTINEL) ## Run Read Service tests (pytest; brings up the test datastores if none are running, port 5534)
+	@$(MAKE) --no-print-directory -C $(READ_SERVICE_DIR) test
 
 .PHONY: test-ai
-test-ai: | $(HOOK_SENTINEL) ## Run AI Service tests (pytest; needs `make test-datastores`, port 5536)
+test-ai: | $(HOOK_SENTINEL) ## Run AI Service tests (pytest; brings up the test datastores if none are running, port 5536)
 	@$(MAKE) -C $(AI_SERVICE_DIR) test
 
 .PHONY: test-go
@@ -135,7 +139,7 @@ test-gateway: ## Run the Kong plugin specs under the gateway's own LuaJIT (needs
 	@infrastructure/kong/run_plugin_tests.sh
 
 .PHONY: test-datastores
-test-datastores: ## Start the throwaway Postgres instances the Python suites expect (5533/5534/5536)
+test-datastores: ## Keep the throwaway test Postgres instances up between runs (5533/5534/5536); test targets then leave them running
 	$(TEST_DATASTORES_COMPOSE) up -d --wait
 
 .PHONY: test-datastores-down
@@ -210,7 +214,8 @@ endif
 COMPOSE_ENV_LAYERS := $(wildcard .env) $(wildcard services/*/.env.compose)
 COMPOSE_ENV_FLAGS  := $(foreach layer,$(COMPOSE_ENV_LAYERS),--env-file $(layer))
 COMPOSE            := docker compose $(COMPOSE_ENV_FLAGS)
-TEST_DATASTORES_COMPOSE := docker compose -f compose.test-datastores.yaml
+TEST_DATASTORES_COMPOSE := docker compose -f infrastructure/tests/compose.test-datastores.yaml
+TEST_DATASTORES_RUNNER  := infrastructure/tests/with_test_datastores.sh
 
 .PHONY: env-layers
 env-layers: ## Show which env files the compose targets will stack, in order
@@ -256,13 +261,13 @@ LOCAL_SERVICE_PORTS      ?= $(if $(filter command line environment,$(origin LOCA
 DEV_HOST_USER            ?=
 DEV_HOST_REPO            ?= ~/daemons/power-finance-backend
 
-SANDBOX_LOCAL_DATASTORES = $(COMPOSE) -p pf-sbx-$(NAME) -f compose.sandbox-local-datastores.yaml
+SANDBOX_LOCAL_DATASTORES = $(COMPOSE) --project-directory . -p pf-sbx-$(NAME) -f infrastructure/deploy/sandbox/compose.sandbox-local-datastores.yaml
 SANDBOX_DATABASE_PORT   ?= 5633
 
-BASELINE_COMPOSE  := $(COMPOSE) -p $(BASELINE_PROJECT) -f compose.yaml -f compose.baseline.yaml --profile local-elastic
-SANDBOX_DATASTORE_FILES = $(if $(ISOLATED),-f compose.sandbox-datastores.yaml,)
-SANDBOX_LIVE_FILES      = $(if $(BAKED),,-f compose.sandbox-live.yaml)
-SANDBOX_COMPOSE    = $(COMPOSE) -p $(SANDBOX_PROJECT_PREFIX)$(NAME) -f compose.sandbox.yaml $(SANDBOX_LIVE_FILES) $(SANDBOX_DATASTORE_FILES)
+BASELINE_COMPOSE  := $(COMPOSE) -p $(BASELINE_PROJECT) -f compose.yaml -f infrastructure/deploy/compose.baseline.yaml --profile local-elastic
+SANDBOX_DATASTORE_FILES = $(if $(ISOLATED),-f infrastructure/deploy/sandbox/compose.sandbox-datastores.yaml,)
+SANDBOX_LIVE_FILES      = $(if $(BAKED),,-f infrastructure/deploy/sandbox/compose.sandbox-live.yaml)
+SANDBOX_COMPOSE    = $(COMPOSE) --project-directory . -p $(SANDBOX_PROJECT_PREFIX)$(NAME) -f infrastructure/deploy/sandbox/compose.sandbox.yaml $(SANDBOX_LIVE_FILES) $(SANDBOX_DATASTORE_FILES)
 SANDBOX_SERVICE    = sbx-$(SERVICE)
 SANDBOX_CONTAINER  = $(SANDBOX_PROJECT_PREFIX)$(NAME)-$(SANDBOX_SERVICE)-1
 SANDBOX_ADDRESS_FORMAT := {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}
@@ -410,25 +415,25 @@ host-list: ## List registered sandbox routes
 
 .PHONY: host-prune
 host-prune: ## Drop gateway routes whose sandbox container is gone
-	@infrastructure/dev-host/prune_sandbox_routes.sh \
+	@infrastructure/deploy/sandbox/prune_sandbox_routes.sh \
 		"$(SANDBOX_ROUTE_KEY_PREFIX)" "$(BASELINE_PROJECT)"
 
 .PHONY: host-wipe
 host-wipe: guard-NAME ## Remove a sandbox entirely — containers, routes and consumer groups: NAME= [FORCE=1]
-	@infrastructure/dev-host/wipe_sandbox.sh \
+	@infrastructure/deploy/sandbox/wipe_sandbox.sh \
 		"$(NAME)" "$(SANDBOX_ROUTE_KEY_PREFIX)" "$(BASELINE_PROJECT)" \
 		"$(SANDBOX_PROJECT_PREFIX)$(NAME)" "$(FORCE)"
 
 .PHONY: host-replay
 host-replay: guard-NAME ## Give a finished isolated sandbox's events back to the baseline read model: NAME= [DRY_RUN=1] [SINCE=] [UNTIL=]
-	@infrastructure/dev-host/replay_sandbox_events.sh \
+	@infrastructure/deploy/sandbox/replay_sandbox_events.sh \
 		"$(NAME)" "$(BASELINE_PROJECT)" "$(DRY_RUN)" "$(SINCE)" "$(UNTIL)"
 
 ##@ Dev host, driven from your laptop — these reach it over ssh
 
 .PHONY: devhost-tunnels
 devhost-tunnels: guard-DEV_HOST ## Open SSH tunnels from this laptop to the dev host: DEV_HOST= [DEV_HOST_USER=] [LOCAL_SERVICE_PORTS=8100 8101 8102] [PRINT=1]
-	@infrastructure/dev-host/open_tunnels.sh \
+	@infrastructure/deploy/sandbox/open_tunnels.sh \
 		"$(DEV_HOST)" "$(LOCAL_SERVICE_PORTS)" "$(PRINT)" "$(DEV_HOST_USER)"
 
 .PHONY: devhost-route
@@ -443,25 +448,25 @@ devhost-route: guard-NAME guard-SERVICE guard-DEV_HOST ## Register a sandbox rou
 		echo ""; \
 		exit 1; \
 	fi
-	@infrastructure/dev-host/run_remote_make.sh \
+	@infrastructure/deploy/sandbox/run_remote_make.sh \
 		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
 		host-route "NAME=$(NAME)" "SERVICE=$(SERVICE)" "TARGET=$(SANDBOX_REMOTE_TARGET)"
 
 .PHONY: devhost-unroute
 devhost-unroute: guard-NAME guard-SERVICE guard-DEV_HOST ## Drop a sandbox route on the dev host from your laptop: NAME= SERVICE= DEV_HOST= [DEV_HOST_USER=] [DEV_HOST_REPO=~/daemons/power-finance-backend]
-	@infrastructure/dev-host/run_remote_make.sh \
+	@infrastructure/deploy/sandbox/run_remote_make.sh \
 		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
 		host-unroute "NAME=$(NAME)" "SERVICE=$(SERVICE)"
 
 .PHONY: devhost-replay
 devhost-replay: guard-NAME guard-DEV_HOST ## Replay a finished isolated sandbox's events into the baseline, from your laptop: NAME= DEV_HOST= [DRY_RUN=1]
-	@infrastructure/dev-host/run_remote_make.sh \
+	@infrastructure/deploy/sandbox/run_remote_make.sh \
 		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
 		host-replay "NAME=$(NAME)" "DRY_RUN=$(DRY_RUN)" "SINCE=$(SINCE)" "UNTIL=$(UNTIL)"
 
 .PHONY: devhost-wipe
 devhost-wipe: guard-NAME guard-DEV_HOST ## Remove a sandbox entirely, from your laptop: NAME= DEV_HOST= [FORCE=1] [DEV_HOST_USER=] [DEV_HOST_REPO=]
-	@infrastructure/dev-host/run_remote_make.sh \
+	@infrastructure/deploy/sandbox/run_remote_make.sh \
 		"$(DEV_HOST)" "$(DEV_HOST_USER)" "$(DEV_HOST_REPO)" \
 		host-wipe "NAME=$(NAME)" "FORCE=$(FORCE)"
 
@@ -471,7 +476,7 @@ devhost-wipe: guard-NAME guard-DEV_HOST ## Remove a sandbox entirely, from your 
 sandbox-env: guard-NAME guard-SERVICE ## Write an env file pointing a locally-run service at the baseline: NAME= SERVICE= [DEV_HOST=] [ISOLATED=1 own Postgres + prefixed ES]
 	@set -a; [ -f .env ] && . ./.env; set +a; \
 	SANDBOX_DATABASE_PORT=$(SANDBOX_DATABASE_PORT) \
-	written=$$(infrastructure/dev-host/generate_sandbox_env.sh \
+	written=$$(infrastructure/deploy/sandbox/generate_sandbox_env.sh \
 		"$(NAME)" "$(SERVICE)" "$(DEV_HOST)" "$(SANDBOX_ENV_DIR)/$(NAME)-$(SERVICE).env" "$(ISOLATED)"); \
 	echo "wrote $$written (endpoints: $(DEV_HOST)$(if $(ISOLATED), — database: localhost:$(SANDBOX_DATABASE_PORT),))"; \
 	$(if $(ISOLATED),echo "start that database with:  make sandbox-datastores NAME=$(NAME)";,) \
@@ -494,3 +499,85 @@ sandbox-datastores: guard-NAME ## Start this laptop's own Postgres for an isolat
 sandbox-datastores-down: guard-NAME ## Remove this laptop's isolated sandbox database AND its data: NAME=
 	@SANDBOX_DATABASE_PORT=$(SANDBOX_DATABASE_PORT) $(SANDBOX_LOCAL_DATASTORES) down -v
 	@echo "sandbox '$(NAME)' local database removed"
+
+##@ Production — run these ON a production VM (see infrastructure/deploy/production/README.md)
+
+PRODUCTION_PROJECT   := pf-production
+PRODUCTION_ROLE      ?= $(shell sed -n 's/^PRODUCTION_ROLE=//p' .env 2>/dev/null)
+PRODUCTION_IMAGE_TAG ?= $(shell git rev-parse HEAD)
+PRODUCTION_FILES_core   := -f compose.yaml -f infrastructure/deploy/compose.baseline.yaml -f infrastructure/deploy/production/compose.production.yaml
+PRODUCTION_FILES_search := -f services/read-service/compose.elastic.yaml -f infrastructure/deploy/production/compose.production-search.yaml
+PRODUCTION_FILES_stream := --project-directory . -f infrastructure/deploy/production/compose.production-stream.yaml
+PRODUCTION_COMPOSE    = PRODUCTION_IMAGE_TAG=$(PRODUCTION_IMAGE_TAG) docker compose --env-file .env \
+	-p $(PRODUCTION_PROJECT) $(PRODUCTION_FILES_$(PRODUCTION_ROLE))
+REF                  ?= main
+
+PRODUCTION_CORE_HOST   ?= pf-core
+PRODUCTION_SEARCH_HOST ?= pf-search
+PRODUCTION_STREAM_HOST ?= pf-stream
+PRODUCTION_REPO        ?= ~/power-finance-backend
+
+.PHONY: prod-check
+prod-check: ## Validate this VM's .env for its PRODUCTION_ROLE (core | search | stream)
+	@infrastructure/deploy/production/check_environment.sh .env
+
+.PHONY: prod-config
+prod-config: prod-check ## Print the fully resolved compose config for this VM's role
+	@$(PRODUCTION_COMPOSE) config
+
+.PHONY: prod-pull
+prod-pull: prod-check ## Pull this role's images for the checked-out commit
+	$(PRODUCTION_COMPOSE) pull
+
+.PHONY: prod-up
+prod-up: prod-pull ## Start / update this role's stack at the checked-out commit
+	$(PRODUCTION_COMPOSE) up -d --no-build --remove-orphans
+
+.PHONY: prod-deploy
+prod-deploy: ## Check out REF (default main) and roll this role onto its images: [REF=]
+	git fetch --prune origin
+	git checkout --detach "origin/$(REF)" 2>/dev/null || git checkout --detach "$(REF)"
+	@$(MAKE) --no-print-directory prod-up
+
+.PHONY: prod-down
+prod-down: ## Stop this role's stack (volumes are kept)
+	$(PRODUCTION_COMPOSE) down
+
+.PHONY: prod-ps
+prod-ps: ## Show this role's container state
+	$(PRODUCTION_COMPOSE) ps
+
+.PHONY: prod-logs
+prod-logs: ## Follow this role's logs: [SERVICE=api-gateway]
+	$(PRODUCTION_COMPOSE) logs -f --tail=200 $(SERVICE)
+
+.PHONY: prod-backup
+prod-backup: ## Dump every Postgres now (core only; the systemd timer runs this nightly)
+	@infrastructure/deploy/production/backup_databases.sh
+
+.PHONY: prod-print-es-ca
+prod-print-es-ca: ## Print the Elasticsearch CA certificate (search only)
+	@$(PRODUCTION_COMPOSE) exec -T es01 cat config/certs/ca/ca.crt
+
+##@ Production, driven from your laptop — hosts are ssh aliases (see infrastructure/deploy/production/README.md)
+
+.PHONY: prod-copy-es-ca
+prod-copy-es-ca: ## Copy the Elasticsearch CA from the search VM onto the core VM
+	ssh $(PRODUCTION_SEARCH_HOST) 'cd $(PRODUCTION_REPO) && make -s prod-print-es-ca' \
+		| ssh $(PRODUCTION_CORE_HOST) 'mkdir -p $(PRODUCTION_REPO)/.secrets && cat > $(PRODUCTION_REPO)/.secrets/elasticsearch-ca.crt'
+	@echo "CA copied to $(PRODUCTION_CORE_HOST):$(PRODUCTION_REPO)/.secrets/elasticsearch-ca.crt"
+
+.PHONY: prod-deploy-all
+prod-deploy-all: ## Deploy REF to search, then core, then stream: [REF=]
+	@for host in $(PRODUCTION_SEARCH_HOST) $(PRODUCTION_CORE_HOST) $(PRODUCTION_STREAM_HOST); do \
+		echo "==> $$host"; \
+		ssh $$host 'cd $(PRODUCTION_REPO) && make prod-deploy REF=$(REF)' || exit 1; \
+	done
+
+.PHONY: prod-tunnel
+prod-tunnel: ## Forward the loopback-only UIs: Kong admin 8001 + Jaeger 16686 (core), Kibana 5601 (search), Flink 8085 (stream)
+	@trap 'kill 0' INT TERM EXIT; \
+	ssh -N -L 8001:127.0.0.1:8001 -L 16686:127.0.0.1:16686 $(PRODUCTION_CORE_HOST) & \
+	ssh -N -L 5601:127.0.0.1:5601 $(PRODUCTION_SEARCH_HOST) & \
+	ssh -N -L 8085:127.0.0.1:8085 $(PRODUCTION_STREAM_HOST) & \
+	wait

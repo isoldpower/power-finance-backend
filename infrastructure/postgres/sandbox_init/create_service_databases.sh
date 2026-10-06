@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# See ../../dev-host/README.md → "Scripts here"
+# See ../../deploy/sandbox/README.md → "Scripts here"
 set -euo pipefail
 
 for database_name in \

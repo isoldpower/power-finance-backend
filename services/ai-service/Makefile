@@ -2,7 +2,7 @@
 AI_TEST_DATABASE_URL ?= postgresql+psycopg://postgres:postgres@localhost:5536/power_finance_ai_test
 COMPOSE := docker compose -f compose.yaml
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../..)
-SANDBOX_RUNNER := $(REPO_ROOT)/infrastructure/dev-host/run_sandbox_service.sh
+SANDBOX_RUNNER := $(REPO_ROOT)/infrastructure/deploy/sandbox/run_sandbox_service.sh
 SANDBOX_NAME ?= $(NAME)
 SANDBOX_ENV_FILE = $(REPO_ROOT)/.sandbox/$(SANDBOX_NAME)-ai-service.env
 PORT ?= 8101
@@ -34,8 +34,8 @@ makemigration: ## Autogenerate a migration from the models (pass NAME="...")
 	uv run alembic revision --autogenerate -m "$(NAME)"
 
 .PHONY: test
-test: ## Run AI Service tests (needs `make test-datastores` at the repo root, port 5536)
-	AI_DATABASE_URL="$(AI_TEST_DATABASE_URL)" uv run pytest -q
+test: ## Run AI Service tests (brings up the repo's test datastores if none are running, port 5536)
+	@AI_DATABASE_URL="$(AI_TEST_DATABASE_URL)" $(REPO_ROOT)/infrastructure/tests/with_test_datastores.sh uv run pytest -q
 
 .PHONY: build-image
 build-image: ## Build the AI Service Docker image (context = repo root)

@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 COMPOSE := docker compose -f compose.yaml
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../..)
-SANDBOX_RUNNER := $(REPO_ROOT)/infrastructure/dev-host/run_sandbox_service.sh
+SANDBOX_RUNNER := $(REPO_ROOT)/infrastructure/deploy/sandbox/run_sandbox_service.sh
 SANDBOX_NAME ?= $(NAME)
 SANDBOX_ENV_FILE = $(REPO_ROOT)/.sandbox/$(SANDBOX_NAME)-read-service.env
 PORT ?= 8100
@@ -21,8 +21,8 @@ run: ## Run the Kafka consumer locally (no docker; needs Kafka + postgres-read r
 	uv run python manage.py run_write_message_consumer
 
 .PHONY: test
-test: ## Run Read Service tests (pytest; needs `make test-datastores` at the repo root, port 5534)
-	uv run pytest -q
+test: ## Run Read Service tests (brings up the repo's test datastores if none are running, port 5534)
+	@$(REPO_ROOT)/infrastructure/tests/with_test_datastores.sh uv run pytest -q
 
 .PHONY: build-image
 build-image: ## Build the Read Service Docker image (context = repo root)

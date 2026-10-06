@@ -1,4 +1,4 @@
-# Disposable Postgres instances for the Python test suites. See README.md → "Testing".
+# Disposable Postgres instances for the Python test suites. See ../../README.md → "Testing".
 name: pf-test
 
 x-test-postgres: &test-postgres

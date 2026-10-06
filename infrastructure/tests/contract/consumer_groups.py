@@ -58,7 +58,7 @@ def compose_default(variable: str, path: str) -> str | None:
 
 
 def generator_pin(variable: str) -> str | None:
-    text = (REPO_ROOT / "infrastructure/dev-host/generate_sandbox_env.sh").read_text()
+    text = (REPO_ROOT / "infrastructure/deploy/sandbox/generate_sandbox_env.sh").read_text()
     match = re.search(rf"{variable}=\$\{{{variable}:-([^}}]+)\}}", text)
 
     return match.group(1) if match else None

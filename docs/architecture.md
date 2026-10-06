@@ -761,7 +761,7 @@ mechanism that makes tracing continuous is what makes per-developer isolation
 possible. See [ADR-0002](./adr-0002-shared-dev-environment.md) for the decision and
 its costs, [ADR-0003](./adr-0003-sandbox-event-fallback.md) for how a baseline
 consumer covers a sandbox that is not running that service, and
-`infrastructure/dev-host/README.md` for the host itself.
+`infrastructure/deploy/sandbox/README.md` for the host itself.
 
 ## Implementation Notes
 

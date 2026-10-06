@@ -261,7 +261,10 @@ plugins:
   - name: cors
     config:
       origins:
-        - "*"
+        - "https://powerfinance.site"
+        - "https://manage.powerfinance.site"
+        - "http://localhost(:\\d+)?"
+        - "http://127\\.0\\.0\\.1(:\\d+)?"
       methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
       headers:
         - Accept

@@ -1,0 +1,121 @@
+# See infrastructure/deploy/production/README.md → core VM
+x-required-image-tag: ${PRODUCTION_IMAGE_TAG:?PRODUCTION_IMAGE_TAG is required — use `make prod-up`}
+x-required-core-address: ${CORE_PRIVATE_ADDRESS:?CORE_PRIVATE_ADDRESS is required — the core VM's private IP}
+
+x-write-production-env: &write-production-env
+  DJANGO_SETTINGS_MODULE: write_service.settings.production
+  SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:?WRITE_SERVICE_SECRET_KEY is required}
+  ALLOWED_HOSTS: write-service,localhost,127.0.0.1
+  DEBUG: "false"
+
+x-read-production-env: &read-production-env
+  DJANGO_SETTINGS_MODULE: read_service.settings.production
+  SECRET_KEY: ${READ_SERVICE_SECRET_KEY:?READ_SERVICE_SECRET_KEY is required}
+  ALLOWED_HOSTS: read-service,localhost,127.0.0.1
+  DEBUG: "false"
+  ELASTICSEARCH_HOSTS: https://${SEARCH_PRIVATE_HOSTNAME:?SEARCH_PRIVATE_HOSTNAME is required}:9200
+  ELASTICSEARCH_CA_CERTS: /certs/ca/ca.crt
+
+services:
+  write-migrate:
+    image: ghcr.io/isoldpower/power-finance/write-service:${PRODUCTION_IMAGE_TAG}
+    environment: *write-production-env
+
+  write-service:
+    image: ghcr.io/isoldpower/power-finance/write-service:${PRODUCTION_IMAGE_TAG}
+    environment: *write-production-env
+
+  write-inbound-notifications-consumer:
+    image: ghcr.io/isoldpower/power-finance/write-service:${PRODUCTION_IMAGE_TAG}
+    environment: *write-production-env
+
+  write-fraud-alerts-consumer:
+    image: ghcr.io/isoldpower/power-finance/write-service:${PRODUCTION_IMAGE_TAG}
+    environment: *write-production-env
+
+  write-action-expiry-sweeper:
+    image: ghcr.io/isoldpower/power-finance/write-service:${PRODUCTION_IMAGE_TAG}
+    environment: *write-production-env
+
+  write-automation-engine:
+    image: ghcr.io/isoldpower/power-finance/write-service:${PRODUCTION_IMAGE_TAG}
+    environment: *write-production-env
+
+  write-automation-scheduler:
+    image: ghcr.io/isoldpower/power-finance/write-service:${PRODUCTION_IMAGE_TAG}
+    environment: *write-production-env
+
+  read-migrate:
+    image: ghcr.io/isoldpower/power-finance/read-service:${PRODUCTION_IMAGE_TAG}
+    environment: *read-production-env
+
+  read-service:
+    image: ghcr.io/isoldpower/power-finance/read-service:${PRODUCTION_IMAGE_TAG}
+    environment: *read-production-env
+    volumes: !override
+      - ${ELASTICSEARCH_CA_CERTIFICATE_FILE:-./.secrets/elasticsearch-ca.crt}:/certs/ca/ca.crt:ro
+
+  read-es-init:
+    profiles: !reset []
+    image: ghcr.io/isoldpower/power-finance/read-service:${PRODUCTION_IMAGE_TAG}
+    environment: *read-production-env
+    volumes: !override
+      - ${ELASTICSEARCH_CA_CERTIFICATE_FILE:-./.secrets/elasticsearch-ca.crt}:/certs/ca/ca.crt:ro
+    depends_on: !reset {}
+
+  read-write-consumer:
+    image: ghcr.io/isoldpower/power-finance/read-service:${PRODUCTION_IMAGE_TAG}
+    environment: *read-production-env
+    volumes: !override
+      - ${ELASTICSEARCH_CA_CERTIFICATE_FILE:-./.secrets/elasticsearch-ca.crt}:/certs/ca/ca.crt:ro
+
+  ai-migrate:
+    image: ghcr.io/isoldpower/power-finance/ai-service:${PRODUCTION_IMAGE_TAG}
+
+  ai-service:
+    image: ghcr.io/isoldpower/power-finance/ai-service:${PRODUCTION_IMAGE_TAG}
+
+  ai-dispatcher:
+    image: ghcr.io/isoldpower/power-finance/ai-service:${PRODUCTION_IMAGE_TAG}
+
+  push-service:
+    image: ghcr.io/isoldpower/power-finance/push-service:${PRODUCTION_IMAGE_TAG}
+
+  webhook-migrate:
+    image: ghcr.io/isoldpower/power-finance/webhook-service:${PRODUCTION_IMAGE_TAG}
+
+  webhook-service:
+    image: ghcr.io/isoldpower/power-finance/webhook-service:${PRODUCTION_IMAGE_TAG}
+
+  antifraud-jobmanager:
+    profiles: ["stream-vm"]
+
+  antifraud-taskmanager:
+    profiles: ["stream-vm"]
+
+  kafka:
+    ports: !override
+      - "${CORE_PRIVATE_ADDRESS}:19092:19092"
+
+  jaeger:
+    ports: !override
+      - "127.0.0.1:${JAEGER_UI_PORT:-16686}:16686"
+      - "127.0.0.1:${OTLP_GRPC_PORT:-4317}:4317"
+      - "${CORE_PRIVATE_ADDRESS}:4317:4317"
+
+  api-gateway:
+    image: ghcr.io/isoldpower/power-finance/api-gateway:${PRODUCTION_IMAGE_TAG}
+    volumes: !reset []
+    environment:
+      KONG_TRACING_SAMPLING_RATE: ${KONG_TRACING_SAMPLING_RATE:-0.1}
+
+  cloudflared:
+    image: cloudflare/cloudflared:${CLOUDFLARED_VERSION:-2026.10.0}
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN is required}
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    mem_limit: 128m

@@ -9,7 +9,7 @@ since="${4:-}"
 until_moment="${5:-}"
 
 baseline_compose() {
-    docker compose -p "$baseline_project" -f compose.yaml -f compose.baseline.yaml \
+    docker compose -p "$baseline_project" -f compose.yaml -f infrastructure/deploy/compose.baseline.yaml \
         --profile local-elastic "$@"
 }
 

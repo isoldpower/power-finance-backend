@@ -24,7 +24,7 @@ What turns a MacBook M2 Pro (16 GB) into the shared dev host. Run these on the
    VM, so colima itself needs launchd:
 
    ```bash
-   cp infrastructure/dev-host/com.powerfinance.colima.plist ~/Library/LaunchAgents/
+   cp infrastructure/deploy/sandbox/com.powerfinance.colima.plist ~/Library/LaunchAgents/
    launchctl load ~/Library/LaunchAgents/com.powerfinance.colima.plist
    ```
 
@@ -287,7 +287,7 @@ examined. In order of likelihood:
 
 1. **`CLERK_ISSUER_URL` empty or wrong.** It ships empty in `.env.example`. Kong
    resolves it at config load, so recreate the gateway after setting it:
-   `docker compose -p pf-baseline -f compose.yaml -f compose.baseline.yaml up -d --force-recreate api-gateway`.
+   `docker compose -p pf-baseline -f compose.yaml -f infrastructure/deploy/compose.baseline.yaml up -d --force-recreate api-gateway`.
 2. **A stale JWKS cache entry** in `gateway-redis` — clear `clerk:jwks:*` keys.
 3. **No egress or DNS from the container.** Test on the stack's own network:
    `docker run --rm --network pf-baseline_default curlimages/curl:8.9.1 -s -o /dev/null -w '%{http_code}\n' "$CLERK_ISSUER_URL/.well-known/jwks.json"` — expect 200.

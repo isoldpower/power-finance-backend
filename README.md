@@ -61,18 +61,23 @@ Shared code lives in `libraries/` (Python: `correlation-py`, `kafka-client-py`,
 ```bash
 make install            # sync the uv workspace + wire the git pre-commit hook
 docker compose up -d    # gateway + all services + Kafka/Postgres/Redis
-make test-datastores    # throwaway Postgres for the Python suites (5533/5534/5536)
 make test               # run every service + library suite
 ```
 
-`make test-datastores` is separate from the stack on purpose. The Python suites
+`make test`, `make test-write`, `make test-read` and `make test-ai` bring up the
+throwaway Postgres instances the Python suites use (5533/5534/5536) through
+`infrastructure/tests/with_test_datastores.sh`, and drop them when the run ends,
+pass or fail. If any of them is already running, the wrapper treats them as yours
+and leaves them up. So `make test-datastores` keeps them alive while you iterate
+with plain `pytest`, and `make test-datastores-down` drops them when you're done.
+
+The test datastores are separate from the stack on purpose. The Python suites
 default to 5533/5534/5536 rather than the stack's 5433/5434/5436, because those
 belong to the **dev host** whenever `make devhost-tunnels` is running — and a test
 run that reaches one of them creates and drops its test database on the machine
-everyone shares. The throwaway instances are tmpfs-backed and safe to leave up;
-`make test-datastores-down` discards them — the data directory is a tmpfs, so
-`down` leaves nothing behind. They take the plain credentials the suites
-default to, which is why `make test-datastores` runs Compose with **no**
+everyone shares. The throwaway instances are tmpfs-backed, so `down` leaves
+nothing behind. They take the plain credentials the suites default to, which is
+why they are started with **no**
 `--env-file` layering: a laptop `.env` carries the dev host's credentials, and
 layering them in is how a test run ends up authenticating against the shared
 machine.
@@ -126,7 +131,7 @@ ssh <dev-host> 'echo ok'
 
 If you get `tailnet policy does not permit you to SSH as user …`, that is usually the
 wrong username rather than an ACL problem — see
-[infrastructure/dev-host/README.md](infrastructure/dev-host/README.md).
+[infrastructure/deploy/sandbox/README.md](infrastructure/deploy/sandbox/README.md).
 
 ### 3. Clone and install
 
@@ -288,7 +293,7 @@ directory.
   when not routing, so a service subcommand sharing a name doesn't collide. Use
   `make help`, not `make write help`, for the root.
 - **Setup / quality:** `make install` (sync the uv workspace + wire the hook),
-  `make test-datastores` (the Postgres instances the Python suites expect),
+  `make test-datastores` (keep the test Postgres instances up between runs; the test targets otherwise start and drop them),
   `make test`, `make lint` / `lint-fix`, `make format` / `format-check`,
   `make typecheck`, `make precommit`.
 - The git pre-commit hook is auto-installed on every Makefile invocation: every
@@ -336,7 +341,7 @@ make host-kibana    # Kibana is scaled to 0 by default; ~768 MB when you want it
 make host-down
 ```
 
-`compose.baseline.yaml` layers over `compose.yaml`: memory limits per container,
+`infrastructure/deploy/compose.baseline.yaml` layers over `compose.yaml`: memory limits per container,
 capped ES and Kafka heaps, one Flink task slot, `OTEL_*` pointed at Jaeger, and
 `SANDBOX_ID` explicitly empty, which is what makes the baseline the owner of all
 untagged traffic.
@@ -559,17 +564,17 @@ stands in for, whatever the code defaults say. (ai-service and webhook-service
 take a whole database URL rather than `DATABASE_*` parts, so the generator
 writes those instead.)
 
-Note that a sandbox reuses the baseline's Elastic certs: `compose.sandbox.yaml`
+Note that a sandbox reuses the baseline's Elastic certs: `infrastructure/deploy/sandbox/compose.sandbox.yaml`
 declares the baseline's `certs` volume as external.
 
-Every service in `compose.sandbox.yaml` is named `sbx-<service>` and pulled in
+Every service in `infrastructure/deploy/sandbox/compose.sandbox.yaml` is named `sbx-<service>` and pulled in
 with `extends` rather than layered over `compose.yaml`. That is deliberate:
 Compose always adds the service name as a network alias, so reusing the
 baseline's names on the shared network would make `write-service` round-robin
 between the baseline and a sandbox, silently sending a share of untagged
 traffic into someone's sandbox.
 
-The default overlay is `compose.sandbox-live.yaml`: the service's source is
+The default overlay is `infrastructure/deploy/sandbox/compose.sandbox-live.yaml`: the service's source is
 bind-mounted from the checkout on the dev host, so a change is picked up in
 about a second instead of a ~20s image rebuild. The venv lives at `/app/.venv`,
 outside the mount, so dependencies are untouched — only first-party source is
@@ -808,5 +813,7 @@ password.
 - [ADR-0001: fraud service on Java/Flink](docs/adr-0001-fraud-service.md)
 - [ADR-0002: shared dev environment](docs/adr-0002-shared-dev-environment.md) — why
   one baseline plus per-developer sandboxes, and what it costs.
-- [Dev host setup](infrastructure/dev-host/README.md) — for whoever runs the host.
+- [Dev host setup](infrastructure/deploy/sandbox/README.md) — for whoever runs the host.
 - [Infrastructure](infrastructure/README.md) — Kafka, Kong, Postgres, Debezium.
+- [Production](infrastructure/deploy/production/README.md) — three Oracle A1 VMs (core, Elasticsearch, Flink) behind a
+  Cloudflare Tunnel, images from GHCR, nightly Postgres backups.

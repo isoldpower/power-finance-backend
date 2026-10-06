@@ -1,0 +1,54 @@
+# See infrastructure/deploy/production/README.md → stream VM
+x-required-image-tag: ${PRODUCTION_IMAGE_TAG:?PRODUCTION_IMAGE_TAG is required — use `make prod-up`}
+
+x-antifraud-env: &antifraud-env
+  KAFKA_BOOTSTRAP_SERVERS: ${CORE_PRIVATE_HOSTNAME:?CORE_PRIVATE_HOSTNAME is required — the core VM's private FQDN}:19092
+  KAFKA_OUTBOX_TOPIC: ${KAFKA_OUTBOX_TOPIC:-events.async}
+  KAFKA_GROUP_ID: ${ANTIFRAUD_KAFKA_GROUP_ID:-antifraud-service}
+  KAFKA_ALERTS_TOPIC: ${KAFKA_ALERTS_TOPIC:-fraud.alerts}
+  FRAUD_SCORE_THRESHOLD: ${FRAUD_SCORE_THRESHOLD:-4.0}
+  SANDBOX_ID: ""
+  OTEL_JAVAAGENT_ENABLED: "true"
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://${CORE_PRIVATE_HOSTNAME}:4317
+  OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+  OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-0.1}
+  OTEL_RESOURCE_ATTRIBUTES: deployment.environment=${OTEL_DEPLOYMENT_ENVIRONMENT:-production}
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
+
+services:
+  antifraud-jobmanager:
+    image: ghcr.io/isoldpower/power-finance/antifraud-service:${PRODUCTION_IMAGE_TAG}
+    command: standalone-job --job-classname com.powerfinance.antifraud.App
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${ANTIFRAUD_UI_PORT:-8085}:8081"
+    environment:
+      <<: *antifraud-env
+      OTEL_SERVICE_NAME: antifraud-jobmanager
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: antifraud-jobmanager
+        parallelism.default: 1
+        restart-strategy.type: exponential-delay
+        jobmanager.memory.process.size: 1024m
+        jobmanager.memory.jvm-metaspace.size: 192m
+    mem_limit: 1152m
+    stop_grace_period: 30s
+
+  antifraud-taskmanager:
+    image: ghcr.io/isoldpower/power-finance/antifraud-service:${PRODUCTION_IMAGE_TAG}
+    command: taskmanager
+    restart: unless-stopped
+    environment:
+      <<: *antifraud-env
+      OTEL_SERVICE_NAME: antifraud-taskmanager
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: antifraud-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        taskmanager.memory.process.size: 2048m
+        taskmanager.memory.managed.size: 128m
+        taskmanager.memory.jvm-metaspace.size: 192m
+    depends_on:
+      - antifraud-jobmanager
+    mem_limit: 2304m
+    stop_grace_period: 30s

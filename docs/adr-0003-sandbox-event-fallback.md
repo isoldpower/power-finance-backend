@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-09-14
 - **Deciders:** Project owner
-- **Related:** [`adr-0002-shared-dev-environment.md`](./adr-0002-shared-dev-environment.md), [`../libraries/kafka-consumer-py/README.md`](../libraries/kafka-consumer-py/README.md), [`../infrastructure/dev-host/README.md`](../infrastructure/dev-host/README.md)
+- **Related:** [`adr-0002-shared-dev-environment.md`](./adr-0002-shared-dev-environment.md), [`../libraries/kafka-consumer-py/README.md`](../libraries/kafka-consumer-py/README.md), [`../infrastructure/deploy/sandbox/README.md`](../infrastructure/deploy/sandbox/README.md)
 
 ## Context
 

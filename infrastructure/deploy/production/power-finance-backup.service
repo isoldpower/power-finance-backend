@@ -1,0 +1,10 @@
+[Unit]
+Description=Power Finance nightly Postgres backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=__USER__
+WorkingDirectory=__REPOSITORY_DIRECTORY__
+ExecStart=__REPOSITORY_DIRECTORY__/infrastructure/deploy/production/backup_databases.sh

@@ -129,3 +129,5 @@ openapi.json
 # =============================================================================
 infrastructure/debezium/.connect-data/
 infrastructure/kafka/.kafka-data/
+# Production secrets fetched onto a VM (Elasticsearch CA)
+.secrets/

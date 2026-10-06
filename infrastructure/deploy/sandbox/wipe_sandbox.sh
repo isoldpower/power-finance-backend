@@ -57,7 +57,7 @@ fi
 
 echo "== containers"
 SANDBOX_ID="$sandbox_name" BASELINE_NETWORK_NAME="${baseline_project}_default" \
-    docker compose -p "$sandbox_project" -f compose.sandbox.yaml \
+    docker compose --project-directory . -p "$sandbox_project" -f infrastructure/deploy/sandbox/compose.sandbox.yaml \
     down --remove-orphans --volumes 2>&1 | sed 's/^/   /' || true
 
 echo "== gateway routes"
