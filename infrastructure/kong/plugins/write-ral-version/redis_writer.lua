@@ -1,6 +1,7 @@
 local redis = require "resty.redis"
 
 local plugin_config = require "kong.plugins.write-ral-version.config"
+local set_script    = require "kong.plugins.write-ral-version.set_script"
 
 
 
@@ -72,7 +73,7 @@ local set_user_offset_monotonic = function(config, user_id, offset)
     local key = prefix .. user_id
     local ttl = config.redis_ttl_seconds or plugin_config.RedisConnection.DEFAULT_TTL_SECONDS
 
-    local _, eval_error = client:eval(MONOTONIC_SET_SCRIPT, 1, key, offset, ttl)
+    local _, eval_error = client:eval(set_script.MONOTONIC_SET_SCRIPT, 1, key, offset, ttl)
     if eval_error then
         client:close()
         return nil, "redis eval: " .. eval_error

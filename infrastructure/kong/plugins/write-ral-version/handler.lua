@@ -42,17 +42,33 @@ function WriteRalVersionHandler:header_filter(config)
 end
 
 
+local record_user_offset = function(premature, config, user_id, raw_version)
+    if premature then
+        return
+    end
+
+    local redis_write, set_error = redis_writer.set_user_offset_monotonic(config, user_id, raw_version)
+    if not redis_write then
+        kong.log.warn("write-ral-version: redis offset update failed (best effort): ", set_error)
+    end
+end
+
+
 function WriteRalVersionHandler:log(config)
     local pending_record = kong.ctx.plugin.pending_offset_record
     if not pending_record then
         return
     end
 
-    local redis_write, set_error = redis_writer.set_user_offset_monotonic(
-        config, pending_record.user_id, pending_record.raw_version
+    local scheduled, schedule_error = ngx.timer.at(
+        0,
+        record_user_offset,
+        config,
+        pending_record.user_id,
+        pending_record.raw_version
     )
-    if not redis_write then
-        kong.log.warn("write-ral-version: redis offset update failed (best effort): ", set_error)
+    if not scheduled then
+        kong.log.warn("write-ral-version: could not schedule redis offset update (best effort): ", schedule_error)
     end
 end
 

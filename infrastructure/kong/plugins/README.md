@@ -99,12 +99,18 @@ runs across two phases, and the split is forced by OpenResty:
   `X-Write-Version`, HMAC-signs it, and rewrites the header in place so the
   client sees `{seq}:{hex-hmac-sha256}`: exactly the shape it must send back as
   `Read-At-Least`. HMAC is CPU-only, so it is safe in this phase.
-- **`log`** — best-effort writes `(user_id, seq)` to `gateway-redis` under
-  `ral:user:{sub}` through a monotonic Lua script, so the gateway can inject a
-  default header for that user's later reads. The Redis call cannot live in
-  `header_filter`: OpenResty forbids cosocket APIs (TCP, Redis, HTTP) there and
-  throws *"API disabled in the context of header_filter_by_lua"*. The `log`
-  phase runs after the response is fully sent and explicitly supports cosockets.
+- **`log`** — schedules a best-effort write of `(user_id, seq)` to
+  `gateway-redis` under `ral:user:{sub}` through a monotonic Lua script, so the
+  gateway can inject a default header for that user's later reads. OpenResty
+  forbids cosocket APIs (TCP, Redis, HTTP) in **both** `header_filter` and `log`
+  (*"API disabled in the context of log_by_lua"*). So the log handler only calls
+  `ngx.timer.at(0, …)`, and the Redis write runs in that timer, where cosockets
+  are allowed.
+
+  Until 2026-10-07 the write ran directly in `log`. It never succeeded, and the
+  error aborted every later log-phase plugin, `opentelemetry` included, so writes
+  exported no gateway spans. The same code also referenced
+  `MONOTONIC_SET_SCRIPT` without requiring `set_script.lua`.
 
 The point of all of it is that Write Service stays ignorant of the HMAC secret,
 of the Redis side-channel, and of the `Read-At-Least` wire format. It just

@@ -37,6 +37,7 @@ from .tracing import (
     RedisInstrumentationActivator,
     SqlalchemyInstrumentationActivator,
     configure_tracing,
+    trace_datastore_operation,
     wrap_asgi_application,
     wrap_wsgi_application,
 )
@@ -65,6 +66,7 @@ __all__ = [
     "build_kafka_message_context_components",
     "capture_outbox_trace_context",
     "configure_tracing",
+    "trace_datastore_operation",
     "wrap_asgi_application",
     "wrap_wsgi_application",
     "current_sandbox_id",

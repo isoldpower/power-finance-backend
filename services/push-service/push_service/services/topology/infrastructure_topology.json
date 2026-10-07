@@ -216,7 +216,12 @@
       "group": "write",
       "deployment": "core",
       "description": "Tamper-evident ledger holding every immutable money flow behind a transaction.",
-      "telemetry": null
+      "telemetry": {
+        "attributes": {
+          "db.system": "immudb",
+          "db.name": "transactions"
+        }
+      }
     },
     {
       "id": "debezium",

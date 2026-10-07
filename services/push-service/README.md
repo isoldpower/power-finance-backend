@@ -89,10 +89,12 @@ connections and unconnected nodes.
   job and task managers), and Debezium owns none because it emits no spans.
 - `attributes` matches a client span's attributes: `db.system` plus `db.name`
   for Postgres, `db.system` for Redis and Elasticsearch,
-  `messaging.destination.name` for topics. Three Redis nodes share
+  `messaging.destination.name` for topics, `db.system: immudb` for the ledger
+  (spans come from `ResilientImmudbClient`, one per client call, named after the
+  method, e.g. `sqlExec`). Three Redis nodes share
   `db.system: redis`, so resolve an attribute match only among nodes connected
   to the span's own service node.
-- `null` means the piece emits nothing traceable (ImmuDB, Clerk, external APIs).
+- `null` means the piece emits nothing traceable (Clerk, external APIs).
   Animate those from the connection list instead.
 
 Python Kafka consumers create no consumer span. Their DB spans join the producer's

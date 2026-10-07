@@ -3,6 +3,9 @@ from typing import Any
 
 import grpc
 from immudb import ImmudbClient
+from observability import trace_datastore_operation
+
+IMMUDB_DATABASE_SYSTEM = "immudb"
 
 
 class ResilientImmudbClient:
@@ -37,12 +40,17 @@ class ResilientImmudbClient:
             return attr
 
         def _wrapped(*args: Any, **kwargs: Any) -> Any:
-            try:
-                return attr(*args, **kwargs)
-            except grpc.RpcError as err:
-                if not self._is_expired_token(err):
-                    raise
-                self._relogin()
-                return getattr(self._client, name)(*args, **kwargs)
+            with trace_datastore_operation(
+                database_system=IMMUDB_DATABASE_SYSTEM,
+                database_name=self._database,
+                operation_name=name,
+            ):
+                try:
+                    return attr(*args, **kwargs)
+                except grpc.RpcError as err:
+                    if not self._is_expired_token(err):
+                        raise
+                    self._relogin()
+                    return getattr(self._client, name)(*args, **kwargs)
 
         return _wrapped
