@@ -13,6 +13,14 @@ local force_trace_sampling = function(demo_session_identifier)
 end
 
 
+local tag_request_spans = function(request_spans, demo_session_identifier)
+    for _, request_span in ipairs(request_spans or {}) do
+        request_span:set_attribute(plugin_config.DemoSessionSpanAttribute, demo_session_identifier)
+    end
+end
+
+
 return {
     force_trace_sampling = force_trace_sampling,
+    tag_request_spans    = tag_request_spans,
 }

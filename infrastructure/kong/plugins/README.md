@@ -261,7 +261,16 @@ sessions").
 When `X-Demo-Session` carries a valid id (16–64 of `[A-Za-z0-9_-]`), the plugin
 replaces any client-supplied `demo-session` entry in the upstream `baggage` header,
 sets the `demo-session` attribute on the gateway root span, and calls
-`kong.tracing:set_should_sample(true)`. An invalid or missing id leaves the request
+`kong.tracing:set_should_sample(true)`. In the log phase it tags every other gateway span of the
+request too (router, plugins, balancer). Upstream spans are parented to the
+balancer span, so without its tag their parent would never reach the demo stream.
+That works because Kong runs plugins in priority order in **every** phase: at 740
+this log handler runs before the `opentelemetry` plugin's (14) export.
+
+**One path per route.** Kong reports `http.route` as the matched route's
+*first* path (`r.paths[1]`), not the path that matched. So a route with several
+paths mislabels every request but the first, and the demo stream would show the
+wrong endpoint. That is why the search and demo routes are one route per path. An invalid or missing id leaves the request
 alone.
 
 Custom because **Kong 3.7 does not honour an incoming `sampled=1` flag**:

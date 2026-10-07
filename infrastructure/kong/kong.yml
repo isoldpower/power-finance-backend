@@ -76,12 +76,32 @@ services:
         strip_path: false
         preserve_host: false
         methods: [GET, OPTIONS]
-      - name: read-api-v1-search
+      - name: read-api-v1-wallets-search
         paths:
           - /api/v1/wallets/search
+        strip_path: false
+        preserve_host: false
+        methods: [POST, OPTIONS]
+      - name: read-api-v1-transactions-search
+        paths:
           - /api/v1/transactions/search
+        strip_path: false
+        preserve_host: false
+        methods: [POST, OPTIONS]
+      - name: read-api-v1-webhooks-search
+        paths:
           - /api/v1/webhooks/search
+        strip_path: false
+        preserve_host: false
+        methods: [POST, OPTIONS]
+      - name: read-api-v1-automations-search
+        paths:
           - /api/v1/automations/search
+        strip_path: false
+        preserve_host: false
+        methods: [POST, OPTIONS]
+      - name: read-api-v1-goals-search
+        paths:
           - /api/v1/goals/search
         strip_path: false
         preserve_host: false
@@ -213,9 +233,14 @@ services:
     write_timeout: 3600000
     read_timeout: 3600000
     routes:
-      - name: demo-endpoints
+      - name: demo-traces-stream
         paths:
           - /api/v1/demo/traces/stream
+        strip_path: false
+        preserve_host: false
+        methods: [GET, OPTIONS]
+      - name: demo-topology
+        paths:
           - /api/v1/demo/topology
         strip_path: false
         preserve_host: false
