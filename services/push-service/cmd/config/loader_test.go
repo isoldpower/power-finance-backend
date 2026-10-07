@@ -17,6 +17,7 @@ func clearConfigEnvironment(t *testing.T) {
 		"PUSH_SERVICE_HEARTBEAT_INTERVAL_SECONDS",
 		"KAFKA_BOOTSTRAP_SERVERS",
 		"KAFKA_OUTBOX_TOPIC",
+		"KAFKA_DEMO_SPANS_TOPIC",
 		"LOG_LEVEL",
 	}
 	for _, variable := range variables {
@@ -148,5 +149,28 @@ func TestSplitTopicsDropsEmptyEntries(t *testing.T) {
 
 	if len(topics) != 2 {
 		t.Fatalf("expected 2 topics, got %v", topics)
+	}
+}
+
+func TestDemoSpansTopicDefaultsAndOverrides(t *testing.T) {
+	clearConfigEnvironment(t)
+
+	if defaultTopic := Load().Kafka.DemoSpansTopic; defaultTopic != "telemetry.demo-spans" {
+		t.Fatalf("expected the default demo spans topic, got %q", defaultTopic)
+	}
+
+	t.Setenv("KAFKA_DEMO_SPANS_TOPIC", "telemetry.portfolio-spans")
+
+	if overriddenTopic := Load().Kafka.DemoSpansTopic; overriddenTopic != "telemetry.portfolio-spans" {
+		t.Fatalf("expected the overridden demo spans topic, got %q", overriddenTopic)
+	}
+}
+
+func TestEmptyDemoSpansTopicInConfigFileDisablesTheStream(t *testing.T) {
+	clearConfigEnvironment(t)
+	t.Setenv("PUSH_SERVICE_CONFIG_FILE", writeConfigFile(t, "kafka:\n  demo_spans_topic: \"\"\n"))
+
+	if disabledTopic := Load().Kafka.DemoSpansTopic; disabledTopic != "" {
+		t.Fatalf("expected an empty demo spans topic, got %q", disabledTopic)
 	}
 }

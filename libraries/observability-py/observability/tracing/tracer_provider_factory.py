@@ -15,14 +15,20 @@ from opentelemetry.sdk.trace.sampling import (
 )
 
 from ..configuration import TracingSettings
+from ..demo_session import DEMO_SESSION_BAGGAGE_ENTRY_NAME
+from .baggage_span_attributes_processor import BaggageSpanAttributesProcessor
 
 FULL_SAMPLING_RATIO = 1.0
+SPAN_ATTRIBUTE_BAGGAGE_ENTRY_NAMES = (DEMO_SESSION_BAGGAGE_ENTRY_NAME,)
 
 
 def build_tracer_provider(settings: TracingSettings) -> TracerProvider:
     tracer_provider = TracerProvider(
         resource=_build_resource(settings),
         sampler=_build_sampler(settings.sampler_ratio),
+    )
+    tracer_provider.add_span_processor(
+        BaggageSpanAttributesProcessor(SPAN_ATTRIBUTE_BAGGAGE_ENTRY_NAMES),
     )
     tracer_provider.add_span_processor(
         BatchSpanProcessor(

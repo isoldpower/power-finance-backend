@@ -44,6 +44,27 @@ topics:
       retention: 7d
       cleanup_policy: delete
 
+  - name: telemetry.demo-spans
+    purpose: >-
+      Spans of portfolio demo sessions, for the live request-flow view. Jaeger's
+      `traces/demo_sessions` pipeline keeps only spans carrying the
+      `demo-session` attribute and exports them here as OTLP protobuf. Telemetry,
+      not domain events: losing a message only leaves a gap in the animation.
+    key: The trace id (`partition_traces_by_id`).
+    producers:
+      - service: jaeger
+        via: kafka exporter
+        does: forwards demo-session spans after the filter processor
+    consumers:
+      - service: push-service
+        group: null
+        does: >-
+          Groupless broadcast like events.async; projects whitelisted span fields
+          and fans them out over `GET /api/v1/demo/traces/stream?session=<id>`.
+    settings: >-
+      Auto-created with broker defaults on the first produce (Jaeger) or
+      metadata request (push-service enables auto-creation for this topic).
+
   - name: notifications.inbound
     purpose: >-
       Inbound notification requests. A command topic, not an event stream: the

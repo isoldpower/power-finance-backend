@@ -205,6 +205,32 @@ services:
           redis_timeout_ms: 100
           redis_key_prefix: "clerk:jwks:"
 
+  - name: push-service-demo-traces
+    host: push-service
+    port: 8001
+    protocol: http
+    connect_timeout: 5000
+    write_timeout: 3600000
+    read_timeout: 3600000
+    routes:
+      - name: demo-traces-stream
+        paths:
+          - /api/v1/demo/traces/stream
+        strip_path: false
+        preserve_host: false
+        methods: [GET, OPTIONS]
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 30
+          hour: 300
+          policy: redis
+          redis_host: gateway-redis
+          redis_port: 6379
+          limit_by: ip
+          fault_tolerant: true
+          hide_client_headers: true
+
   - name: ai-service
     host: ai-service
     port: 8000
@@ -245,6 +271,11 @@ plugins:
       redis_key_prefix: "sandbox:route:"
       propagate_baggage: true
 
+  - name: demo-session
+    config:
+      header_name: X-Demo-Session
+      force_sampling: true
+
   - name: opentelemetry
     config:
       endpoint: "{vault://env/otel-exporter-otlp-traces-endpoint}"
@@ -274,6 +305,7 @@ plugins:
         - Read-At-Least
         - Idempotency-Key
         - X-Sandbox
+        - X-Demo-Session
         - baggage
         - traceparent
         - tracestate

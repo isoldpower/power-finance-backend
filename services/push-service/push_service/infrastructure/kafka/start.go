@@ -24,3 +24,18 @@ func StartKafkaConsumer(
 
 	return nil
 }
+
+func StartDemoSpansConsumer(
+	ctx context.Context,
+	kafkaConfig types.KafkaConfig,
+	spansSink chan<- types.OutboxEvent,
+	readinessProbe *health.Probe,
+) error {
+	consumerLoop, buildErr := BuildDemoSpansConsumerLoop(ctx, kafkaConfig, spansSink, readinessProbe)
+	if buildErr != nil {
+		return buildErr
+	}
+
+	go consumerLoop.Run(ctx)
+	return nil
+}

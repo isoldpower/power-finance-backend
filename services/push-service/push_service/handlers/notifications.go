@@ -6,19 +6,19 @@ import (
 	"services/push-service/push_service/types"
 )
 
-type SSENotificationsHandler struct {
+type SSEStreamHandler struct {
 	poolService       types.ClientsPool
 	projectionService types.EventsProjector
 	newHeartbeat      types.HeartbeatFactory
 	kafkaChannel      chan types.OutboxEvent
 }
 
-func NewSSENotificationsHandler(
+func NewSSEStreamHandler(
 	poolService types.ClientsPool,
 	projectionService types.EventsProjector,
 	newHeartbeat types.HeartbeatFactory,
-) *SSENotificationsHandler {
-	return &SSENotificationsHandler{
+) *SSEStreamHandler {
+	return &SSEStreamHandler{
 		poolService:       poolService,
 		projectionService: projectionService,
 		newHeartbeat:      newHeartbeat,
@@ -27,18 +27,18 @@ func NewSSENotificationsHandler(
 }
 
 // Start launches the projection and fanout pipelines; both stop when ctx is cancelled.
-func (snh *SSENotificationsHandler) Start(ctx context.Context) {
+func (snh *SSEStreamHandler) Start(ctx context.Context) {
 	go snh.projectionService.RunKafkaReceiver(ctx, snh.kafkaChannel)
 	go snh.poolService.FanoutEvents(ctx, snh.projectionService.Events())
 }
 
 // KafkaSink returns the Kafka event channel associated with handler.
-func (snh *SSENotificationsHandler) KafkaSink() chan<- types.OutboxEvent {
+func (snh *SSEStreamHandler) KafkaSink() chan<- types.OutboxEvent {
 	return snh.kafkaChannel
 }
 
 // Subscribe allows to subscribe to user-based events fanout.
-func (snh *SSENotificationsHandler) Subscribe(
+func (snh *SSEStreamHandler) Subscribe(
 	externalUserID string,
 ) (<-chan types.OutboxEvent, func(), bool) {
 	subscription, registered := snh.poolService.Subscribe(externalUserID)
@@ -51,7 +51,7 @@ func (snh *SSENotificationsHandler) Subscribe(
 
 // SpinUntilDone runs a loop which handles events and fans them out to related channel
 // until the connection is gone (client disconnected).
-func (snh *SSENotificationsHandler) SpinUntilDone(
+func (snh *SSEStreamHandler) SpinUntilDone(
 	goneChannel <-chan struct{},
 	eventsChannel <-chan types.OutboxEvent,
 	responseChannel chan<- []byte,

@@ -1,0 +1,76 @@
+# See ../README.md → "Tracing"
+service:
+  extensions: [jaeger_storage, jaeger_query, healthcheckv2]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [jaeger_storage_exporter]
+    traces/demo_sessions:
+      receivers: [otlp]
+      processors: [filter/demo_sessions, batch/demo_sessions]
+      exporters: [kafka/demo_sessions]
+  telemetry:
+    resource:
+      service.name: jaeger
+    logs:
+      level: ${env:JAEGER_LOG_LEVEL:-info}
+
+extensions:
+  healthcheckv2:
+    use_v2: true
+    http:
+      endpoint: 0.0.0.0:13133
+
+  jaeger_query:
+    storage:
+      traces: badger_store
+
+  jaeger_storage:
+    backends:
+      badger_store:
+        badger:
+          directories:
+            keys: /badger/key
+            values: /badger/data
+          ephemeral: false
+          ttl:
+            spans: ${env:JAEGER_SPAN_TTL:-72h}
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+
+  filter/demo_sessions:
+    error_mode: ignore
+    traces:
+      span:
+        - 'attributes["demo-session"] == nil'
+
+  batch/demo_sessions:
+    timeout: 100ms
+    send_batch_size: 256
+
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: badger_store
+
+  kafka/demo_sessions:
+    brokers:
+      - ${env:DEMO_SESSIONS_KAFKA_BROKERS:-kafka:9092}
+    traces:
+      topic: ${env:DEMO_SESSIONS_KAFKA_TOPIC:-telemetry.demo-spans}
+      encoding: otlp_proto
+    partition_traces_by_id: true
+    retry_on_failure:
+      enabled: false
+    sending_queue:
+      enabled: true
+      queue_size: 100

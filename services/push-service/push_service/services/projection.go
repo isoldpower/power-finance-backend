@@ -4,19 +4,31 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"services/push-service/push_service/services/demotraces"
 	"services/push-service/push_service/services/projections"
 
 	"services/push-service/internal/metrics"
 	"services/push-service/push_service/types"
 )
 
+type kafkaMessageTranslator func(kafkaMessage types.OutboxEvent) ([]types.OutboxEvent, error)
+
 type EventsProjectionService struct {
 	eventsChannel chan types.OutboxEvent
+	translate     kafkaMessageTranslator
 }
 
 func NewEventsProjectionService() *EventsProjectionService {
 	return &EventsProjectionService{
 		eventsChannel: make(chan types.OutboxEvent),
+		translate:     translateNotificationMessage,
+	}
+}
+
+func NewDemoSpansProjectionService() *EventsProjectionService {
+	return &EventsProjectionService{
+		eventsChannel: make(chan types.OutboxEvent),
+		translate:     translateDemoSpansMessage,
 	}
 }
 
@@ -52,7 +64,7 @@ func (eps *EventsProjectionService) forwardProjectedEvents(
 	ctx context.Context,
 	kafkaMessage types.OutboxEvent,
 ) bool {
-	projectedEvents, translateErr := eps.translateKafkaMessage(kafkaMessage)
+	projectedEvents, translateErr := eps.translate(kafkaMessage)
 	if translateErr != nil {
 		metrics.EventDroppedMalformed()
 		slog.Warn(
@@ -81,9 +93,7 @@ func (eps *EventsProjectionService) forwardProjectedEvents(
 	return true
 }
 
-func (eps *EventsProjectionService) translateKafkaMessage(
-	kafkaMessage types.OutboxEvent,
-) ([]types.OutboxEvent, error) {
+func translateNotificationMessage(kafkaMessage types.OutboxEvent) ([]types.OutboxEvent, error) {
 	if kafkaMessage.EventType == "" {
 		return nil, errors.New("outbox event is missing the event_type header")
 	}
@@ -92,4 +102,12 @@ func (eps *EventsProjectionService) translateKafkaMessage(
 	}
 
 	return projections.ProjectNotificationEvents(kafkaMessage)
+}
+
+func translateDemoSpansMessage(kafkaMessage types.OutboxEvent) ([]types.OutboxEvent, error) {
+	if len(kafkaMessage.Payload) == 0 {
+		return nil, errors.New("demo spans message carries an empty payload")
+	}
+
+	return demotraces.ProjectDemoSpanEvents(kafkaMessage.Payload)
 }

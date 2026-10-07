@@ -15,6 +15,8 @@ x-antifraud-env: &antifraud-env
   OTEL_RESOURCE_ATTRIBUTES: deployment.environment=${OTEL_DEPLOYMENT_ENVIRONMENT:-production}
   OTEL_METRICS_EXPORTER: none
   OTEL_LOGS_EXPORTER: none
+  OTEL_BSP_SCHEDULE_DELAY: ${OTEL_BSP_SCHEDULE_DELAY:-500}
+  OTEL_JAVA_EXPERIMENTAL_SPAN_ATTRIBUTES_COPY_FROM_BAGGAGE_INCLUDE: demo-session
 
 services:
   antifraud-jobmanager:

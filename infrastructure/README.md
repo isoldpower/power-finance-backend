@@ -222,10 +222,21 @@ Global plugins: `correlation-id` (X-Correlation-ID, echoed downstream) and
 
 ## Tracing
 
-`observability/compose.yaml` runs **Jaeger all-in-one** and nothing else. There is
-no OpenTelemetry Collector: Jaeger accepts OTLP natively on 4317 (gRPC) and 4318
-(HTTP), and on a single-host dev box a collector would be a second hop buying
-nothing.
+`observability/compose.yaml` runs **Jaeger v2** (`jaegertracing/jaeger`, pinned by
+`JAEGER_VERSION`). Jaeger v2 *is* an OpenTelemetry Collector distribution, so there
+is still no separate collector container: `observability/jaeger-config.yaml` is an
+ordinary collector config with two pipelines on the same OTLP receiver
+(4317 gRPC, 4318 HTTP):
+
+| Pipeline | Processors | Exporter |
+| --- | --- | --- |
+| `traces` | `batch` | Badger storage (the Jaeger UI) — every span |
+| `traces/demo_sessions` | `filter/demo_sessions`, `batch/demo_sessions` | Kafka `telemetry.demo-spans`, OTLP protobuf — only spans carrying the `demo-session` attribute |
+
+Validate a config change before deploying it:
+`docker run --rm -v $PWD/infrastructure/observability/jaeger-config.yaml:/c.yaml jaegertracing/jaeger:2.22.0 validate --config /c.yaml`.
+The v2 query service serves only `/api/v3/*`; the v1 `/api/services` style
+endpoints are gone.
 
 | Producer | Transport | Endpoint |
 | --- | --- | --- |
@@ -236,6 +247,34 @@ nothing.
 The UI is on `JAEGER_UI_PORT` (default 16686). Spans live in Badger on a named
 volume with `JAEGER_SPAN_TTL` (default 72h), so restarts keep history without
 growing unbounded.
+
+### Portfolio demo sessions
+
+The portfolio site embeds the app in an `<iframe>` and shows a live graph of where
+each request goes. The parent page makes a random session id (16–64 of
+`[A-Za-z0-9_-]`, a UUID fits). It passes the id to the iframe, which sends it as
+`X-Demo-Session` on every API call. The parent page then subscribes to
+`GET /api/v1/demo/traces/stream?session=<id>`, which is public, rate-limited per IP
+and needs no Clerk token.
+
+1. Kong's `demo-session` plugin (`kong/plugins/README.md`) validates the id, puts
+   `demo-session=<id>` into W3C baggage, tags the gateway root span and forces the
+   trace to be sampled whatever `KONG_TRACING_SAMPLING_RATE` says.
+2. Every service sampler is `ParentBased`, so the forced flag carries through
+   HTTP, the outbox `traceparent`/`baggage` columns, Debezium headers and every
+   Kafka consumer.
+3. `observability-py` / `observability-go` register a span processor that copies
+   the `demo-session` baggage entry onto each span as an attribute. The Java agent
+   does the same through
+   `OTEL_JAVA_EXPERIMENTAL_SPAN_ATTRIBUTES_COPY_FROM_BAGGAGE_INCLUDE`.
+4. Jaeger's `traces/demo_sessions` pipeline forwards the tagged spans to Kafka.
+   push-service projects a field whitelist (no SQL, URLs or ids) and fans them out
+   by session.
+
+Spans export when they **end**, so the parent HTTP span arrives after its
+children. Clients should order spans by `startTimeUnixNano`. Services set
+`OTEL_BSP_SCHEDULE_DELAY=500` (ms) so a span leaves the process within half a
+second instead of the default five.
 
 **Nothing traces until an endpoint is set.** `observability-py` treats an unset
 `OTEL_EXPORTER_OTLP_ENDPOINT` as "tracing off", so a service run straight on a

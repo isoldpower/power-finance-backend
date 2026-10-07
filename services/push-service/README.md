@@ -4,6 +4,41 @@ SSE push-notifications service. It consumes the `events.async` Kafka topic as a
 groupless broadcast and fans events out to connected clients over Server-Sent
 Events, authenticated per-user by the gateway.
 
+## Demo traces stream
+
+`GET /api/v1/demo/traces/stream?session=<id>` streams the spans of one portfolio
+demo session (see `infrastructure/README.md` → "Tracing / Portfolio demo
+sessions"). It needs no gateway auth: the route is registered as public, and Kong
+fronts it with an IP rate limit instead of `clerk-jwt`. A session id that is not
+16–64 of `[A-Za-z0-9_-]` gets `400`.
+
+A second groupless broadcast consumer reads `telemetry.demo-spans` (OTLP protobuf
+written by Jaeger). It reuses the same clients pool, heartbeat and SSE framing as
+notifications, keyed by session id instead of user id. Each span becomes one
+`event: span` frame:
+
+```json
+{"traceId":"…","spanId":"…","parentSpanId":"…","service":"write-service",
+ "name":"INSERT","kind":"client","status":"ok",
+ "startTimeUnixNano":"1791345070588577260","endTimeUnixNano":"…","durationMs":4.5,
+ "attributes":{"db.system":"postgresql"}}
+```
+
+Only a whitelist of attributes is forwarded (`db.system`, `db.namespace`,
+`messaging.system`, `messaging.destination.name`, `http.route`, the status code and
+a few more, listed in `services/demotraces/contracts.go`). SQL text, URLs, Kafka
+keys and user ids never leave the service. Span names are scrubbed too, because the
+ASGI wrapper names its server span after the raw path (`GET /api/v1/wallets/<real id>`).
+A span with `http.route` is renamed `<method> <route template>`. Any other server
+span keeps only its method, or becomes `request` when it has none. Non-server span
+names (`INSERT`, a topic name) pass through unchanged. Nanosecond timestamps are JSON strings
+because they exceed JavaScript's safe integer range.
+
+`kafka.demo_spans_topic` (`KAFKA_DEMO_SPANS_TOPIC`, default `telemetry.demo-spans`)
+names the topic. An empty `demo_spans_topic` in the config file turns the stream
+off, and the route then answers `404`. An empty environment variable does not work
+for this, because Viper ignores empty env values and falls back to the default.
+
 ## Observability
 
 The service exposes three unauthenticated HTTP routes (they bypass the gateway

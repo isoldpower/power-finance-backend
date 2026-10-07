@@ -1,0 +1,5 @@
+from .config import DEMO_SESSION_BAGGAGE_ENTRY_NAME
+
+__all__ = [
+    "DEMO_SESSION_BAGGAGE_ENTRY_NAME",
+]

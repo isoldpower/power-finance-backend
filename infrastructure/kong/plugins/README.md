@@ -20,6 +20,7 @@ it.
 | 901 | `rate-limiting` (bundled) | the IP floor runs before JWT verification, so spraying invalid tokens hits the cap rather than burning verification CPU |
 | 801 | `clerk-jwt` | deliberately below the IP floor, above everything that needs claims |
 | 750 | `sandbox-router` | needs nothing from the claims, but sitting under `clerk-jwt` means an unauthenticated request is never routed into a sandbox; sitting above `read-fallback` means the request that plugin forwards is already pointed at the right upstream |
+| 740 | `demo-session` | under `clerk-jwt`, so an unauthenticated request can't force sampling on a protected route; above `read-fallback`, so the request that plugin forwards already has the demo baggage and the forced sampling flag |
 | 700 | `read-at-least` | needs `clerk_claims` |
 | 700 | `write-ral-version` | mirrors `read-at-least` so the pair sits at the same relative position |
 | 650 | `read-fallback` | below both, so `X-User-Id` and the resolved `Read-At-Least` are already on the request it forwards |
@@ -250,3 +251,34 @@ four lines is kept in one file.
 `infrastructure/kong/run_plugin_tests.sh`: `resolve_sandbox_spec.lua` pins the
 precedence of the three channels, `route_target_spec.lua` pins each fail-open
 branch and the baggage propagation.
+
+## demo-session
+
+Marks requests from the portfolio's embedded demo so their whole trace can be
+streamed live (see [../../README.md](../../README.md) → "Tracing / Portfolio demo
+sessions").
+
+When `X-Demo-Session` carries a valid id (16–64 of `[A-Za-z0-9_-]`), the plugin
+replaces any client-supplied `demo-session` entry in the upstream `baggage` header,
+sets the `demo-session` attribute on the gateway root span, and calls
+`kong.tracing:set_should_sample(true)`. An invalid or missing id leaves the request
+alone.
+
+Custom because **Kong 3.7 does not honour an incoming `sampled=1` flag**:
+`get_sampling_decision` only inherits a parent's *negative* decision and otherwise
+reuses the root span's probability draw. Setting the root span's flag before the
+`opentelemetry` plugin's access phase (priority 14) makes that plugin propagate
+`sampled=01` on its own.
+
+It deliberately does **not** write `traceparent`. The `opentelemetry` plugin reads
+the request's `traceparent` as the *incoming* parent, so a header injected earlier
+in the chain makes the root span its own parent. Reads get their trace context from
+`read-fallback` instead, below.
+
+`read-fallback` forwards reads itself and exits before the `opentelemetry` plugin
+runs, so until now read-service never saw the gateway's trace context. It now
+stamps `traceparent` from the gateway root span (`shared/lua/gateway_trace_context.lua`)
+on every forwarded request, carrying that span's sampling flag. Reads join the
+gateway trace, and read-service follows the gateway's sampling decision instead of
+drawing its own.
+

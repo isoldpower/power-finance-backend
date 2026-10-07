@@ -21,6 +21,7 @@ const (
 
 	bootstrapServersKey = "kafka.bootstrap_servers"
 	outboxTopicKey      = "kafka.outbox_topic"
+	demoSpansTopicKey   = "kafka.demo_spans_topic"
 
 	logLevelKey = "log_level"
 )
@@ -45,6 +46,7 @@ func Load() types.PushServiceConfig {
 		Kafka: types.KafkaConfig{
 			BootstrapServers: viperInstance.GetString(bootstrapServersKey),
 			OutboxTopics:     splitTopics(viperInstance.GetString(outboxTopicKey)),
+			DemoSpansTopic:   strings.TrimSpace(viperInstance.GetString(demoSpansTopicKey)),
 		},
 		Logging: types.LoggingConfig{
 			Level: viperInstance.GetString(logLevelKey),
@@ -59,6 +61,7 @@ func registerDefaults(viperInstance *viper.Viper) {
 
 	viperInstance.SetDefault(bootstrapServersKey, "localhost:9092")
 	viperInstance.SetDefault(outboxTopicKey, "events.async")
+	viperInstance.SetDefault(demoSpansTopicKey, "telemetry.demo-spans")
 
 	viperInstance.SetDefault(logLevelKey, "info")
 }

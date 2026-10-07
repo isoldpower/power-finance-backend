@@ -40,7 +40,7 @@ func StartPushService(serviceConfig types.PushServiceConfig) error {
 	newHeartbeat := func() types.Heartbeat {
 		return services.NewHeartbeatService(serviceConfig.Server.HeartbeatInterval)
 	}
-	notificationsHandler := handlers.NewSSENotificationsHandler(
+	notificationsHandler := handlers.NewSSEStreamHandler(
 		services.NewClientsPoolService(),
 		services.NewEventsProjectionService(),
 		newHeartbeat,
@@ -58,6 +58,15 @@ func StartPushService(serviceConfig types.PushServiceConfig) error {
 		return kafkaErr
 	}
 
+	demoTracesStream, demoTracesErr := startDemoTracesStream(
+		backgroundContext,
+		serviceConfig,
+		newHeartbeat,
+	)
+	if demoTracesErr != nil {
+		return demoTracesErr
+	}
+
 	establishedConfig := httpServer.EstablishHTTPProcessConfig(httpServer.HTTPProcessConfig{
 		ProcessConfig: server.ProcessConfig{
 			Host: utilities.BuildOption(serviceConfig.Server.Host),
@@ -68,6 +77,7 @@ func StartPushService(serviceConfig types.PushServiceConfig) error {
 	pushHttpServer, serverErr := http.NewPushHTTPServer(
 		http.NewPushHTTPConfig(establishedConfig),
 		notificationsHandler,
+		demoTracesStream,
 		readinessProbe,
 	)
 
@@ -79,4 +89,33 @@ func StartPushService(serviceConfig types.PushServiceConfig) error {
 	}
 
 	return serverErr
+}
+
+func startDemoTracesStream(
+	backgroundContext context.Context,
+	serviceConfig types.PushServiceConfig,
+	newHeartbeat types.HeartbeatFactory,
+) (types.DemoTracesStream, error) {
+	if serviceConfig.Kafka.DemoSpansTopic == "" {
+		return nil, nil
+	}
+
+	demoTracesHandler := handlers.NewSSEStreamHandler(
+		services.NewClientsPoolService(),
+		services.NewDemoSpansProjectionService(),
+		newHeartbeat,
+	)
+	demoTracesHandler.Start(backgroundContext)
+
+	demoSpansConsumerErr := kafka.StartDemoSpansConsumer(
+		backgroundContext,
+		serviceConfig.Kafka,
+		demoTracesHandler.KafkaSink(),
+		health.NewProbe(),
+	)
+	if demoSpansConsumerErr != nil {
+		return nil, demoSpansConsumerErr
+	}
+
+	return demoTracesHandler, nil
 }

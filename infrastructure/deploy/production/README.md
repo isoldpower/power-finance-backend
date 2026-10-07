@@ -26,12 +26,12 @@ Together the three VMs use exactly the free A1 allowance (4 OCPU, 24 GB) and all
 Each VM keeps its role in `.env` as `PRODUCTION_ROLE`, and every `make prod-*`
 target picks the compose files for that role.
 
-**What crosses VMs** (private IPs only; the VCN security list allows these and nothing else):
+**What crosses VMs** (private IPs only; the network security groups allow these and nothing else):
 
 | From → to | Port | What | Protection |
 | --- | --- | --- | --- |
 | core → search | 9200 | read-service, read-write-consumer, read-es-init → Elasticsearch | TLS (cert issued for the search VM's FQDN) + `elastic` password |
-| stream → core | 19092 | Flink → Kafka `EXTERNAL` listener (advertises the core FQDN) | plaintext, no auth: rely on the security list |
+| stream → core | 19092 | Flink → Kafka `EXTERNAL` listener (advertises the core FQDN) | plaintext, no auth: rely on the `nsg-core` rule |
 | stream → core | 4317 | Flink OTel agent → Jaeger OTLP gRPC | plaintext |
 
 Everything else stays on each VM's loopback: Kong admin, Jaeger UI, Kibana, the
@@ -50,30 +50,40 @@ Flink UI, and the databases. `make prod-tunnel` brings those UIs to your laptop.
 
 ## 0. Oracle Cloud
 
-1. **Upgrade the account to Pay-As-You-Go** (Billing → Upgrade). It costs $0 inside
-   the Always Free limits, but idle Always Free instances get *reclaimed* (under
-   20% CPU at the 95th percentile over 7 days), and the stream and search VMs will
-   be idle most of the time. A PAYG account is exempt, and A1 is far less often
-   "Out of capacity". Set a budget alert at $1.
+1. **Optional: upgrade to Pay-As-You-Go** (Billing → Upgrade). It costs $0 inside
+   the Always Free limits. It exempts the VMs from idle reclaim, and A1 is less
+   often "Out of capacity". Plain Always Free works too. Oracle reclaims an A1
+   instance only when CPU (p95), network **and memory** all stay under 20% for 7
+   days. Elasticsearch's locked heap and Flink's JVMs keep memory above that, but
+   check with `free -m` on each VM after the first deploy. Set a $1 budget alert
+   either way.
 2. **VCN**: create it with the wizard (*VCN with Internet Connectivity*). Keep
    **DNS labels** on, so each VM gets a private FQDN
    `<hostname>.<subnet-label>.<vcn-label>.oraclevcn.com`.
-3. **Instances** (Compute → Instances → Create), ×3 from the table above:
+3. **Default security list** of the public subnet: delete the ingress rule
+   `0.0.0.0/0 TCP 22`. Security lists and NSGs are combined, so if that rule stays,
+   SSH stays open to the whole internet whatever the NSGs say. Keep the egress rule
+   and the ICMP rules.
+4. **Network security groups** (VCN → Network Security Groups), with the default
+   egress rule to all destinations, and these ingress rules:
+
+   | NSG | Source | Port | For |
+   | --- | --- | --- | --- |
+   | `nsg-core` | your IP `/32` | TCP 22 | SSH |
+   | `nsg-core` | NSG `nsg-stream` | TCP 19092, 4317 | Flink → Kafka, OTLP |
+   | `nsg-search` | your IP `/32` | TCP 22 | SSH |
+   | `nsg-search` | NSG `nsg-core` | TCP 9200 | core → Elasticsearch |
+   | `nsg-stream` | your IP `/32` | TCP 22 | SSH |
+
+   Docker-published ports bypass the host firewall, so these NSGs are the real
+   firewall. The cross-VM ports are also bound to private IPs only.
+5. **Instances** (Compute → Instances → Create), ×3 from the table above:
    - Image: **Canonical Ubuntu 24.04** (aarch64). Shape **VM.Standard.A1.Flex**.
    - Hostname: `pf-core` / `pf-search` / `pf-stream`. Public subnet with a public
-     IPv4, so each VM can pull images and you can SSH in. Paste your SSH key.
+     IPv4, so each VM can pull images and you can SSH in. Attach its NSG. Paste
+     your SSH key.
    - If you hit "Out of capacity", try another availability domain or retry later.
-4. **Security list** of the public subnet, ingress rules:
-
-   | Source | Protocol / port | For |
-   | --- | --- | --- |
-   | your IP `/32` (or `0.0.0.0/0`) | TCP 22 | SSH (already there) |
-   | `<core private IP>/32` | TCP 9200 | core → Elasticsearch |
-   | `<stream private IP>/32` | TCP 19092, 4317 | Flink → Kafka, OTLP |
-
-   The ports are bound to private IPs only, so they are unreachable from the
-   internet even when a rule is too wide.
-5. On your laptop, add SSH aliases so the Make targets can reach each VM:
+6. On your laptop, add SSH aliases so the Make targets can reach each VM:
 
    ```
    # ~/.ssh/config
@@ -177,7 +187,7 @@ on rollback.
 | Disk | `docker system df`; `docker image prune -a --filter until=168h` after a few deploys |
 | Connectivity | from core: `curl --cacert .secrets/elasticsearch-ca.crt -u elastic https://<search FQDN>:9200`; from stream: `nc -vz <core FQDN> 19092` |
 
-If a cross-VM port is unreachable even though the security list allows it, check
+If a cross-VM port is unreachable even though the NSG allows it, check
 the Oracle Ubuntu image's own iptables (`sudo iptables -L FORWARD -n`). Docker's
 chains must come before the image's final `REJECT`.
 

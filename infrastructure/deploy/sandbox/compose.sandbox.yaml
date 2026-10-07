@@ -4,6 +4,7 @@ x-sandbox-env: &sandbox-env
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
   OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
   OTEL_DEPLOYMENT_ENVIRONMENT: sandbox
+  OTEL_BSP_SCHEDULE_DELAY: ${OTEL_BSP_SCHEDULE_DELAY:-500}
 
 x-flink-sandbox-env: &flink-sandbox-env
   - SANDBOX_ID=${SANDBOX_ID:?SANDBOX_ID is required — use `make host-sandbox-up NAME=...`}
@@ -12,6 +13,8 @@ x-flink-sandbox-env: &flink-sandbox-env
   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
   - OTEL_METRICS_EXPORTER=none
   - OTEL_LOGS_EXPORTER=none
+  - OTEL_BSP_SCHEDULE_DELAY=${OTEL_BSP_SCHEDULE_DELAY:-500}
+  - OTEL_JAVA_EXPERIMENTAL_SPAN_ATTRIBUTES_COPY_FROM_BAGGAGE_INCLUDE=demo-session
 
 volumes:
   certs:

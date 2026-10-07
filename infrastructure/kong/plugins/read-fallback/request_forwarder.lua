@@ -1,5 +1,10 @@
-local http   = require "resty.http"
-local config = require "kong.plugins.read-fallback.config"
+local http                  = require "resty.http"
+local config                = require "kong.plugins.read-fallback.config"
+local gateway_trace_context = require "power_finance.gateway_trace_context"
+
+
+local TRACEPARENT_HEADER_NAME = "traceparent"
+local TRACESTATE_HEADER_NAME  = "tracestate"
 
 
 --- Collect the headers to forward upstream.
@@ -9,6 +14,12 @@ local collect_request_headers = function()
         if not config.SKIP_HEADERS[name:lower()] then
             forwarded[name] = value
         end
+    end
+
+    local root_traceparent = gateway_trace_context.build_root_traceparent()
+    if root_traceparent then
+        forwarded[TRACEPARENT_HEADER_NAME] = root_traceparent
+        forwarded[TRACESTATE_HEADER_NAME] = nil
     end
 
     return forwarded

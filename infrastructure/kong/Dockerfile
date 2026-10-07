@@ -16,11 +16,12 @@ COPY plugins/write-ral-version    /usr/local/share/lua/5.1/kong/plugins/write-ra
 COPY plugins/user-tier-rate-limit /usr/local/share/lua/5.1/kong/plugins/user-tier-rate-limit
 COPY plugins/read-fallback        /usr/local/share/lua/5.1/kong/plugins/read-fallback
 COPY plugins/sandbox-router       /usr/local/share/lua/5.1/kong/plugins/sandbox-router
+COPY plugins/demo-session         /usr/local/share/lua/5.1/kong/plugins/demo-session
 COPY shared/lua                   /usr/local/share/lua/5.1/power_finance
 
 ENV KONG_DATABASE=off \
     KONG_DECLARATIVE_CONFIG=/etc/kong/kong.yml \
-    KONG_PLUGINS=bundled,clerk-jwt,read-at-least,write-ral-version,user-tier-rate-limit,read-fallback,sandbox-router \
+    KONG_PLUGINS=bundled,clerk-jwt,read-at-least,write-ral-version,user-tier-rate-limit,read-fallback,sandbox-router,demo-session \
     KONG_PROXY_ACCESS_LOG=/dev/stdout \
     KONG_ADMIN_ACCESS_LOG=/dev/stdout \
     KONG_PROXY_ERROR_LOG=/dev/stderr \
@@ -42,4 +43,4 @@ HEALTHCHECK --interval=10s --timeout=5s --retries=5 CMD kong health
 
 LABEL org.opencontainers.image.source=https://github.com/isoldpower/power-finance-backend \
       org.opencontainers.image.title="power-finance/api-gateway" \
-      org.opencontainers.image.description="Kong gateway with Clerk JWT auth, read-at-least, tiered rate-limit and sandbox-router plugins."
+      org.opencontainers.image.description="Kong gateway with Clerk JWT auth, read-at-least, tiered rate-limit, sandbox-router and demo-session plugins."

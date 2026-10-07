@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/power-finance/observability-go/demosession"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
@@ -37,6 +38,7 @@ func Configure(ctx context.Context, defaultServiceName string) (Settings, Shutdo
 	}
 
 	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(NewBaggageSpanAttributesProcessor(demosession.BaggageEntryName)),
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithSampler(buildSampler(settings.SamplerRatio)),
 		sdktrace.WithResource(buildResource(settings)),

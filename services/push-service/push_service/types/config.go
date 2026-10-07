@@ -21,4 +21,5 @@ type ServerConfig struct {
 type KafkaConfig struct {
 	BootstrapServers string
 	OutboxTopics     []string
+	DemoSpansTopic   string
 }

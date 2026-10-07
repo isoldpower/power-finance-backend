@@ -1,4 +1,5 @@
 from .application_wrappers import wrap_asgi_application, wrap_wsgi_application
+from .baggage_span_attributes_processor import BaggageSpanAttributesProcessor
 from .bootstrap import configure_tracing
 from .instrumentation_activators import (
     DjangoInstrumentationActivator,
@@ -12,6 +13,7 @@ from .instrumentation_registry import InstrumentationActivator, InstrumentationR
 from .tracer_provider_factory import build_tracer_provider, install_tracer_provider
 
 __all__ = [
+    "BaggageSpanAttributesProcessor",
     "DjangoInstrumentationActivator",
     "ElasticsearchInstrumentationActivator",
     "FastapiInstrumentationActivator",

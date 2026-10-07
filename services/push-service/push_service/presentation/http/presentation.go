@@ -7,20 +7,26 @@ import (
 	"services/push-service/internal/correlation"
 	"services/push-service/internal/health"
 	"services/push-service/push_service/presentation"
+	"services/push-service/push_service/services/demotraces"
 	"services/push-service/push_service/types"
 )
 
+const demoSessionQueryParameter = "session"
+
 type HttpPresentation struct {
 	notificationsStream types.NotificationsStream
+	demoTracesStream    types.DemoTracesStream
 	readinessProbe      *health.Probe
 }
 
 func NewHttpPresentation(
 	notificationsStream types.NotificationsStream,
+	demoTracesStream types.DemoTracesStream,
 	readinessProbe *health.Probe,
 ) *HttpPresentation {
 	return &HttpPresentation{
 		notificationsStream: notificationsStream,
+		demoTracesStream:    demoTracesStream,
 		readinessProbe:      readinessProbe,
 	}
 }
@@ -80,7 +86,8 @@ func (hp *HttpPresentation) HandleGetNotifications(
 	eventsChannel, unsubscribe, isSubscribed := hp.notificationsStream.Subscribe(externalUserID)
 	if isSubscribed {
 		defer unsubscribe()
-		hp.runNotificationsStream(
+		hp.runEventsStream(
+			hp.notificationsStream,
 			requestLogger,
 			httpConnection,
 			eventsChannel,
@@ -89,7 +96,42 @@ func (hp *HttpPresentation) HandleGetNotifications(
 	}
 }
 
-func (hp *HttpPresentation) runNotificationsStream(
+func (hp *HttpPresentation) HandleGetDemoTraces(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	if hp.demoTracesStream == nil {
+		http.Error(writer, "Demo traces stream is disabled", http.StatusNotFound)
+		return
+	}
+
+	demoSessionIdentifier := request.URL.Query().Get(demoSessionQueryParameter)
+	if !demotraces.IsValidDemoSessionIdentifier(demoSessionIdentifier) {
+		http.Error(writer, "A valid demo session identifier is required", http.StatusBadRequest)
+		return
+	}
+
+	requestLogger := correlation.
+		Logger(request.Context()).
+		With("demo_session", demoSessionIdentifier)
+
+	httpConnection := NewSseHttpConnection(writer, request)
+	goneChannel := httpConnection.ClientGoneChannel()
+	spansChannel, unsubscribe, isSubscribed := hp.demoTracesStream.Subscribe(demoSessionIdentifier)
+	if isSubscribed {
+		defer unsubscribe()
+		hp.runEventsStream(
+			hp.demoTracesStream,
+			requestLogger,
+			httpConnection,
+			spansChannel,
+			goneChannel,
+		)
+	}
+}
+
+func (hp *HttpPresentation) runEventsStream(
+	eventsStream types.NotificationsStream,
 	requestLogger *slog.Logger,
 	connection presentation.ConnectionPresentation,
 	eventsChannel <-chan types.OutboxEvent,
@@ -99,7 +141,7 @@ func (hp *HttpPresentation) runNotificationsStream(
 	responseChannel := make(chan []byte)
 
 	go hp.consumeResponseMessages(requestLogger, connection, responseChannel)
-	hp.notificationsStream.SpinUntilDone(goneChannel, eventsChannel, responseChannel)
+	eventsStream.SpinUntilDone(goneChannel, eventsChannel, responseChannel)
 
 	close(responseChannel)
 	requestLogger.Info("sse connection closed")

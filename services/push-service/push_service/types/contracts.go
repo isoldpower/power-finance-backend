@@ -35,3 +35,7 @@ type NotificationsStream interface {
 	Subscribe(externalUserID string) (<-chan OutboxEvent, func(), bool)
 	SpinUntilDone(goneChannel <-chan struct{}, eventsChannel <-chan OutboxEvent, responseChannel chan<- []byte)
 }
+
+type DemoTracesStream interface {
+	NotificationsStream
+}

@@ -1,0 +1,1 @@
+DEMO_SESSION_BAGGAGE_ENTRY_NAME = "demo-session"

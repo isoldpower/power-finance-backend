@@ -9,6 +9,7 @@ from .context import (
     read_baggage_entry,
     write_baggage_entry,
 )
+from .demo_session import DEMO_SESSION_BAGGAGE_ENTRY_NAME
 from .logging import TraceContextFilter, get_observability_logger
 from .messaging import (
     EMPTY_OUTBOX_TRACE_CONTEXT,
@@ -28,6 +29,7 @@ from .sandbox import (
     resolve_own_sandbox_id,
 )
 from .tracing import (
+    BaggageSpanAttributesProcessor,
     DjangoInstrumentationActivator,
     ElasticsearchInstrumentationActivator,
     FastapiInstrumentationActivator,
@@ -40,9 +42,11 @@ from .tracing import (
 )
 
 __all__ = [
+    "DEMO_SESSION_BAGGAGE_ENTRY_NAME",
     "EMPTY_OUTBOX_TRACE_CONTEXT",
     "SANDBOX_BAGGAGE_ENTRY_NAME",
     "SANDBOX_HTTP_HEADER_NAME",
+    "BaggageSpanAttributesProcessor",
     "DjangoInstrumentationActivator",
     "ElasticsearchInstrumentationActivator",
     "FastapiInstrumentationActivator",

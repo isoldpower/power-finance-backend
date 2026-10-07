@@ -25,11 +25,11 @@ func newFakeHeartbeat() *fakeHeartbeat {
 func (f *fakeHeartbeat) SpawnHeartbeatMessages(_ chan<- []byte) { close(f.started) }
 func (f *fakeHeartbeat) StopTicker()                            { close(f.stopped) }
 
-func newTestHandler(heartbeat types.Heartbeat) *SSENotificationsHandler {
+func newTestHandler(heartbeat types.Heartbeat) *SSEStreamHandler {
 	var poolUnusedBySpinUntilDone types.ClientsPool
 	var projectionUnusedBySpinUntilDone types.EventsProjector
 
-	return NewSSENotificationsHandler(
+	return NewSSEStreamHandler(
 		poolUnusedBySpinUntilDone,
 		projectionUnusedBySpinUntilDone,
 		func() types.Heartbeat { return heartbeat },

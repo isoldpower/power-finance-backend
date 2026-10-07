@@ -27,13 +27,52 @@ func BuildNotificationsConsumerLoop(
 	eventsSink chan<- types.OutboxEvent,
 	readinessProbe *health.Probe,
 ) (*ConsumerLoop, error) {
-	broadcastClient, clientErr := kgo.NewClient(
-		kgo.SeedBrokers(strings.Split(kafkaConfig.BootstrapServers, ",")...),
-		kgo.ClientID(clientID),
+	broadcastClient, clientErr := buildBroadcastClient(
+		ctx,
+		kafkaConfig.BootstrapServers,
 		kgo.ConsumeTopics(kafkaConfig.OutboxTopics...),
 		kgo.FetchIsolationLevel(kgo.ReadCommitted()),
-		kgo.ConsumeResetOffset(kgo.NewOffset().AtEnd()),
 	)
+	if clientErr != nil {
+		return nil, clientErr
+	}
+
+	return NewConsumerLoop(broadcastClient, newEventsSinkHandler(eventsSink), readinessProbe), nil
+}
+
+func BuildDemoSpansConsumerLoop(
+	ctx context.Context,
+	kafkaConfig types.KafkaConfig,
+	spansSink chan<- types.OutboxEvent,
+	readinessProbe *health.Probe,
+) (*ConsumerLoop, error) {
+	broadcastClient, clientErr := buildBroadcastClient(
+		ctx,
+		kafkaConfig.BootstrapServers,
+		kgo.ConsumeTopics(kafkaConfig.DemoSpansTopic),
+		kgo.AllowAutoTopicCreation(),
+	)
+	if clientErr != nil {
+		return nil, clientErr
+	}
+
+	return NewConsumerLoop(broadcastClient, newDemoSpansSinkHandler(spansSink), readinessProbe), nil
+}
+
+func buildBroadcastClient(
+	ctx context.Context,
+	bootstrapServers string,
+	consumptionOptions ...kgo.Opt,
+) (*kgo.Client, error) {
+	clientOptions := append(
+		[]kgo.Opt{
+			kgo.SeedBrokers(strings.Split(bootstrapServers, ",")...),
+			kgo.ClientID(clientID),
+			kgo.ConsumeResetOffset(kgo.NewOffset().AtEnd()),
+		},
+		consumptionOptions...,
+	)
+	broadcastClient, clientErr := kgo.NewClient(clientOptions...)
 	if clientErr != nil {
 		return nil, fmt.Errorf("kafka: broadcast consumer client: %w", clientErr)
 	}
@@ -43,7 +82,7 @@ func BuildNotificationsConsumerLoop(
 		return nil, fmt.Errorf("kafka: broker unreachable: %w", pingErr)
 	}
 
-	return NewConsumerLoop(broadcastClient, newEventsSinkHandler(eventsSink), readinessProbe), nil
+	return broadcastClient, nil
 }
 
 func newEventsSinkHandler(eventsSink chan<- types.OutboxEvent) MessageHandlerFunc {
@@ -65,6 +104,17 @@ func newEventsSinkHandler(eventsSink chan<- types.OutboxEvent) MessageHandlerFun
 
 		select {
 		case eventsSink <- outboxEventFromMessage(message):
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+func newDemoSpansSinkHandler(spansSink chan<- types.OutboxEvent) MessageHandlerFunc {
+	return func(ctx context.Context, message kafkaclient.ConsumedMessage) error {
+		select {
+		case spansSink <- types.OutboxEvent{Payload: message.Value}:
 			return nil
 		case <-ctx.Done():
 			return ctx.Err()

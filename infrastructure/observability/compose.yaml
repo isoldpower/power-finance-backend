@@ -14,28 +14,30 @@ services:
       - jaeger_data:/badger
 
   jaeger:
-    image: jaegertracing/all-in-one:1.62.0
+    image: jaegertracing/jaeger:${JAEGER_VERSION:-2.22.0}
     restart: unless-stopped
+    command: ["--config", "/etc/jaeger/config.yaml"]
     environment:
-      COLLECTOR_OTLP_ENABLED: "true"
-      SPAN_STORAGE_TYPE: badger
-      BADGER_EPHEMERAL: "false"
-      BADGER_DIRECTORY_VALUE: /badger/data
-      BADGER_DIRECTORY_KEY: /badger/key
-      BADGER_SPAN_STORE_TTL: ${JAEGER_SPAN_TTL:-72h}
-      MEMORY_MAX_TRACES: ${JAEGER_MAX_TRACES:-20000}
+      JAEGER_SPAN_TTL: ${JAEGER_SPAN_TTL:-72h}
+      JAEGER_LOG_LEVEL: ${JAEGER_LOG_LEVEL:-info}
+      DEMO_SESSIONS_KAFKA_BROKERS: ${DEMO_SESSIONS_KAFKA_BROKERS:-kafka:9092}
+      DEMO_SESSIONS_KAFKA_TOPIC: ${DEMO_SESSIONS_KAFKA_TOPIC:-telemetry.demo-spans}
     volumes:
       - jaeger_data:/badger
+      - ./jaeger-config.yaml:/etc/jaeger/config.yaml:ro
     depends_on:
       jaeger-storage-init:
         condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+        required: false
     ports:
       - "${JAEGER_UI_PORT:-16686}:16686"
     expose:
       - "4317"
       - "4318"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:14269/"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:13133/status"]
       interval: 15s
       timeout: 5s
       retries: 5

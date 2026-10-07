@@ -9,3 +9,4 @@ push_service:
 kafka:
   bootstrap_servers: localhost:9092
   outbox_topic: events.async
+  demo_spans_topic: telemetry.demo-spans
