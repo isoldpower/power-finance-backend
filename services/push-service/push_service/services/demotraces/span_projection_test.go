@@ -8,6 +8,8 @@ import (
 	resourcev1 "go.opentelemetry.io/proto/otlp/resource/v1"
 	tracev1 "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/protobuf/proto"
+
+	"services/push-service/push_service/types"
 )
 
 const portfolioVisitorSession = "portfolio-visitor-session"
@@ -57,7 +59,7 @@ func databaseInsertSpan() *tracev1.Span {
 }
 
 func TestDemoSpanIsProjectedForItsSession(t *testing.T) {
-	projectedEvents, projectErr := ProjectDemoSpanEvents(
+	projectedEvents, projectErr := projectForWriteService(
 		encodeTracesPayload(t, "write-service", databaseInsertSpan()),
 	)
 	if projectErr != nil {
@@ -95,7 +97,7 @@ func TestDemoSpanIsProjectedForItsSession(t *testing.T) {
 }
 
 func TestOnlyWhitelistedAttributesLeaveTheService(t *testing.T) {
-	projectedEvents, _ := ProjectDemoSpanEvents(
+	projectedEvents, _ := projectForWriteService(
 		encodeTracesPayload(t, "write-service", databaseInsertSpan()),
 	)
 
@@ -115,7 +117,7 @@ func TestSpanWithoutDemoSessionIsDropped(t *testing.T) {
 	untaggedSpan := databaseInsertSpan()
 	untaggedSpan.Attributes = []*commonv1.KeyValue{stringAttribute("db.system", "postgresql")}
 
-	projectedEvents, projectErr := ProjectDemoSpanEvents(
+	projectedEvents, projectErr := projectForWriteService(
 		encodeTracesPayload(t, "write-service", untaggedSpan),
 	)
 	if projectErr != nil {
@@ -127,7 +129,7 @@ func TestSpanWithoutDemoSessionIsDropped(t *testing.T) {
 }
 
 func TestMalformedPayloadIsRejected(t *testing.T) {
-	if _, projectErr := ProjectDemoSpanEvents([]byte{0xff, 0xff, 0xff}); projectErr == nil {
+	if _, projectErr := projectForWriteService([]byte{0xff, 0xff, 0xff}); projectErr == nil {
 		t.Fatal("expected a malformed payload to be rejected")
 	}
 }
@@ -151,7 +153,7 @@ func TestDemoSessionIdentifierValidation(t *testing.T) {
 func projectedSpanName(t *testing.T, span *tracev1.Span) string {
 	t.Helper()
 
-	projectedEvents, projectErr := ProjectDemoSpanEvents(encodeTracesPayload(t, "write-service", span))
+	projectedEvents, projectErr := projectForWriteService(encodeTracesPayload(t, "write-service", span))
 	if projectErr != nil {
 		t.Fatal(projectErr)
 	}
@@ -208,5 +210,44 @@ func TestServerSpanWithoutMethodOrRouteGetsAGenericName(t *testing.T) {
 func TestNonServerSpanKeepsItsName(t *testing.T) {
 	if spanName := projectedSpanName(t, databaseInsertSpan()); spanName != "INSERT" {
 		t.Fatalf("expected the database span name to be kept, got %q", spanName)
+	}
+}
+
+func isWriteService(serviceName string) bool {
+	return serviceName == "write-service"
+}
+
+func projectForWriteService(tracesPayload []byte) ([]types.OutboxEvent, error) {
+	return ProjectDemoSpanEvents(tracesPayload, isWriteService)
+}
+
+func TestSpanFromServiceMissingFromTopologyIsDropped(t *testing.T) {
+	projectedEvents, projectErr := projectForWriteService(
+		encodeTracesPayload(t, "spoofed-service", databaseInsertSpan()),
+	)
+	if projectErr != nil {
+		t.Fatal(projectErr)
+	}
+	if len(projectedEvents) != 0 {
+		t.Fatalf("expected the unknown service span to be dropped, got %d events", len(projectedEvents))
+	}
+}
+
+func TestSpanWithoutServiceNameIsDropped(t *testing.T) {
+	payload, marshalErr := proto.Marshal(&tracev1.TracesData{
+		ResourceSpans: []*tracev1.ResourceSpans{{
+			ScopeSpans: []*tracev1.ScopeSpans{{Spans: []*tracev1.Span{databaseInsertSpan()}}},
+		}},
+	})
+	if marshalErr != nil {
+		t.Fatal(marshalErr)
+	}
+
+	projectedEvents, projectErr := projectForWriteService(payload)
+	if projectErr != nil {
+		t.Fatal(projectErr)
+	}
+	if len(projectedEvents) != 0 {
+		t.Fatalf("expected a span without service.name to be dropped, got %d events", len(projectedEvents))
 	}
 }

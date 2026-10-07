@@ -34,10 +34,71 @@ span keeps only its method, or becomes `request` when it has none. Non-server sp
 names (`INSERT`, a topic name) pass through unchanged. Nanosecond timestamps are JSON strings
 because they exceed JavaScript's safe integer range.
 
+Only spans from real services are fanned out. A span whose `service.name` is not
+listed in any node's `telemetry.serviceNames` in the infrastructure topology
+(below) is dropped and counted under
+`push_events_dropped_total{reason="unknown_service"}`. That covers spans from
+something that reached Jaeger's OTLP port with a forged `demo-session`, a local
+process with a made-up `OTEL_SERVICE_NAME`, or a span without a service name. The
+allow-list is read from the embedded topology at startup, and a document without
+any service names stops the service from booting. So a new service must be added
+to `infrastructure_topology.json`, or its spans will never reach the demo.
+
 `kafka.demo_spans_topic` (`KAFKA_DEMO_SPANS_TOPIC`, default `telemetry.demo-spans`)
 names the topic. An empty `demo_spans_topic` in the config file turns the stream
 off, and the route then answers `404`. An empty environment variable does not work
 for this, because Viper ignores empty env values and falls back to the default.
+
+## Infrastructure topology
+
+`GET /api/v1/demo/topology` returns the static map of the system that the demo
+graph is drawn on. It is public like the traces stream and served with
+`Cache-Control: public, max-age=300`. The document is
+`push_service/services/topology/infrastructure_topology.json`, embedded at build
+time, so it ships with the code it describes. Edit it when infrastructure changes;
+the package tests reject duplicate ids, unknown types and groups, dangling
+connections and unconnected nodes.
+
+```json
+{
+  "version": 1,
+  "groups": [{"id": "write", "name": "Write side"}],
+  "nodes": [{
+    "id": "postgres-write", "name": "Write Postgres", "type": "database",
+    "technology": "PostgreSQL 18 (logical replication)", "group": "write",
+    "deployment": "core", "description": "…",
+    "telemetry": {"attributes": {"db.system": "postgresql", "db.name": "power_finance_write"}}
+  }],
+  "connections": [{
+    "from": "write-service", "to": "postgres-write",
+    "kind": "query", "protocol": "sql", "description": "…"
+  }]
+}
+```
+
+- `type`: `client`, `gateway`, `service`, `worker`, `stream-processor`, `database`,
+  `cache`, `ledger`, `search`, `topic`, `connector`, `observability`, `external`.
+- `deployment`: the production VM (`core`, `search`, `stream`), or `client` /
+  `external`.
+- `kind`: `request`, `query`, `publish`, `consume`, `cdc`, `push`, `telemetry`. Hide
+  `telemetry` (every service → Jaeger) for a cleaner graph.
+
+`telemetry` is how a span from the traces stream finds its node:
+
+- `serviceNames` matches the span's `service`. A node may own several (Flink's
+  job and task managers), and Debezium owns none because it emits no spans.
+- `attributes` matches a client span's attributes: `db.system` plus `db.name`
+  for Postgres, `db.system` for Redis and Elasticsearch,
+  `messaging.destination.name` for topics. Three Redis nodes share
+  `db.system: redis`, so resolve an attribute match only among nodes connected
+  to the span's own service node.
+- `null` means the piece emits nothing traceable (ImmuDB, Clerk, external APIs).
+  Animate those from the connection list instead.
+
+Python Kafka consumers create no consumer span. Their DB spans join the producer's
+trace directly, so a jump from `write-service` to `read-write-consumer` should be
+drawn along the `postgres-write → debezium → topic:events.async →
+read-write-consumer` path from this document.
 
 ## Observability
 
@@ -51,7 +112,7 @@ auth/correlation middleware):
   collectors it publishes:
   - `push_kafka_events_received_total` — events consumed from the topic.
   - `push_events_projected_total` — events forwarded to the fanout.
-  - `push_events_dropped_total{reason="malformed"|"slow_client"}` — dropped events.
+  - `push_events_dropped_total{reason="malformed"|"slow_client"|"unknown_service"}` — dropped events.
   - `push_active_subscribers` — currently connected SSE subscribers (gauge).
 
 ## Configuration

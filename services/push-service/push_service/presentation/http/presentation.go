@@ -7,26 +7,28 @@ import (
 	"services/push-service/internal/correlation"
 	"services/push-service/internal/health"
 	"services/push-service/push_service/presentation"
-	"services/push-service/push_service/services/demotraces"
 	"services/push-service/push_service/types"
 )
 
-const demoSessionQueryParameter = "session"
+const (
+	demoSessionQueryParameter          = "session"
+	infrastructureTopologyCacheControl = "public, max-age=300"
+)
 
 type HttpPresentation struct {
 	notificationsStream types.NotificationsStream
-	demoTracesStream    types.DemoTracesStream
+	demoSurface         types.DemoSurface
 	readinessProbe      *health.Probe
 }
 
 func NewHttpPresentation(
 	notificationsStream types.NotificationsStream,
-	demoTracesStream types.DemoTracesStream,
+	demoSurface types.DemoSurface,
 	readinessProbe *health.Probe,
 ) *HttpPresentation {
 	return &HttpPresentation{
 		notificationsStream: notificationsStream,
-		demoTracesStream:    demoTracesStream,
+		demoSurface:         demoSurface,
 		readinessProbe:      readinessProbe,
 	}
 }
@@ -100,13 +102,13 @@ func (hp *HttpPresentation) HandleGetDemoTraces(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
-	if hp.demoTracesStream == nil {
+	if hp.demoSurface.TracesStream == nil || hp.demoSurface.IsValidDemoSessionIdentifier == nil {
 		http.Error(writer, "Demo traces stream is disabled", http.StatusNotFound)
 		return
 	}
 
 	demoSessionIdentifier := request.URL.Query().Get(demoSessionQueryParameter)
-	if !demotraces.IsValidDemoSessionIdentifier(demoSessionIdentifier) {
+	if !hp.demoSurface.IsValidDemoSessionIdentifier(demoSessionIdentifier) {
 		http.Error(writer, "A valid demo session identifier is required", http.StatusBadRequest)
 		return
 	}
@@ -117,16 +119,33 @@ func (hp *HttpPresentation) HandleGetDemoTraces(
 
 	httpConnection := NewSseHttpConnection(writer, request)
 	goneChannel := httpConnection.ClientGoneChannel()
-	spansChannel, unsubscribe, isSubscribed := hp.demoTracesStream.Subscribe(demoSessionIdentifier)
+	spansChannel, unsubscribe, isSubscribed := hp.demoSurface.TracesStream.Subscribe(demoSessionIdentifier)
 	if isSubscribed {
 		defer unsubscribe()
 		hp.runEventsStream(
-			hp.demoTracesStream,
+			hp.demoSurface.TracesStream,
 			requestLogger,
 			httpConnection,
 			spansChannel,
 			goneChannel,
 		)
+	}
+}
+
+func (hp *HttpPresentation) HandleGetInfrastructureTopology(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	if len(hp.demoSurface.InfrastructureTopologyDocument) == 0 {
+		http.Error(writer, "Infrastructure topology is unavailable", http.StatusNotFound)
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.Header().Set("Cache-Control", infrastructureTopologyCacheControl)
+	writer.WriteHeader(http.StatusOK)
+	if _, writeErr := writer.Write(hp.demoSurface.InfrastructureTopologyDocument); writeErr != nil {
+		slog.Warn("infrastructure topology response write failed", "error", writeErr)
 	}
 }
 

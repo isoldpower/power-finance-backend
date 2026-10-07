@@ -4,6 +4,8 @@ import "github.com/power-finance/observability-go/demosession"
 
 const SpanEventType = "span"
 
+type KnownServicePredicate func(serviceName string) bool
+
 const (
 	demoSessionAttributeName = demosession.SpanAttributeName
 	serviceNameAttributeName = "service.name"

@@ -205,7 +205,7 @@ services:
           redis_timeout_ms: 100
           redis_key_prefix: "clerk:jwks:"
 
-  - name: push-service-demo-traces
+  - name: push-service-demo
     host: push-service
     port: 8001
     protocol: http
@@ -213,9 +213,10 @@ services:
     write_timeout: 3600000
     read_timeout: 3600000
     routes:
-      - name: demo-traces-stream
+      - name: demo-endpoints
         paths:
           - /api/v1/demo/traces/stream
+          - /api/v1/demo/topology
         strip_path: false
         preserve_host: false
         methods: [GET, OPTIONS]

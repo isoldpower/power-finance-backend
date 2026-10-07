@@ -4,18 +4,25 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"iter"
+	"log/slog"
 	"strings"
 
 	commonv1 "go.opentelemetry.io/proto/otlp/common/v1"
 	tracev1 "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/protobuf/proto"
 
+	"services/push-service/internal/metrics"
 	"services/push-service/push_service/types"
 )
 
+
 const nanosecondsPerMillisecond = 1_000_000
 
-func ProjectDemoSpanEvents(tracesPayload []byte) ([]types.OutboxEvent, error) {
+func ProjectDemoSpanEvents(
+	tracesPayload []byte,
+	isKnownService KnownServicePredicate,
+) ([]types.OutboxEvent, error) {
 	var tracesData tracev1.TracesData
 	if unmarshalErr := proto.Unmarshal(tracesPayload, &tracesData); unmarshalErr != nil {
 		return nil, fmt.Errorf("demo traces: decode otlp payload: %w", unmarshalErr)
@@ -24,20 +31,60 @@ func ProjectDemoSpanEvents(tracesPayload []byte) ([]types.OutboxEvent, error) {
 	var projectedEvents []types.OutboxEvent
 	for _, resourceSpans := range tracesData.GetResourceSpans() {
 		serviceName := readServiceName(resourceSpans)
-		for _, scopeSpans := range resourceSpans.GetScopeSpans() {
-			for _, span := range scopeSpans.GetSpans() {
-				projectedEvent, isDemoSpan, projectErr := projectSpan(serviceName, span)
-				if projectErr != nil {
-					return nil, projectErr
-				}
-				if isDemoSpan {
-					projectedEvents = append(projectedEvents, projectedEvent)
-				}
-			}
+		if !isKnownService(serviceName) {
+			recordUnknownServiceSpansDropped(serviceName, resourceSpans)
+		} else {
+            resourceEvents, projectErr := projectResourceSpans(serviceName, resourceSpans)
+            if projectErr != nil {
+                return nil, projectErr
+            }
+
+            projectedEvents = append(projectedEvents, resourceEvents...)
 		}
 	}
 
 	return projectedEvents, nil
+}
+
+func projectResourceSpans(
+	serviceName string,
+	resourceSpans *tracev1.ResourceSpans,
+) ([]types.OutboxEvent, error) {
+	var resourceEvents []types.OutboxEvent
+	for span := range spansOfResource(resourceSpans) {
+		projectedEvent, isDemoSpan, projectErr := projectSpan(serviceName, span)
+		if projectErr != nil {
+			return nil, projectErr
+		}
+
+		if isDemoSpan {
+			resourceEvents = append(resourceEvents, projectedEvent)
+		}
+	}
+
+	return resourceEvents, nil
+}
+
+func spansOfResource(resourceSpans *tracev1.ResourceSpans) iter.Seq[*tracev1.Span] {
+	return func(yield func(*tracev1.Span) bool) {
+		for _, scopeSpans := range resourceSpans.GetScopeSpans() {
+			for _, span := range scopeSpans.GetSpans() {
+				if !yield(span) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func carriesDemoSession(span *tracev1.Span) bool {
+	for _, keyValue := range span.GetAttributes() {
+		if keyValue.GetKey() == demoSessionAttributeName && keyValue.GetValue().GetStringValue() != "" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func projectSpan(serviceName string, span *tracev1.Span) (types.OutboxEvent, bool, error) {
@@ -46,12 +93,11 @@ func projectSpan(serviceName string, span *tracev1.Span) (types.OutboxEvent, boo
 	for _, keyValue := range span.GetAttributes() {
 		if keyValue.GetKey() == demoSessionAttributeName {
 			demoSessionIdentifier = keyValue.GetValue().GetStringValue()
-			continue
-		}
-		if _, isForwarded := forwardedSpanAttributeNames[keyValue.GetKey()]; isForwarded {
+		} else if _, isForwarded := forwardedSpanAttributeNames[keyValue.GetKey()]; isForwarded {
 			forwardedAttributes[keyValue.GetKey()] = readAttributeValue(keyValue.GetValue())
 		}
 	}
+
 	if demoSessionIdentifier == "" {
 		return types.OutboxEvent{}, false, nil
 	}
@@ -82,17 +128,35 @@ func projectSpan(serviceName string, span *tracev1.Span) (types.OutboxEvent, boo
 	}, true, nil
 }
 
+func recordUnknownServiceSpansDropped(serviceName string, resourceSpans *tracev1.ResourceSpans) {
+	droppedSpanCount := 0
+	for span := range spansOfResource(resourceSpans) {
+		if carriesDemoSession(span) {
+			metrics.EventDroppedUnknownService()
+			droppedSpanCount++
+		}
+	}
+
+	if droppedSpanCount > 0 {
+		slog.Debug(
+			"dropping demo spans from a service missing from the infrastructure topology",
+			"service", serviceName,
+			"dropped_span_count", droppedSpanCount,
+		)
+	}
+}
+
 func sanitizeSpanName(span *tracev1.Span, forwardedAttributes map[string]any) string {
 	requestMethod := readFirstStringAttribute(forwardedAttributes, requestMethodAttributeNames)
 	requestRoute := readFirstStringAttribute(forwardedAttributes, requestRouteAttributeNames)
 
 	if requestRoute != "" {
 		return strings.TrimSpace(requestMethod + " " + requestRoute)
-	}
-	if span.GetKind() == tracev1.Span_SPAN_KIND_SERVER {
+	} else if span.GetKind() == tracev1.Span_SPAN_KIND_SERVER {
 		if requestMethod != "" {
 			return requestMethod
 		}
+
 		return unnamedServerSpanName
 	}
 
@@ -139,7 +203,8 @@ func spanDurationMilliseconds(span *tracev1.Span) float64 {
 		return 0
 	}
 
-	return float64(span.GetEndTimeUnixNano()-span.GetStartTimeUnixNano()) / nanosecondsPerMillisecond
+    spanUnixGap := span.GetEndTimeUnixNano() - span.GetStartTimeUnixNano()
+	return float64(spanUnixGap) / nanosecondsPerMillisecond
 }
 
 func spanKindName(spanKind tracev1.Span_SpanKind) string {

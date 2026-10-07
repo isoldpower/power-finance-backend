@@ -13,8 +13,15 @@ type unusedDemoTracesStream struct {
 	types.NotificationsStream
 }
 
+func acceptOnlyPortfolioVisitorSession(candidateIdentifier string) bool {
+	return candidateIdentifier == "portfolio-visitor-session"
+}
+
 func TestDemoTracesRequiresAValidSessionIdentifier(t *testing.T) {
-	presentation := NewHttpPresentation(nil, unusedDemoTracesStream{}, health.NewProbe())
+	presentation := NewHttpPresentation(nil, types.DemoSurface{
+		TracesStream:                 unusedDemoTracesStream{},
+		IsValidDemoSessionIdentifier: acceptOnlyPortfolioVisitorSession,
+	}, health.NewProbe())
 
 	for _, requestPath := range []string{
 		"/api/v1/demo/traces/stream",
@@ -31,7 +38,9 @@ func TestDemoTracesRequiresAValidSessionIdentifier(t *testing.T) {
 }
 
 func TestDemoTracesIsNotFoundWhenTheStreamIsDisabled(t *testing.T) {
-	presentation := NewHttpPresentation(nil, nil, health.NewProbe())
+	presentation := NewHttpPresentation(nil, types.DemoSurface{
+		IsValidDemoSessionIdentifier: acceptOnlyPortfolioVisitorSession,
+	}, health.NewProbe())
 	recorder := httptest.NewRecorder()
 
 	presentation.HandleGetDemoTraces(
@@ -41,5 +50,41 @@ func TestDemoTracesIsNotFoundWhenTheStreamIsDisabled(t *testing.T) {
 
 	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("expected 404 when the demo stream is disabled, got %d", recorder.Code)
+	}
+}
+
+func TestInfrastructureTopologyIsServedAsCacheableJSON(t *testing.T) {
+	presentation := NewHttpPresentation(nil, types.DemoSurface{
+		InfrastructureTopologyDocument: []byte(`{"version":1}`),
+	}, health.NewProbe())
+	recorder := httptest.NewRecorder()
+
+	presentation.HandleGetInfrastructureTopology(
+		recorder,
+		httptest.NewRequest(http.MethodGet, "/api/v1/demo/topology", nil),
+	)
+
+	if recorder.Code != http.StatusOK || recorder.Body.String() != `{"version":1}` {
+		t.Fatalf("expected the topology document, got %d %q", recorder.Code, recorder.Body.String())
+	}
+	if recorder.Header().Get("Content-Type") != "application/json" {
+		t.Fatalf("expected a JSON content type, got %q", recorder.Header().Get("Content-Type"))
+	}
+	if recorder.Header().Get("Cache-Control") != infrastructureTopologyCacheControl {
+		t.Fatalf("expected the topology to be cacheable, got %q", recorder.Header().Get("Cache-Control"))
+	}
+}
+
+func TestInfrastructureTopologyIsNotFoundWithoutADocument(t *testing.T) {
+	presentation := NewHttpPresentation(nil, types.DemoSurface{}, health.NewProbe())
+	recorder := httptest.NewRecorder()
+
+	presentation.HandleGetInfrastructureTopology(
+		recorder,
+		httptest.NewRequest(http.MethodGet, "/api/v1/demo/topology", nil),
+	)
+
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 without a topology document, got %d", recorder.Code)
 	}
 }

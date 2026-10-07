@@ -14,6 +14,8 @@ import (
 	"services/push-service/push_service/handlers"
 	"services/push-service/push_service/infrastructure/kafka"
 	"services/push-service/push_service/services"
+	"services/push-service/push_service/services/demotraces"
+	"services/push-service/push_service/services/topology"
 	"services/push-service/push_service/types"
 )
 
@@ -77,7 +79,11 @@ func StartPushService(serviceConfig types.PushServiceConfig) error {
 	pushHttpServer, serverErr := http.NewPushHTTPServer(
 		http.NewPushHTTPConfig(establishedConfig),
 		notificationsHandler,
-		demoTracesStream,
+		types.DemoSurface{
+			TracesStream:                   demoTracesStream,
+			IsValidDemoSessionIdentifier:   demotraces.IsValidDemoSessionIdentifier,
+			InfrastructureTopologyDocument: topology.InfrastructureTopologyDocument(),
+		},
 		readinessProbe,
 	)
 
@@ -100,9 +106,14 @@ func startDemoTracesStream(
 		return nil, nil
 	}
 
+	knownServiceNames, topologyErr := topology.KnownServiceNames()
+	if topologyErr != nil {
+		return nil, topologyErr
+	}
+
 	demoTracesHandler := handlers.NewSSEStreamHandler(
 		services.NewClientsPoolService(),
-		services.NewDemoSpansProjectionService(),
+		services.NewDemoSpansProjectionService(knownServiceNames.Contains),
 		newHeartbeat,
 	)
 	demoTracesHandler.Start(backgroundContext)

@@ -13,11 +13,11 @@ type HttpPresenterDefinition struct {
 
 func NewHttpPresenterDefinition(
 	notificationsStream types.NotificationsStream,
-	demoTracesStream types.DemoTracesStream,
+	demoSurface types.DemoSurface,
 	readinessProbe *health.Probe,
 ) *HttpPresenterDefinition {
 	return &HttpPresenterDefinition{
-		presentation: NewHttpPresentation(notificationsStream, demoTracesStream, readinessProbe),
+		presentation: NewHttpPresentation(notificationsStream, demoSurface, readinessProbe),
 	}
 }
 
@@ -32,6 +32,7 @@ func (hpd *HttpPresenterDefinition) InitialiseRoutes(
 		{Pattern: "GET /readyz", Handler: hpd.presentation.HandleReadinessCheck},
 		{Pattern: "GET /metrics", Handler: metrics.Handler().ServeHTTP},
 		{Pattern: "GET /api/v1/demo/traces/stream", Handler: hpd.presentation.HandleGetDemoTraces},
+		{Pattern: "GET /api/v1/demo/topology", Handler: hpd.presentation.HandleGetInfrastructureTopology},
 	}
 
 	for _, route := range routes {

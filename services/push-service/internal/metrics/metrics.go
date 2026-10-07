@@ -11,6 +11,8 @@ import (
 const (
 	dropReasonMalformed  = "malformed"
 	dropReasonSlowClient = "slow_client"
+
+	dropReasonUnknownService = "unknown_service"
 )
 
 var (
@@ -41,6 +43,7 @@ func init() {
 func registerZeroValuedDropReasons() {
 	eventsDropped.WithLabelValues(dropReasonMalformed)
 	eventsDropped.WithLabelValues(dropReasonSlowClient)
+	eventsDropped.WithLabelValues(dropReasonUnknownService)
 }
 
 // KafkaEventReceived records one event consumed from the Kafka topic.
@@ -61,6 +64,10 @@ func EventDroppedMalformed() {
 // EventDroppedSlowClient records an event dropped because a client buffer was full.
 func EventDroppedSlowClient() {
 	eventsDropped.WithLabelValues(dropReasonSlowClient).Inc()
+}
+
+func EventDroppedUnknownService() {
+	eventsDropped.WithLabelValues(dropReasonUnknownService).Inc()
 }
 
 // SubscriberAdded increments the active subscriber gauge.

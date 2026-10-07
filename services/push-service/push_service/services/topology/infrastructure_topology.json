@@ -1,0 +1,1072 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": "clients",
+      "name": "Clients"
+    },
+    {
+      "id": "edge",
+      "name": "Edge"
+    },
+    {
+      "id": "write",
+      "name": "Write side"
+    },
+    {
+      "id": "read",
+      "name": "Read side"
+    },
+    {
+      "id": "ai",
+      "name": "AI"
+    },
+    {
+      "id": "messaging",
+      "name": "Messaging"
+    },
+    {
+      "id": "notifications",
+      "name": "Notifications"
+    },
+    {
+      "id": "webhooks",
+      "name": "Webhooks"
+    },
+    {
+      "id": "fraud",
+      "name": "Fraud"
+    },
+    {
+      "id": "observability",
+      "name": "Observability"
+    },
+    {
+      "id": "external",
+      "name": "External"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "browser",
+      "name": "Browser",
+      "type": "client",
+      "technology": "Web app in the portfolio iframe",
+      "group": "clients",
+      "deployment": "client",
+      "description": "The user's browser running the Power Finance web app.",
+      "telemetry": null
+    },
+    {
+      "id": "api-gateway",
+      "name": "API Gateway",
+      "type": "gateway",
+      "technology": "Kong 3.7 + custom Lua plugins",
+      "group": "edge",
+      "deployment": "core",
+      "description": "Single entry point. Verifies Clerk JWTs, rate-limits, routes reads and writes to different services, tags demo sessions.",
+      "telemetry": {
+        "serviceNames": [
+          "api-gateway"
+        ]
+      }
+    },
+    {
+      "id": "gateway-redis",
+      "name": "Gateway Redis",
+      "type": "cache",
+      "technology": "Redis 7",
+      "group": "edge",
+      "deployment": "core",
+      "description": "JWKS cache, rate-limit counters, read-your-writes versions, sandbox routes.",
+      "telemetry": {
+        "attributes": {
+          "db.system": "redis"
+        }
+      }
+    },
+    {
+      "id": "clerk",
+      "name": "Clerk",
+      "type": "external",
+      "technology": "Clerk (SaaS)",
+      "group": "external",
+      "deployment": "external",
+      "description": "Identity provider. The gateway fetches its JWKS to verify session tokens.",
+      "telemetry": null
+    },
+    {
+      "id": "write-service",
+      "name": "Write Service",
+      "type": "service",
+      "technology": "Python 3.12, Django, DRF",
+      "group": "write",
+      "deployment": "core",
+      "description": "Command side of CQRS. Validates and stores wallets, transactions, goals, automations; writes events to the outbox in the same transaction.",
+      "telemetry": {
+        "serviceNames": [
+          "write-service"
+        ]
+      }
+    },
+    {
+      "id": "write-automation-engine",
+      "name": "Automation Engine",
+      "type": "worker",
+      "technology": "Python, Django worker",
+      "group": "write",
+      "deployment": "core",
+      "description": "Consumes domain events and runs user-authored automation rules triggered by them.",
+      "telemetry": {
+        "serviceNames": [
+          "write-automation-engine"
+        ]
+      }
+    },
+    {
+      "id": "write-automation-scheduler",
+      "name": "Automation Scheduler",
+      "type": "worker",
+      "technology": "Python, Django worker",
+      "group": "write",
+      "deployment": "core",
+      "description": "Runs automation rules whose trigger is a schedule.",
+      "telemetry": {
+        "serviceNames": [
+          "write-automation-scheduler"
+        ]
+      }
+    },
+    {
+      "id": "write-action-expiry-sweeper",
+      "name": "Action Expiry Sweeper",
+      "type": "worker",
+      "technology": "Python, Django worker",
+      "group": "write",
+      "deployment": "core",
+      "description": "Moves pending actions past their expiry to expired.",
+      "telemetry": {
+        "serviceNames": [
+          "write-action-expiry-sweeper"
+        ]
+      }
+    },
+    {
+      "id": "write-fraud-alerts-consumer",
+      "name": "Fraud Alerts Consumer",
+      "type": "worker",
+      "technology": "Python, Django worker",
+      "group": "fraud",
+      "deployment": "core",
+      "description": "Consumes fraud alerts from the stream processor and records them against transactions.",
+      "telemetry": {
+        "serviceNames": [
+          "write-fraud-alerts-consumer"
+        ]
+      }
+    },
+    {
+      "id": "write-inbound-notifications-consumer",
+      "name": "Inbound Notifications Consumer",
+      "type": "worker",
+      "technology": "Python, Django worker",
+      "group": "notifications",
+      "deployment": "core",
+      "description": "Turns notification requests from other services into notifications, which re-enter the event stream through the outbox.",
+      "telemetry": {
+        "serviceNames": [
+          "write-inbound-notifications-consumer"
+        ]
+      }
+    },
+    {
+      "id": "postgres-write",
+      "name": "Write Postgres",
+      "type": "database",
+      "technology": "PostgreSQL 18 (logical replication)",
+      "group": "write",
+      "deployment": "core",
+      "description": "Source of truth for the write model, including the transactional outbox table Debezium reads.",
+      "telemetry": {
+        "attributes": {
+          "db.system": "postgresql",
+          "db.name": "power_finance_write"
+        }
+      }
+    },
+    {
+      "id": "write-redis",
+      "name": "Write Redis",
+      "type": "cache",
+      "technology": "Redis 7",
+      "group": "write",
+      "deployment": "core",
+      "description": "Idempotency keys for write requests and fraud-alert bookkeeping.",
+      "telemetry": {
+        "attributes": {
+          "db.system": "redis"
+        }
+      }
+    },
+    {
+      "id": "immudb",
+      "name": "ImmuDB Ledger",
+      "type": "ledger",
+      "technology": "immudb 1.10",
+      "group": "write",
+      "deployment": "core",
+      "description": "Tamper-evident ledger holding every immutable money flow behind a transaction.",
+      "telemetry": null
+    },
+    {
+      "id": "debezium",
+      "name": "Debezium",
+      "type": "connector",
+      "technology": "Debezium 2.7 on Kafka Connect",
+      "group": "messaging",
+      "deployment": "core",
+      "description": "Change data capture. Tails the outbox tables through the Postgres WAL and publishes each row to Kafka with its trace context.",
+      "telemetry": {
+        "serviceNames": []
+      }
+    },
+    {
+      "id": "topic:events.async",
+      "name": "events.async",
+      "type": "topic",
+      "technology": "Apache Kafka 3.7 (Confluent 7.7)",
+      "group": "messaging",
+      "deployment": "core",
+      "description": "Primary domain event stream, keyed by the user's Clerk id for per-user ordering.",
+      "telemetry": {
+        "attributes": {
+          "messaging.destination.name": "events.async"
+        }
+      }
+    },
+    {
+      "id": "topic:fraud.alerts",
+      "name": "fraud.alerts",
+      "type": "topic",
+      "technology": "Apache Kafka 3.7 (Confluent 7.7)",
+      "group": "messaging",
+      "deployment": "core",
+      "description": "Fraud alerts raised by the stream processor.",
+      "telemetry": {
+        "attributes": {
+          "messaging.destination.name": "fraud.alerts"
+        }
+      }
+    },
+    {
+      "id": "topic:notifications.inbound",
+      "name": "notifications.inbound",
+      "type": "topic",
+      "technology": "Apache Kafka 3.7 (Confluent 7.7)",
+      "group": "messaging",
+      "deployment": "core",
+      "description": "Requests from other services to create a user notification.",
+      "telemetry": {
+        "attributes": {
+          "messaging.destination.name": "notifications.inbound"
+        }
+      }
+    },
+    {
+      "id": "topic:read-service.retry",
+      "name": "read-service.retry",
+      "type": "topic",
+      "technology": "Apache Kafka 3.7 (Confluent 7.7)",
+      "group": "messaging",
+      "deployment": "core",
+      "description": "Delayed retries for read-side projection failures.",
+      "telemetry": {
+        "attributes": {
+          "messaging.destination.name": "read-service.retry"
+        }
+      }
+    },
+    {
+      "id": "topic:read-service.dlq",
+      "name": "read-service.dlq",
+      "type": "topic",
+      "technology": "Apache Kafka 3.7 (Confluent 7.7)",
+      "group": "messaging",
+      "deployment": "core",
+      "description": "Read-side events that exhausted their retries.",
+      "telemetry": {
+        "attributes": {
+          "messaging.destination.name": "read-service.dlq"
+        }
+      }
+    },
+    {
+      "id": "topic:ai-service.retry",
+      "name": "ai-service.retry",
+      "type": "topic",
+      "technology": "Apache Kafka 3.7 (Confluent 7.7)",
+      "group": "messaging",
+      "deployment": "core",
+      "description": "Delayed retries for the AI dispatcher.",
+      "telemetry": {
+        "attributes": {
+          "messaging.destination.name": "ai-service.retry"
+        }
+      }
+    },
+    {
+      "id": "topic:ai-service.dlq",
+      "name": "ai-service.dlq",
+      "type": "topic",
+      "technology": "Apache Kafka 3.7 (Confluent 7.7)",
+      "group": "messaging",
+      "deployment": "core",
+      "description": "AI dispatcher events that exhausted their retries.",
+      "telemetry": {
+        "attributes": {
+          "messaging.destination.name": "ai-service.dlq"
+        }
+      }
+    },
+    {
+      "id": "topic:webhooks.retry",
+      "name": "webhooks.retry",
+      "type": "topic",
+      "technology": "Apache Kafka 3.7 (Confluent 7.7)",
+      "group": "messaging",
+      "deployment": "core",
+      "description": "Delayed retries for failed webhook deliveries.",
+      "telemetry": {
+        "attributes": {
+          "messaging.destination.name": "webhooks.retry"
+        }
+      }
+    },
+    {
+      "id": "topic:webhooks.dlq",
+      "name": "webhooks.dlq",
+      "type": "topic",
+      "technology": "Apache Kafka 3.7 (Confluent 7.7)",
+      "group": "messaging",
+      "deployment": "core",
+      "description": "Webhook deliveries that exhausted their retries.",
+      "telemetry": {
+        "attributes": {
+          "messaging.destination.name": "webhooks.dlq"
+        }
+      }
+    },
+    {
+      "id": "topic:telemetry.demo-spans",
+      "name": "telemetry.demo-spans",
+      "type": "topic",
+      "technology": "Apache Kafka 3.7 (Confluent 7.7)",
+      "group": "messaging",
+      "deployment": "core",
+      "description": "Spans of portfolio demo sessions, forwarded by Jaeger for this live view.",
+      "telemetry": {
+        "attributes": {
+          "messaging.destination.name": "telemetry.demo-spans"
+        }
+      }
+    },
+    {
+      "id": "read-service",
+      "name": "Read Service",
+      "type": "service",
+      "technology": "Python 3.12, Django, DRF",
+      "group": "read",
+      "deployment": "core",
+      "description": "Query side of CQRS. Serves lists, details, analytics and full-text search from denormalised projections.",
+      "telemetry": {
+        "serviceNames": [
+          "read-service"
+        ]
+      }
+    },
+    {
+      "id": "read-write-consumer",
+      "name": "Read Projector",
+      "type": "worker",
+      "technology": "Python, Django worker",
+      "group": "read",
+      "deployment": "core",
+      "description": "Consumes domain events and updates the Postgres and Elasticsearch projections, then invalidates caches.",
+      "telemetry": {
+        "serviceNames": [
+          "read-write-consumer"
+        ]
+      }
+    },
+    {
+      "id": "postgres-read",
+      "name": "Read Postgres",
+      "type": "database",
+      "technology": "PostgreSQL 18",
+      "group": "read",
+      "deployment": "core",
+      "description": "Denormalised read models.",
+      "telemetry": {
+        "attributes": {
+          "db.system": "postgresql",
+          "db.name": "power_finance_read"
+        }
+      }
+    },
+    {
+      "id": "read-redis",
+      "name": "Read Redis",
+      "type": "cache",
+      "technology": "Redis 7",
+      "group": "read",
+      "deployment": "core",
+      "description": "Response cache for read endpoints.",
+      "telemetry": {
+        "attributes": {
+          "db.system": "redis"
+        }
+      }
+    },
+    {
+      "id": "elasticsearch",
+      "name": "Elasticsearch",
+      "type": "search",
+      "technology": "Elasticsearch 9.4",
+      "group": "read",
+      "deployment": "search",
+      "description": "Full-text search over wallets and transaction analytics.",
+      "telemetry": {
+        "attributes": {
+          "db.system": "elasticsearch"
+        }
+      }
+    },
+    {
+      "id": "ai-service",
+      "name": "AI Service",
+      "type": "service",
+      "technology": "Python 3.12, FastAPI",
+      "group": "ai",
+      "deployment": "core",
+      "description": "Assistant chat over WebSocket and accounting views.",
+      "telemetry": {
+        "serviceNames": [
+          "ai-service"
+        ]
+      }
+    },
+    {
+      "id": "ai-dispatcher",
+      "name": "AI Dispatcher",
+      "type": "worker",
+      "technology": "Python, asyncio worker",
+      "group": "ai",
+      "deployment": "core",
+      "description": "Consumes domain events and derives double-entry postings for each transaction.",
+      "telemetry": {
+        "serviceNames": [
+          "ai-dispatcher"
+        ]
+      }
+    },
+    {
+      "id": "postgres-ai",
+      "name": "AI Postgres",
+      "type": "database",
+      "technology": "PostgreSQL 18 (logical replication)",
+      "group": "ai",
+      "deployment": "core",
+      "description": "Accounts and entries, plus the AI outbox table Debezium reads.",
+      "telemetry": {
+        "attributes": {
+          "db.system": "postgresql",
+          "db.name": "power_finance_ai"
+        }
+      }
+    },
+    {
+      "id": "exchange-rates-api",
+      "name": "Exchange Rates API",
+      "type": "external",
+      "technology": "open.er-api.com",
+      "group": "external",
+      "deployment": "external",
+      "description": "Currency exchange rates.",
+      "telemetry": null
+    },
+    {
+      "id": "push-service",
+      "name": "Push Service",
+      "type": "service",
+      "technology": "Go 1.26",
+      "group": "notifications",
+      "deployment": "core",
+      "description": "Server-Sent Events. Fans domain events out to connected users and streams this demo's spans.",
+      "telemetry": {
+        "serviceNames": [
+          "push-service"
+        ]
+      }
+    },
+    {
+      "id": "webhook-service",
+      "name": "Webhook Service",
+      "type": "service",
+      "technology": "Go 1.26",
+      "group": "webhooks",
+      "deployment": "core",
+      "description": "Delivers domain events to user-configured webhook endpoints with retries and a delivery log.",
+      "telemetry": {
+        "serviceNames": [
+          "webhook-service"
+        ]
+      }
+    },
+    {
+      "id": "webhook-postgres",
+      "name": "Webhook Postgres",
+      "type": "database",
+      "technology": "PostgreSQL 17",
+      "group": "webhooks",
+      "deployment": "core",
+      "description": "Webhook configurations and delivery history.",
+      "telemetry": {
+        "attributes": {
+          "db.system": "postgresql",
+          "db.name": "power_finance_webhooks"
+        }
+      }
+    },
+    {
+      "id": "webhook-receivers",
+      "name": "Webhook Receivers",
+      "type": "external",
+      "technology": "User HTTP endpoints",
+      "group": "external",
+      "deployment": "external",
+      "description": "Third-party endpoints that receive webhook deliveries.",
+      "telemetry": null
+    },
+    {
+      "id": "antifraud-service",
+      "name": "Antifraud",
+      "type": "stream-processor",
+      "technology": "Java 21, Apache Flink 2.0",
+      "group": "fraud",
+      "deployment": "stream",
+      "description": "Stateful stream job scoring each transaction for fraud.",
+      "telemetry": {
+        "serviceNames": [
+          "antifraud-jobmanager",
+          "antifraud-taskmanager"
+        ]
+      }
+    },
+    {
+      "id": "jaeger",
+      "name": "Jaeger",
+      "type": "observability",
+      "technology": "Jaeger v2 (OpenTelemetry Collector)",
+      "group": "observability",
+      "deployment": "core",
+      "description": "Receives every service's spans over OTLP, stores them, and forwards demo-session spans to Kafka.",
+      "telemetry": {
+        "serviceNames": [
+          "jaeger"
+        ]
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "browser",
+      "to": "api-gateway",
+      "kind": "request",
+      "protocol": "https",
+      "description": "Every API call, including the SSE and WebSocket streams."
+    },
+    {
+      "from": "api-gateway",
+      "to": "clerk",
+      "kind": "request",
+      "protocol": "https",
+      "description": "Fetches the JWKS used to verify session tokens."
+    },
+    {
+      "from": "api-gateway",
+      "to": "gateway-redis",
+      "kind": "query",
+      "protocol": "resp",
+      "description": "JWKS cache, rate limits, read-your-writes versions, sandbox routes."
+    },
+    {
+      "from": "api-gateway",
+      "to": "write-service",
+      "kind": "request",
+      "protocol": "http",
+      "description": "POST, PUT, PATCH and DELETE under /api/v1, plus read fallbacks."
+    },
+    {
+      "from": "api-gateway",
+      "to": "read-service",
+      "kind": "request",
+      "protocol": "http",
+      "description": "GET under /api/v1 and search queries."
+    },
+    {
+      "from": "api-gateway",
+      "to": "ai-service",
+      "kind": "request",
+      "protocol": "http",
+      "description": "Assistant chat (WebSocket) and assistant endpoints."
+    },
+    {
+      "from": "api-gateway",
+      "to": "push-service",
+      "kind": "request",
+      "protocol": "http",
+      "description": "Notification SSE stream and this demo's span stream."
+    },
+    {
+      "from": "api-gateway",
+      "to": "webhook-service",
+      "kind": "request",
+      "protocol": "http",
+      "description": "Webhook delivery history."
+    },
+    {
+      "from": "write-service",
+      "to": "postgres-write",
+      "kind": "query",
+      "protocol": "sql",
+      "description": "Write model and outbox rows in one transaction."
+    },
+    {
+      "from": "write-service",
+      "to": "write-redis",
+      "kind": "query",
+      "protocol": "resp",
+      "description": "Idempotency keys."
+    },
+    {
+      "from": "write-service",
+      "to": "immudb",
+      "kind": "query",
+      "protocol": "grpc",
+      "description": "Appends the money flows of each transaction."
+    },
+    {
+      "from": "postgres-write",
+      "to": "debezium",
+      "kind": "cdc",
+      "protocol": "postgres-wal",
+      "description": "Debezium tails the write outbox through logical replication."
+    },
+    {
+      "from": "postgres-ai",
+      "to": "debezium",
+      "kind": "cdc",
+      "protocol": "postgres-wal",
+      "description": "Debezium tails the AI outbox through logical replication."
+    },
+    {
+      "from": "debezium",
+      "to": "topic:events.async",
+      "kind": "publish",
+      "protocol": "kafka",
+      "description": "Each outbox row becomes one event, keyed by the user's Clerk id."
+    },
+    {
+      "from": "topic:events.async",
+      "to": "read-write-consumer",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Consumer group read-service.write-consumer."
+    },
+    {
+      "from": "topic:events.async",
+      "to": "ai-dispatcher",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Consumer group ai-service.dispatcher."
+    },
+    {
+      "from": "topic:events.async",
+      "to": "webhook-service",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Consumer group webhook-service.deliveries."
+    },
+    {
+      "from": "topic:events.async",
+      "to": "antifraud-service",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Consumer group antifraud-service."
+    },
+    {
+      "from": "topic:events.async",
+      "to": "write-automation-engine",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Consumer group write-service.automation-engine."
+    },
+    {
+      "from": "topic:events.async",
+      "to": "push-service",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Groupless broadcast; every replica reads every partition."
+    },
+    {
+      "from": "write-automation-engine",
+      "to": "postgres-write",
+      "kind": "query",
+      "protocol": "sql",
+      "description": "Loads rules and applies their effects through the outbox."
+    },
+    {
+      "from": "write-automation-engine",
+      "to": "immudb",
+      "kind": "query",
+      "protocol": "grpc",
+      "description": "Rules that create transactions append money flows."
+    },
+    {
+      "from": "write-automation-scheduler",
+      "to": "postgres-write",
+      "kind": "query",
+      "protocol": "sql",
+      "description": "Loads scheduled rules and applies their effects."
+    },
+    {
+      "from": "write-automation-scheduler",
+      "to": "immudb",
+      "kind": "query",
+      "protocol": "grpc",
+      "description": "Rules that create transactions append money flows."
+    },
+    {
+      "from": "write-action-expiry-sweeper",
+      "to": "postgres-write",
+      "kind": "query",
+      "protocol": "sql",
+      "description": "Expires pending actions."
+    },
+    {
+      "from": "read-write-consumer",
+      "to": "postgres-read",
+      "kind": "query",
+      "protocol": "sql",
+      "description": "Updates read projections."
+    },
+    {
+      "from": "read-write-consumer",
+      "to": "elasticsearch",
+      "kind": "query",
+      "protocol": "https",
+      "description": "Updates search documents."
+    },
+    {
+      "from": "read-write-consumer",
+      "to": "read-redis",
+      "kind": "query",
+      "protocol": "resp",
+      "description": "Invalidates cached responses."
+    },
+    {
+      "from": "read-write-consumer",
+      "to": "topic:read-service.retry",
+      "kind": "publish",
+      "protocol": "kafka",
+      "description": "Schedules a retry for a failed event."
+    },
+    {
+      "from": "topic:read-service.retry",
+      "to": "read-write-consumer",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Re-processes delayed events."
+    },
+    {
+      "from": "read-write-consumer",
+      "to": "topic:read-service.dlq",
+      "kind": "publish",
+      "protocol": "kafka",
+      "description": "Parks events that exhausted their retries."
+    },
+    {
+      "from": "read-service",
+      "to": "postgres-read",
+      "kind": "query",
+      "protocol": "sql",
+      "description": "Serves read models."
+    },
+    {
+      "from": "read-service",
+      "to": "read-redis",
+      "kind": "query",
+      "protocol": "resp",
+      "description": "Response cache."
+    },
+    {
+      "from": "read-service",
+      "to": "elasticsearch",
+      "kind": "query",
+      "protocol": "https",
+      "description": "Full-text search and analytics."
+    },
+    {
+      "from": "read-service",
+      "to": "exchange-rates-api",
+      "kind": "request",
+      "protocol": "https",
+      "description": "Currency conversion for aggregated views."
+    },
+    {
+      "from": "ai-service",
+      "to": "postgres-ai",
+      "kind": "query",
+      "protocol": "sql",
+      "description": "Accounts, entries and chat state."
+    },
+    {
+      "from": "ai-dispatcher",
+      "to": "postgres-ai",
+      "kind": "query",
+      "protocol": "sql",
+      "description": "Writes postings and AI outbox rows."
+    },
+    {
+      "from": "ai-dispatcher",
+      "to": "exchange-rates-api",
+      "kind": "request",
+      "protocol": "https",
+      "description": "Currency conversion for postings."
+    },
+    {
+      "from": "ai-dispatcher",
+      "to": "topic:ai-service.retry",
+      "kind": "publish",
+      "protocol": "kafka",
+      "description": "Schedules a retry for a failed event."
+    },
+    {
+      "from": "topic:ai-service.retry",
+      "to": "ai-dispatcher",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Re-processes delayed events."
+    },
+    {
+      "from": "ai-dispatcher",
+      "to": "topic:ai-service.dlq",
+      "kind": "publish",
+      "protocol": "kafka",
+      "description": "Parks events that exhausted their retries."
+    },
+    {
+      "from": "antifraud-service",
+      "to": "topic:fraud.alerts",
+      "kind": "publish",
+      "protocol": "kafka",
+      "description": "Emits an alert when a transaction scores above the threshold."
+    },
+    {
+      "from": "topic:fraud.alerts",
+      "to": "write-fraud-alerts-consumer",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Consumer group write-service.fraud-alerts."
+    },
+    {
+      "from": "write-fraud-alerts-consumer",
+      "to": "postgres-write",
+      "kind": "query",
+      "protocol": "sql",
+      "description": "Records the alert, which re-enters the stream through the outbox."
+    },
+    {
+      "from": "write-fraud-alerts-consumer",
+      "to": "write-redis",
+      "kind": "query",
+      "protocol": "resp",
+      "description": "Alert bookkeeping."
+    },
+    {
+      "from": "webhook-service",
+      "to": "webhook-postgres",
+      "kind": "query",
+      "protocol": "sql",
+      "description": "Webhook projections and delivery log."
+    },
+    {
+      "from": "webhook-service",
+      "to": "webhook-receivers",
+      "kind": "request",
+      "protocol": "https",
+      "description": "Signed POST of each matching event."
+    },
+    {
+      "from": "webhook-service",
+      "to": "topic:webhooks.retry",
+      "kind": "publish",
+      "protocol": "kafka",
+      "description": "Schedules a retry for a failed delivery."
+    },
+    {
+      "from": "topic:webhooks.retry",
+      "to": "webhook-service",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Re-attempts delayed deliveries."
+    },
+    {
+      "from": "webhook-service",
+      "to": "topic:webhooks.dlq",
+      "kind": "publish",
+      "protocol": "kafka",
+      "description": "Parks deliveries that exhausted their retries."
+    },
+    {
+      "from": "webhook-service",
+      "to": "topic:notifications.inbound",
+      "kind": "publish",
+      "protocol": "kafka",
+      "description": "Asks for a notification after a delivery outcome."
+    },
+    {
+      "from": "topic:notifications.inbound",
+      "to": "write-inbound-notifications-consumer",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Consumer group write-service.notifications-inbound."
+    },
+    {
+      "from": "write-inbound-notifications-consumer",
+      "to": "postgres-write",
+      "kind": "query",
+      "protocol": "sql",
+      "description": "Stores the notification and its outbox event."
+    },
+    {
+      "from": "push-service",
+      "to": "browser",
+      "kind": "push",
+      "protocol": "sse",
+      "description": "Server-Sent Events back to the browser through the gateway."
+    },
+    {
+      "from": "jaeger",
+      "to": "topic:telemetry.demo-spans",
+      "kind": "publish",
+      "protocol": "kafka",
+      "description": "Forwards spans tagged with a demo session."
+    },
+    {
+      "from": "topic:telemetry.demo-spans",
+      "to": "push-service",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Groupless broadcast feeding this view."
+    },
+    {
+      "from": "api-gateway",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    },
+    {
+      "from": "write-service",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    },
+    {
+      "from": "write-automation-engine",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    },
+    {
+      "from": "write-automation-scheduler",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    },
+    {
+      "from": "write-action-expiry-sweeper",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    },
+    {
+      "from": "write-fraud-alerts-consumer",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    },
+    {
+      "from": "write-inbound-notifications-consumer",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    },
+    {
+      "from": "read-service",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    },
+    {
+      "from": "read-write-consumer",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    },
+    {
+      "from": "ai-service",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    },
+    {
+      "from": "ai-dispatcher",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    },
+    {
+      "from": "push-service",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    },
+    {
+      "from": "webhook-service",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    },
+    {
+      "from": "antifraud-service",
+      "to": "jaeger",
+      "kind": "telemetry",
+      "protocol": "otlp",
+      "description": "Exports spans."
+    }
+  ]
+}

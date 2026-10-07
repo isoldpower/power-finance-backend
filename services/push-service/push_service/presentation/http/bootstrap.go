@@ -28,10 +28,10 @@ type pushServiceHttpServer struct {
 func NewPushHTTPServer(
 	config *pushServiceHttpServerConfig,
 	notificationsStream types.NotificationsStream,
-	demoTracesStream types.DemoTracesStream,
+	demoSurface types.DemoSurface,
 	readinessProbe *health.Probe,
 ) (internalServer.Server, error) {
-	serverDefinition := NewHttpPresenterDefinition(notificationsStream, demoTracesStream, readinessProbe)
+	serverDefinition := NewHttpPresenterDefinition(notificationsStream, demoSurface, readinessProbe)
 
 	basicServer, serverErr := httpServer.NewHTTPServer(config.EstablishedHTTPProcessConfig)
 	if serverErr != nil {

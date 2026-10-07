@@ -39,3 +39,11 @@ type NotificationsStream interface {
 type DemoTracesStream interface {
 	NotificationsStream
 }
+
+type DemoSessionIdentifierValidator func(candidateIdentifier string) bool
+
+type DemoSurface struct {
+	TracesStream                   DemoTracesStream
+	IsValidDemoSessionIdentifier   DemoSessionIdentifierValidator
+	InfrastructureTopologyDocument []byte
+}
