@@ -218,7 +218,7 @@ func isWriteService(serviceName string) bool {
 }
 
 func projectForWriteService(tracesPayload []byte) ([]types.OutboxEvent, error) {
-	return ProjectDemoSpanEvents(tracesPayload, isWriteService)
+	return ProjectDemoSpanEvents(tracesPayload, SpanProjectionPolicy{IsKnownService: isWriteService})
 }
 
 func TestSpanFromServiceMissingFromTopologyIsDropped(t *testing.T) {

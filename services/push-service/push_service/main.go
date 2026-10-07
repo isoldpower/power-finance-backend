@@ -111,9 +111,17 @@ func startDemoTracesStream(
 		return nil, topologyErr
 	}
 
+	spanNarrator, narratorErr := demotraces.NewSpanNarrator()
+	if narratorErr != nil {
+		return nil, narratorErr
+	}
+
 	demoTracesHandler := handlers.NewSSEStreamHandler(
 		services.NewClientsPoolService(),
-		services.NewDemoSpansProjectionService(knownServiceNames.Contains),
+		services.NewDemoSpansProjectionService(demotraces.SpanProjectionPolicy{
+			IsKnownService: knownServiceNames.Contains,
+			Narrator:       spanNarrator,
+		}),
 		newHeartbeat,
 	)
 	demoTracesHandler.Start(backgroundContext)

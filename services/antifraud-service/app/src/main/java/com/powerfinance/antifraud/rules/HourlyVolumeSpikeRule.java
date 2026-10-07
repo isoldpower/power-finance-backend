@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import com.powerfinance.antifraud.model.OutboxEvent;
+import com.powerfinance.antifraud.model.OutboxPayloads;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
@@ -43,7 +44,7 @@ public class HourlyVolumeSpikeRule implements FraudRule {
             return 0;
         }
 
-        TransactionCreated transaction = TransactionCreated.parseFrom(outboxEvent.getPayload());
+        TransactionCreated transaction = OutboxPayloads.decodeTransactionCreated(outboxEvent.getPayload());
         double transactionAmount = Double.parseDouble(transaction.getAmount());
         long currentHourBucket = eventTimeMillis(transaction) / HOUR_MS;
 

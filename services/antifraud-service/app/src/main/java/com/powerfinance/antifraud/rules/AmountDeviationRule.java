@@ -1,6 +1,7 @@
 package com.powerfinance.antifraud.rules;
 
 import com.powerfinance.antifraud.model.OutboxEvent;
+import com.powerfinance.antifraud.model.OutboxPayloads;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
@@ -33,7 +34,7 @@ public class AmountDeviationRule implements FraudRule {
             return 0;
         }
 
-        TransactionCreated transaction = TransactionCreated.parseFrom(outboxEvent.getPayload());
+        TransactionCreated transaction = OutboxPayloads.decodeTransactionCreated(outboxEvent.getPayload());
         double transactionAmount = Double.parseDouble(transaction.getAmount());
 
         RunningStats runningAmountStats = amountStatsState.value();

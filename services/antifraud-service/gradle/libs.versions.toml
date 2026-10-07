@@ -11,4 +11,5 @@ flink-connector-base = { module = "org.apache.flink:flink-connector-base", versi
 flink-connector-kafka = { module = "org.apache.flink:flink-connector-kafka", version = "4.0.0-2.0" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
+protobuf-java-util = { module = "com.google.protobuf:protobuf-java-util", version.ref = "protobuf" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }

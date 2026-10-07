@@ -25,11 +25,11 @@ func NewEventsProjectionService() *EventsProjectionService {
 	}
 }
 
-func NewDemoSpansProjectionService(isKnownService demotraces.KnownServicePredicate) *EventsProjectionService {
+func NewDemoSpansProjectionService(projectionPolicy demotraces.SpanProjectionPolicy) *EventsProjectionService {
 	return &EventsProjectionService{
 		eventsChannel: make(chan types.OutboxEvent),
 		translate: func(kafkaMessage types.OutboxEvent) ([]types.OutboxEvent, error) {
-			return translateDemoSpansMessage(kafkaMessage, isKnownService)
+			return translateDemoSpansMessage(kafkaMessage, projectionPolicy)
 		},
 	}
 }
@@ -108,11 +108,11 @@ func translateNotificationMessage(kafkaMessage types.OutboxEvent) ([]types.Outbo
 
 func translateDemoSpansMessage(
 	kafkaMessage types.OutboxEvent,
-	isKnownService demotraces.KnownServicePredicate,
+	projectionPolicy demotraces.SpanProjectionPolicy,
 ) ([]types.OutboxEvent, error) {
 	if len(kafkaMessage.Payload) == 0 {
 		return nil, errors.New("demo spans message carries an empty payload")
 	}
 
-	return demotraces.ProjectDemoSpanEvents(kafkaMessage.Payload, isKnownService)
+	return demotraces.ProjectDemoSpanEvents(kafkaMessage.Payload, projectionPolicy)
 }

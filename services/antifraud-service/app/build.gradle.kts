@@ -24,6 +24,7 @@ dependencies {
     implementation(libs.guava)
     implementation(libs.flink.connector.kafka)
     implementation(libs.protobuf.java)
+    implementation(libs.protobuf.java.util)
 }
 
 java {

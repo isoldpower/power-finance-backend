@@ -6,6 +6,13 @@ const SpanEventType = "span"
 
 type KnownServicePredicate func(serviceName string) bool
 
+type SpanProjectionPolicy struct {
+	IsKnownService KnownServicePredicate
+	Narrator       *SpanNarrator
+}
+
+var asgiMessageSpanNameSuffixes = []string{" http send", " http receive"}
+
 const (
 	demoSessionAttributeName = demosession.SpanAttributeName
 	serviceNameAttributeName = "service.name"
@@ -51,4 +58,5 @@ type projectedSpan struct {
 	EndTimeUnixNano      uint64         `json:"endTimeUnixNano,string"`
 	DurationMilliseconds float64        `json:"durationMs"`
 	Attributes           map[string]any `json:"attributes"`
+	Narrative            string         `json:"narrative"`
 }

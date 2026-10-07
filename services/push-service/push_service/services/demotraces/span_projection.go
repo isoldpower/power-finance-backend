@@ -16,12 +16,11 @@ import (
 	"services/push-service/push_service/types"
 )
 
-
 const nanosecondsPerMillisecond = 1_000_000
 
 func ProjectDemoSpanEvents(
 	tracesPayload []byte,
-	isKnownService KnownServicePredicate,
+	projectionPolicy SpanProjectionPolicy,
 ) ([]types.OutboxEvent, error) {
 	var tracesData tracev1.TracesData
 	if unmarshalErr := proto.Unmarshal(tracesPayload, &tracesData); unmarshalErr != nil {
@@ -31,15 +30,15 @@ func ProjectDemoSpanEvents(
 	var projectedEvents []types.OutboxEvent
 	for _, resourceSpans := range tracesData.GetResourceSpans() {
 		serviceName := readServiceName(resourceSpans)
-		if !isKnownService(serviceName) {
+		if !projectionPolicy.IsKnownService(serviceName) {
 			recordUnknownServiceSpansDropped(serviceName, resourceSpans)
 		} else {
-            resourceEvents, projectErr := projectResourceSpans(serviceName, resourceSpans)
-            if projectErr != nil {
-                return nil, projectErr
-            }
+			resourceEvents, projectErr := projectResourceSpans(serviceName, resourceSpans, projectionPolicy.Narrator)
+			if projectErr != nil {
+				return nil, projectErr
+			}
 
-            projectedEvents = append(projectedEvents, resourceEvents...)
+			projectedEvents = append(projectedEvents, resourceEvents...)
 		}
 	}
 
@@ -49,10 +48,11 @@ func ProjectDemoSpanEvents(
 func projectResourceSpans(
 	serviceName string,
 	resourceSpans *tracev1.ResourceSpans,
+	spanNarrator *SpanNarrator,
 ) ([]types.OutboxEvent, error) {
 	var resourceEvents []types.OutboxEvent
 	for span := range spansOfResource(resourceSpans) {
-		projectedEvent, isDemoSpan, projectErr := projectSpan(serviceName, span)
+		projectedEvent, isDemoSpan, projectErr := projectSpan(serviceName, span, spanNarrator)
 		if projectErr != nil {
 			return nil, projectErr
 		}
@@ -87,7 +87,11 @@ func carriesDemoSession(span *tracev1.Span) bool {
 	return false
 }
 
-func projectSpan(serviceName string, span *tracev1.Span) (types.OutboxEvent, bool, error) {
+func projectSpan(
+	serviceName string,
+	span *tracev1.Span,
+	spanNarrator *SpanNarrator,
+) (types.OutboxEvent, bool, error) {
 	demoSessionIdentifier := ""
 	forwardedAttributes := make(map[string]any)
 	for _, keyValue := range span.GetAttributes() {
@@ -103,7 +107,7 @@ func projectSpan(serviceName string, span *tracev1.Span) (types.OutboxEvent, boo
 	}
 
 	spanIdentifier := hex.EncodeToString(span.GetSpanId())
-	encodedSpan, encodeErr := json.Marshal(projectedSpan{
+	spanProjection := projectedSpan{
 		TraceID:              hex.EncodeToString(span.GetTraceId()),
 		SpanID:               spanIdentifier,
 		ParentSpanID:         hex.EncodeToString(span.GetParentSpanId()),
@@ -115,7 +119,12 @@ func projectSpan(serviceName string, span *tracev1.Span) (types.OutboxEvent, boo
 		EndTimeUnixNano:      span.GetEndTimeUnixNano(),
 		DurationMilliseconds: spanDurationMilliseconds(span),
 		Attributes:           forwardedAttributes,
-	})
+	}
+	if spanNarrator != nil {
+		spanProjection.Narrative = spanNarrator.Describe(spanProjection)
+	}
+
+	encodedSpan, encodeErr := json.Marshal(spanProjection)
 	if encodeErr != nil {
 		return types.OutboxEvent{}, false, fmt.Errorf("demo traces: encode span: %w", encodeErr)
 	}
@@ -149,6 +158,12 @@ func recordUnknownServiceSpansDropped(serviceName string, resourceSpans *tracev1
 func sanitizeSpanName(span *tracev1.Span, forwardedAttributes map[string]any) string {
 	requestMethod := readFirstStringAttribute(forwardedAttributes, requestMethodAttributeNames)
 	requestRoute := readFirstStringAttribute(forwardedAttributes, requestRouteAttributeNames)
+
+	for _, asgiMessageSuffix := range asgiMessageSpanNameSuffixes {
+		if strings.HasSuffix(span.GetName(), asgiMessageSuffix) {
+			return strings.Fields(span.GetName())[0] + asgiMessageSuffix
+		}
+	}
 
 	if requestRoute != "" {
 		return strings.TrimSpace(requestMethod + " " + requestRoute)
@@ -203,7 +218,7 @@ func spanDurationMilliseconds(span *tracev1.Span) float64 {
 		return 0
 	}
 
-    spanUnixGap := span.GetEndTimeUnixNano() - span.GetStartTimeUnixNano()
+	spanUnixGap := span.GetEndTimeUnixNano() - span.GetStartTimeUnixNano()
 	return float64(spanUnixGap) / nanosecondsPerMillisecond
 }
 

@@ -1,8 +1,11 @@
 package com.powerfinance.antifraud.rules;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
+import com.google.protobuf.util.JsonFormat;
 import com.powerfinance.antifraud.engine.KeyedFraudScoringEngine;
 import com.powerfinance.antifraud.model.Alert;
 import com.powerfinance.antifraud.model.OutboxEvent;
@@ -50,7 +53,19 @@ public final class RuleTestSupport {
         if (occurredAtSeconds > 0) {
             builder.setOccurredAt(Timestamp.newBuilder().setSeconds(occurredAtSeconds).build());
         }
-        return new OutboxEvent(clerkId, "TransactionCreated", "evt", builder.build().toByteArray());
+        return new OutboxEvent(clerkId, "TransactionCreated", "evt", encodeAsOutboxJson(builder.build()));
+    }
+
+    public static byte[] encodeAsOutboxJson(TransactionCreated transaction) {
+        try {
+            return JsonFormat.printer().print(transaction).getBytes(StandardCharsets.UTF_8);
+        } catch (InvalidProtocolBufferException encodingFailure) {
+            throw new IllegalStateException(encodingFailure);
+        }
+    }
+
+    public static OutboxEvent transactionEventWithPayload(String clerkId, byte[] rawPayload) {
+        return new OutboxEvent(clerkId, "TransactionCreated", "evt", rawPayload);
     }
 
     /** Builds a non-transaction outbox event for verifying rules ignore other event types. */

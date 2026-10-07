@@ -21,7 +21,8 @@ notifications, keyed by session id instead of user id. Each span becomes one
 {"traceId":"…","spanId":"…","parentSpanId":"…","service":"write-service",
  "name":"INSERT","kind":"client","status":"ok",
  "startTimeUnixNano":"1791345070588577260","endTimeUnixNano":"…","durationMs":4.5,
- "attributes":{"db.system":"postgresql"}}
+ "attributes":{"db.system":"postgresql","db.name":"power_finance_write"},
+ "narrative":"write-service inserted rows into Postgres database power_finance_write in 4.5 ms."}
 ```
 
 Only a whitelist of attributes is forwarded (`db.system`, `db.namespace`,
@@ -31,8 +32,43 @@ keys and user ids never leave the service. Span names are scrubbed too, because 
 ASGI wrapper names its server span after the raw path (`GET /api/v1/wallets/<real id>`).
 A span with `http.route` is renamed `<method> <route template>`. Any other server
 span keeps only its method, or becomes `request` when it has none. Non-server span
-names (`INSERT`, a topic name) pass through unchanged. Nanosecond timestamps are JSON strings
-because they exceed JavaScript's safe integer range.
+names (`INSERT`, a topic name) pass through unchanged, except the ASGI message spans,
+which also carry the raw path (`PATCH /api/v1/wallets/<id> http send`) and are cut to
+`PATCH http send`. Nanosecond timestamps are JSON strings because they exceed
+JavaScript's safe integer range.
+
+### Narratives
+
+`narrative` is a plain-English sentence describing the span, built from
+`services/demotraces/span_narratives.json`, which is embedded at build time. Each rule
+has a `match` and a `template`:
+
+```json
+{"match": {"attributes": {"db.system": "immudb"}, "names": ["sqlExec"]},
+ "template": "{service} appended to the tamper-evident ImmuDB ledger {attr:db.name} in {duration}."}
+```
+
+- `match` keys, all optional and combined with AND: `services`, `kind`, `names`
+  (exact), `namePrefix`, `nameSuffix`, `attributes` (exact values). An empty `match`
+  matches every span.
+- Placeholders: `{service}`, `{name}`, `{kind}`, `{duration}` (`0.40 ms`, `32.5 ms`,
+  `1.97 s`), `{nameRemainder}` (the name minus the matched prefix and suffix, so
+  `kong.access.plugin.cors` with prefix `kong.access.plugin.` gives `cors`), and
+  `{attr:a|b}` (the first non-empty attribute, for old and new semantic-convention
+  names alike).
+- Rules are tried top to bottom, and the first one that matches **and** can fill
+  every placeholder wins. A rule whose attribute is missing falls through to the next
+  one, so a half-filled sentence never goes out. Order rules from specific to generic.
+- A span with `status: error` gets ` It failed.` appended.
+- Narratives are produced only from the forwarded fields above, so they describe what
+  a span shows (`read from Postgres database power_finance_write`) and never guess at
+  what the query was for.
+
+The file is checked at startup, and the service refuses to boot when the JSON is
+malformed or has an unknown field, a template uses an unknown placeholder, or the last
+rule is not a catch-all built only from `{service}`, `{name}`, `{kind}` and `{duration}`.
+`span_narrator_test.go` pins the sentences for real spans from a dev-host trace. Update
+it together with the rules.
 
 Only spans from real services are fanned out. A span whose `service.name` is not
 listed in any node's `telemetry.serviceNames` in the infrastructure topology

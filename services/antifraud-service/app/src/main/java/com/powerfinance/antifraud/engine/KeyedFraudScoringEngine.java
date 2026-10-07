@@ -2,6 +2,7 @@ package com.powerfinance.antifraud.engine;
 
 import java.util.List;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.powerfinance.antifraud.model.Alert;
 import com.powerfinance.antifraud.model.OutboxEvent;
 import com.powerfinance.antifraud.rules.FraudRule;
@@ -9,11 +10,15 @@ import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Per-user keyed engine that sums every rule's score and emits an alert past the threshold. */
 public class KeyedFraudScoringEngine
         extends KeyedProcessFunction<String, OutboxEvent, Alert>
         implements FraudScoringEngine {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(KeyedFraudScoringEngine.class);
 
     private final List<FraudRule> fraudRules;
     private final double fraudScoreThreshold;
@@ -47,7 +52,19 @@ public class KeyedFraudScoringEngine
         double totalFraudScore = 0;
         StringBuilder scoreBreakdown = new StringBuilder();
         for (FraudRule fraudRule : fraudRules) {
-            double rulePoints = fraudRule.score(outboxEvent);
+            double rulePoints;
+            try {
+                rulePoints = fraudRule.score(outboxEvent);
+            } catch (InvalidProtocolBufferException | NumberFormatException undecodablePayload) {
+                LOGGER.warn(
+                        "skipping undecodable outbox event {} of type {}: {}",
+                        outboxEvent.getEventId(),
+                        outboxEvent.getEventType(),
+                        undecodablePayload.getMessage()
+                );
+                return;
+            }
+
             if (rulePoints > 0) {
                 totalFraudScore += rulePoints;
                 scoreBreakdown

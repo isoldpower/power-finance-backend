@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "rules": [
+    {"match": {"services": ["api-gateway"], "kind": "server"}, "template": "The API gateway received {attr:http.method|http.request.method} {attr:http.route} and answered {attr:http.status_code|http.response.status_code} after {duration}."},
+    {"match": {"services": ["api-gateway"], "kind": "server"}, "template": "The API gateway handled the request in {duration}."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.router"]}, "template": "The gateway matched the request to a route in {duration}."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.dns"]}, "template": "The gateway resolved a hostname in {duration}."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.balancer"]}, "template": "The gateway forwarded the request to the upstream service, which took {duration} to respond."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.internal.request"]}, "template": "The gateway made its own {attr:http.method} call to an external service, usually Clerk's signing keys when its cache is cold, taking {duration}."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.access.plugin.clerk-jwt"]}, "template": "The gateway verified the Clerk session token in {duration}."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.access.plugin.rate-limiting"]}, "template": "The gateway checked the per-IP rate limit in {duration}."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.access.plugin.user-tier-rate-limit"]}, "template": "The gateway checked the rate limit of the user's plan in {duration}."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.access.plugin.demo-session"]}, "template": "The gateway tagged the request with this demo session and switched tracing on for it."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.access.plugin.sandbox-router"]}, "template": "The gateway checked whether a developer sandbox should receive this request."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.access.plugin.read-fallback"]}, "template": "The gateway sent the read to read-service, ready to fall back to write-service if the projection lags, taking {duration}."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.access.plugin.read-at-least"]}, "template": "The gateway attached the user's latest write version so the read reflects their own writes."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.access.plugin.opentelemetry"]}, "template": "The gateway attached trace context so every downstream service joins this trace."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.access.plugin.cors"]}, "template": "The gateway applied the CORS policy."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.access.plugin.correlation-id"]}, "template": "The gateway assigned a correlation id to the request."},
+    {"match": {"services": ["api-gateway"], "names": ["kong.header_filter.plugin.write-ral-version"]}, "template": "The gateway signed the write version returned by write-service and queued it in Redis for read-your-writes."},
+    {"match": {"services": ["api-gateway"], "namePrefix": "kong.access.plugin."}, "template": "The gateway ran its {nameRemainder} plugin in {duration}."},
+    {"match": {"services": ["api-gateway"], "namePrefix": "kong.header_filter.plugin."}, "template": "The gateway's {nameRemainder} plugin processed the response headers."},
+    {"match": {"services": ["api-gateway"], "namePrefix": "kong."}, "template": "The gateway ran its {nameRemainder} step in {duration}."},
+
+    {"match": {"nameSuffix": " http send"}, "template": "{service} sent the response headers with status {attr:http.status_code|http.response.status_code}."},
+    {"match": {"nameSuffix": " http send"}, "template": "{service} sent the response body."},
+    {"match": {"nameSuffix": " http receive"}, "template": "{service} read from the client connection for {duration}."},
+    {"match": {"kind": "server"}, "template": "{service} received a {attr:http.method|http.request.method} request and answered {attr:http.status_code|http.response.status_code} after {duration}."},
+    {"match": {"kind": "internal"}, "template": "{service} ran its {attr:http.method|http.request.method} {attr:http.route} handler in {duration}."},
+
+    {"match": {"attributes": {"db.system": "postgresql"}, "names": ["SAVEPOINT"]}, "template": "{service} opened a nested transaction on Postgres database {attr:db.name|db.namespace}."},
+    {"match": {"attributes": {"db.system": "postgresql"}, "names": ["RELEASE"]}, "template": "{service} committed a nested transaction on Postgres database {attr:db.name|db.namespace}."},
+    {"match": {"attributes": {"db.system": "postgresql"}, "names": ["connect"]}, "template": "{service} opened a connection to Postgres database {attr:db.name|db.namespace}."},
+    {"match": {"attributes": {"db.system": "postgresql"}, "names": ["SELECT"]}, "template": "{service} read from Postgres database {attr:db.name|db.namespace} in {duration}."},
+    {"match": {"attributes": {"db.system": "postgresql"}, "names": ["INSERT"]}, "template": "{service} inserted rows into Postgres database {attr:db.name|db.namespace} in {duration}."},
+    {"match": {"attributes": {"db.system": "postgresql"}, "names": ["UPDATE"]}, "template": "{service} updated rows in Postgres database {attr:db.name|db.namespace} in {duration}."},
+    {"match": {"attributes": {"db.system": "postgresql"}, "names": ["DELETE"]}, "template": "{service} deleted rows from Postgres database {attr:db.name|db.namespace} in {duration}."},
+    {"match": {"attributes": {"db.system": "postgresql"}}, "template": "{service} ran {name} on Postgres database {attr:db.name|db.namespace} in {duration}."},
+
+    {"match": {"attributes": {"db.system": "redis"}, "names": ["SET", "SETEX", "SETNX"]}, "template": "{service} stored a key in Redis in {duration}."},
+    {"match": {"attributes": {"db.system": "redis"}, "names": ["GET", "MGET"]}, "template": "{service} read a key from Redis in {duration}."},
+    {"match": {"attributes": {"db.system": "redis"}, "names": ["INCR", "INCRBY"]}, "template": "{service} bumped a cache version counter in Redis, which invalidates cached responses."},
+    {"match": {"attributes": {"db.system": "redis"}, "names": ["DEL", "UNLINK"]}, "template": "{service} deleted a cached entry from Redis."},
+    {"match": {"attributes": {"db.system": "redis"}, "names": ["EVAL", "EVALSHA"]}, "template": "{service} ran an atomic Lua script in Redis in {duration}."},
+    {"match": {"attributes": {"db.system": "redis"}}, "template": "{service} ran Redis {name} in {duration}."},
+
+    {"match": {"attributes": {"db.system": "elasticsearch"}, "names": ["index"]}, "template": "{service} indexed a document into Elasticsearch in {duration}."},
+    {"match": {"attributes": {"db.system": "elasticsearch"}, "names": ["update"]}, "template": "{service} updated a document in Elasticsearch in {duration}."},
+    {"match": {"attributes": {"db.system": "elasticsearch"}, "names": ["search"]}, "template": "{service} searched Elasticsearch in {duration}."},
+    {"match": {"attributes": {"db.system": "elasticsearch"}}, "template": "{service} sent {name} to Elasticsearch in {duration}."},
+
+    {"match": {"attributes": {"db.system": "immudb"}, "names": ["sqlExec"]}, "template": "{service} appended to the tamper-evident ImmuDB ledger {attr:db.name} in {duration}."},
+    {"match": {"attributes": {"db.system": "immudb"}, "names": ["verifiableSQLGet"]}, "template": "{service} read a ledger row from ImmuDB together with its cryptographic proof in {duration}."},
+    {"match": {"attributes": {"db.system": "immudb"}, "names": ["sqlQuery"]}, "template": "{service} queried the ImmuDB ledger {attr:db.name} in {duration}."},
+    {"match": {"attributes": {"db.system": "immudb"}}, "template": "{service} called ImmuDB {name} in {duration}."},
+
+    {"match": {"services": ["push-service"], "kind": "consumer"}, "template": "push-service received an event from {attr:messaging.destination.name|messaging.destination} and pushed it to the user's open browser tabs."},
+    {"match": {"services": ["webhook-service"], "kind": "consumer"}, "template": "webhook-service checked an event from {attr:messaging.destination.name|messaging.destination} against the user's webhooks in {duration}."},
+    {"match": {"services": ["antifraud-jobmanager", "antifraud-taskmanager"], "kind": "consumer"}, "template": "The Flink antifraud job scored an event from {attr:messaging.destination.name|messaging.destination} in {duration}."},
+    {"match": {"kind": "consumer"}, "template": "{service} consumed an event from {attr:messaging.destination.name|messaging.destination}."},
+    {"match": {"kind": "producer"}, "template": "{service} published an event to {attr:messaging.destination.name|messaging.destination}."},
+
+    {"match": {"kind": "server"}, "template": "{service} handled a request in {duration}."},
+    {"match": {"kind": "client"}, "template": "{service} called {name} in {duration}."},
+    {"match": {}, "template": "{service} ran {name} in {duration}."}
+  ]
+}
