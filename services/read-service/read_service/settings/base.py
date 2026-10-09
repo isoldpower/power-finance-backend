@@ -27,6 +27,7 @@ env = environ.Env(
     DATABASE_PASSWORD=(str, "postgres"),
     KAFKA_BOOTSTRAP_SERVERS=(str, "localhost:9092"),
     KAFKA_OUTBOX_TOPIC=(str, "events.async"),
+    KAFKA_AI_OUTBOX_TOPIC=(str, "events.ai-async"),
     KAFKA_READ_GROUP_ID=(str, "read-service.write-consumer"),
     KAFKA_RETRY_TOPIC=(str, "read-service.retry"),
     KAFKA_DLQ_TOPIC=(str, "read-service.dlq"),
@@ -158,6 +159,7 @@ AUTH_PASSWORD_VALIDATORS = [
 KAFKA = {
     "BOOTSTRAP_SERVERS": env("KAFKA_BOOTSTRAP_SERVERS"),
     "OUTBOX_TOPIC": env("KAFKA_OUTBOX_TOPIC"),
+    "AI_OUTBOX_TOPIC": env("KAFKA_AI_OUTBOX_TOPIC"),
     "READ_GROUP_ID": env("KAFKA_READ_GROUP_ID"),
     "RETRY_TOPIC": env("KAFKA_RETRY_TOPIC"),
     "DLQ_TOPIC": env("KAFKA_DLQ_TOPIC"),

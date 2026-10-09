@@ -36,6 +36,7 @@ env = environ.Env(
     IMMUDB_PASSWORD=(str, "immudb"),
     KAFKA_BOOTSTRAP_SERVERS=(str, "localhost:9092"),
     KAFKA_OUTBOX_TOPIC=(str, "events.async"),
+    KAFKA_AI_OUTBOX_TOPIC=(str, "events.ai-async"),
     KAFKA_FRAUD_ALERTS_TOPIC=(str, "fraud.alerts"),
     KAFKA_FRAUD_ALERTS_GROUP_ID=(str, "write-service.fraud-alerts"),
     KAFKA_NOTIFICATIONS_INBOUND_TOPIC=(str, "notifications.inbound"),
@@ -141,6 +142,7 @@ IMMUDB = {
 KAFKA = {
     "BOOTSTRAP_SERVERS": env("KAFKA_BOOTSTRAP_SERVERS"),
     "OUTBOX_TOPIC": env("KAFKA_OUTBOX_TOPIC"),
+    "AI_OUTBOX_TOPIC": env("KAFKA_AI_OUTBOX_TOPIC"),
     "FRAUD_ALERTS_TOPIC": env("KAFKA_FRAUD_ALERTS_TOPIC"),
     "FRAUD_ALERTS_GROUP_ID": env("KAFKA_FRAUD_ALERTS_GROUP_ID"),
     "NOTIFICATIONS_INBOUND_TOPIC": env("KAFKA_NOTIFICATIONS_INBOUND_TOPIC"),

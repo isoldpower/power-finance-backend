@@ -3,9 +3,9 @@
 topics:
   - name: events.async
     purpose: >-
-      Primary event stream. Every service that owns a transactional outbox
-      publishes here through its own Debezium Outbox Event Router connector, and
-      every projection, fan-out and derivation reads from it.
+      Write-side event stream: the single source of truth for everything
+      write-service decides. Only write-service publishes here, through its
+      Debezium Outbox Event Router connector.
     key: >-
       The owning user's external (Clerk) id, or "GLOBAL" for events no user owns.
       Per-user ordering and push-service's SSE authorisation both depend on it.
@@ -15,10 +15,6 @@ topics:
         via: debezium
         connector: outbox-connector
         table: public.outbox_events
-      - service: ai-service
-        via: debezium
-        connector: ai-outbox-connector
-        table: public.ai_outbox_events
     consumers:
       - service: read-service
         group: read-service.write-consumer
@@ -26,6 +22,9 @@ topics:
       - service: ai-service
         group: ai-service.dispatcher
         does: derives the postings behind each transaction
+      - service: write-service
+        group: write-service.automation-engine
+        does: runs user automation rules triggered by events
       - service: webhook-service
         group: webhook-service.deliveries
         does: webhook config projection and delivery dispatch
@@ -43,6 +42,31 @@ topics:
       replication_factor: 1
       retention: 7d
       cleanup_policy: delete
+
+  - name: events.ai-async
+    purpose: >-
+      AI-side event stream: the single source of truth for what ai-service's
+      dispatcher decides (accounts and postings). Consumers subscribe here
+      directly; nothing republishes these events onto events.async. Ordering
+      holds within this topic only, so a consumer can see an AI event before the
+      events.async event that caused it.
+    key: >-
+      The owning user's external (Clerk) id, same as events.async.
+    headers: [event_id, aggregate_type, event_type, outbox_seq]
+    producers:
+      - service: ai-service
+        via: debezium
+        connector: ai-outbox-connector
+        table: public.ai_outbox_events
+    consumers:
+      - service: read-service
+        group: read-service.write-consumer
+        does: account and posting projections, cache invalidation
+      - service: write-service
+        group: write-service.automation-engine
+        does: automation triggers on AI events (none registered yet; unknown types are skipped)
+    settings: >-
+      Auto-created with broker defaults on the first produce by Debezium.
 
   - name: telemetry.demo-spans
     purpose: >-

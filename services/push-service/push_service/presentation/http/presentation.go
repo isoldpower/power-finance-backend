@@ -156,6 +156,11 @@ func (hp *HttpPresentation) runEventsStream(
 	eventsChannel <-chan types.OutboxEvent,
 	goneChannel <-chan struct{},
 ) {
+	if openErr := connection.OpenStream(); openErr != nil {
+		requestLogger.Warn("failed to open sse stream", "error", openErr)
+		return
+	}
+
 	requestLogger.Info("sse connection established")
 	responseChannel := make(chan []byte)
 

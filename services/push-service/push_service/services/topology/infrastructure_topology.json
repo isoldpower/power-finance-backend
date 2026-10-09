@@ -26,16 +26,16 @@
       "name": "Messaging"
     },
     {
-      "id": "notifications",
-      "name": "Notifications"
+      "id": "push",
+      "name": "Push"
     },
     {
       "id": "webhooks",
       "name": "Webhooks"
     },
     {
-      "id": "fraud",
-      "name": "Fraud"
+      "id": "antifraud",
+      "name": "Antifraud"
     },
     {
       "id": "observability",
@@ -156,9 +156,9 @@
       "name": "Fraud Alerts Consumer",
       "type": "worker",
       "technology": "Python, Django worker",
-      "group": "fraud",
+      "group": "write",
       "deployment": "core",
-      "description": "Consumes fraud alerts from the stream processor and records them against transactions.",
+      "description": "Consumes fraud alerts from the stream processor and marks the alerted user as suspended in Redis, keyed by Clerk id.",
       "telemetry": {
         "serviceNames": [
           "write-fraud-alerts-consumer"
@@ -170,7 +170,7 @@
       "name": "Inbound Notifications Consumer",
       "type": "worker",
       "technology": "Python, Django worker",
-      "group": "notifications",
+      "group": "write",
       "deployment": "core",
       "description": "Turns notification requests from other services into notifications, which re-enter the event stream through the outbox.",
       "telemetry": {
@@ -201,7 +201,7 @@
       "technology": "Redis 7",
       "group": "write",
       "deployment": "core",
-      "description": "Idempotency keys for write requests and fraud-alert bookkeeping.",
+      "description": "Idempotency keys for write requests and the fraud:suspended hash of users flagged by the antifraud job.",
       "telemetry": {
         "attributes": {
           "db.system": "redis"
@@ -224,13 +224,25 @@
       }
     },
     {
-      "id": "debezium",
-      "name": "Debezium",
+      "id": "write-outbox-connector",
+      "name": "Write Outbox Connector",
       "type": "connector",
       "technology": "Debezium 2.7 on Kafka Connect",
       "group": "messaging",
       "deployment": "core",
-      "description": "Change data capture. Tails the outbox tables through the Postgres WAL and publishes each row to Kafka with its trace context.",
+      "description": "Debezium connector tailing write-service's outbox table through the Postgres WAL and publishing every row to events.async with its trace context.",
+      "telemetry": {
+        "serviceNames": []
+      }
+    },
+    {
+      "id": "ai-outbox-connector",
+      "name": "AI Outbox Connector",
+      "type": "connector",
+      "technology": "Debezium 2.7 on Kafka Connect",
+      "group": "messaging",
+      "deployment": "core",
+      "description": "Debezium connector tailing ai-service's outbox table through the Postgres WAL and publishing every row to events.ai-async with its trace context.",
       "telemetry": {
         "serviceNames": []
       }
@@ -242,10 +254,24 @@
       "technology": "Apache Kafka 3.7 (Confluent 7.7)",
       "group": "messaging",
       "deployment": "core",
-      "description": "Primary domain event stream, keyed by the user's Clerk id for per-user ordering.",
+      "description": "Write-side domain event stream, the single source of truth for write-service's events, keyed by the user's Clerk id for per-user ordering.",
       "telemetry": {
         "attributes": {
           "messaging.destination.name": "events.async"
+        }
+      }
+    },
+    {
+      "id": "topic:events.ai-async",
+      "name": "events.ai-async",
+      "type": "topic",
+      "technology": "Apache Kafka 3.7 (Confluent 7.7)",
+      "group": "messaging",
+      "deployment": "core",
+      "description": "AI-side event stream, the single source of truth for accounts and postings decided by ai-service, keyed by the user's Clerk id.",
+      "telemetry": {
+        "attributes": {
+          "messaging.destination.name": "events.ai-async"
         }
       }
     },
@@ -504,7 +530,7 @@
       "name": "Push Service",
       "type": "service",
       "technology": "Go 1.26",
-      "group": "notifications",
+      "group": "push",
       "deployment": "core",
       "description": "Server-Sent Events. Fans domain events out to connected users and streams this demo's spans.",
       "telemetry": {
@@ -557,7 +583,7 @@
       "name": "Antifraud",
       "type": "stream-processor",
       "technology": "Java 21, Apache Flink 2.0",
-      "group": "fraud",
+      "group": "antifraud",
       "deployment": "stream",
       "description": "Stateful stream job scoring each transaction for fraud.",
       "telemetry": {
@@ -662,24 +688,31 @@
     },
     {
       "from": "postgres-write",
-      "to": "debezium",
+      "to": "write-outbox-connector",
       "kind": "cdc",
       "protocol": "postgres-wal",
-      "description": "Debezium tails the write outbox through logical replication."
+      "description": "The connector tails the write outbox through logical replication."
     },
     {
       "from": "postgres-ai",
-      "to": "debezium",
+      "to": "ai-outbox-connector",
       "kind": "cdc",
       "protocol": "postgres-wal",
-      "description": "Debezium tails the AI outbox through logical replication."
+      "description": "The connector tails the AI outbox through logical replication."
     },
     {
-      "from": "debezium",
+      "from": "write-outbox-connector",
       "to": "topic:events.async",
       "kind": "publish",
       "protocol": "kafka",
-      "description": "Each outbox row becomes one event, keyed by the user's Clerk id."
+      "description": "Each write outbox row becomes one event, keyed by the user's Clerk id."
+    },
+    {
+      "from": "ai-outbox-connector",
+      "to": "topic:events.ai-async",
+      "kind": "publish",
+      "protocol": "kafka",
+      "description": "Each AI outbox row becomes one event, keyed by the user's Clerk id."
     },
     {
       "from": "topic:events.async",
@@ -687,6 +720,13 @@
       "kind": "consume",
       "protocol": "kafka",
       "description": "Consumer group read-service.write-consumer."
+    },
+    {
+      "from": "topic:events.ai-async",
+      "to": "read-write-consumer",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Same consumer group; projects accounts and postings."
     },
     {
       "from": "topic:events.async",
@@ -715,6 +755,13 @@
       "kind": "consume",
       "protocol": "kafka",
       "description": "Consumer group write-service.automation-engine."
+    },
+    {
+      "from": "topic:events.ai-async",
+      "to": "write-automation-engine",
+      "kind": "consume",
+      "protocol": "kafka",
+      "description": "Same consumer group; event types without an automation trigger are skipped."
     },
     {
       "from": "topic:events.async",
@@ -886,17 +933,10 @@
     },
     {
       "from": "write-fraud-alerts-consumer",
-      "to": "postgres-write",
-      "kind": "query",
-      "protocol": "sql",
-      "description": "Records the alert, which re-enters the stream through the outbox."
-    },
-    {
-      "from": "write-fraud-alerts-consumer",
       "to": "write-redis",
       "kind": "query",
       "protocol": "resp",
-      "description": "Alert bookkeeping."
+      "description": "Records the user in the fraud:suspended hash with the alert as the reason."
     },
     {
       "from": "webhook-service",
@@ -956,10 +996,17 @@
     },
     {
       "from": "push-service",
+      "to": "api-gateway",
+      "kind": "push",
+      "protocol": "sse",
+      "description": "Streams Server-Sent Events back over the connection the gateway opened to it."
+    },
+    {
+      "from": "api-gateway",
       "to": "browser",
       "kind": "push",
       "protocol": "sse",
-      "description": "Server-Sent Events back to the browser through the gateway."
+      "description": "Relays push-service's event stream to the browser unbuffered, on the browser's original request."
     },
     {
       "from": "jaeger",

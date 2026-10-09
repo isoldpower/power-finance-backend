@@ -45,7 +45,8 @@ The graph it records:
 
 | Topic | Produced by | Consumed by |
 | --- | --- | --- |
-| `events.async` | write-service, ai-service (both via Debezium) | read-service, ai-service, webhook-service, antifraud-service, push-service |
+| `events.async` | write-service (via Debezium) | read-service, ai-service, write-service (automation engine), webhook-service, antifraud-service, push-service |
+| `events.ai-async` | ai-service (via Debezium) | read-service, write-service (automation engine) |
 | `notifications.inbound` | webhook-service | write-service |
 | `fraud.alerts` | antifraud-service | write-service |
 | `read-service.retry` | read-service | read-service |
@@ -55,9 +56,19 @@ The graph it records:
 | `webhooks.retry` | webhook-service | webhook-service |
 | `webhooks.dlq` | webhook-service | — (terminal) |
 
-`events.async` is the only topic with more than one producer — every service
-owning an outbox routes onto it through its own connector, stamping the same
-headers, so a consumer cannot tell which database a message came out of.
+Every topic has exactly one producing service. Each service that owns an outbox
+routes it through its own Debezium connector onto its own topic: write-service's
+`outbox_events` to `events.async`, ai-service's `ai_outbox_events` to
+`events.ai-async`. Nothing is copied from one topic to the other, so each topic is
+the single source of truth for its producer's events. A consumer that needs both
+subscribes to both, and the stamped headers (`event_id`, `event_type`,
+`aggregate_type`, `outbox_seq`, trace context) are the same shape on each.
+
+Ordering holds only within one topic. An AI event is always caused by a write
+event, but once they are on different topics a consumer can see the AI event
+first. The AI read models have no foreign keys to write-side rows, so that order
+breaks nothing, and `outbox_seq` from `events.ai-async` is not recorded for
+read-your-writes.
 
 **Retries are per service, not shared.** `kafka-client-py` still defaults to
 `events.retry`/`events.dlq`, but no service uses those defaults: read-service and

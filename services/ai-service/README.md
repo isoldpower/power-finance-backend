@@ -145,6 +145,10 @@ What differs from read-service, and why:
 Everything this service decides leaves through its own transactional outbox,
 `ai_outbox_events` — the same shape as write-service's table, down to Debezium's
 SMT column names, written in the same transaction as the state it describes.
+Debezium routes it to its own topic, **`events.ai-async`**, not to `events.async`:
+the dispatcher consumes `events.async` and never sees its own output, and each
+topic has a single producer. read-service and write-service's automation engine
+subscribe to `events.ai-async` directly.
 `DispatchUnitOfWork` is what makes that free: the entries, the recomputed
 balances and the rows announcing them commit together or not at all.
 
@@ -379,7 +383,7 @@ The image runs as an unprivileged `app` user; unlike read-service there is no
   `AI_DATABASE_URL` the settings actually read, composed from those parts.
 
 - **ai-outbox-connector** — a one-shot that registers this service's Debezium
-  connector with the shared Connect cluster from
+  connector (routing to `events.ai-async`) with the shared Connect cluster from
   [`infrastructure/debezium`](../../infrastructure/debezium). It waits on
   `ai-migrate`, because a connector whose table does not exist yet starts and
   then fails.

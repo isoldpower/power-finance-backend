@@ -206,6 +206,7 @@ services:
 
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_OUTBOX_TOPIC: ${KAFKA_OUTBOX_TOPIC:-events.async}
+      KAFKA_AI_OUTBOX_TOPIC: ${KAFKA_AI_OUTBOX_TOPIC:-events.ai-async}
       KAFKA_AUTOMATION_ENGINE_GROUP_ID: ${KAFKA_AUTOMATION_ENGINE_GROUP_ID:-write-service.automation-engine}
 
       DATABASE_HOST: postgres-write

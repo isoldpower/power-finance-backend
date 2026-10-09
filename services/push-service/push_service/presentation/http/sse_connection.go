@@ -11,6 +11,8 @@ import (
 // cannot block the writer goroutine indefinitely.
 const writeTimeout = 10 * time.Second
 
+const streamOpenedFrame = ": connected\n\n"
+
 type SseHttpConnection struct {
 	responseWriter http.ResponseWriter
 	request        *http.Request
@@ -35,6 +37,12 @@ func NewSseHttpConnection(
 		responseWriter: writer,
 		controller:     responseController,
 	}
+}
+
+func (hc *SseHttpConnection) OpenStream() error {
+	hc.responseWriter.WriteHeader(http.StatusOK)
+
+	return hc.SendMessageOverConnection([]byte(streamOpenedFrame))
 }
 
 // ClientGoneChannel returns connection's channel representing disconnection signal.

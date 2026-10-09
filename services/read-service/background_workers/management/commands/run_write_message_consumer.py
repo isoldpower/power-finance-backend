@@ -24,7 +24,11 @@ class Command(BaseCommand):
             "--topic",
             action="append",
             dest="topics",
-            help=f"Topic to consume; repeatable (default: {settings.KAFKA['OUTBOX_TOPIC']}).",
+            help=(
+                "Topic to consume; repeatable (default: "
+                f"{settings.KAFKA['OUTBOX_TOPIC']}, {settings.KAFKA['AI_OUTBOX_TOPIC']}, "
+                f"{settings.KAFKA['RETRY_TOPIC']})."
+            ),
         )
         parser.add_argument(
             "--group-id",
@@ -40,6 +44,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options) -> None:
         topics = options["topics"] or [
             settings.KAFKA["OUTBOX_TOPIC"],
+            settings.KAFKA["AI_OUTBOX_TOPIC"],
             settings.KAFKA["RETRY_TOPIC"],
         ]
         config = self._build_consumer_config(options, topics)

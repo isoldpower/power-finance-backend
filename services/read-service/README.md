@@ -27,8 +27,9 @@ bind-mounted so they stay out of the layer), then source + editable install.
 - **read-es-init** — one-shot that creates the Elasticsearch indices + mappings
   then exits; kept distinct from consumer startup so index DDL stays an explicit,
   idempotent operation the consumer/app gate on.
-- **read-write-consumer** — long-lived worker tailing `events.async`, projecting
-  events and invalidating caches. No port/healthcheck (background worker);
+- **read-write-consumer** — long-lived worker tailing `events.async` (write-side
+  events), `events.ai-async` (accounts and postings from ai-service) and its own
+  retry topic, projecting events and invalidating caches. No port/healthcheck (background worker);
   liveness is `restart: unless-stopped` + crash exit codes. Uses a stable
   consumer group so offsets survive restarts and partitions can be shared across
   replicas.

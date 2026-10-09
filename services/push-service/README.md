@@ -122,7 +122,8 @@ connections and unconnected nodes.
 `telemetry` is how a span from the traces stream finds its node:
 
 - `serviceNames` matches the span's `service`. A node may own several (Flink's
-  job and task managers), and Debezium owns none because it emits no spans.
+  job and task managers), and the two Debezium connectors
+  (`write-outbox-connector`, `ai-outbox-connector`) own none because they emit no spans.
 - `attributes` matches a client span's attributes: `db.system` plus `db.name`
   for Postgres, `db.system` for Redis and Elasticsearch,
   `messaging.destination.name` for topics, `db.system: immudb` for the ledger
@@ -135,8 +136,10 @@ connections and unconnected nodes.
 
 Python Kafka consumers create no consumer span. Their DB spans join the producer's
 trace directly, so a jump from `write-service` to `read-write-consumer` should be
-drawn along the `postgres-write → debezium → topic:events.async →
-read-write-consumer` path from this document.
+drawn along the `postgres-write → write-outbox-connector → topic:events.async →
+read-write-consumer` path from this document. A jump from `ai-dispatcher` follows
+`postgres-ai → ai-outbox-connector → topic:events.ai-async`. Each outbox has its own
+connector and topic, so the two paths never cross.
 
 ## Observability
 
