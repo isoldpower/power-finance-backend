@@ -4,6 +4,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.exceptions import AuthenticationFailed
 
+from data_read_core.shared.read_at_least import ReadModelNotCaughtUp
 from data_read_core.shared.user_auth import (
     GATEWAY_USER_HEADER,
     GatewayUser,
@@ -54,11 +55,13 @@ async def test_authenticate_missing_header_raises():
 
 
 @pytest.mark.django_db(transaction=True)
-async def test_authenticate_unprovisioned_user_raises():
-    with pytest.raises(AuthenticationFailed, match="not yet provisioned"):
+async def test_an_unprovisioned_user_is_sent_to_the_write_side_fallback():
+    with pytest.raises(ReadModelNotCaughtUp, match="not yet provisioned") as raised:
         await GatewayUserHeaderAuthentication().authenticate(
             _request(headers={GATEWAY_USER_HEADER: "ext-unknown"})
         )
+
+    assert raised.value.status_code == 507
 
 
 @pytest.mark.django_db(transaction=True)

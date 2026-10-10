@@ -3,6 +3,8 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.request import Request
 
+from data_read_core.shared.read_at_least import ReadModelNotCaughtUp
+
 from .gateway_user import GatewayUser
 from .headers import GATEWAY_USER_HEADER
 from .preferences import resolve_preferences
@@ -25,7 +27,7 @@ class GatewayUserHeaderAuthentication(BaseAuthentication):
 
         internal_user = await self._user_model.objects.filter(username=external_user_id).afirst()
         if internal_user is None:
-            raise AuthenticationFailed("User is not yet provisioned in the read store.")
+            raise ReadModelNotCaughtUp("User is not yet provisioned in the read store.")
 
         caller_user = GatewayUser(
             internal=internal_user,

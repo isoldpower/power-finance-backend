@@ -131,3 +131,6 @@ infrastructure/debezium/.connect-data/
 infrastructure/kafka/.kafka-data/
 # Production secrets fetched onto a VM (Elasticsearch CA)
 .secrets/
+
+# Cloudflare wrangler local cache (created when wrangler runs from the repo)
+.wrangler/
