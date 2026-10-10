@@ -313,7 +313,7 @@ services:
       retries: 10
 
   immudb:
-    image: codenotary/immudb:1.10
+    image: codenotary/immudb:1.11.2
     restart: unless-stopped
     command: ["--force-admin-password"]
     environment:
