@@ -2,6 +2,7 @@ from data_read_core.write_reactions import (
     BumpActionListVersion,
     RaiseActionReadModel,
     ResolveActionReadModel,
+    TrackAppliedSeq,
 )
 from kafka_consumer_py import (
     EventRouter,
@@ -22,7 +23,7 @@ def subscribe_action_raised(router: EventRouter, probes: ProbesDictionary):
         [
             SyncProcessGroup(
                 [
-                    RaiseActionReadModel(),
+                    TrackAppliedSeq(RaiseActionReadModel(), ActionRaised),
                     BumpActionListVersion(ActionRaised),
                 ],
                 atomic=True,
@@ -41,7 +42,7 @@ def subscribe_action_resolved(router: EventRouter, probes: ProbesDictionary):
         [
             SyncProcessGroup(
                 [
-                    ResolveActionReadModel(),
+                    TrackAppliedSeq(ResolveActionReadModel(), ActionResolved),
                     BumpActionListVersion(ActionResolved),
                 ],
                 atomic=True,

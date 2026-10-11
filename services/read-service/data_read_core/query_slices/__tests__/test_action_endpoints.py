@@ -20,6 +20,7 @@ from kafka_messages import (
 )
 
 from data_read_core.shared.postgres_orm import ActionReadModel
+from data_read_core.shared.read_at_least import AppliedOutboxSeq
 from data_read_core.shared.redis_cache import get_redis
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -436,6 +437,39 @@ async def test_answering_empties_the_choices_and_leaves_the_pending_queue():
     assert pending["data"] == []
     assert resolved["data"][0]["resolutions"] == []
     assert resolved["data"][0]["resolved_at"] == "2026-03-10T00:00:00+00:00"
+
+
+async def _applied_seq_of(user_id: int) -> int | None:
+    watermark = await AppliedOutboxSeq.objects.filter(user_id=user_id).afirst()
+    return None if watermark is None else watermark.applied_seq
+
+
+async def test_a_raised_action_advances_the_read_your_writes_watermark():
+    owner_id = await _user_id()
+
+    await _dispatch(_raised(str(uuid.uuid4()), owner_id), seq=5)
+
+    assert await _applied_seq_of(owner_id) == 5
+
+
+async def test_answering_an_action_advances_the_read_your_writes_watermark():
+    action = await _action()
+
+    await _dispatch(
+        ActionResolved(
+            event_id="evt-watermark",
+            action_id=str(action.id),
+            user_external_id=EXTERNAL_USER_ID,
+            user_id=action.user_id,
+            status=ActionStatus.ACTION_STATUS_DISMISSED,
+            resolution_id="dismiss",
+            resolved_at=_timestamp(MARCH),
+            updated_at=_timestamp(MARCH),
+        ),
+        seq=9,
+    )
+
+    assert await _applied_seq_of(action.user_id) == 9
 
 
 async def test_dismissal_projects_as_dismissed_not_resolved():

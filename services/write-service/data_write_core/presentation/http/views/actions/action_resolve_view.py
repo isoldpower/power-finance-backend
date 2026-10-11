@@ -26,11 +26,11 @@ class ActionResolveView(ActionView, CommandResponseMixin):
         description=(
             "Choose one of the action's offered resolutions.\n\n"
             "Choosing one whose `applies` was true performs the described "
-            "change to other resources as part of the same request, and the "
-            "response then carries `X-Write-Version` so you can send "
-            "`Read-At-Least` on the follow-up read. When `applies` was false "
-            "nothing outside the action changes and no write version is "
-            "emitted.\n\n"
+            "change to other resources as part of the same request; one whose "
+            "`applies` was false changes nothing outside the action. Either "
+            "way the action's own status changes, so the response always "
+            "carries `X-Write-Version`: send it as `Read-At-Least` on the "
+            "follow-up read, or the action list may still show it pending.\n\n"
             "`resolutions` comes back EMPTY: a resolved action offers no "
             "further choices, and an empty array rather than a stale list is "
             "what stops a client re-rendering buttons that no longer work.\n\n"
@@ -65,5 +65,5 @@ class ActionResolveView(ActionView, CommandResponseMixin):
         return self.form_write_response(
             status_code=status.HTTP_200_OK,
             response_body=ActionHttpPresenter.present_one(resolved.action),
-            write_version=write_version if resolved.applies else None,
+            write_version=write_version,
         )
