@@ -75,6 +75,15 @@ def resolve(path: str, method: str) -> Route | None:
 
 
 @cache
+def upstream_host(service: str) -> str:
+    """The host a Kong service forwards to. Several Kong services may front one
+    backend — `write-service-demo` differs from `write-service` only in plugins."""
+
+    config = yaml.safe_load(KONG_CONFIG.read_text(encoding="utf-8"))
+
+    return next(item["host"] for item in config["services"] if item["name"] == service)
+
+
 def plugin_config(service: str, plugin: str) -> dict | None:
     config = yaml.safe_load(KONG_CONFIG.read_text(encoding="utf-8"))
     entry = next(item for item in config["services"] if item["name"] == service)

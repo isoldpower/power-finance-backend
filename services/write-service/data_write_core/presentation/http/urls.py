@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views.actions import ActionResolveView
 from .views.automations import AutomationListView, AutomationResourceView
+from .views.demo import DemoSessionView
 from .views.fallback_read import (
     FallbackActionListView,
     FallbackAutomationListView,
@@ -44,6 +45,11 @@ from .views.webhooks import (
 )
 
 urlpatterns = [
+    path(
+        "demo/sessions",
+        DemoSessionView.as_view(),
+        name="demo-sessions",
+    ),
     path(
         "automations",
         AutomationListView.as_view(),

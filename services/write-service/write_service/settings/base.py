@@ -44,6 +44,9 @@ env = environ.Env(
     KAFKA_AUTOMATION_ENGINE_GROUP_ID=(str, "write-service.automation-engine"),
     AUTOMATION_SCHEDULE_INTERVAL_SECONDS=(int, 300),
     CORRELATION_ID_HEADER=(str, "X-Correlation-ID"),
+    DEMO_TOKEN_SECRET=(str, ""),
+    DEMO_TOKEN_ISSUER=(str, "power-finance-demo"),
+    DEMO_TOKEN_TTL_SECONDS=(int, 86400),
 )
 if ENV_FILE.exists():
     env.read_env(str(ENV_FILE))
@@ -155,6 +158,12 @@ AUTOMATION_SCHEDULE = {
 }
 
 CORRELATION_ID_HEADER = env("CORRELATION_ID_HEADER")
+
+DEMO_SESSIONS = {
+    "TOKEN_SECRET": env("DEMO_TOKEN_SECRET"),
+    "TOKEN_ISSUER": env("DEMO_TOKEN_ISSUER"),
+    "TOKEN_TTL_SECONDS": env("DEMO_TOKEN_TTL_SECONDS"),
+}
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],

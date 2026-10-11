@@ -2,6 +2,7 @@ local messages      = require "kong.plugins.user-tier-rate-limit.messages"
 local redis_counter = require "kong.plugins.user-tier-rate-limit.redis_counter"
 local plugin_config = require "kong.plugins.user-tier-rate-limit.config"
 local retry_after   = require "kong.plugins.user-tier-rate-limit.retry_after"
+local demo_identity = require "power_finance.demo_identity"
 
 local UserTierRateLimitHandler = {
     PRIORITY = 600,
@@ -38,8 +39,12 @@ function UserTierRateLimitHandler:access(config)
         return
     end
 
+    local limiting_windows = demo_identity.is_demo_subject(claims.sub)
+        and plugin_config.DemoLimitingWindows
+        or plugin_config.LimitingWindows
+
     local evaluated, evaluate_error = redis_counter.evaluate_windows(
-        client, config, claims.sub, plugin_config.LimitingWindows
+        client, config, claims.sub, limiting_windows
     )
     redis_counter.release(client)
 

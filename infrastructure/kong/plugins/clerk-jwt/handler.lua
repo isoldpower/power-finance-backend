@@ -1,6 +1,7 @@
 local utilities    = require "kong.plugins.clerk-jwt.utilities"
 local messages     = require "kong.plugins.clerk-jwt.messages"
 local jwks_fetcher = require "kong.plugins.clerk-jwt.fetch_jwks"
+local demo_identity = require "power_finance.demo_identity"
 
 local AUTH_HEADER = "Authorization"
 local WEBSOCKET_PROTOCOL_HEADER = "Sec-WebSocket-Protocol"
@@ -36,6 +37,28 @@ local forward_preferences = function(payload)
 end
 
 
+--- Authenticate a guest demo token minted by write-service for the portfolio demo.
+local authenticate_demo_token = function(config, unverified_jwt)
+    local verified_jwt = utilities.get_verified_demo_jwt(config.demo_token_secret, unverified_jwt, {
+        issuer             = config.demo_token_issuer,
+        clock_skew_seconds = config.clock_skew_seconds,
+    })
+    if not verified_jwt then
+        return messages.invalid_jwt_token()
+    end
+
+    local sub_claim = verified_jwt.payload and verified_jwt.payload.sub
+    if not demo_identity.is_demo_subject(sub_claim) then
+        kong.log.warn("clerk-jwt: demo token carries a non-demo subject")
+        return messages.invalid_jwt_token()
+    end
+
+    kong.ctx.shared.clerk_claims = verified_jwt.payload
+    kong.service.request.set_header("X-User-Id", sub_claim)
+    forward_preferences(verified_jwt.payload)
+end
+
+
 function ClerkJwtHandler:access(config)
     local auth_header = kong.request.get_header(AUTH_HEADER)
     local token = utilities.extract_bearer(auth_header)
@@ -61,6 +84,11 @@ function ClerkJwtHandler:access(config)
     local unverified_jwt = utilities.load_unverified_jwt(token)
     if not unverified_jwt then
         return messages.wrong_jwt_received()
+    end
+
+    local demo_tokens_enabled = config.demo_token_secret ~= nil and config.demo_token_secret ~= ""
+    if demo_tokens_enabled and utilities.is_demo_token(unverified_jwt, config.demo_token_issuer) then
+        return authenticate_demo_token(config, unverified_jwt)
     end
 
     local kid = utilities.get_kid_from_jwt(unverified_jwt)

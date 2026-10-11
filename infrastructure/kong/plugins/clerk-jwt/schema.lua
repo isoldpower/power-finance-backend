@@ -67,6 +67,28 @@ return {
                         },
                     },
                     {
+                        demo_token_secret = {
+                            type = "string",
+                            referenceable = true,
+                            description = [[
+                                HMAC secret shared with write-service for
+                                guest demo tokens. Empty disables demo
+                                tokens entirely.
+                            ]],
+                        },
+                    },
+                    {
+                        demo_token_issuer = {
+                            type = "string",
+                            default = "power-finance-demo",
+                            description = [[
+                                `iss` claim that marks a token as a guest
+                                demo token (HS256) instead of a Clerk
+                                session token (RS256).
+                            ]],
+                        },
+                    },
+                    {
                         redis_host = {
                             type = "string",
                             required = true,

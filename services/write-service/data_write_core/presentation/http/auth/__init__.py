@@ -4,6 +4,7 @@ from .gateway_authentication import (
     IsGatewayAuthenticated,
 )
 from .gateway_user import GatewayUser
+from .guest_demo_permission import IsNotGuestDemoAccount
 from .preferences import UserPreferences, resolve_preferences
 
 __all__ = [
@@ -11,6 +12,7 @@ __all__ = [
     "HeaderName",
     "SchemaName",
     "GatewayUser",
+    "IsNotGuestDemoAccount",
     "GatewayUserHeaderAuthentication",
     "IsGatewayAuthenticated",
     "UserPreferences",

@@ -27,6 +27,7 @@ services:
       - name: clerk-jwt
         config:
           issuer_url: "{vault://env/clerk-issuer-url}"
+          demo_token_secret: "{vault://env/demo-token-secret}"
           redis_host: gateway-redis
           redis_port: 6379
           redis_database: 0
@@ -110,6 +111,7 @@ services:
       - name: clerk-jwt
         config:
           issuer_url: "{vault://env/clerk-issuer-url}"
+          demo_token_secret: "{vault://env/demo-token-secret}"
           redis_host: gateway-redis
           redis_port: 6379
           redis_database: 0
@@ -176,6 +178,7 @@ services:
       - name: clerk-jwt
         config:
           issuer_url: "{vault://env/clerk-issuer-url}"
+          demo_token_secret: "{vault://env/demo-token-secret}"
           redis_host: gateway-redis
           redis_port: 6379
           redis_database: 0
@@ -219,11 +222,38 @@ services:
       - name: clerk-jwt
         config:
           issuer_url: "{vault://env/clerk-issuer-url}"
+          demo_token_secret: "{vault://env/demo-token-secret}"
           redis_host: gateway-redis
           redis_port: 6379
           redis_database: 0
           redis_timeout_ms: 100
           redis_key_prefix: "clerk:jwks:"
+
+  - name: write-service-demo
+    host: write-service
+    port: 8000
+    protocol: http
+    connect_timeout: 5000
+    write_timeout: 30000
+    read_timeout: 30000
+    routes:
+      - name: demo-sessions
+        paths:
+          - /api/v1/demo/sessions
+        strip_path: false
+        preserve_host: false
+        methods: [POST, OPTIONS]
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 5
+          hour: 20
+          policy: redis
+          redis_host: gateway-redis
+          redis_port: 6379
+          limit_by: ip
+          fault_tolerant: true
+          hide_client_headers: true
 
   - name: push-service-demo
     host: push-service
@@ -281,6 +311,7 @@ services:
       - name: clerk-jwt
         config:
           issuer_url: "{vault://env/clerk-issuer-url}"
+          demo_token_secret: "{vault://env/demo-token-secret}"
           redis_host: gateway-redis
           redis_port: 6379
           redis_database: 0

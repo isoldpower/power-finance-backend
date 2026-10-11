@@ -29,6 +29,24 @@ return {
                         },
                     },
                     {
+                        demo_per_minute = {
+                            type = "number",
+                            default = 30,
+                            gt = 0,
+                            description = "Request cap per minute for guest "
+                                .. "demo accounts (portfolio iframe).",
+                        },
+                    },
+                    {
+                        demo_per_hour = {
+                            type = "number",
+                            default = 300,
+                            gt = 0,
+                            description = "Request cap per hour for guest "
+                                .. "demo accounts.",
+                        },
+                    },
+                    {
                         redis_host = {
                             type = "string",
                             required = true,

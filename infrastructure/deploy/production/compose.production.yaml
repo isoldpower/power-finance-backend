@@ -5,6 +5,7 @@ x-required-core-address: ${CORE_PRIVATE_ADDRESS:?CORE_PRIVATE_ADDRESS is require
 x-write-production-env: &write-production-env
   DJANGO_SETTINGS_MODULE: write_service.settings.production
   SECRET_KEY: ${WRITE_SERVICE_SECRET_KEY:?WRITE_SERVICE_SECRET_KEY is required}
+  DEMO_TOKEN_SECRET: ${DEMO_TOKEN_SECRET:?DEMO_TOKEN_SECRET is required}
   ALLOWED_HOSTS: write-service,localhost,127.0.0.1
   DEBUG: "false"
 
@@ -108,6 +109,10 @@ services:
     volumes: !reset []
     environment:
       KONG_TRACING_SAMPLING_RATE: ${KONG_TRACING_SAMPLING_RATE:-0.1}
+      DEMO_TOKEN_SECRET: ${DEMO_TOKEN_SECRET:?DEMO_TOKEN_SECRET is required}
+      KONG_TRUSTED_IPS: "0.0.0.0/0,::/0"
+      KONG_REAL_IP_HEADER: CF-Connecting-IP
+      KONG_REAL_IP_RECURSIVE: "off"
 
   cloudflared:
     image: cloudflare/cloudflared:${CLOUDFLARED_VERSION:-2026.10.0}

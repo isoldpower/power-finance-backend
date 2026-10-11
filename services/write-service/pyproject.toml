@@ -26,6 +26,7 @@ dependencies = [
     "kafka-consumer-py",
     "filter-grammar-py",
     "webhook-catalog-py",
+    "pyjwt>=2.9,<3",
 ]
 
 [dependency-groups]

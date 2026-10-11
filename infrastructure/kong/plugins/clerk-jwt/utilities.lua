@@ -108,7 +108,42 @@ end
 --   * issuer_url string         expected `iss` claim value
 --   * clock_skew_seconds number tolerance window for `exp`
 -- @return table|nil  resty.jwt object with `verified = true` on success
+local CLERK_SIGNING_ALGORITHM = "RS256"
+local DEMO_SIGNING_ALGORITHM = "HS256"
+
+
+--- Whether the token header declares exactly this signing algorithm.
+--
+-- @param unverified_jwt table|nil  object produced by `load_unverified_jwt`
+-- @param algorithm string  e.g. "RS256"
+-- @return boolean
+local has_signing_algorithm = function(unverified_jwt, algorithm)
+    return unverified_jwt ~= nil
+        and type(unverified_jwt.header) == "table"
+        and unverified_jwt.header.alg == algorithm
+end
+
+
+--- Whether the token claims to be a guest demo token issued by write-service.
+-- The claim is not trusted until `get_verified_demo_jwt` checks the signature.
+--
+-- @param unverified_jwt table|nil  object produced by `load_unverified_jwt`
+-- @param demo_issuer string|nil  configured demo `iss` value
+-- @return boolean
+local is_demo_token = function(unverified_jwt, demo_issuer)
+    return demo_issuer ~= nil
+        and has_signing_algorithm(unverified_jwt, DEMO_SIGNING_ALGORITHM)
+        and type(unverified_jwt.payload) == "table"
+        and unverified_jwt.payload.iss == demo_issuer
+end
+
+
 local get_verified_jwt = function(pem_token, unverified_jwt, options)
+    if not has_signing_algorithm(unverified_jwt, CLERK_SIGNING_ALGORITHM) then
+        kong.log.warn("clerk-jwt: rejected a token not signed with ", CLERK_SIGNING_ALGORITHM)
+        return nil
+    end
+
     local verify_options = { require_exp_claim = true }
     if options then
         if options.issuer_url then
@@ -123,6 +158,36 @@ local get_verified_jwt = function(pem_token, unverified_jwt, options)
     if not verified_jwt or not verified_jwt.verified then
         local reason = verified_jwt and verified_jwt.reason or "JWT signature mismatch"
         kong.log.warn("clerk-jwt: verification failed: ", reason)
+        return nil
+    end
+
+    return verified_jwt
+end
+
+
+--- Verify a guest demo token against the shared HMAC secret.
+--
+-- @param demo_secret string  secret shared with write-service
+-- @param unverified_jwt table  object produced by `load_unverified_jwt`
+-- @param options table  `issuer` and `clock_skew_seconds`
+-- @return table|nil  resty.jwt object with `verified = true` on success
+local get_verified_demo_jwt = function(demo_secret, unverified_jwt, options)
+    if not has_signing_algorithm(unverified_jwt, DEMO_SIGNING_ALGORITHM) then
+        return nil
+    end
+
+    local verify_options = {
+        require_exp_claim = true,
+        valid_issuers = { options.issuer },
+    }
+    if options.clock_skew_seconds and options.clock_skew_seconds > 0 then
+        verify_options.lifetime_grace_period = options.clock_skew_seconds
+    end
+
+    local verified_jwt = jwt:verify_jwt_obj(demo_secret, unverified_jwt, verify_options)
+    if not verified_jwt or not verified_jwt.verified then
+        local reason = verified_jwt and verified_jwt.reason or "JWT signature mismatch"
+        kong.log.warn("clerk-jwt: demo token verification failed: ", reason)
         return nil
     end
 
@@ -186,6 +251,9 @@ local exports = {
     find_key_for_kid       = find_key_for_kid,
     encode_jwk_as_pem      = encode_jwk_as_pem,
     get_verified_jwt       = get_verified_jwt,
+    get_verified_demo_jwt  = get_verified_demo_jwt,
+    has_signing_algorithm  = has_signing_algorithm,
+    is_demo_token          = is_demo_token,
     check_authorized_party = check_authorized_party,
 }
 

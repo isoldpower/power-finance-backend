@@ -119,7 +119,8 @@ fill it in (`openssl rand -hex 32` for each secret), then run `make prod-check`.
 - **search**: set `ELASTIC_PASSWORD` and `ELASTICSEARCH_CERTIFICATE_HOSTNAME` (its
   own FQDN) **before the first start**. The password is baked into the data volume
   and the TLS certificate is issued once.
-- **core**: `ELASTIC_PASSWORD` must match the search VM's. `KAFKA_EXTERNAL_HOST` is
+- **core**: `DEMO_TOKEN_SECRET` (at least 32 characters) signs the portfolio's guest demo tokens; write-service and Kong both read it.
+  `ELASTIC_PASSWORD` must match the search VM's. `KAFKA_EXTERNAL_HOST` is
   core's own FQDN, `CORE_PRIVATE_ADDRESS` core's own IP, `SEARCH_PRIVATE_HOSTNAME`
   the search FQDN. Database and ImmuDB passwords are baked into volumes on first
   start too.

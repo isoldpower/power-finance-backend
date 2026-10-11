@@ -8,7 +8,7 @@ a service that has no such view, or a POST answered by a projection.
 import pytest
 
 from ..documents import API_PREFIX, normalise
-from ..gateway import plugin_config, resolve, routes
+from ..gateway import plugin_config, resolve, routes, upstream_host
 from ..surface import GO_ROUTES, WEBSOCKET_ROUTES, public_endpoints, schema_of
 
 MUTATING_METHODS = ("POST", "PATCH", "PUT", "DELETE")
@@ -22,6 +22,13 @@ SEARCH_ENDPOINTS = (
     "/automations/search",
     "/goals/search",
 )
+
+# Deliberately reachable without a Clerk session. Each one must be rate-limited
+# per client IP instead, which `test_every_anonymous_endpoint_is_rate_limited_by_ip`
+# enforces.
+ANONYMOUS_ENDPOINTS = {
+    "/demo/sessions": "mints the guest demo token the portfolio iframe signs in with",
+}
 
 # A mutation reaches the service that OWNS the resource, which is write-service
 # for everything it holds the ledger for — and is not, for the slices whose
@@ -62,6 +69,9 @@ def test_every_public_endpoint_is_authenticated(endpoint):
     """`clerk-jwt` is what turns a bearer token into the `X-User-Id` every
     service trusts. A route without it would serve anonymous callers."""
 
+    if normalise(endpoint.path) in ANONYMOUS_ENDPOINTS:
+        return
+
     route = resolve(_concrete(endpoint.path), endpoint.method)
 
     assert (
@@ -84,9 +94,30 @@ def test_a_mutation_reaches_the_service_that_owns_the_resource(endpoint):
 
     route = resolve(_concrete(endpoint.path), endpoint.method)
 
-    assert route.service == _owner_of(
+    assert upstream_host(route.service) == _owner_of(
         endpoint.path
-    ), f"{endpoint} would reach {route.service} via route {route.name!r}"
+    ), f"{endpoint} would reach {upstream_host(route.service)} via route {route.name!r}"
+
+
+@pytest.mark.parametrize("path", sorted(ANONYMOUS_ENDPOINTS))
+def test_every_anonymous_endpoint_is_rate_limited_by_ip(path):
+    """An endpoint anyone can call without a session has only the gateway's
+    per-IP limit between it and a flood."""
+
+    anonymous_endpoints = [
+        endpoint for endpoint in public_endpoints() if normalise(endpoint.path) == path
+    ]
+    assert anonymous_endpoints, f"{path} is allow-listed as anonymous but no service serves it"
+
+    for endpoint in anonymous_endpoints:
+        route = resolve(_concrete(endpoint.path), endpoint.method)
+        rate_limit = plugin_config(route.service, "rate-limiting")
+
+        assert (
+            plugin_config(route.service, "clerk-jwt") is None
+        ), f"{endpoint} is allow-listed as anonymous but {route.service} requires a session"
+        assert rate_limit is not None, f"{endpoint} is anonymous and not rate-limited"
+        assert rate_limit.get("limit_by") == "ip", f"{endpoint} is not rate-limited per IP"
 
 
 def test_the_conversation_is_cleared_by_the_service_that_stores_it():

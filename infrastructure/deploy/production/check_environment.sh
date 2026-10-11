@@ -18,7 +18,7 @@ case "${PRODUCTION_ROLE:-}" in
         required_variables=(
             CORE_PRIVATE_ADDRESS KAFKA_EXTERNAL_HOST SEARCH_PRIVATE_HOSTNAME
             CLOUDFLARE_TUNNEL_TOKEN CLERK_ISSUER_URL READ_AT_LEAST_HMAC_SECRET
-            WRITE_SERVICE_SECRET_KEY READ_SERVICE_SECRET_KEY
+            WRITE_SERVICE_SECRET_KEY READ_SERVICE_SECRET_KEY DEMO_TOKEN_SECRET
             WRITE_DATABASE_PASSWORD READ_DATABASE_PASSWORD AI_DATABASE_PASSWORD WEBHOOK_DATABASE_PASSWORD
             IMMUDB_PASSWORD ELASTIC_PASSWORD
         )
@@ -34,7 +34,7 @@ case "${PRODUCTION_ROLE:-}" in
         exit 1
         ;;
 esac
-known_default_values=(postgres immudb changeme dev-only-secret-key-change-me)
+known_default_values=(postgres immudb changeme dev-only-secret-key-change-me dev-only-demo-token-secret-change-me-0000)
 
 problems=()
 for variable_name in "${required_variables[@]}"; do
@@ -51,6 +51,9 @@ done
 if [ "$PRODUCTION_ROLE" = core ]; then
     if [ "${#READ_AT_LEAST_HMAC_SECRET}" -lt 32 ]; then
         problems+=("READ_AT_LEAST_HMAC_SECRET must be at least 32 characters")
+    fi
+    if [ "${#DEMO_TOKEN_SECRET}" -lt 32 ]; then
+        problems+=("DEMO_TOKEN_SECRET must be at least 32 characters")
     fi
     certificate_authority_file="${ELASTICSEARCH_CA_CERTIFICATE_FILE:-./.secrets/elasticsearch-ca.crt}"
     if [ ! -s "$certificate_authority_file" ]; then
