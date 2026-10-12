@@ -19,6 +19,7 @@ class DemoSessionDTO:
     token: str
     expires_at: datetime
     external_id: str
+    write_version: int
 
 
 class StartDemoSessionCommandHandler:
@@ -35,11 +36,12 @@ class StartDemoSessionCommandHandler:
     async def handle(self, command: StartDemoSessionCommand) -> DemoSessionDTO:
         external_id = new_demo_external_id()
         demo_user = await self._user_repository.get_synced_internal(external_id=external_id)
-        await self._account_seeder.seed(int(demo_user.unique_id), external_id)
+        write_version = await self._account_seeder.seed(int(demo_user.unique_id), external_id)
         issued_token = self._token_issuer.issue(external_id)
 
         return DemoSessionDTO(
             token=issued_token.token,
             expires_at=issued_token.expires_at,
             external_id=external_id,
+            write_version=write_version,
         )

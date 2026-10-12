@@ -37,7 +37,9 @@ class DemoSessionView(BaseAsyncAPIView):
         description=(
             "Creates a throwaway guest account seeded with sample wallets, a goal "
             "and transactions, and returns a short-lived bearer token for it. "
-            "Used by the portfolio iframe, where a Clerk session is unavailable."
+            "Used by the portfolio iframe, where a Clerk session is unavailable. "
+            "The response carries `X-Write-Version` so the gateway pins the new "
+            "account's reads to the seeded state."
         ),
         request=None,
         responses={201: None, 503: None},
@@ -55,4 +57,8 @@ class DemoSessionView(BaseAsyncAPIView):
             },
             {},
             status_code=status.HTTP_201_CREATED,
+            headers={
+                "X-Write-Version": str(demo_session.write_version),
+                "X-Demo-Subject": demo_session.external_id,
+            },
         )

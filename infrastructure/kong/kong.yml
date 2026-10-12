@@ -244,6 +244,17 @@ services:
         preserve_host: false
         methods: [POST, OPTIONS]
     plugins:
+      - name: write-ral-version
+        config:
+          hmac_secret: "{vault://env/read-at-least-hmac-secret}"
+          write_version_header: "X-Write-Version"
+          subject_response_header: "X-Demo-Subject"
+          redis_host: gateway-redis
+          redis_port: 6379
+          redis_database: 0
+          redis_timeout_ms: 100
+          redis_key_prefix: "ral:user:"
+          redis_ttl_seconds: 604800
       - name: rate-limiting
         config:
           minute: 5

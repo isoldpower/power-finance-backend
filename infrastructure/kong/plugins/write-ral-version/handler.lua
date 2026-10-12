@@ -3,11 +3,35 @@ local redis_writer = require "kong.plugins.write-ral-version.redis_writer"
 
 local WriteRalVersionHandler = {
     PRIORITY = 700,
-    VERSION  = "0.2.0",
+    VERSION  = "0.3.0",
 }
 
 
+local resolve_offset_owner = function(config)
+    local claims = kong.ctx.shared.clerk_claims
+    if claims and claims.sub then
+        return claims.sub
+    end
+
+    if not config.subject_response_header then
+        return nil
+    end
+
+    local upstream_subject = kong.response.get_header(config.subject_response_header)
+    if not upstream_subject or upstream_subject == "" then
+        return nil
+    end
+
+    return upstream_subject
+end
+
+
 function WriteRalVersionHandler:header_filter(config)
+    local user_id = resolve_offset_owner(config)
+    if config.subject_response_header then
+        kong.response.clear_header(config.subject_response_header)
+    end
+
     local raw_version = kong.response.get_header(config.write_version_header)
     if not raw_version or raw_version == "" then
         return
@@ -19,10 +43,8 @@ function WriteRalVersionHandler:header_filter(config)
         return
     end
 
-    local claims = kong.ctx.shared.clerk_claims
-    local user_id = claims and claims.sub
     if not user_id then
-        kong.log.warn("write-ral-version: no clerk sub in ctx; cannot record offset")
+        kong.log.warn("write-ral-version: no clerk sub or upstream subject; cannot record offset")
         return
     end
 

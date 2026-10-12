@@ -86,16 +86,22 @@ DEMO_TRANSACTIONS: tuple[DemoTransactionSeed, ...] = (
 
 
 class DemoAccountSeeder:
-    async def seed(self, user_id: int, external_id: str) -> None:
-        container_ids = await self._create_wallets(user_id, external_id)
-        container_ids[DEMO_GOAL.key] = await self._create_goal(user_id, external_id)
-        await self._create_transactions(user_id, external_id, container_ids)
+    async def seed(self, user_id: int, external_id: str) -> int:
+        container_ids, wallets_write_version = await self._create_wallets(user_id, external_id)
+        goal_id, goal_write_version = await self._create_goal(user_id, external_id)
+        container_ids[DEMO_GOAL.key] = goal_id
+        transactions_write_version = await self._create_transactions(
+            user_id, external_id, container_ids
+        )
+
+        return max(wallets_write_version, goal_write_version, transactions_write_version)
 
     @staticmethod
-    async def _create_wallets(user_id: int, external_id: str) -> dict[str, UUID]:
+    async def _create_wallets(user_id: int, external_id: str) -> tuple[dict[str, UUID], int]:
         container_ids: dict[str, UUID] = {}
+        latest_write_version = 0
         for wallet_seed in DEMO_WALLETS:
-            created_wallet, _ = await CreateNewWalletCommandHandler().handle(
+            created_wallet, write_version = await CreateNewWalletCommandHandler().handle(
                 CreateNewWalletCommand(
                     user_id=user_id,
                     user_external_id=external_id,
@@ -107,12 +113,13 @@ class DemoAccountSeeder:
                 )
             )
             container_ids[wallet_seed.key] = created_wallet.id
+            latest_write_version = max(latest_write_version, write_version)
 
-        return container_ids
+        return container_ids, latest_write_version
 
     @staticmethod
-    async def _create_goal(user_id: int, external_id: str) -> UUID:
-        created_goal, _ = await CreateNewGoalCommandHandler().handle(
+    async def _create_goal(user_id: int, external_id: str) -> tuple[UUID, int]:
+        created_goal, write_version = await CreateNewGoalCommandHandler().handle(
             CreateNewGoalCommand(
                 user_id=user_id,
                 user_external_id=external_id,
@@ -122,16 +129,17 @@ class DemoAccountSeeder:
                 finish_at=datetime.now() + timedelta(days=DEMO_GOAL.days_until_finish),
             )
         )
-        return created_goal.id
+        return created_goal.id, write_version
 
     @staticmethod
     async def _create_transactions(
         user_id: int,
         external_id: str,
         container_ids: dict[str, UUID],
-    ) -> None:
+    ) -> int:
+        latest_write_version = 0
         for transaction_seed in DEMO_TRANSACTIONS:
-            await CreateTransactionCommandHandler().handle(
+            _, write_version = await CreateTransactionCommandHandler().handle(
                 CreateTransactionCommand(
                     user_id=user_id,
                     user_external_id=external_id,
@@ -142,3 +150,6 @@ class DemoAccountSeeder:
                     transaction_type=transaction_seed.transaction_type,
                 )
             )
+            latest_write_version = max(latest_write_version, write_version)
+
+        return latest_write_version

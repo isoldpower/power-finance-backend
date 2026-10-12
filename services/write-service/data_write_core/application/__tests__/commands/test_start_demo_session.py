@@ -1,4 +1,6 @@
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
+from uuid import uuid4
 
 import jwt
 import pytest
@@ -6,6 +8,12 @@ import pytest
 from data_write_core.application.commands.demo import (
     StartDemoSessionCommand,
     StartDemoSessionCommandHandler,
+    demo_account_seed,
+)
+from data_write_core.application.commands.demo.demo_account_seed import (
+    DEMO_TRANSACTIONS,
+    DEMO_WALLETS,
+    DemoAccountSeeder,
 )
 from data_write_core.application.interfaces.demo_token_issuer import IssuedDemoToken
 from data_write_core.domain.entities import InternalUserEntity
@@ -19,6 +27,7 @@ from data_write_core.infrastructure.demo import DEMO_TOKEN_ALGORITHM, JwtDemoTok
 DEMO_SECRET = "test-demo-secret-that-is-long-enough-0000"
 DEMO_ISSUER = "power-finance-demo"
 PROVISIONED_USER_ID = 41
+SEEDED_WRITE_VERSION = 913
 
 
 class RecordingUserRepository:
@@ -40,8 +49,9 @@ class RecordingSeeder:
     def __init__(self) -> None:
         self.seeded_accounts: list[tuple[int, str]] = []
 
-    async def seed(self, user_id: int, external_id: str) -> None:
+    async def seed(self, user_id: int, external_id: str) -> int:
         self.seeded_accounts.append((user_id, external_id))
+        return SEEDED_WRITE_VERSION
 
 
 class FixedTokenIssuer:
@@ -123,6 +133,7 @@ async def test_starting_a_session_provisions_seeds_and_signs_one_fresh_demo_user
     assert seeder.seeded_accounts == [(PROVISIONED_USER_ID, demo_session.external_id)]
     assert token_issuer.issued_for == [demo_session.external_id]
     assert demo_session.token == "signed-token"
+    assert demo_session.write_version == SEEDED_WRITE_VERSION
 
 
 async def test_every_session_gets_its_own_demo_user():
@@ -137,3 +148,28 @@ async def test_every_session_gets_its_own_demo_user():
 
     first_identity, second_identity = user_repository.provisioned_external_ids
     assert first_identity != second_identity
+
+
+class SequencedCommandHandler:
+    issued_write_versions: list[int] = []
+
+    async def handle(self, command):
+        write_version = len(SequencedCommandHandler.issued_write_versions) + 100
+        SequencedCommandHandler.issued_write_versions.append(write_version)
+        return SimpleNamespace(id=uuid4()), write_version
+
+
+async def test_seeding_reports_the_latest_write_version_of_every_seeded_command(monkeypatch):
+    SequencedCommandHandler.issued_write_versions = []
+    for handler_name in (
+        "CreateNewWalletCommandHandler",
+        "CreateNewGoalCommandHandler",
+        "CreateTransactionCommandHandler",
+    ):
+        monkeypatch.setattr(demo_account_seed, handler_name, SequencedCommandHandler)
+
+    write_version = await DemoAccountSeeder().seed(PROVISIONED_USER_ID, "demo_abc123")
+
+    expected_command_count = len(DEMO_WALLETS) + 1 + len(DEMO_TRANSACTIONS)
+    assert len(SequencedCommandHandler.issued_write_versions) == expected_command_count
+    assert write_version == max(SequencedCommandHandler.issued_write_versions)

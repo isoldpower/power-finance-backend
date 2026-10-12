@@ -31,6 +31,17 @@ return {
                         },
                     },
                     {
+                        subject_response_header = {
+                            type = "string",
+                            description = "Optional upstream response header "
+                                .. "naming the user the offset belongs to, "
+                                .. "used only when the request carried no "
+                                .. "clerk claims (unauthenticated routes such "
+                                .. "as demo-session minting). Always stripped "
+                                .. "before the response leaves the gateway.",
+                        },
+                    },
+                    {
                         redis_host = {
                             type = "string",
                             required = true,

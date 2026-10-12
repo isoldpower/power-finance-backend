@@ -116,6 +116,16 @@ The point of all of it is that Write Service stays ignorant of the HMAC secret,
 of the Redis side-channel, and of the `Read-At-Least` wire format. It just
 returns the `BIGSERIAL` outbox row id as a plain integer.
 
+The offset is owned by the clerk `sub`. Unauthenticated routes have none, so
+`subject_response_header` lets the upstream name the owner instead. The demo
+session route uses it: `POST /api/v1/demo/sessions` seeds a fresh `demo_` user,
+returns the highest seq of the seed in `X-Write-Version` and the new user in
+`X-Demo-Subject`. The plugin records the offset for that user and always strips
+the subject header. The guest's first reads then pick up a default
+`Read-At-Least` and fall back to the Write Service until the projection has
+caught up with the seed, so the dashboard never shows a half-projected account.
+The claims `sub` still wins when both are present.
+
 ## read-fallback
 
 Transparent read-your-writes fallback, attached to the Read Service route.
