@@ -351,6 +351,7 @@ plugins:
       origins:
         - "https://powerfinance.site"
         - "https://manage.powerfinance.site"
+        - "https://nikitalapin.dev"
         - "http://localhost(:\\d+)?"
         - "http://127\\.0\\.0\\.1(:\\d+)?"
       methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
