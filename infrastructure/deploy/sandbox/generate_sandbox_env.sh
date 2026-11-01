@@ -90,6 +90,7 @@ esac
 case "$service_name" in
     read-service|read-*)
         consumer_group_lines="KAFKA_READ_GROUP_ID=${KAFKA_READ_GROUP_ID:-read-service.write-consumer}
+KAFKA_READ_SEARCH_GROUP_ID=${KAFKA_READ_SEARCH_GROUP_ID:-read-service.search-consumer}
 "
         ;;
     ai-service|ai-*)

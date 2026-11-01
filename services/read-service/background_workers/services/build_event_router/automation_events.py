@@ -9,7 +9,7 @@ from data_read_core.write_reactions import (
     TrackAppliedSeq,
     TrackEsAppliedSeq,
 )
-from kafka_consumer_py import EventRouter, ExecutionPlan, SyncProcessGroup
+from kafka_consumer_py import ExecutionPlan, SyncProcessGroup
 from kafka_messages import (
     AutomationCreated,
     AutomationDeleted,
@@ -17,12 +17,12 @@ from kafka_messages import (
     AutomationUpdated,
 )
 
-from ._health_guards import guard_all
-from ._types import ProbesDictionary
+from ._health_guards import guard_postgres_lane, guard_search_lane
+from ._types import ProbesDictionary, ProjectionRouters
 
 
-def subscribe_automation_created(router: EventRouter, probes: ProbesDictionary):
-    plan = ExecutionPlan(
+def subscribe_automation_created(routers: ProjectionRouters, probes: ProbesDictionary):
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -34,6 +34,10 @@ def subscribe_automation_created(router: EventRouter, probes: ProbesDictionary):
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
                 [
                     TrackEsAppliedSeq(
@@ -46,11 +50,12 @@ def subscribe_automation_created(router: EventRouter, probes: ProbesDictionary):
         ]
     )
 
-    router.register("AutomationCreated", guard_all(plan, probes))
+    routers.postgres.register("AutomationCreated", guard_postgres_lane(postgres_plan, probes))
+    routers.search.register("AutomationCreated", guard_search_lane(search_plan, probes))
 
 
-def subscribe_automation_updated(router: EventRouter, probes: ProbesDictionary):
-    plan = ExecutionPlan(
+def subscribe_automation_updated(routers: ProjectionRouters, probes: ProbesDictionary):
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -62,6 +67,10 @@ def subscribe_automation_updated(router: EventRouter, probes: ProbesDictionary):
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
                 [
                     TrackEsAppliedSeq(
@@ -74,11 +83,12 @@ def subscribe_automation_updated(router: EventRouter, probes: ProbesDictionary):
         ]
     )
 
-    router.register("AutomationUpdated", guard_all(plan, probes))
+    routers.postgres.register("AutomationUpdated", guard_postgres_lane(postgres_plan, probes))
+    routers.search.register("AutomationUpdated", guard_search_lane(search_plan, probes))
 
 
-def subscribe_automation_deleted(router: EventRouter, probes: ProbesDictionary):
-    plan = ExecutionPlan(
+def subscribe_automation_deleted(routers: ProjectionRouters, probes: ProbesDictionary):
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -87,6 +97,10 @@ def subscribe_automation_deleted(router: EventRouter, probes: ProbesDictionary):
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
                 [TrackEsAppliedSeq(RemoveAutomationDocument(), AutomationDeleted)],
                 atomic=True,
@@ -94,11 +108,12 @@ def subscribe_automation_deleted(router: EventRouter, probes: ProbesDictionary):
         ]
     )
 
-    router.register("AutomationDeleted", guard_all(plan, probes))
+    routers.postgres.register("AutomationDeleted", guard_postgres_lane(postgres_plan, probes))
+    routers.search.register("AutomationDeleted", guard_search_lane(search_plan, probes))
 
 
-def subscribe_automation_ran(router: EventRouter, probes: ProbesDictionary):
-    plan = ExecutionPlan(
+def subscribe_automation_ran(routers: ProjectionRouters, probes: ProbesDictionary):
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -107,6 +122,10 @@ def subscribe_automation_ran(router: EventRouter, probes: ProbesDictionary):
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
                 [TrackEsAppliedSeq(RecordAutomationRunDocument(), AutomationRan)],
                 atomic=True,
@@ -114,4 +133,5 @@ def subscribe_automation_ran(router: EventRouter, probes: ProbesDictionary):
         ]
     )
 
-    router.register("AutomationRan", guard_all(plan, probes))
+    routers.postgres.register("AutomationRan", guard_postgres_lane(postgres_plan, probes))
+    routers.search.register("AutomationRan", guard_search_lane(search_plan, probes))

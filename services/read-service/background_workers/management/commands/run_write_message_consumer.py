@@ -36,6 +36,14 @@ class Command(BaseCommand):
             help=f"Consumer group id (default: {settings.KAFKA['READ_GROUP_ID']}).",
         )
         parser.add_argument(
+            "--search-group-id",
+            default=settings.KAFKA["READ_SEARCH_GROUP_ID"],
+            help=(
+                "Consumer group id of the Elasticsearch projection lane (default: "
+                f"{settings.KAFKA['READ_SEARCH_GROUP_ID']})."
+            ),
+        )
+        parser.add_argument(
             "--from-beginning",
             action="store_true",
             help="Read from the earliest offset instead of the latest.",
@@ -47,25 +55,27 @@ class Command(BaseCommand):
             settings.KAFKA["AI_OUTBOX_TOPIC"],
             settings.KAFKA["RETRY_TOPIC"],
         ]
-        config = self._build_consumer_config(options, topics)
+        postgres_config = self._build_consumer_config(options, topics, options["group_id"])
+        search_config = self._build_consumer_config(options, topics, options["search_group_id"])
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Starting test consumer — servers={config.bootstrap_servers} "
-                f"group={config.group_id} topics={list(topics)}"
+                f"Starting test consumer — servers={postgres_config.bootstrap_servers} "
+                f"groups={postgres_config.group_id},{search_config.group_id} "
+                f"topics={list(topics)}"
             )
         )
 
         try:
-            asyncio.run(build_event_router(config))
+            asyncio.run(build_event_router(postgres_config, search_config))
         except KeyboardInterrupt:
             self.stdout.write(self.style.WARNING("Interrupted — shutting down."))
 
-    def _build_consumer_config(self, options, topics) -> ConsumerConfig:
+    def _build_consumer_config(self, options, topics, group_id: str) -> ConsumerConfig:
         return ConsumerConfig(
             bootstrap_servers=options["bootstrap_servers"],
             group_id=resolve_sandbox_scoped_group_id(
-                options["group_id"],
+                group_id,
                 resolve_own_sandbox_id(),
             ),
             topics=topics,

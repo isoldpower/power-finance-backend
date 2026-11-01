@@ -8,7 +8,6 @@ from data_read_core.write_reactions import (
     TrackAppliedSeq,
 )
 from kafka_consumer_py import (
-    EventRouter,
     ExecutionPlan,
     SyncProcessGroup,
 )
@@ -18,12 +17,12 @@ from kafka_messages import (
     NotificationsAcknowledged,
 )
 
-from ._health_guards import guard_all
-from ._types import ProbesDictionary
+from ._health_guards import guard_postgres_lane
+from ._types import ProbesDictionary, ProjectionRouters
 
 
 def subscribe_notification_created(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
     notification_created = ExecutionPlan(
@@ -38,14 +37,14 @@ def subscribe_notification_created(
         ]
     )
 
-    router.register(
+    routers.postgres.register(
         "NotificationCreated",
-        guard_all(notification_created, probes),
+        guard_postgres_lane(notification_created, probes),
     )
 
 
 def subscribe_notifications_acknowledged(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
     notifications_acknowledged = ExecutionPlan(
@@ -64,14 +63,14 @@ def subscribe_notifications_acknowledged(
         ]
     )
 
-    router.register(
+    routers.postgres.register(
         "NotificationsAcknowledged",
-        guard_all(notifications_acknowledged, probes),
+        guard_postgres_lane(notifications_acknowledged, probes),
     )
 
 
 def subscribe_notification_deleted(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
     notification_deleted = ExecutionPlan(
@@ -87,7 +86,7 @@ def subscribe_notification_deleted(
         ]
     )
 
-    router.register(
+    routers.postgres.register(
         "NotificationDeleted",
-        guard_all(notification_deleted, probes),
+        guard_postgres_lane(notification_deleted, probes),
     )

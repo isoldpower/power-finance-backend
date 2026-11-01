@@ -9,7 +9,6 @@ from data_read_core.write_reactions import (
     UpdateAccountReadModel,
 )
 from kafka_consumer_py import (
-    EventRouter,
     ExecutionPlan,
     SyncProcessGroup,
 )
@@ -21,12 +20,12 @@ from kafka_messages import (
     AccountUpdated,
 )
 
-from ._health_guards import guard_all
-from ._types import ProbesDictionary
+from ._health_guards import guard_postgres_lane
+from ._types import ProbesDictionary, ProjectionRouters
 
 
 def subscribe_account_created(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
     account_created = ExecutionPlan(
@@ -41,14 +40,14 @@ def subscribe_account_created(
         ]
     )
 
-    router.register(
+    routers.postgres.register(
         "AccountCreated",
-        guard_all(account_created, probes),
+        guard_postgres_lane(account_created, probes),
     )
 
 
 def subscribe_account_updated(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
     account_updated = ExecutionPlan(
@@ -64,14 +63,14 @@ def subscribe_account_updated(
         ]
     )
 
-    router.register(
+    routers.postgres.register(
         "AccountUpdated",
-        guard_all(account_updated, probes),
+        guard_postgres_lane(account_updated, probes),
     )
 
 
 def subscribe_account_posting_created(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
     posting_created = ExecutionPlan(
@@ -86,14 +85,14 @@ def subscribe_account_posting_created(
         ]
     )
 
-    router.register(
+    routers.postgres.register(
         "AccountPostingCreated",
-        guard_all(posting_created, probes),
+        guard_postgres_lane(posting_created, probes),
     )
 
 
 def subscribe_account_posting_deleted(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
     posting_deleted = ExecutionPlan(
@@ -108,14 +107,14 @@ def subscribe_account_posting_deleted(
         ]
     )
 
-    router.register(
+    routers.postgres.register(
         "AccountPostingDeleted",
-        guard_all(posting_deleted, probes),
+        guard_postgres_lane(posting_deleted, probes),
     )
 
 
 def subscribe_account_postings_dispatched(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
     postings_dispatched = ExecutionPlan(
@@ -130,7 +129,7 @@ def subscribe_account_postings_dispatched(
         ]
     )
 
-    router.register(
+    routers.postgres.register(
         "AccountPostingsDispatched",
-        guard_all(postings_dispatched, probes),
+        guard_postgres_lane(postings_dispatched, probes),
     )

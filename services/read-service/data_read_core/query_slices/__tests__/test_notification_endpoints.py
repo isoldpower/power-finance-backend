@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 from background_workers.services.build_event_router import _subscribe_all_events
+from background_workers.services.build_event_router._types import ProjectionRouters
 from django.contrib.auth import get_user_model
 from django.test import AsyncClient
 from fakes import make_event
@@ -101,7 +102,7 @@ def _timestamp(moment: datetime) -> Timestamp:
 
 async def _dispatch(message, seq: int) -> None:
     router = KafkaEventRouter()
-    _subscribe_all_events(router)
+    _subscribe_all_events(ProjectionRouters.shared(router))
     await router.dispatch(make_event(message, outbox_seq=seq))
 
 

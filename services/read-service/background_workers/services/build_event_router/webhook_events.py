@@ -10,7 +10,6 @@ from data_read_core.write_reactions import (
     UpdateWebhookReadModel,
 )
 from kafka_consumer_py import (
-    EventRouter,
     ExecutionPlan,
     SyncProcessGroup,
 )
@@ -22,12 +21,12 @@ from kafka_messages import (
     WebhookSubscriptionRemoved,
 )
 
-from ._health_guards import guard_all
-from ._types import ProbesDictionary
+from ._health_guards import guard_postgres_lane
+from ._types import ProbesDictionary, ProjectionRouters
 
 
 def subscribe_webhook_created(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
     webhook_created = ExecutionPlan(
@@ -42,14 +41,14 @@ def subscribe_webhook_created(
         ]
     )
 
-    router.register(
+    routers.postgres.register(
         "WebhookEndpointCreated",
-        guard_all(webhook_created, probes),
+        guard_postgres_lane(webhook_created, probes),
     )
 
 
 def subscribe_webhook_updated(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
     webhook_updated = ExecutionPlan(
@@ -65,14 +64,14 @@ def subscribe_webhook_updated(
         ]
     )
 
-    router.register(
+    routers.postgres.register(
         "WebhookEndpointUpdated",
-        guard_all(webhook_updated, probes),
+        guard_postgres_lane(webhook_updated, probes),
     )
 
 
 def subscribe_webhook_deleted(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
     webhook_deleted = ExecutionPlan(
@@ -89,14 +88,14 @@ def subscribe_webhook_deleted(
         ]
     )
 
-    router.register(
+    routers.postgres.register(
         "WebhookEndpointDeleted",
-        guard_all(webhook_deleted, probes),
+        guard_postgres_lane(webhook_deleted, probes),
     )
 
 
 def subscribe_webhook_subscription_added(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
     subscription_added = ExecutionPlan(
@@ -114,14 +113,14 @@ def subscribe_webhook_subscription_added(
         ]
     )
 
-    router.register(
+    routers.postgres.register(
         "WebhookSubscriptionAdded",
-        guard_all(subscription_added, probes),
+        guard_postgres_lane(subscription_added, probes),
     )
 
 
 def subscribe_webhook_subscription_removed(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
     subscription_removed = ExecutionPlan(
@@ -139,7 +138,7 @@ def subscribe_webhook_subscription_removed(
         ]
     )
 
-    router.register(
+    routers.postgres.register(
         "WebhookSubscriptionRemoved",
-        guard_all(subscription_removed, probes),
+        guard_postgres_lane(subscription_removed, probes),
     )

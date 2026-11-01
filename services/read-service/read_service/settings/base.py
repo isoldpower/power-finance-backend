@@ -4,7 +4,8 @@ production, test) extend this module and override values that differ.
 Environment variables are loaded via django-environ from a `.env` file at the
 service root. See `.env.example` for the full list of recognised keys.
 
-`KAFKA_READ_GROUP_ID` must match services/read-service/compose.yaml: the
+`KAFKA_READ_GROUP_ID` and `KAFKA_READ_SEARCH_GROUP_ID` must match
+services/read-service/compose.yaml: the
 baseline names a sandbox's group by deriving it from its own, so a process that
 falls back to a different default is invisible to it and both would project the
 same events.
@@ -29,6 +30,7 @@ env = environ.Env(
     KAFKA_OUTBOX_TOPIC=(str, "events.async"),
     KAFKA_AI_OUTBOX_TOPIC=(str, "events.ai-async"),
     KAFKA_READ_GROUP_ID=(str, "read-service.write-consumer"),
+    KAFKA_READ_SEARCH_GROUP_ID=(str, "read-service.search-consumer"),
     KAFKA_RETRY_TOPIC=(str, "read-service.retry"),
     KAFKA_DLQ_TOPIC=(str, "read-service.dlq"),
     REDIS_URL=(str, "redis://localhost:6379/0"),
@@ -161,6 +163,7 @@ KAFKA = {
     "OUTBOX_TOPIC": env("KAFKA_OUTBOX_TOPIC"),
     "AI_OUTBOX_TOPIC": env("KAFKA_AI_OUTBOX_TOPIC"),
     "READ_GROUP_ID": env("KAFKA_READ_GROUP_ID"),
+    "READ_SEARCH_GROUP_ID": env("KAFKA_READ_SEARCH_GROUP_ID"),
     "RETRY_TOPIC": env("KAFKA_RETRY_TOPIC"),
     "DLQ_TOPIC": env("KAFKA_DLQ_TOPIC"),
 }

@@ -13,7 +13,6 @@ from data_read_core.write_reactions import (
     UpdateWalletReadModel,
 )
 from kafka_consumer_py import (
-    EventRouter,
     ExecutionPlan,
     SyncProcessGroup,
 )
@@ -23,15 +22,15 @@ from kafka_messages import (
     WalletUpdated,
 )
 
-from ._health_guards import guard_all
-from ._types import ProbesDictionary
+from ._health_guards import guard_postgres_lane, guard_search_lane
+from ._types import ProbesDictionary, ProjectionRouters
 
 
 def subscribe_wallet_deleted(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
-    wallet_deleted = ExecutionPlan(
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -41,23 +40,25 @@ def subscribe_wallet_deleted(
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
                 [TrackEsAppliedSeq(RemoveWalletDocument(), WalletDeleted)], atomic=True
             ),
         ]
     )
 
-    router.register(
-        "WalletDeleted",
-        guard_all(wallet_deleted, probes),
-    )
+    routers.postgres.register("WalletDeleted", guard_postgres_lane(postgres_plan, probes))
+    routers.search.register("WalletDeleted", guard_search_lane(search_plan, probes))
 
 
 def subscribe_wallet_updated(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
-    wallet_updated = ExecutionPlan(
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -69,23 +70,25 @@ def subscribe_wallet_updated(
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
                 [TrackEsAppliedSeq(UpdateWalletDocument(), WalletUpdated)], atomic=True
             ),
         ]
     )
 
-    router.register(
-        "WalletUpdated",
-        guard_all(wallet_updated, probes),
-    )
+    routers.postgres.register("WalletUpdated", guard_postgres_lane(postgres_plan, probes))
+    routers.search.register("WalletUpdated", guard_search_lane(search_plan, probes))
 
 
 def subscribe_wallet_created(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
-    wallet_created = ExecutionPlan(
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -94,13 +97,15 @@ def subscribe_wallet_created(
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
                 [TrackEsAppliedSeq(IndexWalletDocument(), WalletCreated)], atomic=True
             ),
         ]
     )
 
-    router.register(
-        "WalletCreated",
-        guard_all(wallet_created, probes),
-    )
+    routers.postgres.register("WalletCreated", guard_postgres_lane(postgres_plan, probes))
+    routers.search.register("WalletCreated", guard_search_lane(search_plan, probes))

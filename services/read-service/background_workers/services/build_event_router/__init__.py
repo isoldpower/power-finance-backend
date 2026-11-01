@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import Callable
 
 from data_read_core.shared.kafka_dedupe import DjangoDedupeStore
@@ -11,14 +12,16 @@ from kafka_client_py import (
 )
 from kafka_consumer_py import (
     ConsumerConfig,
+    ConsumerLoop,
     EventRouter,
     KafkaEventRouter,
+    SigtermShutdownSignal,
     build_consumer_loop,
     build_sandbox_traffic_policy,
 )
-from observability import build_kafka_message_context_components
+from observability import KafkaMessageContextComponents, build_kafka_message_context_components
 
-from ._types import ProbesDictionary
+from ._types import ProbesDictionary, ProjectionRouters
 from .account_events import (
     subscribe_account_created,
     subscribe_account_posting_created,
@@ -63,7 +66,7 @@ from .webhook_events import (
     subscribe_webhook_updated,
 )
 
-_KNOWN_HANDLERS: list[Callable[[EventRouter, ProbesDictionary], None]] = [
+_KNOWN_HANDLERS: list[Callable[[ProjectionRouters, ProbesDictionary], None]] = [
     subscribe_user_synced,
     subscribe_account_created,
     subscribe_account_updated,
@@ -97,36 +100,61 @@ _KNOWN_HANDLERS: list[Callable[[EventRouter, ProbesDictionary], None]] = [
 ]
 
 
-async def build_event_router(config: ConsumerConfig) -> None:
-    router = KafkaEventRouter()
-    _subscribe_all_events(router)
+async def build_event_router(
+    postgres_config: ConsumerConfig,
+    search_config: ConsumerConfig,
+) -> None:
+    routers = ProjectionRouters(postgres=KafkaEventRouter(), search=KafkaEventRouter())
+    _subscribe_all_events(routers)
 
     message_context = build_kafka_message_context_components()
-    publisher = AsyncPublisher(ProducerConfig(bootstrap_servers=config.bootstrap_servers))
+    publisher = AsyncPublisher(ProducerConfig(bootstrap_servers=postgres_config.bootstrap_servers))
     await publisher.start()
 
+    shutdown = SigtermShutdownSignal()
+    shutdown.install()
+
     try:
-        consumer_loop = build_consumer_loop(
-            config=config,
-            router=router,
-            retry_policy=RetryPolicy(),
-            retry_publisher=RetryPublisher(publisher, topic=settings.KAFKA["RETRY_TOPIC"]),
-            dlq_publisher=DLQPublisher(publisher, topic=settings.KAFKA["DLQ_TOPIC"]),
-            context_binder=message_context.context_binder,
-            traffic_policy=build_sandbox_traffic_policy(
-                config, message_context.traffic_policy.own_sandbox_id
+        lane_loops = [
+            _build_lane_loop(
+                postgres_config, routers.postgres, publisher, message_context, shutdown
             ),
-            dedupe_store=DjangoDedupeStore(consumer_group=config.group_id),
-        )
-        await consumer_loop.run()
+            _build_lane_loop(search_config, routers.search, publisher, message_context, shutdown),
+        ]
+        async with asyncio.TaskGroup() as lanes:
+            for lane_loop in lane_loops:
+                lanes.create_task(lane_loop.run())
     finally:
         await publisher.stop()
 
 
-def _subscribe_all_events(router: EventRouter) -> None:
+def _build_lane_loop(
+    config: ConsumerConfig,
+    router: EventRouter,
+    publisher: AsyncPublisher,
+    message_context: KafkaMessageContextComponents,
+    shutdown: SigtermShutdownSignal,
+) -> ConsumerLoop:
+    return build_consumer_loop(
+        config=config,
+        router=router,
+        retry_policy=RetryPolicy(),
+        retry_publisher=RetryPublisher(publisher, topic=settings.KAFKA["RETRY_TOPIC"]),
+        dlq_publisher=DLQPublisher(publisher, topic=settings.KAFKA["DLQ_TOPIC"]),
+        context_binder=message_context.context_binder,
+        traffic_policy=build_sandbox_traffic_policy(
+            config, message_context.traffic_policy.own_sandbox_id
+        ),
+        dedupe_store=DjangoDedupeStore(consumer_group=config.group_id),
+        shutdown=shutdown,
+        install_signal_handlers=False,
+    )
+
+
+def _subscribe_all_events(routers: ProjectionRouters) -> None:
     probes = _build_probes()
     for subscribe in _KNOWN_HANDLERS:
-        subscribe(router, probes)
+        subscribe(routers, probes)
 
 
 def _build_probes() -> ProbesDictionary:

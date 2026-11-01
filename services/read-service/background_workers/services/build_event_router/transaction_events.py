@@ -20,7 +20,6 @@ from data_read_core.write_reactions import (
     UpdateTransactionReadModel,
 )
 from kafka_consumer_py import (
-    EventRouter,
     ExecutionPlan,
     SyncProcessGroup,
 )
@@ -31,15 +30,15 @@ from kafka_messages import (
     TransactionUpdated,
 )
 
-from ._health_guards import guard_all
-from ._types import ProbesDictionary
+from ._health_guards import guard_postgres_lane, guard_search_lane
+from ._types import ProbesDictionary, ProjectionRouters
 
 
 def subscribe_transaction_created(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
-    transaction_created = ExecutionPlan(
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -49,27 +48,32 @@ def subscribe_transaction_created(
                     BumpWalletListVersion(TransactionCreated),
                     EvictGoalCacheForContainer(TransactionCreated),
                     BumpGoalListVersion(TransactionCreated),
-                    AdjustContainerAmountOnCreate(),
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
-                [TrackEsAppliedSeq(IndexTransactionDocument(), TransactionCreated)], atomic=True
+                [
+                    AdjustContainerAmountOnCreate(),
+                    TrackEsAppliedSeq(IndexTransactionDocument(), TransactionCreated),
+                ],
+                atomic=True,
             ),
         ]
     )
 
-    router.register(
-        "TransactionCreated",
-        guard_all(transaction_created, probes),
-    )
+    routers.postgres.register("TransactionCreated", guard_postgres_lane(postgres_plan, probes))
+    routers.search.register("TransactionCreated", guard_search_lane(search_plan, probes))
 
 
 def subscribe_transaction_deleted(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
-    transaction_deleted = ExecutionPlan(
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -80,27 +84,32 @@ def subscribe_transaction_deleted(
                     BumpWalletListVersion(TransactionDeleted),
                     EvictGoalCacheForContainer(TransactionDeleted),
                     BumpGoalListVersion(TransactionDeleted),
-                    AdjustContainerAmountOnDelete(),
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
-                [TrackEsAppliedSeq(RemoveTransactionDocument(), TransactionDeleted)], atomic=True
+                [
+                    AdjustContainerAmountOnDelete(),
+                    TrackEsAppliedSeq(RemoveTransactionDocument(), TransactionDeleted),
+                ],
+                atomic=True,
             ),
         ]
     )
 
-    router.register(
-        "TransactionDeleted",
-        guard_all(transaction_deleted, probes),
-    )
+    routers.postgres.register("TransactionDeleted", guard_postgres_lane(postgres_plan, probes))
+    routers.search.register("TransactionDeleted", guard_search_lane(search_plan, probes))
 
 
 def subscribe_transaction_updated(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
-    transaction_updated = ExecutionPlan(
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -111,27 +120,32 @@ def subscribe_transaction_updated(
                     BumpWalletListVersion(TransactionUpdated),
                     EvictGoalCacheForContainer(TransactionUpdated),
                     BumpGoalListVersion(TransactionUpdated),
-                    AdjustContainerAmountOnUpdate(),
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
-                [TrackEsAppliedSeq(UpdateTransactionDocument(), TransactionUpdated)], atomic=True
+                [
+                    AdjustContainerAmountOnUpdate(),
+                    TrackEsAppliedSeq(UpdateTransactionDocument(), TransactionUpdated),
+                ],
+                atomic=True,
             ),
         ]
     )
 
-    router.register(
-        "TransactionUpdated",
-        guard_all(transaction_updated, probes),
-    )
+    routers.postgres.register("TransactionUpdated", guard_postgres_lane(postgres_plan, probes))
+    routers.search.register("TransactionUpdated", guard_search_lane(search_plan, probes))
 
 
 def subscribe_transaction_metadata_updated(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
-    metadata_updated = ExecutionPlan(
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -144,6 +158,10 @@ def subscribe_transaction_metadata_updated(
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
                 [
                     TrackEsAppliedSeq(
@@ -156,7 +174,7 @@ def subscribe_transaction_metadata_updated(
         ]
     )
 
-    router.register(
-        "TransactionMetadataUpdated",
-        guard_all(metadata_updated, probes),
+    routers.postgres.register(
+        "TransactionMetadataUpdated", guard_postgres_lane(postgres_plan, probes)
     )
+    routers.search.register("TransactionMetadataUpdated", guard_search_lane(search_plan, probes))

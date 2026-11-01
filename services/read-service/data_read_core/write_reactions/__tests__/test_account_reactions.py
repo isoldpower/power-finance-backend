@@ -4,6 +4,7 @@ from uuid import UUID
 
 import pytest
 from background_workers.services.build_event_router import _subscribe_all_events
+from background_workers.services.build_event_router._types import ProjectionRouters
 from fakes import make_event
 from google.protobuf.timestamp_pb2 import Timestamp
 from kafka_consumer_py import KafkaEventRouter
@@ -262,7 +263,7 @@ async def test_a_re_dispatch_replaces_the_verdict_rather_than_adding_one():
 
 async def test_account_events_never_advance_read_your_writes():
     router = KafkaEventRouter()
-    _subscribe_all_events(router)
+    _subscribe_all_events(ProjectionRouters.shared(router))
 
     await router.dispatch(make_event(_account_created(), outbox_seq=999_999))
 

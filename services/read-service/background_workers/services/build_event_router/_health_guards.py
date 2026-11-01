@@ -12,21 +12,29 @@ from kafka_consumer_py import (
 from ._types import ProbesDictionary
 
 
-def guard_all(plan: ExecutionPlan, probes: ProbesDictionary) -> Handler:
+def guard_postgres_lane(plan: ExecutionPlan, probes: ProbesDictionary) -> Handler:
     guarded: Handler = HealthGuardedHandler(
         plan,
         probes.postgres_probe,
         guarded_errors=POSTGRES_CONNECTIVITY_ERRORS,
     )
-    guarded = HealthGuardedHandler(
+
+    return HealthGuardedHandler(
         guarded,
         probes.redis_probe,
         guarded_errors=REDIS_CONNECTIVITY_ERRORS,
     )
-    guarded = HealthGuardedHandler(
+
+
+def guard_search_lane(plan: ExecutionPlan, probes: ProbesDictionary) -> Handler:
+    guarded: Handler = HealthGuardedHandler(
+        plan,
+        probes.postgres_probe,
+        guarded_errors=POSTGRES_CONNECTIVITY_ERRORS,
+    )
+
+    return HealthGuardedHandler(
         guarded,
         probes.elasticsearch_probe,
         guarded_errors=ELASTICSEARCH_CONNECTIVITY_ERRORS,
     )
-
-    return guarded

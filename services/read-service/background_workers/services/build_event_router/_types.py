@@ -6,6 +6,7 @@ from data_read_core.shared.health_guard import (
     PostgresHealthProbe,
     RedisHealthProbe,
 )
+from kafka_consumer_py import EventRouter
 
 
 @dataclass
@@ -26,3 +27,15 @@ class ProbesDictionary:
             redis_probe=redis_probe or RedisHealthProbe(),
             elasticsearch_probe=elasticsearch_probe or ElasticsearchHealthProbe(),
         )
+
+
+@dataclass(frozen=True)
+class ProjectionRouters:
+    """The two independently consumed projection lanes."""
+
+    postgres: EventRouter
+    search: EventRouter
+
+    @classmethod
+    def shared(cls, router: EventRouter) -> "ProjectionRouters":
+        return cls(postgres=router, search=router)

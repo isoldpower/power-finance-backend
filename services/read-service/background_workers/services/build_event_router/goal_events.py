@@ -13,7 +13,6 @@ from data_read_core.write_reactions import (
     UpdateGoalReadModel,
 )
 from kafka_consumer_py import (
-    EventRouter,
     ExecutionPlan,
     SyncProcessGroup,
 )
@@ -23,15 +22,15 @@ from kafka_messages import (
     GoalUpdated,
 )
 
-from ._health_guards import guard_all
-from ._types import ProbesDictionary
+from ._health_guards import guard_postgres_lane, guard_search_lane
+from ._types import ProbesDictionary, ProjectionRouters
 
 
 def subscribe_goal_created(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
-    goal_created = ExecutionPlan(
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -40,6 +39,10 @@ def subscribe_goal_created(
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
                 [TrackEsAppliedSeq(IndexGoalDocument(), GoalCreated)],
                 atomic=True,
@@ -47,17 +50,15 @@ def subscribe_goal_created(
         ]
     )
 
-    router.register(
-        "GoalCreated",
-        guard_all(goal_created, probes),
-    )
+    routers.postgres.register("GoalCreated", guard_postgres_lane(postgres_plan, probes))
+    routers.search.register("GoalCreated", guard_search_lane(search_plan, probes))
 
 
 def subscribe_goal_updated(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
-    goal_updated = ExecutionPlan(
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -69,6 +70,10 @@ def subscribe_goal_updated(
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
                 [TrackEsAppliedSeq(UpdateGoalDocument(), GoalUpdated)],
                 atomic=True,
@@ -76,17 +81,15 @@ def subscribe_goal_updated(
         ]
     )
 
-    router.register(
-        "GoalUpdated",
-        guard_all(goal_updated, probes),
-    )
+    routers.postgres.register("GoalUpdated", guard_postgres_lane(postgres_plan, probes))
+    routers.search.register("GoalUpdated", guard_search_lane(search_plan, probes))
 
 
 def subscribe_goal_deleted(
-    router: EventRouter,
+    routers: ProjectionRouters,
     probes: ProbesDictionary,
 ):
-    goal_deleted = ExecutionPlan(
+    postgres_plan = ExecutionPlan(
         [
             SyncProcessGroup(
                 [
@@ -96,6 +99,10 @@ def subscribe_goal_deleted(
                 ],
                 atomic=True,
             ),
+        ]
+    )
+    search_plan = ExecutionPlan(
+        [
             SyncProcessGroup(
                 [TrackEsAppliedSeq(RemoveGoalDocument(), GoalDeleted)],
                 atomic=True,
@@ -103,7 +110,5 @@ def subscribe_goal_deleted(
         ]
     )
 
-    router.register(
-        "GoalDeleted",
-        guard_all(goal_deleted, probes),
-    )
+    routers.postgres.register("GoalDeleted", guard_postgres_lane(postgres_plan, probes))
+    routers.search.register("GoalDeleted", guard_search_lane(search_plan, probes))
