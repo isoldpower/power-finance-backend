@@ -51,7 +51,7 @@ def subscribe_wallet_deleted(
     )
 
     routers.postgres.register("WalletDeleted", guard_postgres_lane(postgres_plan, probes))
-    routers.search.register("WalletDeleted", guard_search_lane(search_plan, probes))
+    routers.search.register("WalletDeleted", guard_search_lane(search_plan, probes, WalletDeleted))
 
 
 def subscribe_wallet_updated(
@@ -81,7 +81,7 @@ def subscribe_wallet_updated(
     )
 
     routers.postgres.register("WalletUpdated", guard_postgres_lane(postgres_plan, probes))
-    routers.search.register("WalletUpdated", guard_search_lane(search_plan, probes))
+    routers.search.register("WalletUpdated", guard_search_lane(search_plan, probes, WalletUpdated))
 
 
 def subscribe_wallet_created(
@@ -108,4 +108,4 @@ def subscribe_wallet_created(
     )
 
     routers.postgres.register("WalletCreated", guard_postgres_lane(postgres_plan, probes))
-    routers.search.register("WalletCreated", guard_search_lane(search_plan, probes))
+    routers.search.register("WalletCreated", guard_search_lane(search_plan, probes, WalletCreated))

@@ -66,7 +66,9 @@ def subscribe_transaction_created(
     )
 
     routers.postgres.register("TransactionCreated", guard_postgres_lane(postgres_plan, probes))
-    routers.search.register("TransactionCreated", guard_search_lane(search_plan, probes))
+    routers.search.register(
+        "TransactionCreated", guard_search_lane(search_plan, probes, TransactionCreated)
+    )
 
 
 def subscribe_transaction_deleted(
@@ -102,7 +104,9 @@ def subscribe_transaction_deleted(
     )
 
     routers.postgres.register("TransactionDeleted", guard_postgres_lane(postgres_plan, probes))
-    routers.search.register("TransactionDeleted", guard_search_lane(search_plan, probes))
+    routers.search.register(
+        "TransactionDeleted", guard_search_lane(search_plan, probes, TransactionDeleted)
+    )
 
 
 def subscribe_transaction_updated(
@@ -138,7 +142,9 @@ def subscribe_transaction_updated(
     )
 
     routers.postgres.register("TransactionUpdated", guard_postgres_lane(postgres_plan, probes))
-    routers.search.register("TransactionUpdated", guard_search_lane(search_plan, probes))
+    routers.search.register(
+        "TransactionUpdated", guard_search_lane(search_plan, probes, TransactionUpdated)
+    )
 
 
 def subscribe_transaction_metadata_updated(
@@ -177,4 +183,7 @@ def subscribe_transaction_metadata_updated(
     routers.postgres.register(
         "TransactionMetadataUpdated", guard_postgres_lane(postgres_plan, probes)
     )
-    routers.search.register("TransactionMetadataUpdated", guard_search_lane(search_plan, probes))
+    routers.search.register(
+        "TransactionMetadataUpdated",
+        guard_search_lane(search_plan, probes, TransactionMetadataUpdated),
+    )

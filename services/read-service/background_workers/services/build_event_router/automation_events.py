@@ -51,7 +51,9 @@ def subscribe_automation_created(routers: ProjectionRouters, probes: ProbesDicti
     )
 
     routers.postgres.register("AutomationCreated", guard_postgres_lane(postgres_plan, probes))
-    routers.search.register("AutomationCreated", guard_search_lane(search_plan, probes))
+    routers.search.register(
+        "AutomationCreated", guard_search_lane(search_plan, probes, AutomationCreated)
+    )
 
 
 def subscribe_automation_updated(routers: ProjectionRouters, probes: ProbesDictionary):
@@ -84,7 +86,9 @@ def subscribe_automation_updated(routers: ProjectionRouters, probes: ProbesDicti
     )
 
     routers.postgres.register("AutomationUpdated", guard_postgres_lane(postgres_plan, probes))
-    routers.search.register("AutomationUpdated", guard_search_lane(search_plan, probes))
+    routers.search.register(
+        "AutomationUpdated", guard_search_lane(search_plan, probes, AutomationUpdated)
+    )
 
 
 def subscribe_automation_deleted(routers: ProjectionRouters, probes: ProbesDictionary):
@@ -109,7 +113,9 @@ def subscribe_automation_deleted(routers: ProjectionRouters, probes: ProbesDicti
     )
 
     routers.postgres.register("AutomationDeleted", guard_postgres_lane(postgres_plan, probes))
-    routers.search.register("AutomationDeleted", guard_search_lane(search_plan, probes))
+    routers.search.register(
+        "AutomationDeleted", guard_search_lane(search_plan, probes, AutomationDeleted)
+    )
 
 
 def subscribe_automation_ran(routers: ProjectionRouters, probes: ProbesDictionary):
@@ -134,4 +140,4 @@ def subscribe_automation_ran(routers: ProjectionRouters, probes: ProbesDictionar
     )
 
     routers.postgres.register("AutomationRan", guard_postgres_lane(postgres_plan, probes))
-    routers.search.register("AutomationRan", guard_search_lane(search_plan, probes))
+    routers.search.register("AutomationRan", guard_search_lane(search_plan, probes, AutomationRan))

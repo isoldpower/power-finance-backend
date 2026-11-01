@@ -4,6 +4,8 @@ from data_read_core.shared.health_guard import (
     REDIS_CONNECTIVITY_ERRORS,
     HealthGuardedHandler,
 )
+from data_read_core.write_reactions import TrackEsPendingSeq
+from google.protobuf.message import Message
 from kafka_consumer_py import (
     ExecutionPlan,
     Handler,
@@ -26,9 +28,13 @@ def guard_postgres_lane(plan: ExecutionPlan, probes: ProbesDictionary) -> Handle
     )
 
 
-def guard_search_lane(plan: ExecutionPlan, probes: ProbesDictionary) -> Handler:
+def guard_search_lane(
+    plan: ExecutionPlan,
+    probes: ProbesDictionary,
+    payload_type: type[Message],
+) -> Handler:
     guarded: Handler = HealthGuardedHandler(
-        plan,
+        TrackEsPendingSeq(plan, payload_type),
         probes.postgres_probe,
         guarded_errors=POSTGRES_CONNECTIVITY_ERRORS,
     )

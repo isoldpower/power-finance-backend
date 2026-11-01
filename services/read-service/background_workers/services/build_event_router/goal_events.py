@@ -51,7 +51,7 @@ def subscribe_goal_created(
     )
 
     routers.postgres.register("GoalCreated", guard_postgres_lane(postgres_plan, probes))
-    routers.search.register("GoalCreated", guard_search_lane(search_plan, probes))
+    routers.search.register("GoalCreated", guard_search_lane(search_plan, probes, GoalCreated))
 
 
 def subscribe_goal_updated(
@@ -82,7 +82,7 @@ def subscribe_goal_updated(
     )
 
     routers.postgres.register("GoalUpdated", guard_postgres_lane(postgres_plan, probes))
-    routers.search.register("GoalUpdated", guard_search_lane(search_plan, probes))
+    routers.search.register("GoalUpdated", guard_search_lane(search_plan, probes, GoalUpdated))
 
 
 def subscribe_goal_deleted(
@@ -111,4 +111,4 @@ def subscribe_goal_deleted(
     )
 
     routers.postgres.register("GoalDeleted", guard_postgres_lane(postgres_plan, probes))
-    routers.search.register("GoalDeleted", guard_search_lane(search_plan, probes))
+    routers.search.register("GoalDeleted", guard_search_lane(search_plan, probes, GoalDeleted))

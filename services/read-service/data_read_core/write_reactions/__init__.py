@@ -1,5 +1,6 @@
 from ._applied_seq import TrackAppliedSeq
 from ._es_applied_seq import TrackEsAppliedSeq
+from ._es_pending_seq import TrackEsPendingSeq
 from .account_reactions import (
     BumpAccountListVersion,
     CreateAccountPostingReadModel,
@@ -137,6 +138,7 @@ __all__ = [
     "RemoveWalletReadModel",
     "TrackAppliedSeq",
     "TrackEsAppliedSeq",
+    "TrackEsPendingSeq",
     "BumpWebhookListVersion",
     "CreateWebhookReadModel",
     "CreateWebhookSubscriptionReadModel",

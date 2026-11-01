@@ -6,8 +6,13 @@ from .ensure_ral import (
     read_at_least_gate,
 )
 from .es_postgres_reader import DjangoEsAppliedSeqReader
-from .models import AppliedOutboxSeq, EsAppliedOutboxSeq
+from .models import AppliedOutboxSeq, EsAppliedOutboxSeq, EsPendingOutboxSeq
 from .postgres_reader import DjangoAppliedSeqReader
+from .record_es_pending_sequence import (
+    clear_es_pending_seq,
+    clear_es_pending_seqs_failed_before,
+    record_es_pending_seq,
+)
 from .record_es_sequence import record_es_applied_seq
 from .record_sequence import record_applied_seq
 
@@ -17,11 +22,15 @@ __all__ = [
     "DjangoAppliedSeqReader",
     "DjangoEsAppliedSeqReader",
     "EsAppliedOutboxSeq",
+    "EsPendingOutboxSeq",
     "ReadModelNotCaughtUp",
+    "clear_es_pending_seq",
+    "clear_es_pending_seqs_failed_before",
     "ensure_es_read_at_least",
     "ensure_read_at_least",
     "es_read_at_least_gate",
     "read_at_least_gate",
     "record_applied_seq",
+    "record_es_pending_seq",
     "record_es_applied_seq",
 ]

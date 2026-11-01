@@ -1,8 +1,11 @@
+import asyncio
 import logging
 
 from data_read_core.shared.elasticsearch import get_elasticsearch
+from data_read_core.shared.read_at_least import clear_es_pending_seqs_failed_before
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 logger = logging.getLogger("background_workers.elastic_backfill")
 
@@ -30,6 +33,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options) -> None:
         """Run each per-index backfill in turn, on a fresh Elasticsearch client."""
+        started_at = timezone.now()
         for command_name in BACKFILL_COMMANDS:
             self.stdout.write(self.style.MIGRATE_HEADING(f"Running {command_name}…"))
             get_elasticsearch.cache_clear()
@@ -40,4 +44,6 @@ class Command(BaseCommand):
                 stderr=self.stderr,
             )
 
+        released = asyncio.run(clear_es_pending_seqs_failed_before(started_at))
         self.stdout.write(self.style.SUCCESS("Elasticsearch restated from Postgres."))
+        self.stdout.write(f"Released {released} pending search Read-At-Least hold(s).")

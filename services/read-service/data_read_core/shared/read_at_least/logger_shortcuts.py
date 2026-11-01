@@ -45,3 +45,23 @@ def log_recorded_es_outbox_sequence(outbox_seq: int, user_id: int) -> None:
         outbox_seq,
         user_id,
     )
+
+
+def log_recorded_es_pending_seq(outbox_seq: int, user_id: int, event_id: str) -> None:
+    logger = get_main_logger("read_at_least")
+    logger.warning(
+        "Search projection of outbox seq %s (event %s) failed for user %s; "
+        "holding its ES Read-At-Least below it.",
+        outbox_seq,
+        event_id,
+        user_id,
+    )
+
+
+def log_cleared_es_pending_seq(outbox_seq: int, user_id: int) -> None:
+    logger = get_main_logger("read_at_least")
+    logger.info(
+        "Search projection of outbox seq %s landed for user %s; released its hold.",
+        outbox_seq,
+        user_id,
+    )

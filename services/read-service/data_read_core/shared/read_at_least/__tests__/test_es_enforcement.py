@@ -1,11 +1,15 @@
 import pytest
+from django.utils import timezone
 from rest_framework import status
 
 from data_read_core.shared.read_at_least import (
+    EsPendingOutboxSeq,
     ReadModelNotCaughtUp,
+    clear_es_pending_seqs_failed_before,
     ensure_es_read_at_least,
     record_applied_seq,
     record_es_applied_seq,
+    record_es_pending_seq,
 )
 
 
@@ -47,3 +51,33 @@ async def test_postgres_seq_does_not_satisfy_es_gate():
 
     with pytest.raises(ReadModelNotCaughtUp):
         await ensure_es_read_at_least(_FakeRequest(7, {"Read-At-Least": "100"}))
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_a_held_seq_keeps_the_gate_closed_despite_later_writes():
+    await record_es_applied_seq(user_id=7, outbox_seq=120)
+    await record_es_pending_seq(user_id=7, outbox_seq=110, event_id="evt-dead")
+
+    with pytest.raises(ReadModelNotCaughtUp):
+        await ensure_es_read_at_least(_FakeRequest(7, {"Read-At-Least": "120"}))
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_a_held_seq_above_the_required_one_does_not_block():
+    await record_es_applied_seq(user_id=7, outbox_seq=120)
+    await record_es_pending_seq(user_id=7, outbox_seq=115, event_id="evt-dead")
+
+    await ensure_es_read_at_least(_FakeRequest(7, {"Read-At-Least": "100"}))
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_backfill_release_keeps_holds_recorded_after_it_started():
+    await record_es_pending_seq(user_id=7, outbox_seq=110, event_id="evt-old")
+    started_at = timezone.now()
+    await record_es_pending_seq(user_id=7, outbox_seq=111, event_id="evt-new")
+
+    released = await clear_es_pending_seqs_failed_before(started_at)
+
+    assert released == 1
+    remaining = EsPendingOutboxSeq.objects.values_list("outbox_seq", flat=True)
+    assert [seq async for seq in remaining] == [111]
