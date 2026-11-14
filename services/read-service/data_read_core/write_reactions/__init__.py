@@ -1,5 +1,5 @@
 from ._applied_seq import TrackAppliedSeq
-from ._es_applied_seq import TrackEsAppliedSeq
+from ._es_applied_seq import AdvanceEsAppliedSeq, TrackEsAppliedSeq
 from ._es_pending_seq import TrackEsPendingSeq
 from .account_reactions import (
     BumpAccountListVersion,
@@ -83,6 +83,7 @@ from .webhook_reactions import (
 )
 
 __all__ = [
+    "AdvanceEsAppliedSeq",
     "AdjustContainerAmountOnCreate",
     "AdjustContainerAmountOnDelete",
     "AdjustContainerAmountOnUpdate",

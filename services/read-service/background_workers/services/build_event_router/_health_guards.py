@@ -4,11 +4,12 @@ from data_read_core.shared.health_guard import (
     REDIS_CONNECTIVITY_ERRORS,
     HealthGuardedHandler,
 )
-from data_read_core.write_reactions import TrackEsPendingSeq
+from data_read_core.write_reactions import AdvanceEsAppliedSeq, TrackEsPendingSeq
 from google.protobuf.message import Message
 from kafka_consumer_py import (
     ExecutionPlan,
     Handler,
+    SyncProcessGroup,
 )
 
 from ._types import ProbesDictionary
@@ -44,3 +45,12 @@ def guard_search_lane(
         probes.elasticsearch_probe,
         guarded_errors=ELASTICSEARCH_CONNECTIVITY_ERRORS,
     )
+
+
+def guard_search_watermark_lane(
+    payload_type: type[Message],
+    probes: ProbesDictionary,
+) -> Handler:
+    watermark_plan = ExecutionPlan([SyncProcessGroup([AdvanceEsAppliedSeq(payload_type)])])
+
+    return guard_search_lane(watermark_plan, probes, payload_type)

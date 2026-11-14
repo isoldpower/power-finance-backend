@@ -13,7 +13,7 @@ from kafka_messages import (
     ActionResolved,
 )
 
-from ._health_guards import guard_postgres_lane
+from ._health_guards import guard_postgres_lane, guard_search_watermark_lane
 from ._types import ProbesDictionary, ProjectionRouters
 
 
@@ -34,6 +34,10 @@ def subscribe_action_raised(routers: ProjectionRouters, probes: ProbesDictionary
         "ActionRaised",
         guard_postgres_lane(action_raised, probes),
     )
+    routers.search.register(
+        "ActionRaised",
+        guard_search_watermark_lane(ActionRaised, probes),
+    )
 
 
 def subscribe_action_resolved(routers: ProjectionRouters, probes: ProbesDictionary):
@@ -52,4 +56,8 @@ def subscribe_action_resolved(routers: ProjectionRouters, probes: ProbesDictiona
     routers.postgres.register(
         "ActionResolved",
         guard_postgres_lane(action_resolved, probes),
+    )
+    routers.search.register(
+        "ActionResolved",
+        guard_search_watermark_lane(ActionResolved, probes),
     )
