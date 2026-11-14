@@ -79,6 +79,7 @@ func (eps *EventsProjectionService) forwardProjectedEvents(
 	}
 
 	for _, projectedEvent := range projectedEvents {
+		projectedEvent.SandboxID = kafkaMessage.SandboxID
 		slog.Debug(
 			"kafka message projected",
 			"event_id", projectedEvent.EventID,

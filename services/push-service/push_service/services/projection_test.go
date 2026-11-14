@@ -96,15 +96,15 @@ func TestProjectionDropsEventsWithEmptyPayload(t *testing.T) {
 }
 
 func TestPoolDeliversOnlyToTheEventOwner(t *testing.T) {
-	pool := NewClientsPoolService()
+	pool := NewClientsPoolService(SilentDeliveries)
 	eventsChannel := make(chan types.OutboxEvent)
 	go pool.FanoutEvents(context.Background(), eventsChannel)
 
-	ownerClient, registered := pool.Subscribe("user_2abc")
+	ownerClient, registered := pool.Subscribe(types.StreamAudience{ExternalUserID: "user_2abc"})
 	if !registered {
 		t.Fatal("expected owner client to subscribe")
 	}
-	strangerClient, registered := pool.Subscribe("user_other")
+	strangerClient, registered := pool.Subscribe(types.StreamAudience{ExternalUserID: "user_other"})
 	if !registered {
 		t.Fatal("expected stranger client to subscribe")
 	}
@@ -130,15 +130,15 @@ func TestPoolDeliversOnlyToTheEventOwner(t *testing.T) {
 }
 
 func TestPoolBroadcastsGlobalEventsToEverySubscriber(t *testing.T) {
-	pool := NewClientsPoolService()
+	pool := NewClientsPoolService(SilentDeliveries)
 	eventsChannel := make(chan types.OutboxEvent)
 	go pool.FanoutEvents(context.Background(), eventsChannel)
 
-	firstClient, registered := pool.Subscribe("user_2abc")
+	firstClient, registered := pool.Subscribe(types.StreamAudience{ExternalUserID: "user_2abc"})
 	if !registered {
 		t.Fatal("expected first client to subscribe")
 	}
-	secondClient, registered := pool.Subscribe("user_other")
+	secondClient, registered := pool.Subscribe(types.StreamAudience{ExternalUserID: "user_other"})
 	if !registered {
 		t.Fatal("expected second client to subscribe")
 	}
@@ -186,7 +186,7 @@ func TestProjectionStopsOnContextCancel(t *testing.T) {
 }
 
 func TestFanoutStopsAndDetachesClientsOnContextCancel(t *testing.T) {
-	pool := NewClientsPoolService()
+	pool := NewClientsPoolService(SilentDeliveries)
 	ctx, cancel := context.WithCancel(context.Background())
 	eventsChannel := make(chan types.OutboxEvent)
 
@@ -196,7 +196,7 @@ func TestFanoutStopsAndDetachesClientsOnContextCancel(t *testing.T) {
 		close(done)
 	}()
 
-	subscription, registered := pool.Subscribe("user_2abc")
+	subscription, registered := pool.Subscribe(types.StreamAudience{ExternalUserID: "user_2abc"})
 	if !registered {
 		t.Fatal("expected client to subscribe before shutdown")
 	}
@@ -212,17 +212,17 @@ func TestFanoutStopsAndDetachesClientsOnContextCancel(t *testing.T) {
 	if _, isOpen := <-subscription.Events(); isOpen {
 		t.Fatal("expected subscriber channel to close on shutdown")
 	}
-	if _, registered := pool.Subscribe("user_late"); registered {
+	if _, registered := pool.Subscribe(types.StreamAudience{ExternalUserID: "user_late"}); registered {
 		t.Fatal("expected subscribe to fail after shutdown")
 	}
 }
 
 func TestCancelledSubscriptionStopsReceivingEvents(t *testing.T) {
-	pool := NewClientsPoolService()
+	pool := NewClientsPoolService(SilentDeliveries)
 	eventsChannel := make(chan types.OutboxEvent)
 	go pool.FanoutEvents(context.Background(), eventsChannel)
 
-	subscription, registered := pool.Subscribe("user_2abc")
+	subscription, registered := pool.Subscribe(types.StreamAudience{ExternalUserID: "user_2abc"})
 	if !registered {
 		t.Fatal("expected client to subscribe")
 	}
@@ -239,4 +239,88 @@ func TestCancelledSubscriptionStopsReceivingEvents(t *testing.T) {
 	}
 
 	close(eventsChannel)
+}
+
+func TestPoolDeliversSandboxEventsOnlyToConnectionsOfThatSandbox(t *testing.T) {
+	pool := NewClientsPoolService(SilentDeliveries)
+	eventsChannel := make(chan types.OutboxEvent)
+	go pool.FanoutEvents(context.Background(), eventsChannel)
+
+	sandboxClient, registered := pool.Subscribe(types.StreamAudience{ExternalUserID: "user_2abc", SandboxID: "nikita"})
+	if !registered {
+		t.Fatal("expected sandbox client to subscribe")
+	}
+	baselineClient, registered := pool.Subscribe(types.StreamAudience{ExternalUserID: "user_2abc"})
+	if !registered {
+		t.Fatal("expected baseline client to subscribe")
+	}
+	otherSandboxClient, registered := pool.Subscribe(types.StreamAudience{ExternalUserID: "user_2abc", SandboxID: "anna"})
+	if !registered {
+		t.Fatal("expected other sandbox client to subscribe")
+	}
+
+	sandboxEvent := validOutboxEvent()
+	sandboxEvent.SandboxID = "nikita"
+	eventsChannel <- sandboxEvent
+
+	select {
+	case received := <-sandboxClient.Events():
+		if received.EventID != "evt-1" {
+			t.Fatalf("expected evt-1, got %+v", received)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected the event to reach the connection of its sandbox")
+	}
+
+	for _, client := range []types.ClientSubscription{baselineClient, otherSandboxClient} {
+		select {
+		case leaked := <-client.Events():
+			t.Fatalf("expected no delivery outside the sandbox, got %+v", leaked)
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
+
+	close(eventsChannel)
+}
+
+func TestPoolKeepsBaselineEventsAwayFromSandboxConnections(t *testing.T) {
+	pool := NewClientsPoolService(SilentDeliveries)
+	eventsChannel := make(chan types.OutboxEvent)
+	go pool.FanoutEvents(context.Background(), eventsChannel)
+
+	sandboxClient, registered := pool.Subscribe(types.StreamAudience{ExternalUserID: "user_2abc", SandboxID: "nikita"})
+	if !registered {
+		t.Fatal("expected sandbox client to subscribe")
+	}
+
+	eventsChannel <- validOutboxEvent()
+
+	select {
+	case leaked := <-sandboxClient.Events():
+		t.Fatalf("expected a baseline event to stay off a sandbox connection, got %+v", leaked)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	close(eventsChannel)
+}
+
+func TestProjectionCarriesTheSandboxOfTheKafkaMessage(t *testing.T) {
+	projection := NewEventsProjectionService()
+	kafkaChannel := make(chan types.OutboxEvent)
+	go projection.RunKafkaReceiver(context.Background(), kafkaChannel)
+
+	sandboxMessage := validOutboxEvent()
+	sandboxMessage.SandboxID = "nikita"
+	kafkaChannel <- sandboxMessage
+
+	select {
+	case projected := <-projection.Events():
+		if projected.SandboxID != "nikita" {
+			t.Fatalf("expected the projected event to keep its sandbox, got %q", projected.SandboxID)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected event to be projected")
+	}
+
+	close(kafkaChannel)
 }

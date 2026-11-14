@@ -8,6 +8,9 @@ import (
 	kafkaclient "github.com/power-finance/kafka-client-go"
 	"github.com/power-finance/kafka-client-go/envelope"
 	"github.com/power-finance/kafka-client-go/headers"
+	"github.com/power-finance/observability-go/propagation"
+	"github.com/power-finance/observability-go/sandbox"
+	"github.com/power-finance/observability-go/tracing"
 
 	"services/push-service/internal/health"
 	"services/push-service/push_service/types"
@@ -64,7 +67,7 @@ func TestOutboxEventFromMessageWithoutHeaders(t *testing.T) {
 	event := outboxEventFromMessage(kafkaclient.ConsumedMessage{
 		Topic: "events.async",
 		Value: []byte("payload"),
-	})
+	}, "")
 
 	if event.EventID != "" || event.EventType != "" || event.AggregateType != "" {
 		t.Fatalf("expected empty envelope metadata, got %+v", event)
@@ -92,5 +95,66 @@ func TestBuildFailsFastWhenBrokerUnreachable(t *testing.T) {
 
 	if err == nil {
 		t.Fatal("expected build to fail when the broker is unreachable")
+	}
+}
+
+func installSandboxPropagation(t *testing.T) {
+	t.Helper()
+	t.Setenv(tracing.EnvironmentVariableSDKDisabled, "true")
+	if _, _, configureErr := tracing.Configure(context.Background(), "push-service-test"); configureErr != nil {
+		t.Fatal(configureErr)
+	}
+}
+
+func sandboxTaggedKafkaMessage(sandboxID string) kafkaclient.ConsumedMessage {
+	message := outboxKafkaMessage()
+	message.Headers = append(
+		message.Headers,
+		propagation.InjectIntoKafkaHeaders(sandbox.AttachID(context.Background(), sandboxID))...,
+	)
+	return message
+}
+
+func TestBaselineForwardsSandboxTaggedEventsWithTheirSandbox(t *testing.T) {
+	installSandboxPropagation(t)
+	t.Setenv(sandbox.EnvironmentVariableID, "")
+	eventsSink := make(chan types.OutboxEvent, 1)
+	sinkHandler := newEventsSinkHandler(eventsSink)
+
+	if handleErr := sinkHandler(context.Background(), sandboxTaggedKafkaMessage("nikita")); handleErr != nil {
+		t.Fatal(handleErr)
+	}
+
+	select {
+	case forwarded := <-eventsSink:
+		if forwarded.SandboxID != "nikita" {
+			t.Fatalf("expected the event to keep its sandbox, got %q", forwarded.SandboxID)
+		}
+	default:
+		t.Fatal("expected the baseline to forward a sandbox-tagged event")
+	}
+}
+
+func TestSandboxInstanceForwardsOnlyItsOwnEvents(t *testing.T) {
+	installSandboxPropagation(t)
+	t.Setenv(sandbox.EnvironmentVariableID, "nikita")
+	eventsSink := make(chan types.OutboxEvent, 3)
+	sinkHandler := newEventsSinkHandler(eventsSink)
+
+	for _, message := range []kafkaclient.ConsumedMessage{
+		outboxKafkaMessage(),
+		sandboxTaggedKafkaMessage("anna"),
+		sandboxTaggedKafkaMessage("nikita"),
+	} {
+		if handleErr := sinkHandler(context.Background(), message); handleErr != nil {
+			t.Fatal(handleErr)
+		}
+	}
+
+	if len(eventsSink) != 1 {
+		t.Fatalf("expected only the sandbox's own event, got %d", len(eventsSink))
+	}
+	if forwarded := <-eventsSink; forwarded.SandboxID != "nikita" {
+		t.Fatalf("expected the nikita event, got %q", forwarded.SandboxID)
 	}
 }

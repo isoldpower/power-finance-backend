@@ -4,16 +4,25 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/power-finance/observability-go/sandbox"
+
 	"services/push-service/internal/metrics"
 	"services/push-service/push_service/types"
 )
 
 const clientEventBufferSize = 16
 
+type DeliveryReporting int
+
+const (
+	SilentDeliveries DeliveryReporting = iota
+	ReportedDeliveries
+)
+
 type PoolClient struct {
-	externalUserID string
-	eventsChannel  chan types.OutboxEvent
-	cancel         func()
+	audience      types.StreamAudience
+	eventsChannel chan types.OutboxEvent
+	cancel        func()
 }
 
 // Events returns read-only processed events channel.
@@ -31,14 +40,16 @@ type ClientsPoolService struct {
 	registerChan   chan *PoolClient
 	unregisterChan chan *PoolClient
 	doneChannel    chan struct{}
+	reporting      DeliveryReporting
 }
 
-func NewClientsPoolService() *ClientsPoolService {
+func NewClientsPoolService(reporting DeliveryReporting) *ClientsPoolService {
 	return &ClientsPoolService{
 		clientsByUser:  make(map[string]map[*PoolClient]struct{}),
 		registerChan:   make(chan *PoolClient),
 		unregisterChan: make(chan *PoolClient),
 		doneChannel:    make(chan struct{}),
+		reporting:      reporting,
 	}
 }
 
@@ -68,10 +79,10 @@ func (cps *ClientsPoolService) FanoutEvents(ctx context.Context, eventsChannel <
 }
 
 // Subscribe creates new pool-oriented connection that will consume events from this pool.
-func (cps *ClientsPoolService) Subscribe(externalUserID string) (types.ClientSubscription, bool) {
+func (cps *ClientsPoolService) Subscribe(audience types.StreamAudience) (types.ClientSubscription, bool) {
 	client := &PoolClient{
-		externalUserID: externalUserID,
-		eventsChannel:  make(chan types.OutboxEvent, clientEventBufferSize),
+		audience:      audience,
+		eventsChannel: make(chan types.OutboxEvent, clientEventBufferSize),
 	}
 	client.cancel = func() { cps.unregister(client) }
 
@@ -91,39 +102,92 @@ func (cps *ClientsPoolService) unregister(client *PoolClient) {
 }
 
 func (cps *ClientsPoolService) dispatch(event types.OutboxEvent) {
+	deliveredConnectionCount := 0
+	for _, client := range cps.candidateClients(event) {
+		if client.audience.SandboxID != event.SandboxID {
+			continue
+		}
+		if cps.deliver(client, event) {
+			deliveredConnectionCount++
+		}
+	}
+
+	cps.reportDelivery(event, deliveredConnectionCount)
+}
+
+func (cps *ClientsPoolService) candidateClients(event types.OutboxEvent) []*PoolClient {
+	candidates := make([]*PoolClient, 0)
 	if event.UserID == types.GlobalPartitionKey {
 		for _, userClients := range cps.clientsByUser {
 			for client := range userClients {
-				cps.deliver(client, event)
+				candidates = append(candidates, client)
 			}
 		}
-		return
+		return candidates
 	}
 
 	for client := range cps.clientsByUser[event.UserID] {
-		cps.deliver(client, event)
+		candidates = append(candidates, client)
 	}
+	return candidates
 }
 
-func (cps *ClientsPoolService) deliver(client *PoolClient, event types.OutboxEvent) {
+func (cps *ClientsPoolService) deliver(client *PoolClient, event types.OutboxEvent) bool {
 	select {
 	case client.eventsChannel <- event:
+		return true
 	default:
 		metrics.EventDroppedSlowClient()
-		slog.Warn(
+		slog.WarnContext(
+			eventLogContext(event),
 			"dropping event for slow client",
-			"user_id", client.externalUserID,
+			"user_id", client.audience.ExternalUserID,
 			"event_id", event.EventID,
 			"event_type", event.EventType,
 		)
+		return false
 	}
 }
 
+func (cps *ClientsPoolService) reportDelivery(event types.OutboxEvent, deliveredConnectionCount int) {
+	if cps.reporting != ReportedDeliveries {
+		return
+	}
+
+	if deliveredConnectionCount == 0 {
+		slog.InfoContext(
+			eventLogContext(event),
+			"event skipped, no stream connection matches its user and sandbox",
+			"user_id", event.UserID,
+			"event_id", event.EventID,
+			"event_type", event.EventType,
+		)
+		return
+	}
+
+	slog.InfoContext(
+		eventLogContext(event),
+		"event delivered",
+		"user_id", event.UserID,
+		"event_id", event.EventID,
+		"event_type", event.EventType,
+		"connections", deliveredConnectionCount,
+	)
+}
+
+func eventLogContext(event types.OutboxEvent) context.Context {
+	if event.SandboxID == "" {
+		return context.Background()
+	}
+
+	return sandbox.AttachID(context.Background(), event.SandboxID)
+}
+
 func (cps *ClientsPoolService) addClient(client *PoolClient) {
-	userClients, known := cps.clientsByUser[client.externalUserID]
+	userClients, known := cps.clientsByUser[client.audience.ExternalUserID]
 	if !known {
 		userClients = make(map[*PoolClient]struct{})
-		cps.clientsByUser[client.externalUserID] = userClients
+		cps.clientsByUser[client.audience.ExternalUserID] = userClients
 	}
 
 	userClients[client] = struct{}{}
@@ -131,7 +195,7 @@ func (cps *ClientsPoolService) addClient(client *PoolClient) {
 }
 
 func (cps *ClientsPoolService) removeClient(client *PoolClient) {
-	userClients, knownClient := cps.clientsByUser[client.externalUserID]
+	userClients, knownClient := cps.clientsByUser[client.audience.ExternalUserID]
 	if !knownClient {
 		return
 	}
@@ -141,7 +205,7 @@ func (cps *ClientsPoolService) removeClient(client *PoolClient) {
 
 	delete(userClients, client)
 	if len(userClients) == 0 {
-		delete(cps.clientsByUser, client.externalUserID)
+		delete(cps.clientsByUser, client.audience.ExternalUserID)
 	}
 	close(client.eventsChannel)
 	metrics.SubscriberRemoved()
