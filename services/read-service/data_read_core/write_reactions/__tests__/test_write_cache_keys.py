@@ -13,6 +13,10 @@ from data_read_core.query_slices.list_webhook_events.infra import (
 from data_read_core.query_slices.list_webhooks.infra import (
     get_list_version_key as get_read_webhook_list_version_key,
 )
+from data_read_core.shared.analytics import (
+    get_transaction_version_key as get_analytics_transaction_version_key,
+    get_wallet_version_key as get_analytics_wallet_version_key,
+)
 from data_read_core.shared.metrics import (
     get_account_version_key as get_metrics_account_version_key,
     get_transaction_version_key as get_metrics_transaction_version_key,
@@ -90,3 +94,8 @@ def test_account_namespaces_do_not_collide_with_wallets_or_transactions():
 def test_metrics_read_the_same_version_counters_the_reactions_bump():
     assert get_metrics_transaction_version_key(7) == get_transaction_list_version_key(7)
     assert get_metrics_account_version_key(7) == get_account_list_version_key(7)
+
+
+def test_analytics_read_the_same_version_counters_the_reactions_bump():
+    assert get_analytics_transaction_version_key(7) == get_transaction_list_version_key(7)
+    assert get_analytics_wallet_version_key(7) == get_wallet_list_version_key(7)

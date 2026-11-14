@@ -86,6 +86,7 @@ class CreateTransactionReadModel(Effect):
                 "origin": payload.origin or "manual",
                 "chain_id": chain_id,
                 "chain_sort": chain_id or NO_CHAIN_SENTINEL,
+                "is_opening_balance": chain_id is None and container.created_at == created_at,
                 "occurred_at": created_at,
                 "created_at": created_at,
             },

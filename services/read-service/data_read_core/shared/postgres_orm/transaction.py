@@ -26,6 +26,7 @@ class TransactionReadModel(models.Model):
     origin = models.CharField(max_length=16, blank=True, default="manual")
     chain_id = models.UUIDField(blank=True, null=True)
     chain_sort = models.UUIDField(default=NO_CHAIN_SENTINEL)
+    is_opening_balance = models.BooleanField(default=False)
 
     occurred_at = models.DateTimeField()
     created_at = models.DateTimeField()
