@@ -103,6 +103,15 @@ class DetailCode(StrEnum):
     FILTER_MALFORMED_GROUP = "filter_malformed_group"
     FILTER_MALFORMED_NODE = "filter_malformed_node"
 
+    RANGE_INVALID = "range_invalid"
+    RANGE_TOO_LONG = "range_too_long"
+    GRANULARITY_TOO_FINE = "granularity_too_fine"
+    WALLET_UNKNOWN = "wallet_unknown"
+    LIMIT_OUT_OF_RANGE = "limit_out_of_range"
+    POINTS_OUT_OF_RANGE = "points_out_of_range"
+    TYPE_INVALID = "type_invalid"
+    ORDER_INVALID = "order_invalid"
+
     INVALID = "invalid"
 
 
