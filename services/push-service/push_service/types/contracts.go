@@ -2,6 +2,11 @@ package types
 
 import "context"
 
+type StreamAudience struct {
+	ExternalUserID string
+	SandboxID      string
+}
+
 // ClientSubscription is a single client's event feed; Cancel detaches it from the pool.
 type ClientSubscription interface {
 	Events() <-chan OutboxEvent
@@ -11,7 +16,7 @@ type ClientSubscription interface {
 // ClientsPool fans events out to per-user subscriptions until ctx is cancelled.
 type ClientsPool interface {
 	FanoutEvents(ctx context.Context, eventsChannel <-chan OutboxEvent)
-	Subscribe(externalUserID string) (ClientSubscription, bool)
+	Subscribe(audience StreamAudience) (ClientSubscription, bool)
 }
 
 // EventsProjector translates raw Kafka events into client-facing events until
@@ -32,7 +37,7 @@ type HeartbeatFactory func() Heartbeat
 
 // NotificationsStream is the presentation-facing surface of the SSE pipeline.
 type NotificationsStream interface {
-	Subscribe(externalUserID string) (<-chan OutboxEvent, func(), bool)
+	Subscribe(audience StreamAudience) (<-chan OutboxEvent, func(), bool)
 	SpinUntilDone(goneChannel <-chan struct{}, eventsChannel <-chan OutboxEvent, responseChannel chan<- []byte)
 }
 
