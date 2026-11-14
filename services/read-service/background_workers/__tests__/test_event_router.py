@@ -30,6 +30,9 @@ SEARCH_INDEXED_EVENT_TYPES = {
 }
 
 
+UNVERSIONED_EVENT_TYPES = ACCOUNT_EVENT_TYPES | {"UserSynced"}
+
+
 @pytest.fixture
 def lanes() -> ProjectionRouters:
     routers = ProjectionRouters(postgres=KafkaEventRouter(), search=KafkaEventRouter())
@@ -57,8 +60,14 @@ def test_the_write_service_events_are_still_consumed(registered):
     } <= registered
 
 
-def test_only_indexed_events_reach_the_search_lane(lanes: ProjectionRouters):
-    assert set(lanes.search.registered_event_types()) == SEARCH_INDEXED_EVENT_TYPES
+def test_every_write_versioned_event_reaches_the_search_lane(lanes: ProjectionRouters):
+    write_versioned = set(lanes.postgres.registered_event_types()) - UNVERSIONED_EVENT_TYPES
+
+    assert set(lanes.search.registered_event_types()) == write_versioned
+
+
+def test_events_from_other_sequence_spaces_stay_off_the_search_lane(lanes: ProjectionRouters):
+    assert not set(lanes.search.registered_event_types()) & UNVERSIONED_EVENT_TYPES
 
 
 def test_every_indexed_event_is_also_projected_into_postgres(lanes: ProjectionRouters):

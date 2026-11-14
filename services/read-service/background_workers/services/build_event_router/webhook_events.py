@@ -21,7 +21,7 @@ from kafka_messages import (
     WebhookSubscriptionRemoved,
 )
 
-from ._health_guards import guard_postgres_lane
+from ._health_guards import guard_postgres_lane, guard_search_watermark_lane
 from ._types import ProbesDictionary, ProjectionRouters
 
 
@@ -44,6 +44,10 @@ def subscribe_webhook_created(
     routers.postgres.register(
         "WebhookEndpointCreated",
         guard_postgres_lane(webhook_created, probes),
+    )
+    routers.search.register(
+        "WebhookEndpointCreated",
+        guard_search_watermark_lane(WebhookEndpointCreated, probes),
     )
 
 
@@ -68,6 +72,10 @@ def subscribe_webhook_updated(
         "WebhookEndpointUpdated",
         guard_postgres_lane(webhook_updated, probes),
     )
+    routers.search.register(
+        "WebhookEndpointUpdated",
+        guard_search_watermark_lane(WebhookEndpointUpdated, probes),
+    )
 
 
 def subscribe_webhook_deleted(
@@ -91,6 +99,10 @@ def subscribe_webhook_deleted(
     routers.postgres.register(
         "WebhookEndpointDeleted",
         guard_postgres_lane(webhook_deleted, probes),
+    )
+    routers.search.register(
+        "WebhookEndpointDeleted",
+        guard_search_watermark_lane(WebhookEndpointDeleted, probes),
     )
 
 
@@ -117,6 +129,10 @@ def subscribe_webhook_subscription_added(
         "WebhookSubscriptionAdded",
         guard_postgres_lane(subscription_added, probes),
     )
+    routers.search.register(
+        "WebhookSubscriptionAdded",
+        guard_search_watermark_lane(WebhookSubscriptionAdded, probes),
+    )
 
 
 def subscribe_webhook_subscription_removed(
@@ -141,4 +157,8 @@ def subscribe_webhook_subscription_removed(
     routers.postgres.register(
         "WebhookSubscriptionRemoved",
         guard_postgres_lane(subscription_removed, probes),
+    )
+    routers.search.register(
+        "WebhookSubscriptionRemoved",
+        guard_search_watermark_lane(WebhookSubscriptionRemoved, probes),
     )
