@@ -43,7 +43,7 @@ func StartPushService(serviceConfig types.PushServiceConfig) error {
 		return services.NewHeartbeatService(serviceConfig.Server.HeartbeatInterval)
 	}
 	notificationsHandler := handlers.NewSSEStreamHandler(
-		services.NewClientsPoolService(),
+		services.NewClientsPoolService(services.ReportedDeliveries),
 		services.NewEventsProjectionService(),
 		newHeartbeat,
 	)
@@ -117,7 +117,7 @@ func startDemoTracesStream(
 	}
 
 	demoTracesHandler := handlers.NewSSEStreamHandler(
-		services.NewClientsPoolService(),
+		services.NewClientsPoolService(services.SilentDeliveries),
 		services.NewDemoSpansProjectionService(demotraces.SpanProjectionPolicy{
 			IsKnownService: knownServiceNames.Contains,
 			Narrator:       spanNarrator,

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 
 from django.db.models import F
@@ -15,6 +16,7 @@ class ContainerLabel:
     currency_code: str
     name: str
     kind: str
+    created_at: datetime | None = None
 
 
 async def _container_currency(container_id: str) -> str:
@@ -28,7 +30,7 @@ async def _container_label(
     if kind != MoneyContainers.GOAL:
         wallet = await (
             WalletReadModel.objects.filter(id=container_id)
-            .values_list("currency_code", "title")
+            .values_list("currency_code", "title", "created_at")
             .afirst()
         )
         if wallet is not None:
@@ -36,6 +38,7 @@ async def _container_label(
                 currency_code=wallet[0] or "",
                 name=wallet[1] or "",
                 kind=MoneyContainers.WALLET,
+                created_at=wallet[2],
             )
         if kind == MoneyContainers.WALLET:
             return ContainerLabel(

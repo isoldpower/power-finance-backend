@@ -11,6 +11,7 @@ from ..exceptions import (
     TransactionDirectionChangeError,
 )
 from ..value_objects import (
+    CategoryReference,
     MoneyFlowData,
     TransactionMetadata,
     TransactionType,
@@ -134,7 +135,7 @@ class TransactionAggregate(AggregateRoot[TransactionEntity]):
         self,
         now: datetime,
         name: str | object = UNCHANGED,
-        category: str | None | object = UNCHANGED,
+        category: CategoryReference | None | object = UNCHANGED,
         evidence_url: str | None | object = UNCHANGED,
     ) -> bool:
         return self.root.update_metadata(

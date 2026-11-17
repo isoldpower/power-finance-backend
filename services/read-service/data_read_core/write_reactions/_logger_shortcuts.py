@@ -615,3 +615,50 @@ def log_goal_elastic_removed(goal_id: str, index: str) -> None:
         goal_id,
         index,
     )
+
+
+def log_category_postgres_created(category_id: str) -> None:
+    get_workers_logger("write_message_consumer").info(
+        "Projected category %s into Postgres.",
+        category_id,
+    )
+
+
+def log_category_postgres_renamed(category_id: str, new_name: str) -> None:
+    get_workers_logger("write_message_consumer").info(
+        "Renamed category %s to %r in Postgres.",
+        category_id,
+        new_name,
+    )
+
+
+def log_category_postgres_deleted(category_id: str) -> None:
+    get_workers_logger("write_message_consumer").info(
+        "Soft-deleted category %s in Postgres.",
+        category_id,
+    )
+
+
+def log_category_list_version_bumped(user_id: int, version: int) -> None:
+    get_workers_logger("write_message_consumer").info(
+        "Bumped category list version for user %s to %s.",
+        user_id,
+        version,
+    )
+
+
+def log_categorised_caches_evicted(category_id: str, evicted_count: int) -> None:
+    get_workers_logger("write_message_consumer").info(
+        "Evicted %d cached wallet/transaction entries labelled with category %s.",
+        evicted_count,
+        category_id,
+    )
+
+
+def log_category_documents_renamed(category_id: str, index_name: str, updated_count: int) -> None:
+    get_workers_logger("write_message_consumer").info(
+        "Renamed category %s on %d document(s) in %s.",
+        category_id,
+        updated_count,
+        index_name,
+    )

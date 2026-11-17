@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
+from data_read_core.shared.categories import CategoryReferencePayload
 from data_read_core.shared.pagination import PageRequest
 from data_read_core.shared.postgres_orm import NO_CHAIN_SENTINEL
 
@@ -21,7 +22,7 @@ class TransactionDTO:
     name: str
     amount: str
     currency: str
-    category: str | None
+    category: CategoryReferencePayload | None
     origin: str
     chain_id: str | None
     chain_sort: str
@@ -31,7 +32,11 @@ class TransactionDTO:
     deleted_at: str | None
 
     @classmethod
-    def from_es_hit(cls, source: dict[str, Any]) -> "TransactionDTO":
+    def from_es_hit(
+        cls,
+        source: dict[str, Any],
+        categories: dict[str, CategoryReferencePayload],
+    ) -> "TransactionDTO":
         return cls(
             id=source["id"],
             user_id=source["user_id"],
@@ -40,7 +45,7 @@ class TransactionDTO:
             name=source.get("name", ""),
             amount=str(source.get("amount", "0")),
             currency=source["currency_code"],
-            category=source.get("category"),
+            category=categories.get(source.get("category_id") or ""),
             origin=source.get("origin", "manual"),
             chain_id=source.get("chain_id"),
             chain_sort=source.get("chain_sort", str(NO_CHAIN_SENTINEL)),

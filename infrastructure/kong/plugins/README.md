@@ -274,20 +274,54 @@ Marks requests from the portfolio's embedded demo so their whole trace can be
 streamed live (see [../../README.md](../../README.md) → "Tracing / Portfolio demo
 sessions").
 
-When `X-Demo-Session` carries a valid id (16–64 of `[A-Za-z0-9_-]`), the plugin
-replaces any client-supplied `demo-session` entry in the upstream `baggage` header,
-sets the `demo-session` attribute on the gateway root span, and calls
-`kong.tracing:set_should_sample(true)`. In the log phase it tags every other gateway span of the
-request too (router, plugins, balancer). Upstream spans are parented to the
-balancer span, so without its tag their parent would never reach the demo stream.
-That works because Kong runs plugins in priority order in **every** phase: at 740
-this log handler runs before the `opentelemetry` plugin's (14) export.
+### Verified demo visit ids
+
+The id is a capability that write-service issues on `POST /api/v1/demo/visits`
+and the gateway verifies statelessly:
+
+    dv1_<nonce>_<exp>_<mac>
+
+`nonce` is 16 random bytes and `mac` the first 16 bytes of
+`HMAC-SHA256(DEMO_SESSION_SECRET, "dv1." + nonce + "." + exp)`, both base64url without
+padding. `exp` is the expiry in unix seconds, base36 lowercase. The id is about
+57 characters and still fits the old `^[A-Za-z0-9_-]{16,64}$` shape, so baggage and
+the push-service stream need no change. `demo_visit_identifier.lua` checks the
+format, compares the MAC in constant time and then checks `exp > now`. Its spec shares a
+test vector with write-service's `test_hmac_demo_visit_codec.py`, so the two
+implementations cannot drift apart. The secret (`{vault://env/demo-session-secret}`) is
+separate from the guest JWT secret. Without it every presented id is rejected.
+
+Every id the request presents must verify: the header, plus the query parameter when
+`query_parameter_name` is set. Otherwise a valid header could carry a forged
+`?session=`. A forged, tampered or expired id gets
+`401 {"error": {"code": "demo_session_invalid"}}` in the standard envelope, not a
+silently stripped header, which would surface as confusing 401s from the services. A
+request without an id is untouched, unless `required` is set.
+
+| route | config | why |
+| --- | --- | --- |
+| global | `secret` | every request with `X-Demo-Session` is verified |
+| `demo-visits` | `reject_invalid: false` | a tab whose stored id expired must still be able to get a new one |
+| `demo-sessions` | `required: true` | one guest account per verified visit |
+| `demo-traces-stream` | `query_parameter_name: session`, `required: true`, `trace_request: false` | the stream is the thing the capability protects; the stream request itself is not traced into the demo |
+| `assistant-chat` | `query_parameter_name: demo_session` | a WebSocket cannot set headers. A rejected upgrade is an HTTP 401, not a `1008` close |
+
+A route-level instance **replaces** the global one, so each of them repeats `secret`.
+
+### Tracing a verified request
+
+With a verified id the plugin replaces any client-supplied `demo-session` entry in
+the upstream `baggage` header, sets the `demo-session` attribute on the gateway root
+span, and calls `kong.tracing:set_should_sample(true)`. In the log phase it tags every
+other gateway span of the request too (router, plugins, balancer). Upstream spans are
+parented to the balancer span, so without its tag their parent would never reach the
+demo stream. That works because Kong runs plugins in priority order in **every**
+phase: at 740 this log handler runs before the `opentelemetry` plugin's (14) export.
 
 **One path per route.** Kong reports `http.route` as the matched route's
 *first* path (`r.paths[1]`), not the path that matched. So a route with several
 paths mislabels every request but the first, and the demo stream would show the
-wrong endpoint. That is why the search and demo routes are one route per path. An invalid or missing id leaves the request
-alone.
+wrong endpoint. That is why the search and demo routes are one route per path.
 
 Custom because **Kong 3.7 does not honour an incoming `sampled=1` flag**:
 `get_sampling_decision` only inherits a parent's *negative* decision and otherwise

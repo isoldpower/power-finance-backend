@@ -25,6 +25,11 @@ from .automation_pb2 import (
     AutomationTrigger,
     AutomationUpdated,
 )
+from .category_pb2 import (
+    CategoryCreated,
+    CategoryDeleted,
+    CategoryUpdated,
+)
 from .envelope_pb2 import EventEnvelope
 from .goal_pb2 import (
     GoalCreated,
@@ -85,6 +90,9 @@ __all__ = [
     "AutomationRan",
     "AutomationTrigger",
     "AutomationUpdated",
+    "CategoryCreated",
+    "CategoryDeleted",
+    "CategoryUpdated",
     "EventEnvelope",
     "GoalCreated",
     "GoalDeleted",

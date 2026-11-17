@@ -6,6 +6,9 @@ from data_write_core.application.commands.config import WalletDefaults
 from data_write_core.application.commands.transactions.transaction_factory import (
     build_transaction,
 )
+from data_write_core.application.commands.wallets import (
+    create_new_wallet as create_new_wallet_module,
+)
 from data_write_core.application.commands.wallets.create_new_wallet import (
     UNSET,
     CreateNewWalletCommand,
@@ -133,3 +136,46 @@ class TestOpeningOutboxEntries:
         )
 
         assert entries[0].payload["zero_balance"] == "100.00"
+
+
+class StubCurrencyRepository:
+    async def currency_code_exists(self, currency_code: str) -> bool:
+        return True
+
+
+class TestOpeningTimestamp:
+    async def test_the_opening_transaction_shares_the_wallet_s_creation_instant(self, monkeypatch):
+        captured: dict[str, object] = {}
+
+        async def accept_any_scale(amount: Decimal, currency_code: str) -> None:
+            return None
+
+        async def capture_saga(self, new_wallet, opening_transaction, partition_key):
+            captured["wallet"] = new_wallet
+            captured["opening"] = opening_transaction
+            return new_wallet, 1
+
+        async def skip_publishing(self, aggregate) -> None:
+            return None
+
+        monkeypatch.setattr(create_new_wallet_module, "ensure_amount_scale", accept_any_scale)
+        monkeypatch.setattr(create_new_wallet_module, "get_repository_registry", object)
+        monkeypatch.setattr(CreateNewWalletCommandHandler, "_run_transactions_saga", capture_saga)
+        monkeypatch.setattr(
+            CreateNewWalletCommandHandler, "_publish_domain_events", skip_publishing
+        )
+        handler = CreateNewWalletCommandHandler(
+            wallet_repository=object(),
+            currency_repository=StubCurrencyRepository(),
+            outbox_repository=object(),
+            money_flow_repository=object(),
+            transaction_repository=object(),
+        )
+
+        await handler.handle(_command(opening_balance=Decimal("50.00")))
+
+        wallet = captured["wallet"]
+        opening = captured["opening"]
+        assert isinstance(wallet, WalletEntity)
+        assert isinstance(opening, TransactionAggregate)
+        assert opening.root.created_at == wallet.created_at

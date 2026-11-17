@@ -6,4 +6,4 @@ class CacheSettings(IntEnum):
 
 
 class CacheSchema(StrEnum):
-    VERSION = "s2"
+    VERSION = "s3"

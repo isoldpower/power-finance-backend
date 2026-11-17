@@ -46,7 +46,7 @@ class WalletListView(WalletView, CommandResponseMixin):
                 user_external_id=request.user.external_id,
                 name=validated["name"],
                 currency=validated["currency"],
-                category=validated.get("category", ""),
+                category_id=validated.get("category_id"),
                 color=validated.get("color", ""),
                 zero_balance=validated.get("zero_balance", Decimal("0")),
                 opening_balance=validated.get("opening_balance", UNSET),

@@ -352,6 +352,761 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/v1/analytics/balance-history:
+    get:
+      operationId: analytics_balance_history_retrieve
+      description: Balances measured from each wallet's opening balance, transfers
+        included, sampled at `points` evenly spaced instants from `since` to `until`.
+      summary: Get evenly spaced balance samples per wallet and in total
+      parameters:
+      - in: query
+        name: currency
+        schema:
+          type: string
+        description: ISO-4217 target currency for every amount. Defaults to the user's
+          main currency.
+      - in: query
+        name: points
+        schema:
+          type: integer
+        description: How many samples to take. 2..120, default 40.
+      - in: query
+        name: since
+        schema:
+          type: string
+          format: date-time
+        description: Inclusive start of the window. Defaults to `until` minus 30 days.
+      - in: query
+        name: timezone
+        schema:
+          type: string
+        description: IANA zone that cuts days, ISO weeks, months and hours of day.
+          Defaults to UTC.
+      - in: query
+        name: until
+        schema:
+          type: string
+          format: date-time
+        description: Exclusive end of the window. Defaults to now. At most 5 years
+          after `since`.
+      - in: query
+        name: wallet_id
+        schema:
+          type: string
+        description: Comma-joined wallet ids. Defaults to every open wallet.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAnalyticsBalanceHistory'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/analytics/cash-flow:
+    get:
+      operationId: analytics_cash_flow_retrieve
+      description: Zero-filled buckets aligned to calendar boundaries in `timezone`,
+        each with inflow, outflow, net and the closing balance of the selected wallets.
+      summary: Get inflow and outflow per time bucket
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Comma-joined transaction category ids. `__none__` selects uncategorised
+          rows.
+      - in: query
+        name: currency
+        schema:
+          type: string
+        description: ISO-4217 target currency for every amount. Defaults to the user's
+          main currency.
+      - in: query
+        name: granularity
+        schema:
+          type: string
+          enum:
+          - day
+          - month
+          - week
+        description: Bucket width. Chosen from the window length when omitted.
+      - in: query
+        name: since
+        schema:
+          type: string
+          format: date-time
+        description: Inclusive start of the window. Defaults to `until` minus 30 days.
+      - in: query
+        name: timezone
+        schema:
+          type: string
+        description: IANA zone that cuts days, ISO weeks, months and hours of day.
+          Defaults to UTC.
+      - in: query
+        name: until
+        schema:
+          type: string
+          format: date-time
+        description: Exclusive end of the window. Defaults to now. At most 5 years
+          after `since`.
+      - in: query
+        name: wallet_id
+        schema:
+          type: string
+        description: Comma-joined wallet ids. Defaults to every open wallet.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAnalyticsCashFlow'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/analytics/categories:
+    get:
+      operationId: analytics_categories_retrieve
+      description: Every category with rows in the window, amount descending, each
+        compared with the same category in the previous window. Transfers are excluded.
+      summary: Break one side of the ledger down by category
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Comma-joined transaction category ids. `__none__` selects uncategorised
+          rows.
+      - in: query
+        name: currency
+        schema:
+          type: string
+        description: ISO-4217 target currency for every amount. Defaults to the user's
+          main currency.
+      - in: query
+        name: since
+        schema:
+          type: string
+          format: date-time
+        description: Inclusive start of the window. Defaults to `until` minus 30 days.
+      - in: query
+        name: timezone
+        schema:
+          type: string
+        description: IANA zone that cuts days, ISO weeks, months and hours of day.
+          Defaults to UTC.
+      - in: query
+        name: type
+        schema:
+          type: string
+          enum:
+          - expense
+          - income
+        description: Ledger side. Defaults to `expense`.
+      - in: query
+        name: until
+        schema:
+          type: string
+          format: date-time
+        description: Exclusive end of the window. Defaults to now. At most 5 years
+          after `since`.
+      - in: query
+        name: wallet_id
+        schema:
+          type: string
+        description: Comma-joined wallet ids. Defaults to every open wallet.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAnalyticsCategories'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/analytics/category-trends:
+    get:
+      operationId: analytics_category_trends_retrieve
+      description: One zero-filled series per featured category, aligned to the `/cash-flow`
+        buckets. Without a `category` filter the top `limit` categories are kept and
+        the rest fold into one `__other__` series; with one, exactly those categories
+        come back and no roll-up.
+      summary: Get per-category series over time
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Comma-joined transaction category ids. `__none__` selects uncategorised
+          rows.
+      - in: query
+        name: currency
+        schema:
+          type: string
+        description: ISO-4217 target currency for every amount. Defaults to the user's
+          main currency.
+      - in: query
+        name: granularity
+        schema:
+          type: string
+          enum:
+          - day
+          - month
+          - week
+        description: Bucket width. Chosen from the window length when omitted.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: How many categories to feature. 1..7, default 6.
+      - in: query
+        name: since
+        schema:
+          type: string
+          format: date-time
+        description: Inclusive start of the window. Defaults to `until` minus 30 days.
+      - in: query
+        name: timezone
+        schema:
+          type: string
+        description: IANA zone that cuts days, ISO weeks, months and hours of day.
+          Defaults to UTC.
+      - in: query
+        name: type
+        schema:
+          type: string
+          enum:
+          - expense
+          - income
+        description: Ledger side. Defaults to `expense`.
+      - in: query
+        name: until
+        schema:
+          type: string
+          format: date-time
+        description: Exclusive end of the window. Defaults to now. At most 5 years
+          after `since`.
+      - in: query
+        name: wallet_id
+        schema:
+          type: string
+        description: Comma-joined wallet ids. Defaults to every open wallet.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAnalyticsCategoryTrends'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/analytics/counterparties:
+    get:
+      operationId: analytics_counterparties_list
+      description: Rows grouped by transaction name, trimmed and compared case-insensitively,
+        amount descending. Transfers are excluded.
+      summary: List who the money goes to or comes from
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Comma-joined transaction category ids. `__none__` selects uncategorised
+          rows.
+      - in: query
+        name: currency
+        schema:
+          type: string
+        description: ISO-4217 target currency for every amount. Defaults to the user's
+          main currency.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: How many counterparties to return. 1..25, default 10.
+      - in: query
+        name: since
+        schema:
+          type: string
+          format: date-time
+        description: Inclusive start of the window. Defaults to `until` minus 30 days.
+      - in: query
+        name: timezone
+        schema:
+          type: string
+        description: IANA zone that cuts days, ISO weeks, months and hours of day.
+          Defaults to UTC.
+      - in: query
+        name: type
+        schema:
+          type: string
+          enum:
+          - expense
+          - income
+        description: Ledger side. Defaults to `expense`.
+      - in: query
+        name: until
+        schema:
+          type: string
+          format: date-time
+        description: Exclusive end of the window. Defaults to now. At most 5 years
+          after `since`.
+      - in: query
+        name: wallet_id
+        schema:
+          type: string
+        description: Comma-joined wallet ids. Defaults to every open wallet.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAnalyticsCounterparties'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/analytics/dimensions:
+    get:
+      operationId: analytics_dimensions_retrieve
+      description: Open wallets and the distinct income and expense categories, with
+        the first and last transaction instants. Ignores the window parameters; `currency`
+        is only echoed back.
+      summary: Get the analytics filter vocabulary
+      parameters:
+      - in: query
+        name: currency
+        schema:
+          type: string
+        description: ISO-4217 target currency for every amount. Defaults to the user's
+          main currency.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAnalyticsDimensions'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/analytics/money-flow:
+    get:
+      operationId: analytics_money_flow_retrieve
+      description: A three-column acyclic flow for a Sankey chart. A wallet's surplus
+        flows to `savings`; a shortfall is drawn from `reserves`. Transfers are excluded.
+      summary: Get the income to wallet to expense flow
+      parameters:
+      - in: query
+        name: currency
+        schema:
+          type: string
+        description: ISO-4217 target currency for every amount. Defaults to the user's
+          main currency.
+      - in: query
+        name: since
+        schema:
+          type: string
+          format: date-time
+        description: Inclusive start of the window. Defaults to `until` minus 30 days.
+      - in: query
+        name: timezone
+        schema:
+          type: string
+        description: IANA zone that cuts days, ISO weeks, months and hours of day.
+          Defaults to UTC.
+      - in: query
+        name: until
+        schema:
+          type: string
+          format: date-time
+        description: Exclusive end of the window. Defaults to now. At most 5 years
+          after `since`.
+      - in: query
+        name: wallet_id
+        schema:
+          type: string
+        description: Comma-joined wallet ids. Defaults to every open wallet.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAnalyticsMoneyFlow'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/analytics/overview:
+    get:
+      operationId: analytics_overview_retrieve
+      description: Inflow, outflow, savings rate, activity and the largest movements
+        for `[since, until)` and for the previous window of equal length. Transfers
+        are excluded.
+      summary: Get headline totals for a window and the one before it
+      parameters:
+      - in: query
+        name: currency
+        schema:
+          type: string
+        description: ISO-4217 target currency for every amount. Defaults to the user's
+          main currency.
+      - in: query
+        name: since
+        schema:
+          type: string
+          format: date-time
+        description: Inclusive start of the window. Defaults to `until` minus 30 days.
+      - in: query
+        name: timezone
+        schema:
+          type: string
+        description: IANA zone that cuts days, ISO weeks, months and hours of day.
+          Defaults to UTC.
+      - in: query
+        name: until
+        schema:
+          type: string
+          format: date-time
+        description: Exclusive end of the window. Defaults to now. At most 5 years
+          after `since`.
+      - in: query
+        name: wallet_id
+        schema:
+          type: string
+        description: Comma-joined wallet ids. Defaults to every open wallet.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAnalyticsOverview'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/analytics/spending-calendar:
+    get:
+      operationId: analytics_spending_calendar_retrieve
+      description: One entry per calendar day in `timezone`, zero-filled. The window
+        covers at most 366 days. Transfers are excluded.
+      summary: Get daily inflow and outflow for a heatmap calendar
+      parameters:
+      - in: query
+        name: currency
+        schema:
+          type: string
+        description: ISO-4217 target currency for every amount. Defaults to the user's
+          main currency.
+      - in: query
+        name: since
+        schema:
+          type: string
+          format: date-time
+        description: Inclusive start of the window. Defaults to `until` minus 30 days.
+      - in: query
+        name: timezone
+        schema:
+          type: string
+        description: IANA zone that cuts days, ISO weeks, months and hours of day.
+          Defaults to UTC.
+      - in: query
+        name: until
+        schema:
+          type: string
+          format: date-time
+        description: Exclusive end of the window. Defaults to now. At most 5 years
+          after `since`.
+      - in: query
+        name: wallet_id
+        schema:
+          type: string
+        description: Comma-joined wallet ids. Defaults to every open wallet.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAnalyticsSpendingCalendar'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/analytics/spending-rhythm:
+    get:
+      operationId: analytics_spending_rhythm_retrieve
+      description: All 168 weekday and hour cells in `timezone`, zero-filled, with
+        the peak cell. Transfers are excluded.
+      summary: Get a weekday by hour-of-day matrix
+      parameters:
+      - in: query
+        name: currency
+        schema:
+          type: string
+        description: ISO-4217 target currency for every amount. Defaults to the user's
+          main currency.
+      - in: query
+        name: since
+        schema:
+          type: string
+          format: date-time
+        description: Inclusive start of the window. Defaults to `until` minus 30 days.
+      - in: query
+        name: timezone
+        schema:
+          type: string
+        description: IANA zone that cuts days, ISO weeks, months and hours of day.
+          Defaults to UTC.
+      - in: query
+        name: type
+        schema:
+          type: string
+          enum:
+          - expense
+          - income
+        description: Ledger side. Defaults to `expense`.
+      - in: query
+        name: until
+        schema:
+          type: string
+          format: date-time
+        description: Exclusive end of the window. Defaults to now. At most 5 years
+          after `since`.
+      - in: query
+        name: wallet_id
+        schema:
+          type: string
+        description: Comma-joined wallet ids. Defaults to every open wallet.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAnalyticsSpendingRhythm'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/analytics/transactions:
+    get:
+      operationId: analytics_transactions_list
+      description: The top `limit` matching income and expense rows in `order`, with
+        totals over every match. Not paginated. Transfers are excluded.
+      summary: List the transactions behind a chart element
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Comma-joined transaction category ids. `__none__` selects uncategorised
+          rows.
+      - in: query
+        name: currency
+        schema:
+          type: string
+        description: ISO-4217 target currency for every amount. Defaults to the user's
+          main currency.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: How many rows to return. 1..50, default 20.
+      - in: query
+        name: name
+        schema:
+          type: string
+        description: Exact counterparty, trimmed and compared case-insensitively.
+      - in: query
+        name: order
+        schema:
+          type: string
+          enum:
+          - amount_desc
+          - created_desc
+        description: Defaults to `amount_desc`.
+      - in: query
+        name: since
+        schema:
+          type: string
+          format: date-time
+        description: Inclusive start of the window. Defaults to `until` minus 30 days.
+      - in: query
+        name: timezone
+        schema:
+          type: string
+        description: IANA zone that cuts days, ISO weeks, months and hours of day.
+          Defaults to UTC.
+      - in: query
+        name: type
+        schema:
+          type: string
+          enum:
+          - expense
+          - income
+        description: Ledger side. Both when omitted.
+      - in: query
+        name: until
+        schema:
+          type: string
+          format: date-time
+        description: Exclusive end of the window. Defaults to now. At most 5 years
+          after `since`.
+      - in: query
+        name: wallet_id
+        schema:
+          type: string
+        description: Comma-joined wallet ids. Defaults to every open wallet.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedAnalyticsTransactions'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/v1/automations:
     get:
       operationId: automations_list
@@ -481,6 +1236,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedAutomationSearchResult'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/categories:
+    get:
+      operationId: categories_list
+      description: 'The categories you can assign: the global ones every user sees,
+        then your own, each group alphabetical. Deleted categories are left out, though
+        wallets and transactions that already use one still show it.'
+      summary: List categories
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - transaction
+          - wallet
+        description: Restrict to transaction or wallet categories. Absent means both.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCategory'
           description: ''
         '422':
           content:
@@ -1697,6 +2498,358 @@ components:
       required:
       - id
       - type
+    AnalyticsBalanceHistoryMeta:
+      type: object
+      properties:
+        since:
+          type: string
+          format: date-time
+          description: Effective window start after defaults.
+        until:
+          type: string
+          format: date-time
+          description: Effective window end after defaults.
+        currency:
+          type: string
+        timezone:
+          type: string
+        wallet_ids:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Null means every wallet.
+        categories:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Category ids (or `__none__`) the report was filtered to; null
+            means no filter.
+        generated_at:
+          type: string
+          format: date-time
+        cached:
+          type: boolean
+        points:
+          type: integer
+      required:
+      - categories
+      - currency
+      - generated_at
+      - points
+      - since
+      - timezone
+      - until
+      - wallet_ids
+    AnalyticsCashFlow:
+      type: object
+      properties:
+        buckets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsCashFlowBucket'
+          description: Chronological and zero-filled.
+        totals:
+          $ref: '#/components/schemas/FlowTotals'
+      required:
+      - buckets
+      - totals
+    AnalyticsCashFlowBucket:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        inflow:
+          $ref: '#/components/schemas/Money'
+        outflow:
+          $ref: '#/components/schemas/Money'
+        net:
+          $ref: '#/components/schemas/Money'
+        transactions_count:
+          type: integer
+        closing_balance:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: Signed balance of the selected wallets at `end`, transfers
+            included.
+      required:
+      - closing_balance
+      - end
+      - inflow
+      - net
+      - outflow
+      - start
+      - transactions_count
+    AnalyticsCashFlowMeta:
+      type: object
+      properties:
+        since:
+          type: string
+          format: date-time
+          description: Effective window start after defaults.
+        until:
+          type: string
+          format: date-time
+          description: Effective window end after defaults.
+        currency:
+          type: string
+        timezone:
+          type: string
+        wallet_ids:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Null means every wallet.
+        categories:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Category ids (or `__none__`) the report was filtered to; null
+            means no filter.
+        generated_at:
+          type: string
+          format: date-time
+        cached:
+          type: boolean
+        granularity:
+          $ref: '#/components/schemas/GranularityEnum'
+      required:
+      - categories
+      - currency
+      - generated_at
+      - granularity
+      - since
+      - timezone
+      - until
+      - wallet_ids
+    AnalyticsCategoryTrendsMeta:
+      type: object
+      properties:
+        since:
+          type: string
+          format: date-time
+          description: Effective window start after defaults.
+        until:
+          type: string
+          format: date-time
+          description: Effective window end after defaults.
+        currency:
+          type: string
+        timezone:
+          type: string
+        wallet_ids:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Null means every wallet.
+        categories:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Category ids (or `__none__`) the report was filtered to; null
+            means no filter.
+        generated_at:
+          type: string
+          format: date-time
+        cached:
+          type: boolean
+        granularity:
+          $ref: '#/components/schemas/GranularityEnum'
+      required:
+      - categories
+      - currency
+      - generated_at
+      - granularity
+      - since
+      - timezone
+      - until
+      - wallet_ids
+    AnalyticsCounterpartiesMeta:
+      type: object
+      properties:
+        since:
+          type: string
+          format: date-time
+          description: Effective window start after defaults.
+        until:
+          type: string
+          format: date-time
+          description: Effective window end after defaults.
+        currency:
+          type: string
+        timezone:
+          type: string
+        wallet_ids:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Null means every wallet.
+        categories:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Category ids (or `__none__`) the report was filtered to; null
+            means no filter.
+        generated_at:
+          type: string
+          format: date-time
+        cached:
+          type: boolean
+        limit:
+          type: integer
+          nullable: true
+          description: Effective page size. Null on non-paginated endpoints.
+        total:
+          type: integer
+          description: Total items matching the request, ignoring pagination.
+        next_cursor:
+          type: string
+          nullable: true
+          description: Opaque token for the page after this one. Null when exhausted.
+        prev_cursor:
+          type: string
+          nullable: true
+          description: Opaque token for the page before this one. Null on the first
+            page.
+        total_counterparties:
+          type: integer
+          description: Distinct counterparties before `limit`.
+      required:
+      - categories
+      - currency
+      - generated_at
+      - limit
+      - next_cursor
+      - prev_cursor
+      - since
+      - timezone
+      - total
+      - total_counterparties
+      - until
+      - wallet_ids
+    AnalyticsMeta:
+      type: object
+      properties:
+        since:
+          type: string
+          format: date-time
+          description: Effective window start after defaults.
+        until:
+          type: string
+          format: date-time
+          description: Effective window end after defaults.
+        currency:
+          type: string
+        timezone:
+          type: string
+        wallet_ids:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Null means every wallet.
+        categories:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Category ids (or `__none__`) the report was filtered to; null
+            means no filter.
+        generated_at:
+          type: string
+          format: date-time
+        cached:
+          type: boolean
+      required:
+      - categories
+      - currency
+      - generated_at
+      - since
+      - timezone
+      - until
+      - wallet_ids
+    AnalyticsTransactionsMeta:
+      type: object
+      properties:
+        since:
+          type: string
+          format: date-time
+          description: Effective window start after defaults.
+        until:
+          type: string
+          format: date-time
+          description: Effective window end after defaults.
+        currency:
+          type: string
+        timezone:
+          type: string
+        wallet_ids:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Null means every wallet.
+        categories:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Category ids (or `__none__`) the report was filtered to; null
+            means no filter.
+        generated_at:
+          type: string
+          format: date-time
+        cached:
+          type: boolean
+        limit:
+          type: integer
+          nullable: true
+          description: Effective page size. Null on non-paginated endpoints.
+        total:
+          type: integer
+          description: Total items matching the request, ignoring pagination.
+        next_cursor:
+          type: string
+          nullable: true
+          description: Opaque token for the page after this one. Null when exhausted.
+        prev_cursor:
+          type: string
+          nullable: true
+          description: Opaque token for the page before this one. Null on the first
+            page.
+        total_inflow:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: Over every matching row.
+        total_outflow:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: Over every matching row.
+      required:
+      - categories
+      - currency
+      - generated_at
+      - limit
+      - next_cursor
+      - prev_cursor
+      - since
+      - timezone
+      - total
+      - total_inflow
+      - total_outflow
+      - until
+      - wallet_ids
     Automation:
       type: object
       description: 'One rule as the list returns it: the complete resource, not a
@@ -1914,6 +3067,30 @@ components:
       description: |-
         * `event` - event
         * `schedule` - schedule
+    BalanceHistory:
+      type: object
+      properties:
+        timestamps:
+          type: array
+          items:
+            type: string
+            format: date-time
+          description: '`points` evenly spaced instants; the first is `since`, the
+            last `until`.'
+        total:
+          type: array
+          items:
+            $ref: '#/components/schemas/Money'
+          description: Sum of the converted wallet balances.
+        wallets:
+          type: array
+          items:
+            $ref: '#/components/schemas/WalletBalanceSeries'
+          description: Same order as `/dimensions`.
+      required:
+      - timestamps
+      - total
+      - wallets
     BalanceSheet:
       type: object
       properties:
@@ -1937,6 +3114,39 @@ components:
       - comments
       - equity
       - liabilities
+    BucketBounds:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+      required:
+      - end
+      - start
+    CalendarDay:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          description: Calendar day in `timezone`.
+        inflow:
+          $ref: '#/components/schemas/Money'
+        outflow:
+          $ref: '#/components/schemas/Money'
+        net:
+          $ref: '#/components/schemas/Money'
+        transactions_count:
+          type: integer
+      required:
+      - date
+      - inflow
+      - net
+      - outflow
+      - transactions_count
     CashFlow:
       type: object
       properties:
@@ -1964,6 +3174,186 @@ components:
       - outflow
       - savings_rate
       - total_net
+    Categories:
+      type: object
+      properties:
+        type:
+          type: string
+          description: '`expense` or `income`.'
+        total:
+          $ref: '#/components/schemas/Money'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryShare'
+          description: Every category with rows in the window, amount descending.
+      required:
+      - categories
+      - total
+      - type
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/CategoryKindEnum'
+        name:
+          type: string
+        is_global:
+          type: boolean
+          description: Built-in category every user sees. It cannot be renamed or
+            deleted.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - deleted_at
+      - id
+      - is_global
+      - kind
+      - name
+      - updated_at
+    CategoryCatalog:
+      type: object
+      properties:
+        expense:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryReference'
+          description: A to Z by name.
+        income:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryReference'
+          description: A to Z by name.
+      required:
+      - expense
+      - income
+    CategoryKindEnum:
+      enum:
+      - transaction
+      - wallet
+      type: string
+      description: |-
+        * `transaction` - transaction
+        * `wallet` - wallet
+    CategoryReference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        is_global:
+          type: boolean
+      required:
+      - id
+      - is_global
+      - name
+    CategorySeries:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Category id, `__none__` or `__other__`.
+        category:
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
+          description: Null for uncategorised rows and for the other roll-up.
+        kind:
+          $ref: '#/components/schemas/CategorySeriesKindEnum'
+        total:
+          $ref: '#/components/schemas/Money'
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/Money'
+          description: Exactly one per bucket, in bucket order.
+      required:
+      - category
+      - key
+      - kind
+      - points
+      - total
+    CategorySeriesKindEnum:
+      enum:
+      - category
+      - other
+      type: string
+      description: |-
+        * `category` - category
+        * `other` - other
+    CategoryShare:
+      type: object
+      properties:
+        category:
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
+          description: Null for uncategorised rows.
+        amount:
+          $ref: '#/components/schemas/Money'
+        share:
+          type: number
+          format: double
+          description: Percentage of `total`.
+        transactions_count:
+          type: integer
+        average:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: '`amount / transactions_count`.'
+        previous_amount:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: Same category in the previous window.
+        change_percentage:
+          type: number
+          format: double
+          nullable: true
+          description: Null when the previous amount was zero.
+      required:
+      - amount
+      - average
+      - category
+      - change_percentage
+      - previous_amount
+      - share
+      - transactions_count
+    CategoryTrends:
+      type: object
+      properties:
+        type:
+          type: string
+          description: '`expense` or `income`.'
+        buckets:
+          type: array
+          items:
+            $ref: '#/components/schemas/BucketBounds'
+          description: Identical to `/cash-flow` buckets.
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategorySeries'
+          description: Top `limit` categories by total, then one `other` series if
+            anything remains.
+      required:
+      - buckets
+      - series
+      - type
     ChartMeta:
       type: object
       properties:
@@ -2063,6 +3453,38 @@ components:
           description: When the FEED published the rate, not when the conversion ran.
       required:
       - fetched_at
+    Counterparty:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The most frequent original spelling.
+        category:
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
+          description: The counterparty's most frequent category.
+        amount:
+          $ref: '#/components/schemas/Money'
+        share:
+          type: number
+          format: double
+          description: Percentage of the side's total in the window.
+        transactions_count:
+          type: integer
+        average:
+          $ref: '#/components/schemas/Money'
+        last_seen_at:
+          type: string
+          format: date-time
+      required:
+      - amount
+      - average
+      - category
+      - last_seen_at
+      - name
+      - share
+      - transactions_count
     Currency:
       type: object
       properties:
@@ -2129,6 +3551,44 @@ components:
       required:
       - fetched_at
       - target
+    Dimensions:
+      type: object
+      properties:
+        wallets:
+          type: array
+          items:
+            $ref: '#/components/schemas/WalletOption'
+          description: Open wallets, favourites first, then by name.
+        categories:
+          $ref: '#/components/schemas/CategoryCatalog'
+        first_transaction_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Null when the ledger is empty.
+        last_transaction_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - categories
+      - first_transaction_at
+      - last_transaction_at
+      - wallets
+    DimensionsMeta:
+      type: object
+      properties:
+        currency:
+          type: string
+          description: Echoed back.
+        generated_at:
+          type: string
+          format: date-time
+        cached:
+          type: boolean
+      required:
+      - currency
+      - generated_at
     DirectionEnum:
       enum:
       - up
@@ -2146,6 +3606,120 @@ components:
           $ref: '#/components/schemas/AccountDetail'
         meta:
           $ref: '#/components/schemas/ResourceMeta'
+      required:
+      - data
+      - meta
+    EnvelopedAnalyticsBalanceHistory:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/BalanceHistory'
+        meta:
+          $ref: '#/components/schemas/AnalyticsBalanceHistoryMeta'
+      required:
+      - data
+      - meta
+    EnvelopedAnalyticsCashFlow:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AnalyticsCashFlow'
+        meta:
+          $ref: '#/components/schemas/AnalyticsCashFlowMeta'
+      required:
+      - data
+      - meta
+    EnvelopedAnalyticsCategories:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Categories'
+        meta:
+          $ref: '#/components/schemas/AnalyticsMeta'
+      required:
+      - data
+      - meta
+    EnvelopedAnalyticsCategoryTrends:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CategoryTrends'
+        meta:
+          $ref: '#/components/schemas/AnalyticsCategoryTrendsMeta'
+      required:
+      - data
+      - meta
+    EnvelopedAnalyticsCounterparties:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Counterparty'
+        meta:
+          $ref: '#/components/schemas/AnalyticsCounterpartiesMeta'
+      required:
+      - data
+      - meta
+    EnvelopedAnalyticsDimensions:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Dimensions'
+        meta:
+          $ref: '#/components/schemas/DimensionsMeta'
+      required:
+      - data
+      - meta
+    EnvelopedAnalyticsMoneyFlow:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/MoneyFlow'
+        meta:
+          $ref: '#/components/schemas/AnalyticsMeta'
+      required:
+      - data
+      - meta
+    EnvelopedAnalyticsOverview:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Overview'
+        meta:
+          $ref: '#/components/schemas/AnalyticsMeta'
+      required:
+      - data
+      - meta
+    EnvelopedAnalyticsSpendingCalendar:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SpendingCalendar'
+        meta:
+          $ref: '#/components/schemas/AnalyticsMeta'
+      required:
+      - data
+      - meta
+    EnvelopedAnalyticsSpendingRhythm:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SpendingRhythm'
+        meta:
+          $ref: '#/components/schemas/AnalyticsMeta'
+      required:
+      - data
+      - meta
+    EnvelopedAnalyticsTransactions:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionBrief'
+        meta:
+          $ref: '#/components/schemas/AnalyticsTransactionsMeta'
       required:
       - data
       - meta
@@ -2339,6 +3913,77 @@ components:
         filter_body: {}
       required:
       - filter_body
+    FlowLink:
+      type: object
+      properties:
+        source:
+          type: string
+        target:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Money'
+      required:
+      - amount
+      - source
+      - target
+    FlowNode:
+      type: object
+      properties:
+        id:
+          type: string
+          description: '`income:<category id|__none__>`, `wallet:<id>`, `expense:<category
+            id|__none__>`, `savings` or `reserves`.'
+        kind:
+          $ref: '#/components/schemas/FlowNodeKindEnum'
+        label:
+          type: string
+        category:
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
+        wallet:
+          allOf:
+          - $ref: '#/components/schemas/WalletReference'
+          nullable: true
+          description: Set only for wallet nodes.
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: The larger of the node's total in and total out.
+      required:
+      - amount
+      - category
+      - id
+      - kind
+      - label
+      - wallet
+    FlowNodeKindEnum:
+      enum:
+      - income_category
+      - wallet
+      - expense_category
+      - savings
+      - reserves
+      type: string
+      description: |-
+        * `income_category` - income_category
+        * `wallet` - wallet
+        * `expense_category` - expense_category
+        * `savings` - savings
+        * `reserves` - reserves
+    FlowTotals:
+      type: object
+      properties:
+        inflow:
+          $ref: '#/components/schemas/Money'
+        outflow:
+          $ref: '#/components/schemas/Money'
+        net:
+          $ref: '#/components/schemas/Money'
+      required:
+      - inflow
+      - net
+      - outflow
     GoalDetail:
       type: object
       properties:
@@ -2481,6 +4126,16 @@ components:
       - target
       - updated_at
       - url
+    GranularityEnum:
+      enum:
+      - day
+      - week
+      - month
+      type: string
+      description: |-
+        * `day` - day
+        * `week` - week
+        * `month` - month
     HealthChecksResponse:
       type: object
       properties:
@@ -2616,6 +4271,34 @@ components:
       required:
       - amount
       - currency
+    MoneyFlow:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlowNode'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlowLink'
+          description: Each `(source, target)` pair appears at most once, amount descending.
+        totals:
+          $ref: '#/components/schemas/MoneyFlowTotals'
+      required:
+      - links
+      - nodes
+      - totals
+    MoneyFlowTotals:
+      type: object
+      properties:
+        inflow:
+          $ref: '#/components/schemas/Money'
+        outflow:
+          $ref: '#/components/schemas/Money'
+      required:
+      - inflow
+      - outflow
     NetDiff:
       type: object
       properties:
@@ -2788,6 +4471,18 @@ components:
     NullEnum:
       enum:
       - null
+    Overview:
+      type: object
+      properties:
+        current:
+          $ref: '#/components/schemas/PeriodSummary'
+        previous:
+          allOf:
+          - $ref: '#/components/schemas/PeriodSummary'
+          description: The window of equal length just before.
+      required:
+      - current
+      - previous
     PaginatedAccountPreview:
       type: object
       properties:
@@ -2831,6 +4526,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AutomationSearchResult'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
+    PaginatedCategory:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
         meta:
           $ref: '#/components/schemas/CollectionMeta'
       required:
@@ -2956,12 +4663,98 @@ components:
       required:
       - data
       - meta
+    PeriodSummary:
+      type: object
+      properties:
+        since:
+          type: string
+          format: date-time
+        until:
+          type: string
+          format: date-time
+        inflow:
+          $ref: '#/components/schemas/Money'
+        outflow:
+          $ref: '#/components/schemas/Money'
+        net:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'Signed: `inflow - outflow`.'
+        savings_rate:
+          type: number
+          format: double
+          nullable: true
+          description: '`net / inflow * 100`. Null when nothing came in.'
+        transactions_count:
+          type: integer
+          description: Income and expense rows, no transfers.
+        active_days:
+          type: integer
+          description: Days in `timezone` with at least one row.
+        average_daily_outflow:
+          $ref: '#/components/schemas/Money'
+        largest_expense:
+          allOf:
+          - $ref: '#/components/schemas/TransactionBrief'
+          nullable: true
+        largest_income:
+          allOf:
+          - $ref: '#/components/schemas/TransactionBrief'
+          nullable: true
+        top_expense_category:
+          allOf:
+          - $ref: '#/components/schemas/TopCategory'
+          nullable: true
+      required:
+      - active_days
+      - average_daily_outflow
+      - inflow
+      - largest_expense
+      - largest_income
+      - net
+      - outflow
+      - savings_rate
+      - since
+      - top_expense_category
+      - transactions_count
+      - until
     ResourceMeta:
       type: object
       properties:
         cached:
           type: boolean
           description: True when the payload was served from cache rather than rebuilt.
+    RhythmCell:
+      type: object
+      properties:
+        weekday:
+          type: integer
+          description: 'ISO weekday: 1 is Monday, 7 is Sunday.'
+        hour:
+          type: integer
+          description: 0..23 in `timezone`.
+        amount:
+          $ref: '#/components/schemas/Money'
+        transactions_count:
+          type: integer
+      required:
+      - amount
+      - hour
+      - transactions_count
+      - weekday
+    RhythmPeak:
+      type: object
+      properties:
+        weekday:
+          type: integer
+        hour:
+          type: integer
+        amount:
+          $ref: '#/components/schemas/Money'
+      required:
+      - amount
+      - hour
+      - weekday
     ScheduleEnum:
       enum:
       - daily
@@ -3004,6 +4797,41 @@ components:
       description: |-
         * `assistant` - assistant
         * `scheduler` - scheduler
+    SpendingCalendar:
+      type: object
+      properties:
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalendarDay'
+          description: Every day of the window, chronological and zero-filled.
+        peak_outflow:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: Largest single-day outflow; zero when empty.
+      required:
+      - days
+      - peak_outflow
+    SpendingRhythm:
+      type: object
+      properties:
+        type:
+          type: string
+          description: '`expense` or `income`.'
+        cells:
+          type: array
+          items:
+            $ref: '#/components/schemas/RhythmCell'
+          description: All 168 cells, ordered by weekday then hour.
+        peak:
+          allOf:
+          - $ref: '#/components/schemas/RhythmPeak'
+          nullable: true
+          description: Null when every cell is zero.
+      required:
+      - cells
+      - peak
+      - type
     StatusEnum:
       enum:
       - pending
@@ -3016,6 +4844,23 @@ components:
         * `resolved` - resolved
         * `dismissed` - dismissed
         * `expired` - expired
+    TopCategory:
+      type: object
+      properties:
+        category:
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
+        amount:
+          $ref: '#/components/schemas/Money'
+        share:
+          type: number
+          format: double
+          description: Percentage of the window's outflow.
+      required:
+      - amount
+      - category
+      - share
     TransactionAnalysis:
       type: object
       properties:
@@ -3027,6 +4872,42 @@ components:
       required:
       - balanced
       - comment
+    TransactionBrief:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        type:
+          type: string
+          description: '`expense` or `income`.'
+        category:
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
+        wallet:
+          $ref: '#/components/schemas/WalletReference'
+        money:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: Native amount, in the wallet's currency.
+        converted:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: The same amount in the requested currency.
+      required:
+      - category
+      - converted
+      - created_at
+      - id
+      - money
+      - name
+      - type
+      - wallet
     TransactionChain:
       type: object
       properties:
@@ -3083,7 +4964,8 @@ components:
         wallet:
           $ref: '#/components/schemas/TransactionWallet'
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
         chain:
           allOf:
@@ -3172,7 +5054,8 @@ components:
         wallet:
           $ref: '#/components/schemas/TransactionWallet'
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
         chain:
           allOf:
@@ -3221,7 +5104,8 @@ components:
         wallet:
           $ref: '#/components/schemas/TransactionWallet'
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
         chain:
           allOf:
@@ -3250,6 +5134,25 @@ components:
       required:
       - id
       - name
+    WalletBalanceSeries:
+      type: object
+      properties:
+        wallet:
+          $ref: '#/components/schemas/WalletOption'
+        balances:
+          type: array
+          items:
+            $ref: '#/components/schemas/Money'
+          description: Signed, in the requested currency.
+        native_balances:
+          type: array
+          items:
+            $ref: '#/components/schemas/Money'
+          description: Signed, in the wallet's currency.
+      required:
+      - balances
+      - native_balances
+      - wallet
     WalletDetail:
       type: object
       properties:
@@ -3270,7 +5173,9 @@ components:
           format: date-time
           nullable: true
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
         currency:
           type: string
         money:
@@ -3309,6 +5214,23 @@ components:
       - recent
       - updated_at
       - zero_balance
+    WalletOption:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        color:
+          type: string
+        currency:
+          type: string
+          description: The wallet's own currency.
+      required:
+      - color
+      - currency
+      - id
+      - name
     WalletPeriodFlows:
       type: object
       properties:
@@ -3341,7 +5263,9 @@ components:
           format: date-time
           nullable: true
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
         currency:
           type: string
         money:
@@ -3397,7 +5321,8 @@ components:
         wallet:
           $ref: '#/components/schemas/TransactionWallet'
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
         chain:
           allOf:
@@ -3415,6 +5340,19 @@ components:
       - type
       - updated_at
       - wallet
+    WalletReference:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        color:
+          type: string
+      required:
+      - color
+      - id
+      - name
     WalletSearchResult:
       type: object
       properties:
@@ -3435,7 +5373,9 @@ components:
           format: date-time
           nullable: true
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
         currency:
           type: string
         money:

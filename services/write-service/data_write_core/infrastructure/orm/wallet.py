@@ -1,5 +1,6 @@
 from django.db import models
 
+from .category import WalletCategoryModel
 from .money_container import MoneyContainerModel
 from .object_managers import SoftDeleteManager
 
@@ -15,7 +16,13 @@ class WalletModel(MoneyContainerModel):
         related_name="wallet",
     )
 
-    category = models.CharField(max_length=120, blank=True, default="")
+    category = models.ForeignKey(
+        WalletCategoryModel,
+        on_delete=models.PROTECT,
+        related_name="wallets",
+        blank=True,
+        null=True,
+    )
     color = models.CharField(max_length=9, blank=True, default="")
     favorite = models.BooleanField(default=False)
     zero_balance = models.DecimalField(max_digits=20, decimal_places=2, default=0)

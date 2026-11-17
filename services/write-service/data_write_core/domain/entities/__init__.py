@@ -13,6 +13,7 @@ from .automation import (
     AutomationTrigger,
 )
 from .balance_checkpoint import BalanceCheckpointEntity
+from .category import CategoryEntity
 from .currency import CurrencyEntity
 from .goal import UNCHANGED as GOAL_UNCHANGED, GoalEntity
 from .internal_user import InternalUserEntity
@@ -33,6 +34,7 @@ __all__ = [
     "ActionSource",
     "ActionStatus",
     "rank_of",
+    "CategoryEntity",
     "EntityRoot",
     "WalletEntity",
     "CurrencyEntity",

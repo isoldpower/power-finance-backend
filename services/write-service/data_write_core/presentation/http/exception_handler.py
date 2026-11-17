@@ -8,6 +8,7 @@ from write_service.common.http_contract import (
     ErrorCode,
     ErrorDetail,
     NotFound,
+    ServiceUnavailable,
     ValidationFailed,
     api_exception_handler,
 )
@@ -49,6 +50,8 @@ def translate(exception: Exception) -> Exception:
             MESSAGES.DUPLICATE_SUBSCRIPTION,
             code=ErrorCode.SUBSCRIPTION_EXISTS,
         )
+    except domain.DemoSessionsDisabledError as error:
+        return ServiceUnavailable(str(error))
     except domain.InsufficientFundsError:
         return Conflict(
             MESSAGES.INSUFFICIENT_FUNDS,
@@ -58,6 +61,26 @@ def translate(exception: Exception) -> Exception:
         return Conflict(
             MESSAGES.WALLET_NOT_EMPTY,
             code=ErrorCode.WALLET_NOT_EMPTY,
+        )
+    except domain.GlobalCategoryImmutableError:
+        return Conflict(
+            MESSAGES.GLOBAL_CATEGORY_IMMUTABLE,
+            code=ErrorCode.CONFLICT,
+        )
+    except domain.CategoryNameTakenError:
+        return Conflict(
+            MESSAGES.CATEGORY_NAME_TAKEN,
+            code=ErrorCode.CONFLICT,
+        )
+    except domain.TransactionAlreadyChainedError:
+        return Conflict(
+            MESSAGES.ALREADY_CHAINED,
+            code=ErrorCode.CONFLICT,
+        )
+    except domain.TransactionChainCancelledError:
+        return Conflict(
+            MESSAGES.CHAIN_CANCELLED,
+            code=ErrorCode.CONFLICT,
         )
     except domain.WalletClosedError:
         return Conflict(
@@ -100,6 +123,8 @@ def translate(exception: Exception) -> Exception:
             MESSAGES.CHAIN_CYCLE,
             code=ErrorCode.CHAIN_CYCLE,
         )
+    except domain.TransactionChainDuplicateMemberError as error:
+        return ValidationFailed(str(error))
     except domain.TransactionChainTooLongError as error:
         return ValidationFailed(
             str(error),
@@ -143,6 +168,8 @@ def _translate_field_failure(exception: Exception) -> Exception:
         return _field_error(FIELDS.CURRENCY, DetailCode.INVALID, MESSAGES.IMMUTABLE_CURRENCY)
     except domain.GoalCurrencyImmutableError:
         return _field_error(FIELDS.CURRENCY, DetailCode.INVALID, MESSAGES.IMMUTABLE_GOAL_CURRENCY)
+    except domain.CategoryKindMismatchError as error:
+        return _field_error(FIELDS.CATEGORY_ID, DetailCode.INVALID, str(error))
     except domain.UnsupportedWebhookEventTypeError as error:
         return _field_error(FIELDS.EVENT_TYPE, DetailCode.UNKNOWN_EVENT_TYPE, str(error))
     except UNPROCESSABLE_STATES as error:

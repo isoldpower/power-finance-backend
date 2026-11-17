@@ -8,6 +8,7 @@ from write_service.common.idempotency import idempotent
 
 from data_write_core.application.commands import (
     ChainEntryCommand,
+    ChainExistingEntryCommand,
     CreateTransactionChainCommand,
     CreateTransactionChainCommandHandler,
 )
@@ -34,7 +35,9 @@ class TransactionChainListView(TransactionChainView, CommandResponseMixin):
             "expressed: a transaction carries one money flow, so moving money "
             "between wallets is an expense on one and an income on the other, "
             "submitted together. Because the chain is all-or-nothing, money is "
-            "never observed as having left one wallet without arriving in the other."
+            "never observed as having left one wallet without arriving in the other. "
+            "An entry may instead carry `transaction_id` to bind an existing, "
+            "unchained and uncancelled transaction into the new chain."
         ),
         request=CreateTransactionChainRequestSerializer,
         responses={
@@ -67,7 +70,14 @@ class TransactionChainListView(TransactionChainView, CommandResponseMixin):
         )
 
 
-def _to_entry_command(validated: dict[str, Any]) -> ChainEntryCommand:
+def _to_entry_command(validated: dict[str, Any]) -> ChainEntryCommand | ChainExistingEntryCommand:
+    if "transaction_id" in validated:
+        return ChainExistingEntryCommand(
+            temporary_id=validated["temporary_id"],
+            transaction_id=validated["transaction_id"],
+            after=validated.get("after"),
+        )
+
     return ChainEntryCommand(
         temporary_id=validated["temporary_id"],
         after=validated.get("after"),
@@ -76,6 +86,6 @@ def _to_entry_command(validated: dict[str, Any]) -> ChainEntryCommand:
         name=validated["name"],
         transaction_type=transaction_type_of(validated),
         origin=origin_of(validated),
-        category=validated.get("category"),
+        category_id=validated.get("category_id"),
         evidence_url=evidence_url_of(validated),
     )

@@ -35,6 +35,7 @@ class IndexTransactionDocument(Effect):
             "currency_code": wallet.currency_code,
             "name": payload.name,
             "category": payload.category or None,
+            "category_id": payload.category_id or None,
             "evidence_url": payload.evidence_url or None,
             "origin": payload.origin or "manual",
             "type": "expense" if amount < 0 else "income",

@@ -1,10 +1,13 @@
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import NamedTuple
-from uuid import UUID
+from uuid import UUID, uuid5
 
-from data_write_core.domain.value_objects import TransactionType
+from data_write_core.domain.value_objects import CategoryKind, TransactionType, global_category_id
 
+from ...bootstrap import get_repository_registry
+from ...interfaces import DemoSeedRepository
 from ..goals.create_new_goal import CreateNewGoalCommand, CreateNewGoalCommandHandler
 from ..transactions.create_transaction import (
     CreateTransactionCommand,
@@ -85,41 +88,119 @@ DEMO_TRANSACTIONS: tuple[DemoTransactionSeed, ...] = (
 )
 
 
-class DemoAccountSeeder:
-    async def seed(self, user_id: int, external_id: str) -> int:
-        container_ids, wallets_write_version = await self._create_wallets(user_id, external_id)
-        goal_id, goal_write_version = await self._create_goal(user_id, external_id)
-        container_ids[DEMO_GOAL.key] = goal_id
-        transactions_write_version = await self._create_transactions(
-            user_id, external_id, container_ids
-        )
+DEMO_SEED_ITEM_NAMESPACE = UUID("5d1f0c7e-3a9b-4c62-8e47-b2a6f9d18c35")
 
-        return max(wallets_write_version, goal_write_version, transactions_write_version)
+
+def demo_seed_item_id(external_id: str, item_key: str) -> UUID:
+    return uuid5(DEMO_SEED_ITEM_NAMESPACE, f"{external_id}:{item_key}")
+
+
+class DemoSeedItem(NamedTuple):
+    item_id: UUID
+    create: Callable[[], Awaitable[int]]
+
+
+class DemoAccountSeeder:
+    def __init__(self, seed_repository: DemoSeedRepository | None = None) -> None:
+        self._seed_repository = seed_repository or get_repository_registry().demo_seed_repository
+
+    async def seed_if_incomplete(self, user_id: int, external_id: str) -> int | None:
+        if await self._seed_repository.is_seed_completed(user_id):
+            return None
+
+        seed_items = self._plan(user_id, external_id)
+        existing_item_ids = await self._seed_repository.find_existing_seed_items(
+            user_id, [seed_item.item_id for seed_item in seed_items]
+        )
+        write_versions = [
+            await self._create_unless_present(user_id, seed_item)
+            for seed_item in seed_items
+            if seed_item.item_id not in existing_item_ids
+        ]
+        await self._seed_repository.mark_seed_completed(user_id)
+
+        created_write_versions = [version for version in write_versions if version is not None]
+        return max(created_write_versions) if created_write_versions else None
+
+    async def _create_unless_present(self, user_id: int, seed_item: DemoSeedItem) -> int | None:
+        try:
+            return await seed_item.create()
+        except Exception:
+            concurrently_created = await self._seed_repository.find_existing_seed_items(
+                user_id, [seed_item.item_id]
+            )
+            if seed_item.item_id in concurrently_created:
+                return None
+            raise
 
     @staticmethod
-    async def _create_wallets(user_id: int, external_id: str) -> tuple[dict[str, UUID], int]:
-        container_ids: dict[str, UUID] = {}
-        latest_write_version = 0
-        for wallet_seed in DEMO_WALLETS:
-            created_wallet, write_version = await CreateNewWalletCommandHandler().handle(
-                CreateNewWalletCommand(
-                    user_id=user_id,
-                    user_external_id=external_id,
-                    name=wallet_seed.name,
-                    currency=wallet_seed.currency,
-                    category=wallet_seed.category,
-                    color=wallet_seed.color,
-                    opening_balance=wallet_seed.opening_balance,
+    def _plan(user_id: int, external_id: str) -> list[DemoSeedItem]:
+        container_ids = {
+            wallet_seed.key: demo_seed_item_id(external_id, f"wallet:{wallet_seed.key}")
+            for wallet_seed in DEMO_WALLETS
+        }
+        container_ids[DEMO_GOAL.key] = demo_seed_item_id(external_id, f"goal:{DEMO_GOAL.key}")
+
+        seed_items = [
+            DemoSeedItem(
+                item_id=container_ids[wallet_seed.key],
+                create=_wallet_creator(
+                    user_id, external_id, container_ids[wallet_seed.key], wallet_seed
+                ),
+            )
+            for wallet_seed in DEMO_WALLETS
+        ]
+        seed_items.append(
+            DemoSeedItem(
+                item_id=container_ids[DEMO_GOAL.key],
+                create=_goal_creator(user_id, external_id, container_ids[DEMO_GOAL.key]),
+            )
+        )
+        for transaction_position, transaction_seed in enumerate(DEMO_TRANSACTIONS):
+            transaction_id = demo_seed_item_id(external_id, f"transaction:{transaction_position}")
+            seed_items.append(
+                DemoSeedItem(
+                    item_id=transaction_id,
+                    create=_transaction_creator(
+                        user_id,
+                        external_id,
+                        transaction_id,
+                        container_ids[transaction_seed.container_key],
+                        transaction_seed,
+                    ),
                 )
             )
-            container_ids[wallet_seed.key] = created_wallet.id
-            latest_write_version = max(latest_write_version, write_version)
 
-        return container_ids, latest_write_version
+        return seed_items
 
-    @staticmethod
-    async def _create_goal(user_id: int, external_id: str) -> tuple[UUID, int]:
-        created_goal, write_version = await CreateNewGoalCommandHandler().handle(
+
+def _wallet_creator(
+    user_id: int,
+    external_id: str,
+    wallet_id: UUID,
+    wallet_seed: DemoWalletSeed,
+) -> Callable[[], Awaitable[int]]:
+    async def create_wallet() -> int:
+        _, write_version = await CreateNewWalletCommandHandler().handle(
+            CreateNewWalletCommand(
+                user_id=user_id,
+                user_external_id=external_id,
+                name=wallet_seed.name,
+                currency=wallet_seed.currency,
+                category_id=global_category_id(CategoryKind.WALLET, wallet_seed.category),
+                color=wallet_seed.color,
+                opening_balance=wallet_seed.opening_balance,
+                wallet_id=wallet_id,
+            )
+        )
+        return write_version
+
+    return create_wallet
+
+
+def _goal_creator(user_id: int, external_id: str, goal_id: UUID) -> Callable[[], Awaitable[int]]:
+    async def create_goal() -> int:
+        _, write_version = await CreateNewGoalCommandHandler().handle(
             CreateNewGoalCommand(
                 user_id=user_id,
                 user_external_id=external_id,
@@ -127,29 +208,34 @@ class DemoAccountSeeder:
                 currency=DEMO_GOAL.currency,
                 target=DEMO_GOAL.target,
                 finish_at=datetime.now() + timedelta(days=DEMO_GOAL.days_until_finish),
+                goal_id=goal_id,
             )
         )
-        return created_goal.id, write_version
+        return write_version
 
-    @staticmethod
-    async def _create_transactions(
-        user_id: int,
-        external_id: str,
-        container_ids: dict[str, UUID],
-    ) -> int:
-        latest_write_version = 0
-        for transaction_seed in DEMO_TRANSACTIONS:
-            _, write_version = await CreateTransactionCommandHandler().handle(
-                CreateTransactionCommand(
-                    user_id=user_id,
-                    user_external_id=external_id,
-                    wallet_id=container_ids[transaction_seed.container_key],
-                    amount=transaction_seed.amount,
-                    name=transaction_seed.name,
-                    category=transaction_seed.category,
-                    transaction_type=transaction_seed.transaction_type,
-                )
+    return create_goal
+
+
+def _transaction_creator(
+    user_id: int,
+    external_id: str,
+    transaction_id: UUID,
+    container_id: UUID,
+    transaction_seed: DemoTransactionSeed,
+) -> Callable[[], Awaitable[int]]:
+    async def create_transaction() -> int:
+        _, write_version = await CreateTransactionCommandHandler().handle(
+            CreateTransactionCommand(
+                user_id=user_id,
+                user_external_id=external_id,
+                wallet_id=container_id,
+                amount=transaction_seed.amount,
+                name=transaction_seed.name,
+                category_id=global_category_id(CategoryKind.TRANSACTION, transaction_seed.category),
+                transaction_type=transaction_seed.transaction_type,
+                transaction_id=transaction_id,
             )
-            latest_write_version = max(latest_write_version, write_version)
+        )
+        return write_version
 
-        return latest_write_version
+    return create_transaction

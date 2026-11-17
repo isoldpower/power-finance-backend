@@ -3,6 +3,8 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
+from data_write_core.domain.value_objects import CategoryReference
+
 
 @dataclass(frozen=True)
 class WalletDTO:
@@ -13,7 +15,7 @@ class WalletDTO:
     currency: str
     created_at: datetime
     updated_at: datetime
-    category: str = ""
+    category: CategoryReference | None = None
     color: str = ""
     favorite: bool = False
     zero_balance: Decimal = Decimal("0")

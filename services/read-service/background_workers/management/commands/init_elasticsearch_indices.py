@@ -11,8 +11,8 @@ logger = logging.getLogger("background_workers.elasticsearch_init")
 class Command(BaseCommand):
     help = (
         "Create the read-side Elasticsearch indices (wallets, transactions) with "
-        "their mappings. Idempotent: existing indices are left untouched unless "
-        "--recreate is passed."
+        "their mappings. Idempotent: an existing index only gains the fields its "
+        "mapping added since it was created, unless --recreate is passed."
     )
 
     def add_arguments(self, parser) -> None:
@@ -59,7 +59,8 @@ class Command(BaseCommand):
             exists = False
 
         if exists:
-            self.stdout.write(f"Index {index_name} already exists; skipping.")
+            await client.indices.put_mapping(index=index_name, **definition["mappings"])
+            self.stdout.write(f"Index {index_name} already exists; mapping brought up to date.")
             return
 
         await client.indices.create(index=index_name, **definition)

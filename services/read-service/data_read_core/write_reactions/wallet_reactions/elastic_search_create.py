@@ -35,7 +35,8 @@ class IndexWalletDocument(Effect):
             "created_at": payload.created_at.ToDatetime(tzinfo=UTC).isoformat(),
             "updated_at": None,
             "deleted_at": None,
-            "category": payload.category,
+            "category": payload.category or None,
+            "category_id": payload.category_id or None,
             "color": payload.color,
             "favorite": payload.favorite,
         }

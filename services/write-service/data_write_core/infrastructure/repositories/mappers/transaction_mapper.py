@@ -9,6 +9,8 @@ from data_write_core.domain.value_objects import (
 )
 from data_write_core.infrastructure.orm import TransactionModel
 
+from .category_mapper import reference_from_model, transaction_category_model
+
 
 class TransactionMapper:
     @staticmethod
@@ -20,7 +22,7 @@ class TransactionMapper:
             container_kind=MoneyContainerKind(model.container.kind),
             metadata=TransactionMetadata(
                 name=model.name,
-                category=model.category,
+                category=reference_from_model(model.category),
                 evidence_url=model.evidence_url,
                 origin=TransactionOrigin(model.origin),
                 chain_id=model.chain_id,
@@ -38,7 +40,7 @@ class TransactionMapper:
         model.container_id = entity.container_id
         model.chain_id = entity.chain_id
         model.name = entity.name
-        model.category = entity.category
+        model.category = transaction_category_model(entity.category)
         model.evidence_url = entity.evidence_url
         model.origin = str(entity.origin)
         model.created_at = entity.created_at

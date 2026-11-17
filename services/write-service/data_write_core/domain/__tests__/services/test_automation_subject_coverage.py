@@ -9,6 +9,7 @@ from data_write_core.domain.entities import MoneyFlowEntity, TransactionEntity, 
 from data_write_core.domain.events import EventCollector
 from data_write_core.domain.services import transaction_subject, wallet_subject
 from data_write_core.domain.value_objects import (
+    CategoryReference,
     MoneyContainerKind,
     MoneyFlowData,
     TransactionMetadata,
@@ -28,7 +29,9 @@ def fully_populated_transaction() -> TransactionAggregate:
         container_kind=MoneyContainerKind.WALLET,
         metadata=TransactionMetadata(
             name="Blue Bottle Coffee",
-            category="Dining",
+            category=CategoryReference(
+                id=UUID("dddddddd-dddd-dddd-dddd-dddddddddddd"), name="Dining", is_global=True
+            ),
             evidence_url="https://example.com/receipt.png",
             chain_id=CHAIN_ID,
         ),
@@ -57,7 +60,13 @@ def test_the_transaction_subject_carries_every_filterable_transaction_field():
 
 def test_the_wallet_subject_carries_every_filterable_wallet_field():
     wallet = WalletEntity.create(
-        data=WalletData(title="Everyday", currency_code="USD"),
+        data=WalletData(
+            title="Everyday",
+            currency_code="USD",
+            category=CategoryReference(
+                id=UUID("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"), name="Banking", is_global=True
+            ),
+        ),
         id=str(WALLET_ID),
         user_id="7",
         created_at=datetime(2026, 9, 1, tzinfo=UTC),

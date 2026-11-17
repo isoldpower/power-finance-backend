@@ -16,6 +16,8 @@ from data_read_core.shared.postgres_orm import (
 )
 from data_read_core.shared.redis_cache import get_redis
 
+from .category_fixtures import category_payload, owned_category
+
 pytestmark = pytest.mark.django_db(transaction=True)
 
 EXTERNAL_USER_ID = "user_2txns"
@@ -91,7 +93,9 @@ async def _transaction(
         amount=Decimal(amount),
         currency_code="USD",
         name=name,
-        category=category,
+        category=(
+            await owned_category(await _user_id(), "transaction", category) if category else None
+        ),
         origin=origin,
         chain_id=chain_id,
         chain_sort=chain_id or NO_CHAIN_SENTINEL,
@@ -118,7 +122,9 @@ async def test_preview_carries_the_target_shape():
             "type": "expense",
             "origin": "manual",
             "wallet": {"id": str(WALLET_ID), "name": "Random Credit Card"},
-            "category": "Some Category",
+            "category": category_payload(
+                await owned_category(await _user_id(), "transaction", "Some Category")
+            ),
             "chain": None,
         }
     ]

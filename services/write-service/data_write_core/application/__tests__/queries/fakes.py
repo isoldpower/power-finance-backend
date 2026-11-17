@@ -518,7 +518,11 @@ def make_automation(
         user_external_id="user_clerk",
         name="Tag groceries",
         trigger=AutomationTrigger(type="event", event="transaction.created"),
-        effects=(AutomationEffect(type="set_category", params={"category": "Food"}),),
+        effects=(
+            AutomationEffect(
+                type="set_category", params={"category_id": "dddddddd-dddd-dddd-dddd-dddddddddddd"}
+            ),
+        ),
         created_at=moment,
         enabled=enabled,
         deleted_at=deleted_at,

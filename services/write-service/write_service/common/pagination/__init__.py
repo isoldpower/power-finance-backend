@@ -18,6 +18,7 @@ from .limit_policy import DEFAULT_LIMIT_POLICY, LimitPolicy
 from .ordering import (
     ACTION_QUEUE,
     BOOLEAN_CODEC,
+    CATEGORY_LISTING,
     CREATED_AT_DESC,
     DATETIME_CODEC,
     FAVORITE_CREATED_AT_DESC,
@@ -48,6 +49,7 @@ __all__ = [
     "ParamsList",
     "ACTION_QUEUE",
     "BOOLEAN_CODEC",
+    "CATEGORY_LISTING",
     "CREATED_AT_DESC",
     "FAVORITE_CREATED_AT_DESC",
     "TRANSACTION_FEED",

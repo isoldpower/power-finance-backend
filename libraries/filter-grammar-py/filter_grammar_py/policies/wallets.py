@@ -15,6 +15,18 @@ WALLET_FILTER_POLICY: FilterPolicy = {
         model_lookup="currency_code",
         es_field="currency_code",
     ),
+    "category": FilterFieldPolicy(
+        request_name="category",
+        allowed_operators={"eq", "neq", "in", "contains", "icontains"},
+        value_type=TypeVariant.STRING,
+        es_field="category.keyword",
+    ),
+    "category_id": FilterFieldPolicy(
+        request_name="category_id",
+        allowed_operators={"eq", "neq", "in"},
+        value_type=TypeVariant.UUID,
+        es_field="category_id",
+    ),
     "balance": FilterFieldPolicy(
         request_name="balance",
         allowed_operators={"eq", "gte", "lte", "gt", "lt"},

@@ -8,7 +8,14 @@ a service that has no such view, or a POST answered by a projection.
 import pytest
 
 from ..documents import API_PREFIX, normalise
-from ..gateway import plugin_config, resolve, routes, upstream_host
+from ..gateway import (
+    global_plugin_config,
+    plugin_config,
+    resolve,
+    route_plugin_config,
+    routes,
+    upstream_host,
+)
 from ..surface import GO_ROUTES, WEBSOCKET_ROUTES, public_endpoints, schema_of
 
 MUTATING_METHODS = ("POST", "PATCH", "PUT", "DELETE")
@@ -27,8 +34,11 @@ SEARCH_ENDPOINTS = (
 # per client IP instead, which `test_every_anonymous_endpoint_is_rate_limited_by_ip`
 # enforces.
 ANONYMOUS_ENDPOINTS = {
+    "/demo/visits": "issues the signed demo visit id the portfolio iframe starts from",
     "/demo/sessions": "mints the guest demo token the portfolio iframe signs in with",
 }
+
+DEMO_SESSION_SECRET_REFERENCE = "{vault://env/demo-session-secret}"
 
 # A mutation reaches the service that OWNS the resource, which is write-service
 # for everything it holds the ledger for — and is not, for the slices whose
@@ -111,13 +121,68 @@ def test_every_anonymous_endpoint_is_rate_limited_by_ip(path):
 
     for endpoint in anonymous_endpoints:
         route = resolve(_concrete(endpoint.path), endpoint.method)
-        rate_limit = plugin_config(route.service, "rate-limiting")
+        rate_limit = route_plugin_config(route, "rate-limiting")
 
         assert (
             plugin_config(route.service, "clerk-jwt") is None
         ), f"{endpoint} is allow-listed as anonymous but {route.service} requires a session"
         assert rate_limit is not None, f"{endpoint} is anonymous and not rate-limited"
         assert rate_limit.get("limit_by") == "ip", f"{endpoint} is not rate-limited per IP"
+
+
+def _demo_session_gate(path: str, method: str) -> dict:
+    route = resolve(f"{API_PREFIX}{path}", method)
+    assert route is not None, f"{method} {path} is not routed"
+
+    return route_plugin_config(route, "demo-session") or global_plugin_config("demo-session")
+
+
+def test_issuing_a_demo_visit_is_rate_limited_harder_than_other_traffic():
+    route = resolve(f"{API_PREFIX}/demo/visits", "POST")
+    rate_limit = route_plugin_config(route, "rate-limiting")
+
+    assert rate_limit["limit_by"] == "ip"
+    assert rate_limit["minute"] <= 10
+    assert rate_limit["hour"] <= 60
+
+
+def test_issuing_a_demo_visit_ignores_a_stale_demo_session():
+    """A tab whose stored id expired must still be able to ask for a new one."""
+
+    assert _demo_session_gate("/demo/visits", "POST")["reject_invalid"] is False
+
+
+def test_a_guest_session_needs_a_verified_demo_visit():
+    gate = _demo_session_gate("/demo/sessions", "POST")
+
+    assert gate["required"] is True
+
+
+def test_the_traces_stream_verifies_the_session_it_streams():
+    gate = _demo_session_gate("/demo/traces/stream", "GET")
+
+    assert gate["query_parameter_name"] == "session"
+    assert gate["required"] is True
+    assert gate["trace_request"] is False
+
+
+def test_the_assistant_socket_verifies_its_demo_session_query():
+    assert _demo_session_gate("/chat/advice", "GET")["query_parameter_name"] == "demo_session"
+
+
+@pytest.mark.parametrize(
+    ("path", "method"),
+    [
+        ("/wallets", "GET"),
+        ("/wallets", "POST"),
+        ("/demo/visits", "POST"),
+        ("/demo/sessions", "POST"),
+        ("/demo/traces/stream", "GET"),
+        ("/chat/advice", "GET"),
+    ],
+)
+def test_every_demo_session_gate_can_verify_signatures(path, method):
+    assert _demo_session_gate(path, method)["secret"] == DEMO_SESSION_SECRET_REFERENCE
 
 
 def test_the_conversation_is_cleared_by_the_service_that_stores_it():

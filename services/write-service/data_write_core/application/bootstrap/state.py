@@ -4,7 +4,9 @@ from typing import Any
 from ..interfaces import (
     ActionRepository,
     AutomationRepository,
+    CategoryRepository,
     CurrencyRepository,
+    DemoSeedRepository,
     EventBus,
     GoalRepository,
     MoneyContainerRepository,
@@ -38,6 +40,8 @@ class RepositoryRegistry:
     automation_repository: "AutomationRepository"
     notification_repository: "NotificationRepository"
     webhook_repository: "WebhookRepository"
+    category_repository: "CategoryRepository"
+    demo_seed_repository: "DemoSeedRepository"
 
 
 @dataclass

@@ -11,6 +11,7 @@ from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import TransactionEntity, WalletEntity
 from data_write_core.domain.exceptions import UnsupportedCurrencyError
 from data_write_core.domain.value_objects import (
+    CategoryKind,
     MoneyContainerKind,
     MoneyContainerRef,
     OutboxEntry,
@@ -34,12 +35,14 @@ from ..._amount_scale import ensure_amount_scale
 from ...bootstrap import get_repository_registry
 from ...dtos import WalletDTO, wallet_to_dto
 from ...interfaces import (
+    CategoryRepository,
     CurrencyRepository,
     MoneyFlowRepository,
     OutboxRepository,
     TransactionRepository,
     WalletRepository,
 )
+from .._category_resolution import CategoryResolverMixin, category_event_fields
 from .._command_base import CommandHandlerBase
 from ..transactions import (
     build_transaction,
@@ -56,13 +59,14 @@ class CreateNewWalletCommand:
     user_external_id: str
     name: str
     currency: str
-    category: str = ""
+    category_id: UUID | None = None
     color: str = ""
     zero_balance: Decimal = Decimal("0")
     opening_balance: Decimal | object = UNSET
+    wallet_id: UUID | None = None
 
 
-class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
+class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO], CategoryResolverMixin):
     _wallet_repository: WalletRepository
     _currency_repository: CurrencyRepository
     _money_flow_repository: MoneyFlowRepository
@@ -76,7 +80,9 @@ class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
         outbox_repository: OutboxRepository | None = None,
         money_flow_repository: MoneyFlowRepository | None = None,
         transaction_repository: TransactionRepository | None = None,
+        category_repository: CategoryRepository | None = None,
     ) -> None:
+        self.use_category_repository(category_repository)
         registry = get_repository_registry()
         self._wallet_repository = wallet_repository or registry.wallet_repository
         self._currency_repository = currency_repository or registry.currency_repository
@@ -93,13 +99,18 @@ class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
         await ensure_amount_scale(command.zero_balance, currency_code)
         await ensure_amount_scale(opening_balance, currency_code)
 
+        category = await self.resolve_category(
+            command.category_id,
+            command.user_id,
+            CategoryKind.WALLET,
+        )
         timestamp_now = datetime.now()
         new_wallet = WalletEntity.create(
-            id=str(uuid4()),
+            id=str(command.wallet_id or uuid4()),
             data=WalletData(
                 currency_code=currency_code,
                 title=command.name,
-                category=command.category,
+                category=category,
                 color=command.color,
                 zero_balance=command.zero_balance,
             ),
@@ -213,7 +224,7 @@ class CreateNewWalletCommandHandler(CommandHandlerBase[WalletDTO]):
                     title=new_wallet.title,
                     currency_code=new_wallet.currency_code,
                     created_at=datetime_to_timestamp(new_wallet.created_at),
-                    category=new_wallet.category,
+                    **category_event_fields(new_wallet.category),
                     color=new_wallet.color,
                     favorite=new_wallet.favorite,
                     zero_balance=str(new_wallet.zero_balance),

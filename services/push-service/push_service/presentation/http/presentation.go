@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/power-finance/observability-go/sandbox"
+
 	"services/push-service/internal/correlation"
 	"services/push-service/internal/health"
 	"services/push-service/push_service/presentation"
@@ -85,7 +87,10 @@ func (hp *HttpPresentation) HandleGetNotifications(
 	httpConnection := NewSseHttpConnection(writer, request)
 	goneChannel := httpConnection.ClientGoneChannel()
 
-	eventsChannel, unsubscribe, isSubscribed := hp.notificationsStream.Subscribe(externalUserID)
+	eventsChannel, unsubscribe, isSubscribed := hp.notificationsStream.Subscribe(types.StreamAudience{
+		ExternalUserID: externalUserID,
+		SandboxID:      sandbox.CurrentID(request.Context()),
+	})
 	if isSubscribed {
 		defer unsubscribe()
 		hp.runEventsStream(
@@ -119,7 +124,9 @@ func (hp *HttpPresentation) HandleGetDemoTraces(
 
 	httpConnection := NewSseHttpConnection(writer, request)
 	goneChannel := httpConnection.ClientGoneChannel()
-	spansChannel, unsubscribe, isSubscribed := hp.demoSurface.TracesStream.Subscribe(demoSessionIdentifier)
+	spansChannel, unsubscribe, isSubscribed := hp.demoSurface.TracesStream.Subscribe(types.StreamAudience{
+		ExternalUserID: demoSessionIdentifier,
+	})
 	if isSubscribed {
 		defer unsubscribe()
 		hp.runEventsStream(

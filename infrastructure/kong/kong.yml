@@ -237,12 +237,38 @@ services:
     write_timeout: 30000
     read_timeout: 30000
     routes:
+      - name: demo-visits
+        paths:
+          - /api/v1/demo/visits
+        strip_path: false
+        preserve_host: false
+        methods: [POST, OPTIONS]
+        plugins:
+          - name: demo-session
+            config:
+              secret: "{vault://env/demo-session-secret}"
+              reject_invalid: false
+          - name: rate-limiting
+            config:
+              minute: 10
+              hour: 60
+              policy: redis
+              redis_host: gateway-redis
+              redis_port: 6379
+              limit_by: ip
+              fault_tolerant: true
+              hide_client_headers: true
       - name: demo-sessions
         paths:
           - /api/v1/demo/sessions
         strip_path: false
         preserve_host: false
         methods: [POST, OPTIONS]
+        plugins:
+          - name: demo-session
+            config:
+              secret: "{vault://env/demo-session-secret}"
+              required: true
     plugins:
       - name: write-ral-version
         config:
@@ -280,6 +306,13 @@ services:
         strip_path: false
         preserve_host: false
         methods: [GET, OPTIONS]
+        plugins:
+          - name: demo-session
+            config:
+              secret: "{vault://env/demo-session-secret}"
+              query_parameter_name: session
+              required: true
+              trace_request: false
       - name: demo-topology
         paths:
           - /api/v1/demo/topology
@@ -312,6 +345,11 @@ services:
         strip_path: false
         preserve_host: false
         methods: [GET, OPTIONS]
+        plugins:
+          - name: demo-session
+            config:
+              secret: "{vault://env/demo-session-secret}"
+              query_parameter_name: demo_session
       - name: assistant-rest
         paths:
           - /api/v1/assistant
@@ -341,6 +379,7 @@ plugins:
 
   - name: demo-session
     config:
+      secret: "{vault://env/demo-session-secret}"
       header_name: X-Demo-Session
       force_sampling: true
 

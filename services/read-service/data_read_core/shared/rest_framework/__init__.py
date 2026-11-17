@@ -7,6 +7,7 @@ from .automation_serializers import (
     AutomationTriggerSerializer,
     automation_fields,
 )
+from .category_serializers import CategoryReferenceSerializer
 from .envelope_serializers import (
     CollectionMetaSerializer,
     ErrorResponseSerializer,
@@ -28,6 +29,7 @@ from .transaction_serializers import (
 )
 
 __all__ = [
+    "CategoryReferenceSerializer",
     "empty_meta_field",
     "CURSOR_PARAMETER",
     "LIMIT_PARAMETER",

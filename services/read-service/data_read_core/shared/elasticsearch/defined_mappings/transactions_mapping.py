@@ -20,6 +20,7 @@ TRANSACTIONS_MAPPING: dict = {
                 "type": "text",
                 "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
             },
+            "category_id": {"type": "keyword"},
             "category": {
                 "type": "text",
                 "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},

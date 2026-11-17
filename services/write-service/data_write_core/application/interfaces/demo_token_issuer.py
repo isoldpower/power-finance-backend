@@ -10,5 +10,5 @@ class IssuedDemoToken(NamedTuple):
 
 class DemoTokenIssuer(ABC):
     @abstractmethod
-    def issue(self, external_id: str) -> IssuedDemoToken:
+    def issue(self, external_id: str, not_after: datetime | None = None) -> IssuedDemoToken:
         raise NotImplementedError()

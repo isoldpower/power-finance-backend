@@ -25,6 +25,7 @@ message WalletCreated {
   string color = 16;
   bool favorite = 17;
   string zero_balance = 18;
+  string category_id = 19;
 }
 
 message WalletDeleted {
@@ -52,4 +53,5 @@ message WalletUpdated {
   string color = 16;
   bool favorite = 17;
   string zero_balance = 18;
+  string category_id = 19;
 }

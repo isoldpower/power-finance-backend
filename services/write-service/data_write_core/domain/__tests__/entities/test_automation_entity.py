@@ -88,7 +88,13 @@ def test_restoring_puts_the_rule_back_including_its_timestamps():
     )
     before = rule.snapshot()
 
-    rule.replace_effects((AutomationEffect(type="set_category", params={"category": "X"}),))
+    rule.replace_effects(
+        (
+            AutomationEffect(
+                type="set_category", params={"category_id": "dddddddd-dddd-dddd-dddd-dddddddddddd"}
+            ),
+        )
+    )
     rule.soft_delete(datetime(2026, 9, 2, tzinfo=UTC))
     rule.restore(before)
 

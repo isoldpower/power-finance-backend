@@ -21,6 +21,7 @@ class UpdateTransactionMetadataDocument(Effect):
             "user_id": payload.user_id,
             "name": payload.name,
             "category": payload.category or None,
+            "category_id": payload.category_id or None,
             "evidence_url": payload.evidence_url or None,
             "updated_at": payload.updated_at.ToDatetime(tzinfo=UTC).isoformat(),
         }

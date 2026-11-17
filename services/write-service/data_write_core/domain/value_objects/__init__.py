@@ -1,4 +1,5 @@
 from .action_resolution import ActionResolution, ResolutionIntent
+from .category import CategoryKind, CategoryReference, global_category_id
 from .currency import Currency
 from .goal_data import GoalData
 from .money import Money, NonNegativeMoney
@@ -20,6 +21,8 @@ __all__ = [
     "CLIENT_ORIGINS",
     "TRANSACTION_TYPE_CHOICES",
     "ActionResolution",
+    "CategoryKind",
+    "CategoryReference",
     "Currency",
     "GoalData",
     "Money",
@@ -36,5 +39,6 @@ __all__ = [
     "TransactionOrigin",
     "TransactionType",
     "WEBHOOK_EVENT_TYPES",
+    "global_category_id",
     "is_subscribable_event",
 ]

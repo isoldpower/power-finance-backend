@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import NamedTuple
 from uuid import UUID
 
 from kafka_messages import TransactionDeleted, TransactionUpdated
@@ -9,65 +8,9 @@ from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 from data_write_core.infrastructure.outbox_saga import PostgresWriteStep
 
-from ...bootstrap import get_repository_registry
 from ...dtos import TransactionDTO, transaction_to_dto
-from ...interfaces import (
-    GoalRepository,
-    MoneyContainerRepository,
-    MoneyFlowRepository,
-    OutboxRepository,
-    TransactionRepository,
-    WalletRepository,
-)
-from .._command_base import CommandHandlerBase
-from .._loader_mixins import LoadContainerMixin, LoadTransactionMixin
+from .._ledger_command_base import LoadedTransactionCommandHandlerBase
 from .transaction_saga import run_transaction_saga
-
-
-class ResolvedRepositories(NamedTuple):
-    transaction_repository: TransactionRepository
-    money_flow_repository: MoneyFlowRepository
-    wallet_repository: WalletRepository
-    outbox_repository: OutboxRepository
-    goal_repository: GoalRepository
-    container_repository: MoneyContainerRepository
-
-
-def _resolve_repositories(
-    *,
-    transaction_repository: TransactionRepository | None,
-    money_flow_repository: MoneyFlowRepository | None,
-    wallet_repository: WalletRepository | None,
-    outbox_repository: OutboxRepository | None,
-    goal_repository: GoalRepository | None,
-    container_repository: MoneyContainerRepository | None,
-) -> ResolvedRepositories:
-    """Fall back to the bootstrapped registry only for what the caller left out.
-
-    A handler given every collaborator — as tests do — never touches the registry,
-    so it does not need the application to be bootstrapped to be constructible.
-    """
-    given = (
-        transaction_repository,
-        money_flow_repository,
-        wallet_repository,
-        outbox_repository,
-        goal_repository,
-        container_repository,
-    )
-    if all(repository is not None for repository in given):
-        return ResolvedRepositories(*given)  # type: ignore[arg-type]
-
-    registry = get_repository_registry()
-
-    return ResolvedRepositories(
-        transaction_repository=transaction_repository or registry.transaction_repository,
-        money_flow_repository=money_flow_repository or registry.money_flow_repository,
-        wallet_repository=wallet_repository or registry.wallet_repository,
-        outbox_repository=outbox_repository or registry.outbox_repository,
-        goal_repository=goal_repository or registry.goal_repository,
-        container_repository=container_repository or registry.money_container_repository,
-    )
 
 
 @dataclass(frozen=True)
@@ -77,53 +20,7 @@ class DeleteTransactionCommand:
     user_external_id: str
 
 
-class DeleteTransactionCommandHandler(
-    CommandHandlerBase[TransactionDTO],
-    LoadContainerMixin,
-    LoadTransactionMixin,
-):
-    def __init__(
-        self,
-        transaction_repository: TransactionRepository | None = None,
-        money_flow_repository: MoneyFlowRepository | None = None,
-        wallet_repository: WalletRepository | None = None,
-        outbox_repository: OutboxRepository | None = None,
-        goal_repository: GoalRepository | None = None,
-        container_repository: MoneyContainerRepository | None = None,
-    ) -> None:
-        resolved = _resolve_repositories(
-            transaction_repository=transaction_repository,
-            money_flow_repository=money_flow_repository,
-            wallet_repository=wallet_repository,
-            outbox_repository=outbox_repository,
-            goal_repository=goal_repository,
-            container_repository=container_repository,
-        )
-        transaction_repository = resolved.transaction_repository
-        money_flow_repository = resolved.money_flow_repository
-        wallet_repository = resolved.wallet_repository
-        outbox_repository = resolved.outbox_repository
-        goal_repository = resolved.goal_repository
-        container_repository = resolved.container_repository
-
-        LoadContainerMixin.__init__(
-            self,
-            container_repository=container_repository,
-            wallet_repository=wallet_repository,
-            goal_repository=goal_repository,
-            money_flow_repository=money_flow_repository,
-        )
-        LoadTransactionMixin.__init__(
-            self,
-            transaction_repository,
-            money_flow_repository,
-        )
-
-        self._transaction_repository = transaction_repository
-        self._money_flow_repository = money_flow_repository
-        self._wallet_repository = wallet_repository
-        self._outbox_repository = outbox_repository
-
+class DeleteTransactionCommandHandler(LoadedTransactionCommandHandlerBase[TransactionDTO]):
     async def handle(self, command: DeleteTransactionCommand) -> tuple[TransactionDTO, int]:
         aggregate = await self.load_transaction_aggregate(
             transaction_id=command.transaction_id,

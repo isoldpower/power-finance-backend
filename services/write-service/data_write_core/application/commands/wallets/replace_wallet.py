@@ -18,7 +18,7 @@ class ReplaceWalletCommand:
     wallet_id: UUID
     name: str
     currency_code: str
-    category: str = ""
+    category_id: UUID | None = None
     color: str = ""
     favorite: bool = False
     zero_balance: Decimal = Decimal("0")
@@ -44,7 +44,7 @@ class ReplaceWalletCommandHandler(UpdateExistingWalletCommandHandler):
                 user_external_id=command.user_external_id,
                 wallet_id=command.wallet_id,
                 new_name=command.name,
-                category=command.category,
+                category_id=command.category_id,
                 color=command.color,
                 favorite=command.favorite,
                 zero_balance=command.zero_balance,

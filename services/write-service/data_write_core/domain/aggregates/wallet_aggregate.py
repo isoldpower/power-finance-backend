@@ -6,7 +6,7 @@ from ..entities import BalanceCheckpointEntity, MoneyFlowEntity, WalletEntity
 from ..entities.wallet import UNCHANGED
 from ..events import WalletDeletedEvent, WalletUpdatedEvent
 from ..exceptions import WalletClosedError, WalletNotEmptyError
-from ..value_objects import MoneyContainerKind, MoneyContainerRef, WalletData
+from ..value_objects import CategoryReference, MoneyContainerKind, MoneyContainerRef, WalletData
 from ._aggregate_root import AggregateRoot
 
 
@@ -102,7 +102,7 @@ class WalletAggregate(AggregateRoot[WalletEntity]):
         self,
         now: datetime,
         title: str | object = UNCHANGED,
-        category: str | object = UNCHANGED,
+        category: CategoryReference | None | object = UNCHANGED,
         color: str | object = UNCHANGED,
         favorite: bool | object = UNCHANGED,
         zero_balance: Decimal | object = UNCHANGED,

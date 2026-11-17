@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities import MoneyFlowEntity, TransactionEntity
@@ -21,11 +21,12 @@ def build_transaction(
     amount: Decimal,
     transaction_type: TransactionType,
     created_at: datetime,
+    transaction_id: UUID | None = None,
 ) -> TransactionAggregate:
     if amount == Decimal("0"):
         raise InvalidTransactionAmountError(amount)
 
-    transaction_id = uuid4()
+    transaction_id = transaction_id or uuid4()
     transaction = TransactionEntity.create(
         id=transaction_id,
         user_id=user_id,
