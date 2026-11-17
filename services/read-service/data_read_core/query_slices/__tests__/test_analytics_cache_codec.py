@@ -12,6 +12,7 @@ from data_read_core.query_slices.get_analytics_spending_calendar.dtos import (
     SpendingCalendarDTO,
 )
 from data_read_core.shared.analytics import (
+    AnalyticsCategory,
     LedgerSide,
     LedgerWallet,
     TransactionBriefDTO,
@@ -48,7 +49,7 @@ def test_nested_reports_survive_the_cache_unchanged():
         name="Rent",
         created_at=datetime(2026, 3, 4, 10, tzinfo=UTC),
         side=LedgerSide.EXPENSE,
-        category="Rent",
+        category=AnalyticsCategory(identifier="c-1", name="Rent", is_global=False),
         wallet=WALLET,
         native_amount=Decimal("108.00"),
         native_currency="EUR",

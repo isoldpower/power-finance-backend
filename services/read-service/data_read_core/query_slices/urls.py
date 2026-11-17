@@ -25,6 +25,7 @@ from .list_actions import list_actions
 from .list_analytics_counterparties import list_analytics_counterparties
 from .list_analytics_transactions import list_analytics_transactions
 from .list_automations import list_automations
+from .list_categories import list_categories
 from .list_currencies import list_currencies
 from .list_goals import list_goals
 from .list_notifications import list_notifications
@@ -61,6 +62,7 @@ urlpatterns = [
     path("currencies/convert", convert_currency),
     path("currencies/rates/<str:code>", get_currency_rates),
     path("metrics", get_metrics),
+    path("categories", list_categories),
     path("goals", list_goals),
     path("goals/search", search_goals),
     path("goals/<uuid:goal_id>", get_goal),

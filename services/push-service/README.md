@@ -8,9 +8,11 @@ Events, authenticated per-user by the gateway.
 
 `GET /api/v1/demo/traces/stream?session=<id>` streams the spans of one portfolio
 demo session (see `infrastructure/README.md` → "Tracing / Portfolio demo
-sessions"). It needs no gateway auth: the route is registered as public, and Kong
-fronts it with an IP rate limit instead of `clerk-jwt`. A session id that is not
-16–64 of `[A-Za-z0-9_-]` gets `400`.
+sessions"). It needs no Clerk session: Kong fronts it with an IP rate limit and the
+`demo-session` plugin instead of `clerk-jwt`. The plugin verifies the HMAC-signed,
+expiring visit id in `?session=` and answers `401 demo_session_invalid` for a forged
+or expired one, so this service never sees one. The secret stays at the gateway. A
+session id that is not 16–64 of `[A-Za-z0-9_-]` still gets `400` here.
 
 A second groupless broadcast consumer reads `telemetry.demo-spans` (OTLP protobuf
 written by Jaeger). It reuses the same clients pool, heartbeat and SSE framing as

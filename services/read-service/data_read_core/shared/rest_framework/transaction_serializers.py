@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from .category_serializers import CategoryReferenceSerializer
 from .money_serializers import MoneySerializer
 
 
@@ -28,6 +29,6 @@ def transaction_preview_fields() -> dict:
         ),
         "origin": serializers.CharField(),
         "wallet": TransactionWalletSerializer(),
-        "category": serializers.CharField(allow_null=True),
+        "category": CategoryReferenceSerializer(allow_null=True),
         "chain": TransactionChainSerializer(allow_null=True),
     }

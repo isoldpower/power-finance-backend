@@ -9,7 +9,7 @@ class CacheSettings(IntEnum):
 
 
 class CacheSchema(StrEnum):
-    VERSION = "s1"
+    VERSION = "s2"
 
 
 class ReservedTokens(StrEnum):
@@ -49,6 +49,7 @@ class Messages(StrEnum):
     WINDOW_TOO_LONG = "The window may cover at most {days} days"
     UNKNOWN_TIMEZONE = "timezone must be an IANA zone name, got {timezone!r}"
     UNKNOWN_WALLET = "Wallet {wallet} does not exist"
+    UNKNOWN_CATEGORY = "Transaction category {category} does not exist"
     UNKNOWN_GRANULARITY = "granularity must be one of: {legal}"
     TOO_MANY_BUCKETS = "The window holds more than {maximum} buckets; choose a coarser granularity"
     UNKNOWN_SIDE = "type must be one of: {legal}"

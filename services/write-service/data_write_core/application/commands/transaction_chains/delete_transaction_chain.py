@@ -12,19 +12,12 @@ from data_write_core.domain.value_objects import OutboxEntry
 from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 from data_write_core.infrastructure.outbox_saga import PostgresWriteStep
 
-from ...bootstrap import get_repository_registry
 from ...dtos import TransactionChainDTO, transaction_to_dto
 from ...interfaces import (
-    GoalRepository,
-    MoneyContainerRepository,
-    MoneyFlowRepository,
-    OutboxRepository,
     TransactionRepository,
-    WalletRepository,
 )
-from .._command_base import CommandHandlerBase
+from .._ledger_command_base import LedgerCommandHandlerBase
 from .._loaded_containers import LoadedContainers
-from .._loader_mixins import LoadContainerMixin
 from ..transactions.transaction_saga import run_transaction_saga
 
 
@@ -35,52 +28,7 @@ class DeleteTransactionChainCommand:
     chain_id: UUID
 
 
-class DeleteTransactionChainCommandHandler(
-    CommandHandlerBase[TransactionChainDTO], LoadContainerMixin
-):
-    _transaction_repository: TransactionRepository
-    _money_flow_repository: MoneyFlowRepository
-    _wallet_repository: WalletRepository
-    _outbox_repository: OutboxRepository
-
-    def __init__(
-        self,
-        transaction_repository: TransactionRepository | None = None,
-        money_flow_repository: MoneyFlowRepository | None = None,
-        wallet_repository: WalletRepository | None = None,
-        outbox_repository: OutboxRepository | None = None,
-        goal_repository: GoalRepository | None = None,
-        container_repository: MoneyContainerRepository | None = None,
-    ) -> None:
-        if (
-            transaction_repository is None
-            or money_flow_repository is None
-            or wallet_repository is None
-            or outbox_repository is None
-            or goal_repository is None
-            or container_repository is None
-        ):
-            registry = get_repository_registry()
-            transaction_repository = transaction_repository or registry.transaction_repository
-            money_flow_repository = money_flow_repository or registry.money_flow_repository
-            wallet_repository = wallet_repository or registry.wallet_repository
-            outbox_repository = outbox_repository or registry.outbox_repository
-            goal_repository = goal_repository or registry.goal_repository
-            container_repository = container_repository or registry.money_container_repository
-
-        LoadContainerMixin.__init__(
-            self,
-            container_repository=container_repository,
-            wallet_repository=wallet_repository,
-            goal_repository=goal_repository,
-            money_flow_repository=money_flow_repository,
-        )
-
-        self._transaction_repository = transaction_repository
-        self._money_flow_repository = money_flow_repository
-        self._wallet_repository = wallet_repository
-        self._outbox_repository = outbox_repository
-
+class DeleteTransactionChainCommandHandler(LedgerCommandHandlerBase[TransactionChainDTO]):
     async def handle(
         self,
         command: DeleteTransactionChainCommand,

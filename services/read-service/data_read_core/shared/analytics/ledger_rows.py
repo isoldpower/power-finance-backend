@@ -15,13 +15,20 @@ class LedgerWallet:
 
 
 @dataclass(frozen=True, slots=True)
+class AnalyticsCategory:
+    identifier: str
+    name: str
+    is_global: bool
+
+
+@dataclass(frozen=True, slots=True)
 class LedgerRow:
     identifier: str
     wallet_identifier: str
     signed_amount: Decimal
     currency: str
     name: str
-    category: str | None
+    category: AnalyticsCategory | None
     chain_identifier: str | None
     created_at: datetime
 
@@ -36,3 +43,13 @@ class LedgerRow:
     @property
     def magnitude(self) -> Decimal:
         return abs(self.signed_amount)
+
+
+@dataclass(frozen=True)
+class LedgerRowSelection:
+    since: datetime
+    until: datetime
+    include_until: bool = False
+    include_balance_movements: bool = False
+    side: LedgerSide | None = None
+    categories: tuple[AnalyticsCategory | None, ...] | None = None

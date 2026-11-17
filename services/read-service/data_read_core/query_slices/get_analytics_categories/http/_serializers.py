@@ -1,11 +1,13 @@
 from rest_framework import serializers
 
 from data_read_core.shared.analytics import AnalyticsMetaSerializer, enveloped
-from data_read_core.shared.rest_framework import MoneySerializer
+from data_read_core.shared.rest_framework import CategoryReferenceSerializer, MoneySerializer
 
 
 class CategoryShareSerializer(serializers.Serializer):
-    category = serializers.CharField(allow_null=True, help_text="Null for uncategorised rows.")
+    category = CategoryReferenceSerializer(
+        allow_null=True, help_text="Null for uncategorised rows."
+    )
     amount = MoneySerializer()
     share = serializers.FloatField(help_text="Percentage of `total`.")
     transactions_count = serializers.IntegerField()

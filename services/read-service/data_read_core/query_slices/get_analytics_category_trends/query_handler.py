@@ -3,6 +3,7 @@ from typing import NamedTuple
 
 from data_read_core.shared.analytics import (
     ZERO,
+    AnalyticsCategory,
     AnalyticsLedger,
     AnalyticsReportHandler,
     BucketLocator,
@@ -17,7 +18,7 @@ from .dtos import CategorySeriesDTO, CategoryTrendsDTO, GetAnalyticsCategoryTren
 
 
 class FeaturedCategories(NamedTuple):
-    categories: list[str | None]
+    categories: list[AnalyticsCategory | None]
     has_other: bool
 
 
@@ -84,9 +85,9 @@ def _featured_categories(
 
 
 def _ordered_by_total(
-    categories: list[str | None],
-    points_by_category: dict[str | None, list[Decimal]],
-) -> list[str | None]:
+    categories: list[AnalyticsCategory | None],
+    points_by_category: dict[AnalyticsCategory | None, list[Decimal]],
+) -> list[AnalyticsCategory | None]:
     return sorted(
         categories,
         key=lambda category: sum(points_by_category[category], ZERO),

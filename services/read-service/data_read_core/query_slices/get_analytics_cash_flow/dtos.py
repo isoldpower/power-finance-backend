@@ -2,22 +2,22 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
-from data_read_core.shared.analytics import AnalyticsScope, Granularity, TimeBucket
+from data_read_core.shared.analytics import (
+    ZERO,
+    Granularity,
+    ScopedAnalyticsQuery,
+    TimeBucket,
+)
 
 
 @dataclass(frozen=True)
-class GetAnalyticsCashFlowQuery:
-    scope: AnalyticsScope
+class GetAnalyticsCashFlowQuery(ScopedAnalyticsQuery):
     granularity: Granularity
     buckets: list[TimeBucket]
 
     @property
-    def user_id(self) -> int:
-        return self.scope.user_id
-
-    @property
-    def cache_signature(self) -> dict:
-        return {**self.scope.cache_signature, "granularity": self.granularity.value}
+    def report_parameters(self) -> dict:
+        return {"granularity": self.granularity.value}
 
 
 @dataclass(frozen=True)
@@ -40,11 +40,11 @@ class CashFlowDTO:
 
     @property
     def inflow(self) -> Decimal:
-        return sum((bucket.inflow for bucket in self.buckets), Decimal(0))
+        return sum((bucket.inflow for bucket in self.buckets), ZERO)
 
     @property
     def outflow(self) -> Decimal:
-        return sum((bucket.outflow for bucket in self.buckets), Decimal(0))
+        return sum((bucket.outflow for bucket in self.buckets), ZERO)
 
     @property
     def net(self) -> Decimal:

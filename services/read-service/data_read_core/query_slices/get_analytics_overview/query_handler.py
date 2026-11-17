@@ -1,17 +1,17 @@
-from collections import defaultdict
 from decimal import Decimal
 
 from data_read_core.shared.analytics import (
-    ZERO,
     AnalyticsLedger,
     AnalyticsReportHandler,
     AnalyticsWindow,
     LedgerRow,
     LedgerSide,
+    TransactionBriefDTO,
     brief_of,
     local_moment,
     savings_rate_of,
     share_of,
+    tally_by_category,
 )
 
 from .config import REPORT_NAME
@@ -35,10 +35,8 @@ async def _summarise(ledger: AnalyticsLedger, window: AnalyticsWindow) -> Period
     rows = await ledger.fetch_flows(window)
     expense_rows = [row for row in rows if row.side is LedgerSide.EXPENSE]
     income_rows = [row for row in rows if row.side is LedgerSide.INCOME]
-    inflow = _converted_total(ledger, income_rows)
-    outflow = _converted_total(ledger, expense_rows)
-    largest_expense = _largest(ledger, expense_rows)
-    largest_income = _largest(ledger, income_rows)
+    inflow = ledger.converted_total(income_rows)
+    outflow = ledger.converted_total(expense_rows)
 
     return PeriodSummaryDTO(
         since=window.since,
@@ -51,26 +49,18 @@ async def _summarise(ledger: AnalyticsLedger, window: AnalyticsWindow) -> Period
             {local_moment(row.created_at, ledger.scope.zone).local_date for row in rows}
         ),
         average_daily_outflow=outflow / window.whole_day_count,
-        largest_expense=brief_of(largest_expense, ledger) if largest_expense else None,
-        largest_income=brief_of(largest_income, ledger) if largest_income else None,
+        largest_expense=_largest_brief(ledger, expense_rows),
+        largest_income=_largest_brief(ledger, income_rows),
         top_expense_category=_top_category(ledger, expense_rows, outflow),
     )
 
 
-def _converted_total(ledger: AnalyticsLedger, rows: list[LedgerRow]) -> Decimal:
-    return sum((ledger.converted_magnitude(row) for row in rows), ZERO)
+def _largest_brief(ledger: AnalyticsLedger, rows: list[LedgerRow]) -> TransactionBriefDTO | None:
+    largest_row = max(rows, key=ledger.converted_magnitude, default=None)
+    if largest_row is None:
+        return None
 
-
-def _largest(ledger: AnalyticsLedger, rows: list[LedgerRow]) -> LedgerRow | None:
-    largest_row: LedgerRow | None = None
-    largest_amount = ZERO
-    for row in rows:
-        converted_amount = ledger.converted_magnitude(row)
-        if largest_row is None or converted_amount > largest_amount:
-            largest_row = row
-            largest_amount = converted_amount
-
-    return largest_row
+    return brief_of(largest_row, ledger)
 
 
 def _top_category(
@@ -81,17 +71,10 @@ def _top_category(
     if outflow == 0:
         return None
 
-    totals_by_category: dict[str | None, Decimal] = defaultdict(lambda: ZERO)
-    for row in expense_rows:
-        totals_by_category[row.category] += ledger.converted_magnitude(row)
-
-    top_category, top_amount = max(
-        totals_by_category.items(),
-        key=lambda category_total: category_total[1],
-    )
+    top_tally = tally_by_category(ledger, expense_rows)[0]
 
     return TopCategoryDTO(
-        category=top_category,
-        amount=top_amount,
-        share=share_of(top_amount, outflow),
+        category=top_tally.category,
+        amount=top_tally.amount,
+        share=share_of(top_tally.amount, outflow),
     )

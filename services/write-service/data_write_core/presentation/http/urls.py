@@ -2,11 +2,13 @@ from django.urls import path
 
 from .views.actions import ActionResolveView
 from .views.automations import AutomationListView, AutomationResourceView
-from .views.demo import DemoSessionView
+from .views.categories import CategoryListView, CategoryResourceView
+from .views.demo import DemoSessionView, DemoVisitView
 from .views.fallback_read import (
     FallbackActionListView,
     FallbackAutomationListView,
     FallbackAutomationResourceView,
+    FallbackCategoryListView,
     FallbackGoalListView,
     FallbackGoalResourceView,
     FallbackNotificationCountView,
@@ -45,6 +47,26 @@ from .views.webhooks import (
 )
 
 urlpatterns = [
+    path(
+        "categories",
+        CategoryListView.as_view(),
+        name="categories-list",
+    ),
+    path(
+        "categories/<uuid:category_id>",
+        CategoryResourceView.as_view(),
+        name="categories-resource",
+    ),
+    path(
+        "fallback-reads/categories",
+        FallbackCategoryListView.as_view(),
+        name="fallback-categories-list",
+    ),
+    path(
+        "demo/visits",
+        DemoVisitView.as_view(),
+        name="demo-visits",
+    ),
     path(
         "demo/sessions",
         DemoSessionView.as_view(),

@@ -24,6 +24,14 @@ from .automation_reactions import (
     RemoveAutomationDocument,
     RemoveAutomationReadModel,
 )
+from .category_reactions import (
+    BumpCategoryListVersion,
+    CreateCategoryReadModel,
+    EvictCategorisedItemCaches,
+    RemoveCategoryReadModel,
+    RenameCategoryInDocuments,
+    RenameCategoryReadModel,
+)
 from .goal_reactions import (
     BumpGoalListVersion,
     CreateGoalReadModel,
@@ -83,6 +91,12 @@ from .webhook_reactions import (
 )
 
 __all__ = [
+    "BumpCategoryListVersion",
+    "CreateCategoryReadModel",
+    "EvictCategorisedItemCaches",
+    "RemoveCategoryReadModel",
+    "RenameCategoryInDocuments",
+    "RenameCategoryReadModel",
     "AdvanceEsAppliedSeq",
     "AdjustContainerAmountOnCreate",
     "AdjustContainerAmountOnDelete",

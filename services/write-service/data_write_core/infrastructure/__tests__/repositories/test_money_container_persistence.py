@@ -9,11 +9,14 @@ from django.test import TestCase
 from data_write_core.domain.entities import GoalEntity, TransactionEntity, WalletEntity
 from data_write_core.domain.exceptions import MoneyContainerNotFoundError
 from data_write_core.domain.value_objects import (
+    CategoryKind,
+    CategoryReference,
     GoalData,
     MoneyContainerKind,
     TransactionMetadata,
     TransactionOrigin,
     WalletData,
+    global_category_id,
 )
 from data_write_core.infrastructure.orm import GoalModel, MoneyContainerModel, WalletModel
 from data_write_core.infrastructure.repositories import (
@@ -24,6 +27,11 @@ from data_write_core.infrastructure.repositories import (
 )
 
 NOW = datetime(2026, 8, 24, 12, 0, tzinfo=UTC)
+BANKING = CategoryReference(
+    id=global_category_id(CategoryKind.WALLET, "Banking"),
+    name="Banking",
+    is_global=True,
+)
 
 
 class MoneyContainerPersistenceTests(TestCase):
@@ -36,7 +44,7 @@ class MoneyContainerPersistenceTests(TestCase):
             data=WalletData(
                 title=title,
                 currency_code=currency,
-                category="daily",
+                category=BANKING,
                 color="#ffffff",
                 favorite=True,
                 zero_balance=Decimal("0"),
@@ -102,7 +110,7 @@ class MoneyContainerPersistenceTests(TestCase):
         stored = await WalletModel.objects.aget(id=wallet.unique_id)
         self.assertEqual(str(stored.container_id), wallet.unique_id)
         self.assertEqual(stored.zero_balance, Decimal("0"))
-        self.assertEqual(stored.category, "daily")
+        self.assertEqual(stored.category_id, BANKING.id)
 
     async def test_wallets_and_goals_resolve_through_one_lookup(self) -> None:
         wallet = await DjangoWalletRepository().create_wallet(self._wallet_entity())

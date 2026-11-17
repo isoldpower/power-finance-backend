@@ -1,5 +1,4 @@
 from data_read_core.shared.analytics import (
-    ZERO,
     AnalyticsLedger,
     AnalyticsReportHandler,
     LedgerRow,
@@ -29,14 +28,8 @@ class ListAnalyticsTransactionsQueryHandler(AnalyticsReportHandler[ListAnalytics
                 brief_of(row, ledger) for row in _ordered(ledger, rows, query.order)[: query.limit]
             ],
             total=len(rows),
-            total_inflow=sum(
-                (ledger.converted_magnitude(row) for row in rows if row.side is LedgerSide.INCOME),
-                ZERO,
-            ),
-            total_outflow=sum(
-                (ledger.converted_magnitude(row) for row in rows if row.side is LedgerSide.EXPENSE),
-                ZERO,
-            ),
+            total_inflow=ledger.converted_total(rows, LedgerSide.INCOME),
+            total_outflow=ledger.converted_total(rows, LedgerSide.EXPENSE),
         )
 
 

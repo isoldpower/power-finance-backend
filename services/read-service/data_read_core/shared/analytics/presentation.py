@@ -4,7 +4,7 @@ from decimal import Decimal
 from data_read_core.shared.money import money_at_scale
 from data_read_core.shared.timestamps import to_iso
 
-from .ledger_rows import LedgerWallet
+from .ledger_rows import AnalyticsCategory, LedgerWallet
 from .scope import AnalyticsScope
 from .transaction_briefs import TransactionBriefDTO
 
@@ -62,7 +62,7 @@ async def present_transaction_brief(brief: TransactionBriefDTO, currency: str) -
         "name": brief.name,
         "created_at": to_iso(brief.created_at),
         "type": brief.side.value,
-        "category": brief.category,
+        "category": present_analytics_category(brief.category),
         "wallet": present_wallet_reference(brief.wallet),
         "money": await money_at_scale(brief.native_amount, brief.native_currency),
         "converted": await money_at_scale(brief.converted_amount, currency),
@@ -84,3 +84,14 @@ def as_percentage(percentage: Decimal | None) -> float | None:
         return None
 
     return float(percentage)
+
+
+def present_analytics_category(category: AnalyticsCategory | None) -> dict | None:
+    if category is None:
+        return None
+
+    return {
+        "id": category.identifier,
+        "name": category.name,
+        "is_global": category.is_global,
+    }

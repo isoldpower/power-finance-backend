@@ -21,6 +21,7 @@ from ...presenters import (
     NotificationHttpPresenter,
     TransactionHttpPresenter,
     WebhookHttpPresenter,
+    present_category_reference,
 )
 
 
@@ -31,7 +32,7 @@ async def present_wallet(wallet: WalletDTO) -> dict:
         "created_at": to_iso(wallet.created_at),
         "updated_at": to_iso(wallet.updated_at),
         "deleted_at": to_iso(wallet.deleted_at),
-        "category": wallet.category,
+        "category": present_category_reference(wallet.category),
         "currency": wallet.currency,
         "money": await money_at_scale(
             wallet.balance_amount,

@@ -23,7 +23,8 @@ def transaction_subject(aggregate: TransactionAggregate, currency_code: str) -> 
     }
 
     if transaction.category:
-        subject["category"] = transaction.category
+        subject["category"] = transaction.category.name
+        subject["category_id"] = str(transaction.category.id)
     if transaction.chain_id:
         subject["chain_id"] = str(transaction.chain_id)
 
@@ -31,9 +32,15 @@ def transaction_subject(aggregate: TransactionAggregate, currency_code: str) -> 
 
 
 def wallet_subject(wallet: WalletEntity, balance: Decimal) -> Record:
-    return {
+    subject: dict[str, Any] = {
         "name": wallet.title,
         "currency": wallet.currency_code,
         "balance": balance,
         "created_at": wallet.created_at,
     }
+
+    if wallet.category:
+        subject["category"] = wallet.category.name
+        subject["category_id"] = str(wallet.category.id)
+
+    return subject

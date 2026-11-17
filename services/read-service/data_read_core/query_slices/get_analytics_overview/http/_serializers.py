@@ -5,11 +5,11 @@ from data_read_core.shared.analytics import (
     TransactionBriefSerializer,
     enveloped,
 )
-from data_read_core.shared.rest_framework import MoneySerializer
+from data_read_core.shared.rest_framework import CategoryReferenceSerializer, MoneySerializer
 
 
 class TopCategorySerializer(serializers.Serializer):
-    category = serializers.CharField(allow_null=True)
+    category = CategoryReferenceSerializer(allow_null=True)
     amount = MoneySerializer()
     share = serializers.FloatField(help_text="Percentage of the window's outflow.")
 

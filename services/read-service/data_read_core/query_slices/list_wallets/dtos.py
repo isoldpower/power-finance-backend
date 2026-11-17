@@ -1,5 +1,6 @@
 from dataclasses import asdict, dataclass, field
 
+from data_read_core.shared.categories import CategoryReferencePayload, category_reference_of
 from data_read_core.shared.pagination import PageRequest
 from data_read_core.shared.postgres_orm import WalletReadModel
 from data_read_core.shared.timestamps import to_iso
@@ -31,7 +32,7 @@ class WalletDTO:
     created_at: str
     updated_at: str | None
     deleted_at: str | None
-    category: str
+    category: CategoryReferencePayload | None
     color: str
     favorite: bool
 
@@ -47,7 +48,7 @@ class WalletDTO:
             created_at=to_iso(model.created_at),
             updated_at=to_iso(model.updated_at),
             deleted_at=to_iso(model.deleted_at),
-            category=model.category,
+            category=category_reference_of(model.category),
             color=model.color,
             favorite=model.favorite,
         )

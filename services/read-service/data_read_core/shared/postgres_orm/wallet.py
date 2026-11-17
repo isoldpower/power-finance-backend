@@ -1,5 +1,7 @@
 from django.db import models
 
+from .category import CategoryReadModel
+
 
 class WalletReadModel(models.Model):
     id = models.UUIDField(primary_key=True)
@@ -11,7 +13,14 @@ class WalletReadModel(models.Model):
     updated_at = models.DateTimeField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
-    category = models.CharField(max_length=120, blank=True, default="")
+    category = models.ForeignKey(
+        CategoryReadModel,
+        on_delete=models.DO_NOTHING,
+        db_constraint=False,
+        related_name="+",
+        blank=True,
+        null=True,
+    )
     color = models.CharField(max_length=9, blank=True, default="")
     favorite = models.BooleanField(default=False)
     zero_balance = models.DecimalField(max_digits=20, decimal_places=2, default=0)

@@ -2,21 +2,16 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
-from data_read_core.shared.analytics import AnalyticsScope, LedgerWallet
+from data_read_core.shared.analytics import ZERO, LedgerWallet, ScopedAnalyticsQuery
 
 
 @dataclass(frozen=True)
-class GetAnalyticsBalanceHistoryQuery:
-    scope: AnalyticsScope
+class GetAnalyticsBalanceHistoryQuery(ScopedAnalyticsQuery):
     points: int
 
     @property
-    def user_id(self) -> int:
-        return self.scope.user_id
-
-    @property
-    def cache_signature(self) -> dict:
-        return {**self.scope.cache_signature, "points": self.points}
+    def report_parameters(self) -> dict:
+        return {"points": self.points}
 
     @property
     def sample_instants(self) -> list[datetime]:
@@ -44,6 +39,6 @@ class BalanceHistoryDTO:
     @property
     def totals(self) -> list[Decimal]:
         return [
-            sum((series.converted_balances[index] for series in self.wallets), Decimal(0))
+            sum((series.converted_balances[index] for series in self.wallets), ZERO)
             for index in range(len(self.timestamps))
         ]

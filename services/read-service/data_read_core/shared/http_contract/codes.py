@@ -107,6 +107,7 @@ class DetailCode(StrEnum):
     RANGE_TOO_LONG = "range_too_long"
     GRANULARITY_TOO_FINE = "granularity_too_fine"
     WALLET_UNKNOWN = "wallet_unknown"
+    CATEGORY_UNKNOWN = "category_unknown"
     LIMIT_OUT_OF_RANGE = "limit_out_of_range"
     POINTS_OUT_OF_RANGE = "points_out_of_range"
     TYPE_INVALID = "type_invalid"

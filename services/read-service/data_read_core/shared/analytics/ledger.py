@@ -4,9 +4,9 @@ from decimal import Decimal
 
 from data_read_core.shared.exchange_rates import ExchangeRateService
 
-from .config import LedgerSide
+from .config import ZERO, LedgerSide
 from .currency_rates import RateTable, build_rate_table
-from .ledger_rows import LedgerRow, LedgerWallet
+from .ledger_rows import LedgerRow, LedgerRowSelection, LedgerWallet
 from .postgres_requests import (
     fetch_ledger_rows,
     fetch_open_wallets,
@@ -57,19 +57,14 @@ class AnalyticsLedger:
         side: LedgerSide | None = None,
         apply_categories: bool = True,
     ) -> list[LedgerRow]:
-        rows = await self._fetch_rows(
-            window.since,
-            window.until,
-            include_balance_movements=False,
-            include_until=False,
+        return await self._fetch_rows(
+            LedgerRowSelection(
+                since=window.since,
+                until=window.until,
+                side=side,
+                categories=self.scope.categories if apply_categories else None,
+            )
         )
-
-        return [
-            row
-            for row in rows
-            if (side is None or row.side is side)
-            and (not apply_categories or self.scope.matches_category(row.category))
-        ]
 
     async def fetch_movements(
         self,
@@ -79,10 +74,12 @@ class AnalyticsLedger:
         include_until: bool,
     ) -> list[LedgerRow]:
         return await self._fetch_rows(
-            since,
-            until,
-            include_balance_movements=True,
-            include_until=include_until,
+            LedgerRowSelection(
+                since=since,
+                until=until,
+                include_until=include_until,
+                include_balance_movements=True,
+            )
         )
 
     async def native_balances_before(self, instant: datetime) -> dict[str, Decimal]:
@@ -95,28 +92,20 @@ class AnalyticsLedger:
     def converted_magnitude(self, row: LedgerRow) -> Decimal:
         return self._rate_table.convert(row.magnitude, row.currency)
 
+    def converted_total(self, rows: Iterable[LedgerRow], side: LedgerSide | None = None) -> Decimal:
+        return sum(
+            (self.converted_magnitude(row) for row in rows if side is None or row.side is side),
+            ZERO,
+        )
+
     def converted_signed(self, row: LedgerRow) -> Decimal:
         return self._rate_table.convert(row.signed_amount, row.currency)
 
     def converted_balance(self, native_balance: Decimal, wallet: LedgerWallet) -> Decimal:
         return self._rate_table.convert(native_balance, wallet.currency)
 
-    async def _fetch_rows(
-        self,
-        since: datetime,
-        until: datetime,
-        *,
-        include_balance_movements: bool,
-        include_until: bool,
-    ) -> list[LedgerRow]:
-        rows = await fetch_ledger_rows(
-            self.scope.user_id,
-            self._wallet_currencies,
-            since,
-            until,
-            include_balance_movements=include_balance_movements,
-            include_until=include_until,
-        )
+    async def _fetch_rows(self, selection: LedgerRowSelection) -> list[LedgerRow]:
+        rows = await fetch_ledger_rows(self.scope.user_id, self._wallet_currencies, selection)
         await self._prepare_rates(row.currency for row in rows)
 
         return rows

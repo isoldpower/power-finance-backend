@@ -1,11 +1,12 @@
 from rest_framework import serializers
 
 from data_read_core.shared.analytics import WalletOptionSerializer, enveloped
+from data_read_core.shared.rest_framework import CategoryReferenceSerializer
 
 
 class CategoryCatalogSerializer(serializers.Serializer):
-    expense = serializers.ListField(child=serializers.CharField(), help_text="A to Z.")
-    income = serializers.ListField(child=serializers.CharField(), help_text="A to Z.")
+    expense = CategoryReferenceSerializer(many=True, help_text="A to Z by name.")
+    income = CategoryReferenceSerializer(many=True, help_text="A to Z by name.")
 
 
 class DimensionsSerializer(serializers.Serializer):

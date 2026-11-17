@@ -1,4 +1,9 @@
-from data_read_core.shared.analytics import AnalyticsScope, as_percentage, present_collection_meta
+from data_read_core.shared.analytics import (
+    AnalyticsScope,
+    as_percentage,
+    present_analytics_category,
+    present_collection_meta,
+)
 from data_read_core.shared.money import money_at_scale
 from data_read_core.shared.timestamps import to_iso
 
@@ -30,7 +35,7 @@ def present_meta(
 async def _present_counterparty(counterparty: CounterpartyDTO, currency: str) -> dict:
     return {
         "name": counterparty.name,
-        "category": counterparty.category,
+        "category": present_analytics_category(counterparty.category),
         "amount": await money_at_scale(counterparty.amount, currency),
         "share": as_percentage(counterparty.share),
         "transactions_count": counterparty.transactions_count,

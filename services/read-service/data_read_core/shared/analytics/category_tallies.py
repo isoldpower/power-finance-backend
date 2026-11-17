@@ -3,18 +3,18 @@ from typing import NamedTuple
 
 from .config import ZERO
 from .ledger import AnalyticsLedger
-from .ledger_rows import LedgerRow
+from .ledger_rows import AnalyticsCategory, LedgerRow
 
 
 class CategoryTally(NamedTuple):
-    category: str | None
+    category: AnalyticsCategory | None
     amount: Decimal
     transactions_count: int
 
 
 def tally_by_category(ledger: AnalyticsLedger, rows: list[LedgerRow]) -> list[CategoryTally]:
-    amounts_by_category: dict[str | None, Decimal] = {}
-    counts_by_category: dict[str | None, int] = {}
+    amounts_by_category: dict[AnalyticsCategory | None, Decimal] = {}
+    counts_by_category: dict[AnalyticsCategory | None, int] = {}
     for row in rows:
         amounts_by_category[row.category] = amounts_by_category.get(
             row.category, ZERO

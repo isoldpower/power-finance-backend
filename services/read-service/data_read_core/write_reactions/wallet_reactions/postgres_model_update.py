@@ -23,7 +23,7 @@ class UpdateWalletReadModel(Effect):
         updated_row = await WalletReadModel.objects.filter(id=payload.wallet_id).aupdate(
             title=payload.new_title,
             updated_at=payload.updated_at.ToDatetime(tzinfo=UTC),
-            category=payload.category,
+            category_id=payload.category_id or None,
             color=payload.color,
             favorite=payload.favorite,
             zero_balance=Decimal(payload.zero_balance or "0"),

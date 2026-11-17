@@ -1,6 +1,7 @@
 from data_read_core.shared.analytics import (
     AnalyticsScope,
     as_percentage,
+    present_analytics_category,
     present_optional_transaction_brief,
     present_scope_meta,
 )
@@ -52,7 +53,7 @@ async def _present_top_category(top_category: TopCategoryDTO | None, currency: s
         return None
 
     return {
-        "category": top_category.category,
+        "category": present_analytics_category(top_category.category),
         "amount": await money_at_scale(top_category.amount, currency),
         "share": as_percentage(top_category.share),
     }

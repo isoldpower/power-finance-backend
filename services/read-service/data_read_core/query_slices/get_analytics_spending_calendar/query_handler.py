@@ -1,10 +1,9 @@
 from datetime import date
 
 from data_read_core.shared.analytics import (
-    ZERO,
     AnalyticsLedger,
     AnalyticsReportHandler,
-    LedgerSide,
+    FlowTally,
     build_days,
     local_moment,
 )
@@ -22,30 +21,29 @@ class GetAnalyticsSpendingCalendarQueryHandler(
     async def _build(self, query: GetAnalyticsSpendingCalendarQuery) -> SpendingCalendarDTO:
         ledger = await AnalyticsLedger.load(query.scope, self._rate_service)
         zone = query.scope.zone
-        days_by_date: dict[date, CalendarDayDTO] = {
-            local_moment(day.start, zone).local_date: CalendarDayDTO(
-                local_date=local_moment(day.start, zone).local_date,
-                inflow=ZERO,
-                outflow=ZERO,
-                transactions_count=0,
-            )
+        tallies_by_date: dict[date, FlowTally] = {
+            local_moment(day.start, zone).local_date: FlowTally()
             for day in build_days(query.scope.window, zone)
         }
 
         for row in await ledger.fetch_flows(query.scope.window, apply_categories=False):
             row_date = local_moment(row.created_at, zone).local_date
-            current_day = days_by_date.get(row_date)
-            if current_day is None:
+            if row_date not in tallies_by_date:
                 continue
 
-            converted_amount = ledger.converted_magnitude(row)
-            days_by_date[row_date] = CalendarDayDTO(
-                local_date=row_date,
-                inflow=current_day.inflow
-                + (converted_amount if row.side is LedgerSide.INCOME else ZERO),
-                outflow=current_day.outflow
-                + (converted_amount if row.side is LedgerSide.EXPENSE else ZERO),
-                transactions_count=current_day.transactions_count + 1,
+            tallies_by_date[row_date] = tallies_by_date[row_date].including(
+                row.side,
+                ledger.converted_magnitude(row),
             )
 
-        return SpendingCalendarDTO(days=list(days_by_date.values()))
+        return SpendingCalendarDTO(
+            days=[
+                CalendarDayDTO(
+                    local_date=local_date,
+                    inflow=tally.inflow,
+                    outflow=tally.outflow,
+                    transactions_count=tally.transactions_count,
+                )
+                for local_date, tally in tallies_by_date.items()
+            ]
+        )

@@ -1,7 +1,9 @@
 from .action import ActionModel
 from .automation import AutomationModel
 from .automation_run import AutomationRunModel
+from .category import CategoryModel, TransactionCategoryModel, WalletCategoryModel
 from .currency import CurrencyModel
+from .demo_account_seed import DemoAccountSeedModel
 from .goal import GoalModel
 from .money_container import MoneyContainerModel
 from .notification import NotificationModel
@@ -14,13 +16,17 @@ __all__ = [
     "AutomationModel",
     "AutomationRunModel",
     "ActionModel",
+    "CategoryModel",
     "CurrencyModel",
+    "DemoAccountSeedModel",
     "GoalModel",
     "MoneyContainerModel",
     "NotificationModel",
     "OutboxEntryModel",
+    "TransactionCategoryModel",
     "TransactionChainModel",
     "TransactionModel",
+    "WalletCategoryModel",
     "WalletModel",
     "WebhookModel",
     "WebhookSubscriptionModel",

@@ -1,5 +1,6 @@
 from .action_mapper import ActionMapper
 from .automation_mapper import AutomationMapper
+from .category_mapper import CategoryMapper
 from .currency_mapper import CurrencyMapper
 from .goal_mapper import GoalMapper
 from .money_flow_mapper import MoneyFlowMapper
@@ -12,6 +13,7 @@ from .webhook_mapper import WebhookMapper, WebhookSubscriptionMapper
 __all__ = [
     "AutomationMapper",
     "ActionMapper",
+    "CategoryMapper",
     "CurrencyMapper",
     "GoalMapper",
     "NotificationMapper",

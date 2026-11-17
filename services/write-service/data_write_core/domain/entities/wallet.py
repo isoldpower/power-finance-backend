@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from ..events import EventCollector
-from ..value_objects import WalletData
+from ..value_objects import CategoryReference, WalletData
 from ._entity_root import EntityRoot
 
 UNCHANGED = object()
@@ -24,7 +24,7 @@ class WalletEntity(EntityRoot, WalletData):
         user_id: str,
         event_collector: EventCollector,
         deleted_at: datetime | None = None,
-        category: str = "",
+        category: CategoryReference | None = None,
         color: str = "",
         favorite: bool = False,
         zero_balance: Decimal = Decimal("0"),
@@ -95,7 +95,7 @@ class WalletEntity(EntityRoot, WalletData):
         self,
         now: datetime,
         title: str | object = UNCHANGED,
-        category: str | object = UNCHANGED,
+        category: CategoryReference | None | object = UNCHANGED,
         color: str | object = UNCHANGED,
         favorite: bool | object = UNCHANGED,
         zero_balance: Decimal | object = UNCHANGED,

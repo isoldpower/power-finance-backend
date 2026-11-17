@@ -261,14 +261,23 @@ growing unbounded.
 
 ### Portfolio demo sessions
 
-The portfolio site embeds the app in an `<iframe>` and shows a live graph of where
-each request goes. The parent page makes a random session id (16–64 of
-`[A-Za-z0-9_-]`, a UUID fits). It passes the id to the iframe, which sends it as
-`X-Demo-Session` on every API call. The parent page then subscribes to
-`GET /api/v1/demo/traces/stream?session=<id>`, which is public, rate-limited per IP
-and needs no Clerk token.
+The portfolio site embeds the app in an `<iframe>` with `?demo_session=true` and
+shows a live graph of where each request goes. The iframe asks write-service for a
+signed, expiring visit id (`POST /api/v1/demo/visits`, no auth, 10/min and 60/h per
+IP) and sends it as `X-Demo-Session` on every API call. It also posts the id to the
+parent page, which subscribes to `GET /api/v1/demo/traces/stream?session=<id>`. That
+stream is public and needs no Clerk token, but the gateway only opens it for an id it
+can verify. `POST /api/v1/demo/sessions` maps each visit to exactly one seeded guest
+account, so reloading the page or renewing the token creates no new accounts.
+A client holds one active visit. write-service keeps `demo:client:<hmac of the IP>`
+in its Redis (the IP is the one Kong resolves, an IPv6 address counts as its /64). The key
+expires `DEMO_SESSION_ROTATION_SECONDS` (default 300) before the visit does. Until
+then, asking for a visit again returns the same id, so a new tab joins the same demo
+account. After that a fresh visit and account are issued. If Redis is down, issuing
+falls back to the per-IP rate limit alone.
 
-1. Kong's `demo-session` plugin (`kong/plugins/README.md`) validates the id, puts
+1. Kong's `demo-session` plugin (`kong/plugins/README.md`) verifies the id's HMAC
+   and expiry (a forged or expired id gets `401 demo_session_invalid`), puts
    `demo-session=<id>` into W3C baggage, tags the gateway root span and forces the
    trace to be sampled whatever `KONG_TRACING_SAMPLING_RATE` says.
 2. Every service sampler is `ParentBased`, so the forced flag carries through

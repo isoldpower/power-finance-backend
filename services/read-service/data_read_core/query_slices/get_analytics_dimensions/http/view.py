@@ -21,7 +21,7 @@ from ._serializers import EnvelopedDimensionsSerializer
     operation_id="analytics_dimensions_retrieve",
     summary="Get the analytics filter vocabulary",
     description=(
-        "Open wallets and the distinct income and expense category names, with the "
+        "Open wallets and the distinct income and expense categories, with the "
         "first and last transaction instants. Ignores the window parameters; "
         "`currency` is only echoed back."
     ),

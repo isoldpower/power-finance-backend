@@ -1,27 +1,22 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Unpack
 from uuid import UUID
 
 from kafka_messages import TransactionMetadataUpdated
 
 from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.entities.transaction import UNCHANGED
-from data_write_core.domain.value_objects import TransactionMetadata
+from data_write_core.domain.value_objects import CategoryKind, TransactionMetadata
 from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 from data_write_core.infrastructure.outbox_saga import PostgresWriteStep
 
-from ...bootstrap import get_repository_registry
 from ...dtos import TransactionDTO, transaction_to_dto
 from ...interfaces import (
-    GoalRepository,
-    MoneyContainerRepository,
-    MoneyFlowRepository,
-    OutboxRepository,
-    TransactionRepository,
-    WalletRepository,
+    CategoryRepository,
 )
-from .._command_base import CommandHandlerBase
-from .._loader_mixins import LoadContainerMixin, LoadTransactionMixin
+from .._category_resolution import CategoryResolverMixin, category_event_fields
+from .._ledger_command_base import LedgerRepositoryOverrides, LoadedTransactionCommandHandlerBase
 from .transaction_saga import run_transaction_saga
 
 
@@ -31,53 +26,20 @@ class PatchTransactionCommand:
     user_external_id: str
     transaction_id: UUID
     name: str | object = UNCHANGED
-    category: str | None | object = UNCHANGED
+    category_id: UUID | None | object = UNCHANGED
     evidence_url: str | None | object = UNCHANGED
 
 
 class PatchTransactionCommandHandler(
-    CommandHandlerBase[TransactionDTO],
-    LoadContainerMixin,
-    LoadTransactionMixin,
+    LoadedTransactionCommandHandlerBase[TransactionDTO], CategoryResolverMixin
 ):
     def __init__(
         self,
-        transaction_repository: TransactionRepository | None = None,
-        money_flow_repository: MoneyFlowRepository | None = None,
-        wallet_repository: WalletRepository | None = None,
-        outbox_repository: OutboxRepository | None = None,
-        goal_repository: GoalRepository | None = None,
-        container_repository: MoneyContainerRepository | None = None,
+        category_repository: CategoryRepository | None = None,
+        **repositories: Unpack[LedgerRepositoryOverrides],
     ) -> None:
-        if (
-            transaction_repository is None
-            or money_flow_repository is None
-            or wallet_repository is None
-            or outbox_repository is None
-            or goal_repository is None
-            or container_repository is None
-        ):
-            registry = get_repository_registry()
-            transaction_repository = transaction_repository or registry.transaction_repository
-            money_flow_repository = money_flow_repository or registry.money_flow_repository
-            wallet_repository = wallet_repository or registry.wallet_repository
-            outbox_repository = outbox_repository or registry.outbox_repository
-            goal_repository = goal_repository or registry.goal_repository
-            container_repository = container_repository or registry.money_container_repository
-
-        LoadContainerMixin.__init__(
-            self,
-            container_repository=container_repository,
-            wallet_repository=wallet_repository,
-            goal_repository=goal_repository,
-            money_flow_repository=money_flow_repository,
-        )
-        LoadTransactionMixin.__init__(self, transaction_repository, money_flow_repository)
-
-        self._transaction_repository = transaction_repository
-        self._money_flow_repository = money_flow_repository
-        self._wallet_repository = wallet_repository
-        self._outbox_repository = outbox_repository
+        super().__init__(**repositories)
+        self.use_category_repository(category_repository)
 
     async def handle(self, command: PatchTransactionCommand) -> tuple[TransactionDTO, int]:
         aggregate = await self.load_transaction_aggregate(
@@ -85,12 +47,18 @@ class PatchTransactionCommandHandler(
             user_id=command.user_id,
         )
 
+        category = await self.resolve_category_change(
+            command.category_id,
+            command.user_id,
+            CategoryKind.TRANSACTION,
+            unchanged=UNCHANGED,
+        )
         moment = datetime.now()
         snapshot = aggregate.root.snapshot()
         aggregate.update_metadata(
             now=moment,
             name=command.name,
-            category=command.category,
+            category=category,
             evidence_url=command.evidence_url,
         )
 
@@ -141,7 +109,7 @@ class PatchTransactionCommandHandler(
                         transaction_id=aggregate.unique_id,
                         user_id=int(root.user_id),
                         name=root.name,
-                        category=root.category or "",
+                        **category_event_fields(root.category),
                         evidence_url=root.evidence_url or "",
                         updated_at=datetime_to_timestamp(timestamp),
                     ),

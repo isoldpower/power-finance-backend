@@ -2,25 +2,21 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
-from data_read_core.shared.analytics import AnalyticsScope, TransactionBriefDTO
+from data_read_core.shared.analytics import (
+    AnalyticsCategory,
+    ScopedAnalyticsQuery,
+    TransactionBriefDTO,
+)
 
 
 @dataclass(frozen=True)
-class GetAnalyticsOverviewQuery:
-    scope: AnalyticsScope
-
-    @property
-    def user_id(self) -> int:
-        return self.scope.user_id
-
-    @property
-    def cache_signature(self) -> dict:
-        return self.scope.cache_signature
+class GetAnalyticsOverviewQuery(ScopedAnalyticsQuery):
+    pass
 
 
 @dataclass(frozen=True)
 class TopCategoryDTO:
-    category: str | None
+    category: AnalyticsCategory | None
     amount: Decimal
     share: Decimal
 

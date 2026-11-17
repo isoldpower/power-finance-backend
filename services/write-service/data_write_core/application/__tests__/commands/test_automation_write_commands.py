@@ -27,7 +27,9 @@ NOW = datetime(2026, 9, 1, tzinfo=UTC)
 COFFEE = {"field_name": "name", "operator": "icontains", "value": "coffee"}
 TEA = {"field_name": "name", "operator": "icontains", "value": "tea"}
 EVENT_TRIGGER = {"type": "event", "event": "transaction.created", "filter_body": COFFEE}
-CATEGORISE = [{"type": "set_category", "params": {"category": "Dining"}}]
+CATEGORISE = [
+    {"type": "set_category", "params": {"category_id": "dddddddd-dddd-dddd-dddd-dddddddddddd"}}
+]
 NOTIFY = [{"type": "notify", "params": {"severity": "info", "title": "Ran"}}]
 
 
@@ -127,7 +129,11 @@ def make_stored_rule(**overrides) -> AutomationEntity:
             event="transaction.created",
             filter_body=COFFEE,
         ),
-        effects=(AutomationEffect(type="set_category", params={"category": "Dining"}),),
+        effects=(
+            AutomationEffect(
+                type="set_category", params={"category_id": "dddddddd-dddd-dddd-dddd-dddddddddddd"}
+            ),
+        ),
         created_at=NOW,
     )
     defaults.update(overrides)

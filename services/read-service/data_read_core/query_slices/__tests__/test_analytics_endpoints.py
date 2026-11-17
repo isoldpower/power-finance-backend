@@ -19,6 +19,8 @@ from data_read_core.shared.postgres_orm import (
 )
 from data_read_core.shared.redis_cache import get_redis
 
+from .category_fixtures import owned_category
+
 pytestmark = pytest.mark.django_db(transaction=True)
 
 EXTERNAL_USER_ID = "user_analytics"
@@ -54,6 +56,15 @@ def body_of(response) -> dict:
 
 def amount_of(money: dict) -> str:
     return money["amount"]
+
+
+def name_of(category: dict | None) -> str | None:
+    return category["name"] if category is not None else None
+
+
+async def owner_category_id(name: str) -> str:
+    owner = await get_user_model().objects.aget(username=EXTERNAL_USER_ID)
+    return str((await owned_category(owner.id, "transaction", name)).id)
 
 
 @pytest.fixture(autouse=True)
@@ -190,7 +201,7 @@ async def _transaction(
         amount=Decimal(amount),
         currency_code=currency,
         name=name,
-        category=category,
+        category=await owned_category(user_id, "transaction", category) if category else None,
         chain_id=chain,
         chain_sort=chain or NO_CHAIN_SENTINEL,
         occurred_at=created_at,
@@ -209,9 +220,15 @@ async def test_dimensions_list_open_wallets_favourites_first_and_the_category_vo
         "color": "#112233",
         "currency": "EUR",
     }
-    assert payload["data"]["categories"] == {
-        "expense": ["Groceries", "Rent"],
-        "income": ["Salary"],
+    assert [name_of(category) for category in payload["data"]["categories"]["expense"]] == [
+        "Groceries",
+        "Rent",
+    ]
+    assert [name_of(category) for category in payload["data"]["categories"]["income"]] == ["Salary"]
+    assert payload["data"]["categories"]["income"][0] == {
+        "id": await owner_category_id("Salary"),
+        "name": "Salary",
+        "is_global": False,
     }
     assert payload["data"]["first_transaction_at"] == "2026-02-01T08:00:00+00:00"
     assert payload["data"]["last_transaction_at"] == "2026-03-06T08:00:00+00:00"
@@ -232,9 +249,13 @@ async def test_overview_excludes_transfers_and_converts_into_the_requested_curre
     assert current["largest_expense"]["name"] == "Rent"
     assert current["largest_expense"]["money"] == {"amount": "108.00", "currency": "EUR"}
     assert current["largest_expense"]["converted"] == {"amount": "120.00", "currency": "USD"}
-    assert current["largest_income"]["category"] == "Salary"
+    assert name_of(current["largest_income"]["category"]) == "Salary"
     assert current["top_expense_category"] == {
-        "category": "Groceries",
+        "category": {
+            "id": await owner_category_id("Groceries"),
+            "name": "Groceries",
+            "is_global": False,
+        },
         "amount": {"amount": "150.00", "currency": "USD"},
         "share": 50.0,
     }
@@ -313,7 +334,8 @@ async def test_category_trends_fold_the_tail_into_other():
     payload = body_of(await as_user("category-trends", limit="1"))
     series = payload["data"]["series"]
 
-    assert [entry["key"] for entry in series] == ["Groceries", "__other__"]
+    assert [entry["key"] for entry in series] == [await owner_category_id("Groceries"), "__other__"]
+    assert name_of(series[0]["category"]) == "Groceries"
     assert series[1]["kind"] == "other"
     assert series[1]["category"] is None
     assert amount_of(series[1]["total"]) == "150.00"
@@ -321,10 +343,12 @@ async def test_category_trends_fold_the_tail_into_other():
 
 
 async def test_category_trends_with_a_filter_return_exactly_those_categories():
-    payload = body_of(await as_user("category-trends", category="Rent,__none__", limit="1"))
+    rent_id = await owner_category_id("Rent")
+    payload = body_of(await as_user("category-trends", category=f"{rent_id},__none__", limit="1"))
 
-    assert [entry["key"] for entry in payload["data"]["series"]] == ["Rent", "__none__"]
-    assert payload["meta"]["categories"] == ["Rent", "__none__"]
+    assert [entry["key"] for entry in payload["data"]["series"]] == [rent_id, "__none__"]
+    assert [name_of(entry["category"]) for entry in payload["data"]["series"]] == ["Rent", None]
+    assert payload["meta"]["categories"] == [rent_id, "__none__"]
 
 
 async def test_categories_rank_by_amount_and_compare_with_the_previous_window():
@@ -333,7 +357,7 @@ async def test_categories_rank_by_amount_and_compare_with_the_previous_window():
 
     assert payload["data"]["type"] == "expense"
     assert amount_of(payload["data"]["total"]) == "300.00"
-    assert [category["category"] for category in categories] == ["Groceries", "Rent", None]
+    assert [name_of(category["category"]) for category in categories] == ["Groceries", "Rent", None]
     assert categories[0]["share"] == 50.0
     assert amount_of(categories[0]["average"]) == "75.00"
     assert amount_of(categories[0]["previous_amount"]) == "40.00"
@@ -342,9 +366,29 @@ async def test_categories_rank_by_amount_and_compare_with_the_previous_window():
 
 
 async def test_categories_honour_the_uncategorised_token():
-    payload = body_of(await as_user("categories", category="Rent,__none__"))
+    rent_id = await owner_category_id("Rent")
+    payload = body_of(await as_user("categories", category=f"{rent_id},__none__"))
 
-    assert [category["category"] for category in payload["data"]["categories"]] == ["Rent", None]
+    assert [name_of(category["category"]) for category in payload["data"]["categories"]] == [
+        "Rent",
+        None,
+    ]
+
+
+async def test_an_unknown_category_filter_is_refused():
+    response = await as_user("categories", category=str(uuid.uuid4()))
+
+    assert response.status_code == 422
+    assert body_of(response)["error"]["details"][0]["code"] == "category_unknown"
+
+
+async def test_another_users_category_cannot_filter():
+    stranger = await get_user_model().objects.aget(username=OTHER_USER_ID)
+    their_category = await owned_category(stranger.id, "transaction", "X")
+
+    response = await as_user("categories", category=str(their_category.id))
+
+    assert response.status_code == 422
 
 
 async def test_money_flow_routes_income_through_wallets_into_expenses():
@@ -355,13 +399,16 @@ async def test_money_flow_routes_income_through_wallets_into_expenses():
     }
     cash_node = f"wallet:{CASH_WALLET_ID}"
     euro_node = f"wallet:{EURO_WALLET_ID}"
+    salary_node = f"income:{await owner_category_id('Salary')}"
+    groceries_node = f"expense:{await owner_category_id('Groceries')}"
+    rent_node = f"expense:{await owner_category_id('Rent')}"
 
     assert links == {
-        ("income:Salary", cash_node): "500.00",
-        (cash_node, "expense:Groceries"): "150.00",
+        (salary_node, cash_node): "500.00",
+        (cash_node, groceries_node): "150.00",
         (cash_node, "expense:__none__"): "30.00",
         (cash_node, "savings"): "320.00",
-        (euro_node, "expense:Rent"): "120.00",
+        (euro_node, rent_node): "120.00",
         ("reserves", euro_node): "120.00",
     }
     assert len(links) == len(payload["data"]["links"])
@@ -370,6 +417,8 @@ async def test_money_flow_routes_income_through_wallets_into_expenses():
     assert nodes[cash_node]["amount"]["amount"] == "500.00"
     assert nodes["savings"]["label"] == "Saved"
     assert nodes["expense:__none__"]["category"] is None
+    assert nodes[groceries_node]["label"] == "Groceries"
+    assert name_of(nodes[groceries_node]["category"]) == "Groceries"
 
 
 async def test_spending_calendar_lists_every_day_and_the_peak():
@@ -444,7 +493,7 @@ async def test_counterparties_group_names_case_insensitively():
     leader = payload["data"][0]
 
     assert leader["name"] == "Corner Market"
-    assert leader["category"] == "Groceries"
+    assert name_of(leader["category"]) == "Groceries"
     assert amount_of(leader["amount"]) == "150.00"
     assert leader["share"] == 50.0
     assert leader["transactions_count"] == 2
@@ -534,7 +583,9 @@ async def test_an_opening_balance_moves_the_balance_but_is_never_income():
     history = body_of(await as_user("balance-history", wallet_id=str(FRESH_WALLET_ID), points="2"))
 
     assert amount_of(overview["data"]["current"]["inflow"]) == "500.00"
-    assert [category["category"] for category in income["data"]["categories"]] == ["Salary"]
+    assert [name_of(category["category"]) for category in income["data"]["categories"]] == [
+        "Salary"
+    ]
     assert [payer["name"] for payer in payers["data"]] == ["Salary"]
     assert all(str(FRESH_WALLET_ID) not in node["id"] for node in flow["data"]["nodes"])
     assert [amount_of(total) for total in history["data"]["total"]] == ["0.00", "250.00"]

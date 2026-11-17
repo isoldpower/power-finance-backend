@@ -1,7 +1,9 @@
 from .request import (
     AdjustTransactionRequestSerializer,
+    AttachChainTransactionRequestSerializer,
     BatchAcknowledgeRequestSerializer,
     CreateAutomationRequestSerializer,
+    CreateCategoryRequestSerializer,
     CreateGoalRequestSerializer,
     CreateTransactionChainRequestSerializer,
     CreateTransactionRequestSerializer,
@@ -12,13 +14,16 @@ from .request import (
     ResolveActionRequestSerializer,
     SubscribeWebhookToEventRequestSerializer,
     UpdateAutomationRequestSerializer,
+    UpdateCategoryRequestSerializer,
     UpdateGoalRequestSerializer,
     UpdateWalletRequestSerializer,
     UpdateWebhookRequestSerializer,
 )
 from .response import (
+    CategoryResponseSerializer,
     EnvelopedActionResponseSerializer,
     EnvelopedAutomationResponseSerializer,
+    EnvelopedCategoryResponseSerializer,
     EnvelopedGoalResponseSerializer,
     EnvelopedNotificationCountsResponseSerializer,
     EnvelopedNotificationResponseSerializer,
@@ -34,6 +39,7 @@ from .response import (
     NotificationResponseSerializer,
     PaginatedActionResponseSerializer,
     PaginatedAutomationResponseSerializer,
+    PaginatedCategoryResponseSerializer,
     PaginatedGoalResponseSerializer,
     PaginatedNotificationResponseSerializer,
     PaginatedTransactionFlowSerializer,
@@ -50,6 +56,11 @@ from .response import (
 )
 
 __all__ = [
+    "CategoryResponseSerializer",
+    "CreateCategoryRequestSerializer",
+    "EnvelopedCategoryResponseSerializer",
+    "PaginatedCategoryResponseSerializer",
+    "UpdateCategoryRequestSerializer",
     "PaginatedAutomationResponseSerializer",
     "EnvelopedAutomationResponseSerializer",
     "UpdateAutomationRequestSerializer",
@@ -64,6 +75,7 @@ __all__ = [
     "UpdateGoalRequestSerializer",
     "BatchAcknowledgeRequestSerializer",
     "AdjustTransactionRequestSerializer",
+    "AttachChainTransactionRequestSerializer",
     "CreateTransactionChainRequestSerializer",
     "CreateTransactionRequestSerializer",
     "CreateWalletRequestSerializer",

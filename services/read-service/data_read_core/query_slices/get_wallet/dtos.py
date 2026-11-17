@@ -2,6 +2,7 @@ from dataclasses import asdict, dataclass
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from data_read_core.shared.categories import CategoryReferencePayload, category_reference_of
 from data_read_core.shared.pagination import PageRequest
 from data_read_core.shared.postgres_orm import TransactionReadModel, WalletReadModel
 from data_read_core.shared.timestamps import DEFAULT_PERIOD, Period, to_iso
@@ -33,7 +34,7 @@ class WalletDTO:
     created_at: str
     updated_at: str | None
     deleted_at: str | None
-    category: str
+    category: CategoryReferencePayload | None
     color: str
     favorite: bool
 
@@ -49,7 +50,7 @@ class WalletDTO:
             created_at=to_iso(model.created_at),
             updated_at=to_iso(model.updated_at),
             deleted_at=to_iso(model.deleted_at),
-            category=model.category,
+            category=category_reference_of(model.category),
             color=model.color,
             favorite=model.favorite,
         )
@@ -70,7 +71,7 @@ class RecentTransactionDTO:
     name: str
     amount: str
     currency: str
-    category: str | None
+    category: CategoryReferencePayload | None
     origin: str
     chain_id: str | None
     chain_sort: str
@@ -87,7 +88,7 @@ class RecentTransactionDTO:
             name=model.name,
             amount=str(model.amount),
             currency=model.currency_code,
-            category=model.category,
+            category=category_reference_of(model.category),
             origin=model.origin,
             chain_id=str(model.chain_id) if model.chain_id else None,
             chain_sort=str(model.chain_sort),

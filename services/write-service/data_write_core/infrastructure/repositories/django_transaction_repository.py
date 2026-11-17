@@ -39,7 +39,7 @@ class DjangoTransactionRepository(TransactionRepository):
         transaction_id: UUID,
         user_id: int,
     ) -> TransactionEntity:
-        model = await TransactionModel.objects.select_related("container").aget(
+        model = await TransactionModel.objects.select_related("container", "category").aget(
             id=transaction_id, user_id=user_id
         )
 
@@ -50,7 +50,7 @@ class DjangoTransactionRepository(TransactionRepository):
         user_id: int,
         page: PageRequest | None = None,
     ) -> list[TransactionEntity]:
-        queryset = self._live(user_id).select_related("container")
+        queryset = self._live(user_id).select_related("container", "category")
         rows = apply_keyset(queryset, page) if page else queryset.order_by("-created_at", "-id")
 
         return [TransactionMapper.to_domain(model) async for model in rows]
@@ -74,7 +74,7 @@ class DjangoTransactionRepository(TransactionRepository):
         user_id: int,
     ) -> list[TransactionEntity]:
         rows = (
-            TransactionModel.objects.select_related("container")
+            TransactionModel.objects.select_related("container", "category")
             .filter(chain_id=chain_id, user_id=user_id)
             .order_by("created_at", "id")
         )
@@ -92,7 +92,7 @@ class DjangoTransactionRepository(TransactionRepository):
     ) -> list[TransactionEntity]:
         rows = (
             self._live(user_id)
-            .select_related("container")
+            .select_related("container", "category")
             .filter(chain_id=chain_id)
             .order_by("created_at", "id")
         )

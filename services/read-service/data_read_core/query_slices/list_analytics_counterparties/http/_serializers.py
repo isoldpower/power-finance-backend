@@ -1,12 +1,12 @@
 from rest_framework import serializers
 
 from data_read_core.shared.analytics import collection_meta_with, enveloped
-from data_read_core.shared.rest_framework import MoneySerializer
+from data_read_core.shared.rest_framework import CategoryReferenceSerializer, MoneySerializer
 
 
 class CounterpartySerializer(serializers.Serializer):
     name = serializers.CharField(help_text="The most frequent original spelling.")
-    category = serializers.CharField(
+    category = CategoryReferenceSerializer(
         allow_null=True,
         help_text="The counterparty's most frequent category.",
     )

@@ -2,12 +2,16 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter
 from rest_framework import serializers
 
-from data_read_core.shared.rest_framework import CollectionMetaSerializer, MoneySerializer
+from data_read_core.shared.rest_framework import (
+    CategoryReferenceSerializer,
+    CollectionMetaSerializer,
+    MoneySerializer,
+)
 
 from .config import Granularity, IntegerBounds, LedgerSide, ParamsList
 
 
-def _query_parameter(name: str, parameter_type, description: str, **options) -> OpenApiParameter:
+def query_parameter(name: str, parameter_type, description: str, **options) -> OpenApiParameter:
     return OpenApiParameter(
         name,
         type=parameter_type,
@@ -17,37 +21,37 @@ def _query_parameter(name: str, parameter_type, description: str, **options) -> 
     )
 
 
-SINCE_PARAMETER = _query_parameter(
+SINCE_PARAMETER = query_parameter(
     ParamsList.SINCE,
     OpenApiTypes.DATETIME,
     "Inclusive start of the window. Defaults to `until` minus 30 days.",
 )
-UNTIL_PARAMETER = _query_parameter(
+UNTIL_PARAMETER = query_parameter(
     ParamsList.UNTIL,
     OpenApiTypes.DATETIME,
     "Exclusive end of the window. Defaults to now. At most 5 years after `since`.",
 )
-CURRENCY_PARAMETER = _query_parameter(
+CURRENCY_PARAMETER = query_parameter(
     ParamsList.CURRENCY,
     OpenApiTypes.STR,
     "ISO-4217 target currency for every amount. Defaults to the user's main currency.",
 )
-WALLET_PARAMETER = _query_parameter(
+WALLET_PARAMETER = query_parameter(
     ParamsList.WALLET_ID,
     OpenApiTypes.STR,
     "Comma-joined wallet ids. Defaults to every open wallet.",
 )
-TIMEZONE_PARAMETER = _query_parameter(
+TIMEZONE_PARAMETER = query_parameter(
     ParamsList.TIMEZONE,
     OpenApiTypes.STR,
     "IANA zone that cuts days, ISO weeks, months and hours of day. Defaults to UTC.",
 )
-CATEGORY_PARAMETER = _query_parameter(
+CATEGORY_PARAMETER = query_parameter(
     ParamsList.CATEGORY,
     OpenApiTypes.STR,
-    "Comma-joined category names. `__none__` selects uncategorised rows.",
+    "Comma-joined transaction category ids. `__none__` selects uncategorised rows.",
 )
-GRANULARITY_PARAMETER = _query_parameter(
+GRANULARITY_PARAMETER = query_parameter(
     ParamsList.GRANULARITY,
     OpenApiTypes.STR,
     "Bucket width. Chosen from the window length when omitted.",
@@ -56,7 +60,7 @@ GRANULARITY_PARAMETER = _query_parameter(
 
 
 def side_parameter(*, required_default: bool) -> OpenApiParameter:
-    return _query_parameter(
+    return query_parameter(
         ParamsList.TYPE,
         OpenApiTypes.STR,
         "Ledger side. Defaults to `expense`."
@@ -67,7 +71,7 @@ def side_parameter(*, required_default: bool) -> OpenApiParameter:
 
 
 def bounded_integer_parameter(bounds: IntegerBounds, description: str) -> OpenApiParameter:
-    return _query_parameter(
+    return query_parameter(
         bounds.parameter,
         OpenApiTypes.INT,
         f"{description} {bounds.minimum}..{bounds.maximum}, default {bounds.default}.",
@@ -96,7 +100,7 @@ class AnalyticsMetaSerializer(serializers.Serializer):
     categories = serializers.ListField(
         child=serializers.CharField(),
         allow_null=True,
-        help_text="Null means no category filter.",
+        help_text="Category ids (or `__none__`) the report was filtered to; null means no filter.",
     )
     generated_at = serializers.DateTimeField()
     cached = serializers.BooleanField(required=False)
@@ -117,7 +121,7 @@ class TransactionBriefSerializer(serializers.Serializer):
     name = serializers.CharField()
     created_at = serializers.DateTimeField()
     type = serializers.CharField(help_text="`expense` or `income`.")
-    category = serializers.CharField(allow_null=True)
+    category = CategoryReferenceSerializer(allow_null=True)
     wallet = WalletReferenceSerializer()
     money = MoneySerializer(help_text="Native amount, in the wallet's currency.")
     converted = MoneySerializer(help_text="The same amount in the requested currency.")

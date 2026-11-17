@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from .config import SECONDS_PER_DAY, ReservedTokens
+from .ledger_rows import AnalyticsCategory
 
 
 @dataclass(frozen=True)
@@ -33,7 +34,7 @@ class AnalyticsScope:
     currency: str
     timezone: str
     wallet_identifiers: tuple[str, ...] | None
-    categories: tuple[str | None, ...] | None
+    categories: tuple[AnalyticsCategory | None, ...] | None
 
     @property
     def zone(self) -> ZoneInfo:
@@ -45,9 +46,6 @@ class AnalyticsScope:
             return None
 
         return [category_token(category) for category in self.categories]
-
-    def matches_category(self, category: str | None) -> bool:
-        return self.categories is None or category in self.categories
 
     @property
     def cache_signature(self) -> dict:
@@ -63,5 +61,5 @@ class AnalyticsScope:
         }
 
 
-def category_token(category: str | None) -> str:
-    return ReservedTokens.UNCATEGORISED.value if category is None else category
+def category_token(category: AnalyticsCategory | None) -> str:
+    return ReservedTokens.UNCATEGORISED.value if category is None else category.identifier

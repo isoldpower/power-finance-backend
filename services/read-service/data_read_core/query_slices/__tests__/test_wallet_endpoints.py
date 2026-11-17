@@ -10,12 +10,15 @@ from django.test import AsyncClient
 
 from data_read_core.shared.money import CURRENCY_CATALOG
 from data_read_core.shared.postgres_orm import (
+    CategoryReadModel,
     CurrencyReadModel,
     TransactionReadModel,
     WalletReadModel,
 )
 from data_read_core.shared.redis_cache import get_redis
 from data_read_core.shared.timestamps import Period, period_bounds
+
+from .category_fixtures import category_payload, global_category, owned_category
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -79,7 +82,7 @@ async def _wallet(
     favorite: bool = False,
     created_at: datetime = JULY,
     deleted_at: datetime | None = None,
-    category: str = "",
+    category: CategoryReadModel | None = None,
     color: str = "",
 ) -> WalletReadModel:
     return await WalletReadModel.objects.acreate(
@@ -103,7 +106,7 @@ async def test_preview_carries_the_target_shape():
         balance="50.00",
         zero_balance="100.00",
         favorite=True,
-        category="Savings",
+        category=await global_category("wallet", "Savings"),
         color="#FF0000",
     )
 
@@ -117,7 +120,7 @@ async def test_preview_carries_the_target_shape():
             "created_at": "2026-07-15T12:00:00+00:00",
             "updated_at": None,
             "deleted_at": None,
-            "category": "Savings",
+            "category": category_payload(wallet.category),
             "currency": "USD",
             "money": {"amount": "50.00", "currency": "USD"},
             "zero_balance": {"amount": "100.00", "currency": "USD"},
@@ -319,7 +322,7 @@ async def _recent_transaction(
         amount=Decimal(amount),
         currency_code="USD",
         name=name,
-        category="Some Category",
+        category=await owned_category(await _user_id(), "transaction", "Some Category"),
         origin="manual",
         occurred_at=created_at,
         created_at=created_at,
@@ -344,7 +347,9 @@ async def test_detail_embeds_recent_transactions_in_the_preview_shape():
             "type": "expense",
             "origin": "manual",
             "wallet": {"id": str(wallet.id), "name": "Main"},
-            "category": "Some Category",
+            "category": category_payload(
+                await owned_category(await _user_id(), "transaction", "Some Category")
+            ),
             "chain": None,
         }
     ]

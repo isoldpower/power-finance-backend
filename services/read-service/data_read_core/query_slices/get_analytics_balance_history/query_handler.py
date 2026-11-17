@@ -1,11 +1,9 @@
-from decimal import Decimal
-
 from data_read_core.shared.analytics import (
     AnalyticsLedger,
     AnalyticsReportHandler,
     native_balance_series,
 )
-from data_read_core.shared.money import CURRENCY_CATALOG
+from data_read_core.shared.money import smallest_unit_of
 
 from .config import REPORT_NAME
 from .dtos import BalanceHistoryDTO, GetAnalyticsBalanceHistoryQuery, WalletBalanceSeriesDTO
@@ -25,9 +23,7 @@ class GetAnalyticsBalanceHistoryQueryHandler(
             sample_instants,
             include_instant=True,
         )
-        target_quantum = Decimal(1).scaleb(
-            -await CURRENCY_CATALOG.decimals_or_default(query.scope.currency)
-        )
+        target_quantum = await smallest_unit_of(query.scope.currency)
 
         return BalanceHistoryDTO(
             timestamps=sample_instants,

@@ -1,30 +1,31 @@
 from datetime import UTC, datetime, timedelta
-from enum import StrEnum
-from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from rest_framework import serializers
 from rest_framework.request import Request
 
-from data_read_core.shared.http_contract import DetailCode, ErrorDetail, ValidationFailed
+from data_read_core.shared.http_contract import DetailCode
 from data_read_core.shared.money import CURRENCY_CATALOG
 
 from .config import (
     DEFAULT_TIMEZONE,
     DEFAULT_WINDOW_LENGTH,
-    LIST_SEPARATOR,
     MAXIMUM_WINDOW_LENGTH,
     Granularity,
-    IntegerBounds,
     LedgerSide,
     Messages,
     ParamsList,
     ReservedTokens,
 )
-from .postgres_requests import fetch_open_wallets
+from .ledger_rows import AnalyticsCategory
+from .postgres_requests import fetch_open_wallets, fetch_requested_categories
+from .request_primitives import (
+    invalid_parameter,
+    normalised_uuid,
+    read_choice,
+    read_datetime,
+    read_list,
+)
 from .scope import AnalyticsScope, AnalyticsWindow
-
-DATETIME_FIELD = serializers.DateTimeField()
 
 
 async def read_analytics_scope(
@@ -39,7 +40,7 @@ async def read_analytics_scope(
         currency=await read_currency(request),
         timezone=read_timezone(request),
         wallet_identifiers=await read_wallet_identifiers(request),
-        categories=read_categories(request) if accepts_categories else None,
+        categories=await read_categories(request) if accepts_categories else None,
     )
 
 
@@ -47,17 +48,17 @@ def read_window(
     request: Request,
     maximum_window_length: timedelta = MAXIMUM_WINDOW_LENGTH,
 ) -> AnalyticsWindow:
-    until = _read_datetime(request, ParamsList.UNTIL) or datetime.now(UTC)
-    since = _read_datetime(request, ParamsList.SINCE) or until - DEFAULT_WINDOW_LENGTH
+    until = read_datetime(request, ParamsList.UNTIL) or datetime.now(UTC)
+    since = read_datetime(request, ParamsList.SINCE) or until - DEFAULT_WINDOW_LENGTH
 
     if until <= since:
-        raise _invalid(
+        raise invalid_parameter(
             ParamsList.UNTIL,
             DetailCode.RANGE_INVALID,
             Messages.UNTIL_NOT_AFTER_SINCE,
         )
     if until - since > maximum_window_length:
-        raise _invalid(
+        raise invalid_parameter(
             ParamsList.SINCE,
             DetailCode.RANGE_TOO_LONG,
             Messages.WINDOW_TOO_LONG.format(days=maximum_window_length.days),
@@ -82,7 +83,7 @@ def read_timezone(request: Request) -> str:
     try:
         ZoneInfo(raw_timezone)
     except (ZoneInfoNotFoundError, ValueError):
-        raise _invalid(
+        raise invalid_parameter(
             ParamsList.TIMEZONE,
             DetailCode.INVALID,
             Messages.UNKNOWN_TIMEZONE.format(timezone=raw_timezone),
@@ -92,7 +93,7 @@ def read_timezone(request: Request) -> str:
 
 
 async def read_wallet_identifiers(request: Request) -> tuple[str, ...] | None:
-    requested_identifiers = _read_list(request, ParamsList.WALLET_ID)
+    requested_identifiers = read_list(request, ParamsList.WALLET_ID)
     if requested_identifiers is None:
         return None
 
@@ -101,9 +102,9 @@ async def read_wallet_identifiers(request: Request) -> tuple[str, ...] | None:
     }
     normalised_identifiers: list[str] = []
     for requested_identifier in requested_identifiers:
-        normalised_identifier = _normalised_uuid(requested_identifier)
+        normalised_identifier = normalised_uuid(requested_identifier)
         if normalised_identifier not in open_wallet_identifiers:
-            raise _invalid(
+            raise invalid_parameter(
                 ParamsList.WALLET_ID,
                 DetailCode.WALLET_UNKNOWN,
                 Messages.UNKNOWN_WALLET.format(wallet=requested_identifier),
@@ -114,18 +115,47 @@ async def read_wallet_identifiers(request: Request) -> tuple[str, ...] | None:
     return tuple(normalised_identifiers)
 
 
-def read_categories(request: Request) -> tuple[str | None, ...] | None:
-    requested_tokens = _read_list(request, ParamsList.CATEGORY)
+async def read_categories(request: Request) -> tuple[AnalyticsCategory | None, ...] | None:
+    requested_tokens = read_list(request, ParamsList.CATEGORY)
     if requested_tokens is None:
         return None
 
-    categories: list[str | None] = []
+    identifiers_by_token = {
+        requested_token: normalised_uuid(requested_token)
+        for requested_token in requested_tokens
+        if requested_token != ReservedTokens.UNCATEGORISED
+    }
+    known_categories = await fetch_requested_categories(
+        request.user.id,
+        [identifier for identifier in identifiers_by_token.values() if identifier],
+    )
+
+    categories: list[AnalyticsCategory | None] = []
     for requested_token in requested_tokens:
-        category = None if requested_token == ReservedTokens.UNCATEGORISED else requested_token
+        category = _requested_category(requested_token, identifiers_by_token, known_categories)
         if category not in categories:
             categories.append(category)
 
     return tuple(categories)
+
+
+def _requested_category(
+    requested_token: str,
+    identifiers_by_token: dict[str, str | None],
+    known_categories: dict[str, AnalyticsCategory],
+) -> AnalyticsCategory | None:
+    if requested_token == ReservedTokens.UNCATEGORISED:
+        return None
+
+    category = known_categories.get(identifiers_by_token[requested_token] or "")
+    if category is None:
+        raise invalid_parameter(
+            ParamsList.CATEGORY,
+            DetailCode.CATEGORY_UNKNOWN,
+            Messages.UNKNOWN_CATEGORY.format(category=requested_token),
+        )
+
+    return category
 
 
 def read_side(request: Request, default: LedgerSide = LedgerSide.EXPENSE) -> LedgerSide:
@@ -149,98 +179,4 @@ def read_granularity(request: Request) -> Granularity | None:
         Granularity,
         DetailCode.INVALID,
         Messages.UNKNOWN_GRANULARITY,
-    )
-
-
-def read_bounded_integer(
-    request: Request,
-    bounds: IntegerBounds,
-    detail_code: DetailCode,
-) -> int:
-    raw_value = (request.query_params.get(bounds.parameter) or "").strip()
-    if not raw_value:
-        return bounds.default
-
-    try:
-        parsed_value = int(raw_value)
-    except ValueError:
-        parsed_value = None
-
-    if parsed_value is None or not bounds.minimum <= parsed_value <= bounds.maximum:
-        raise _invalid(
-            bounds.parameter,
-            detail_code,
-            Messages.INTEGER_OUT_OF_RANGE.format(
-                parameter=bounds.parameter,
-                minimum=bounds.minimum,
-                maximum=bounds.maximum,
-            ),
-        )
-
-    return parsed_value
-
-
-def read_choice[ChoiceType: StrEnum](
-    request: Request,
-    parameter: ParamsList,
-    choices: type[ChoiceType],
-    detail_code: DetailCode,
-    message: Messages,
-) -> ChoiceType | None:
-    raw_choice = (request.query_params.get(parameter) or "").strip().lower()
-    if not raw_choice:
-        return None
-
-    try:
-        return choices(raw_choice)
-    except ValueError:
-        raise _invalid(
-            parameter,
-            detail_code,
-            message.format(legal=", ".join(choice.value for choice in choices)),
-        ) from None
-
-
-def _read_datetime(request: Request, parameter: ParamsList) -> datetime | None:
-    raw_datetime = (request.query_params.get(parameter) or "").strip()
-    if not raw_datetime:
-        return None
-
-    try:
-        return DATETIME_FIELD.to_internal_value(raw_datetime)
-    except serializers.ValidationError:
-        raise _invalid(
-            parameter,
-            DetailCode.RANGE_INVALID,
-            Messages.UNPARSABLE_DATETIME.format(parameter=parameter),
-        ) from None
-
-
-def _read_list(request: Request, parameter: ParamsList) -> list[str] | None:
-    listed_values = [
-        listed_value.strip()
-        for raw_value in request.query_params.getlist(parameter)
-        for listed_value in raw_value.split(LIST_SEPARATOR)
-        if listed_value.strip()
-    ]
-
-    return listed_values or None
-
-
-def _normalised_uuid(raw_identifier: str) -> str | None:
-    try:
-        return str(UUID(raw_identifier))
-    except ValueError:
-        return None
-
-
-def _invalid(parameter: str, detail_code: DetailCode, message: str) -> ValidationFailed:
-    return ValidationFailed(
-        details=[
-            ErrorDetail(
-                field=str(parameter),
-                code=detail_code,
-                message=message,
-            )
-        ]
     )

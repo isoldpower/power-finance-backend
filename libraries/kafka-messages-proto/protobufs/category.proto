@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package power_finance.events.v1;
+
+option go_package = "github.com/power-finance/kafka-messages-proto/generated/go/events/v1;eventsv1";
+option java_package = "com.powerfinance.events.v1";
+option java_multiple_files = true;
+option java_outer_classname = "CategoryProto";
+
+import "google/protobuf/timestamp.proto";
+
+
+message CategoryCreated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string category_id = 10;
+  int32 user_id = 11;
+  string kind = 12;
+  string name = 13;
+  google.protobuf.Timestamp created_at = 14;
+}
+
+message CategoryUpdated {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string category_id = 10;
+  int32 user_id = 11;
+  string kind = 12;
+  string previous_name = 13;
+  string new_name = 14;
+  google.protobuf.Timestamp updated_at = 15;
+}
+
+message CategoryDeleted {
+  string event_id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  int32 schema_version = 3;
+
+  string category_id = 10;
+  int32 user_id = 11;
+  string kind = 12;
+  google.protobuf.Timestamp deleted_at = 13;
+}

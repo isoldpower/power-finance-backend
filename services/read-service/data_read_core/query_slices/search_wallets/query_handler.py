@@ -1,5 +1,6 @@
 from filter_grammar_py import WALLET_FILTER_POLICY
 
+from data_read_core.shared.categories import fetch_category_references
 from data_read_core.shared.filtering import FilterTree
 from data_read_core.shared.query_results import FetchedRows
 
@@ -17,7 +18,10 @@ class SearchWalletsQueryHandler:
             page=query.page,
         )
 
-        wallets = [WalletDTO.from_es_hit(document) for document in matched_documents]
+        categories = await fetch_category_references(
+            document.get("category_id") for document in matched_documents
+        )
+        wallets = [WalletDTO.from_es_hit(document, categories) for document in matched_documents]
         log_search_served(query.user_id, len(wallets), total)
 
         return FetchedRows(

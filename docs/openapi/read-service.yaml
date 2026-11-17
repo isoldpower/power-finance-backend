@@ -428,7 +428,7 @@ paths:
         name: category
         schema:
           type: string
-        description: Comma-joined category names. `__none__` selects uncategorised
+        description: Comma-joined transaction category ids. `__none__` selects uncategorised
           rows.
       - in: query
         name: currency
@@ -503,7 +503,7 @@ paths:
         name: category
         schema:
           type: string
-        description: Comma-joined category names. `__none__` selects uncategorised
+        description: Comma-joined transaction category ids. `__none__` selects uncategorised
           rows.
       - in: query
         name: currency
@@ -579,7 +579,7 @@ paths:
         name: category
         schema:
           type: string
-        description: Comma-joined category names. `__none__` selects uncategorised
+        description: Comma-joined transaction category ids. `__none__` selects uncategorised
           rows.
       - in: query
         name: currency
@@ -667,7 +667,7 @@ paths:
         name: category
         schema:
           type: string
-        description: Comma-joined category names. `__none__` selects uncategorised
+        description: Comma-joined transaction category ids. `__none__` selects uncategorised
           rows.
       - in: query
         name: currency
@@ -738,9 +738,9 @@ paths:
   /api/v1/analytics/dimensions:
     get:
       operationId: analytics_dimensions_retrieve
-      description: Open wallets and the distinct income and expense category names,
-        with the first and last transaction instants. Ignores the window parameters;
-        `currency` is only echoed back.
+      description: Open wallets and the distinct income and expense categories, with
+        the first and last transaction instants. Ignores the window parameters; `currency`
+        is only echoed back.
       summary: Get the analytics filter vocabulary
       parameters:
       - in: query
@@ -1026,7 +1026,7 @@ paths:
         name: category
         schema:
           type: string
-        description: Comma-joined category names. `__none__` selects uncategorised
+        description: Comma-joined transaction category ids. `__none__` selects uncategorised
           rows.
       - in: query
         name: currency
@@ -1236,6 +1236,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedAutomationSearchResult'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/categories:
+    get:
+      operationId: categories_list
+      description: 'The categories you can assign: the global ones every user sees,
+        then your own, each group alphabetical. Deleted categories are left out, though
+        wallets and transactions that already use one still show it.'
+      summary: List categories
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`. Absent returns the first page. Direction is encoded
+          in the cursor itself.
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - transaction
+          - wallet
+        description: Restrict to transaction or wallet categories. Absent means both.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100 — out-of-range values
+          are clamped rather than rejected, so `meta.limit` reports what was applied.
+      tags:
+      - api
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCategory'
           description: ''
         '422':
           content:
@@ -2478,7 +2524,8 @@ components:
           items:
             type: string
           nullable: true
-          description: Null means no category filter.
+          description: Category ids (or `__none__`) the report was filtered to; null
+            means no filter.
         generated_at:
           type: string
           format: date-time
@@ -2564,7 +2611,8 @@ components:
           items:
             type: string
           nullable: true
-          description: Null means no category filter.
+          description: Category ids (or `__none__`) the report was filtered to; null
+            means no filter.
         generated_at:
           type: string
           format: date-time
@@ -2607,7 +2655,8 @@ components:
           items:
             type: string
           nullable: true
-          description: Null means no category filter.
+          description: Category ids (or `__none__`) the report was filtered to; null
+            means no filter.
         generated_at:
           type: string
           format: date-time
@@ -2650,7 +2699,8 @@ components:
           items:
             type: string
           nullable: true
-          description: Null means no category filter.
+          description: Category ids (or `__none__`) the report was filtered to; null
+            means no filter.
         generated_at:
           type: string
           format: date-time
@@ -2714,7 +2764,8 @@ components:
           items:
             type: string
           nullable: true
-          description: Null means no category filter.
+          description: Category ids (or `__none__`) the report was filtered to; null
+            means no filter.
         generated_at:
           type: string
           format: date-time
@@ -2754,7 +2805,8 @@ components:
           items:
             type: string
           nullable: true
-          description: Null means no category filter.
+          description: Category ids (or `__none__`) the report was filtered to; null
+            means no filter.
         generated_at:
           type: string
           format: date-time
@@ -3139,30 +3191,86 @@ components:
       - categories
       - total
       - type
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/CategoryKindEnum'
+        name:
+          type: string
+        is_global:
+          type: boolean
+          description: Built-in category every user sees. It cannot be renamed or
+            deleted.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - deleted_at
+      - id
+      - is_global
+      - kind
+      - name
+      - updated_at
     CategoryCatalog:
       type: object
       properties:
         expense:
           type: array
           items:
-            type: string
-          description: A to Z.
+            $ref: '#/components/schemas/CategoryReference'
+          description: A to Z by name.
         income:
           type: array
           items:
-            type: string
-          description: A to Z.
+            $ref: '#/components/schemas/CategoryReference'
+          description: A to Z by name.
       required:
       - expense
       - income
+    CategoryKindEnum:
+      enum:
+      - transaction
+      - wallet
+      type: string
+      description: |-
+        * `transaction` - transaction
+        * `wallet` - wallet
+    CategoryReference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        is_global:
+          type: boolean
+      required:
+      - id
+      - is_global
+      - name
     CategorySeries:
       type: object
       properties:
         key:
           type: string
-          description: Category name, `__none__` or `__other__`.
+          description: Category id, `__none__` or `__other__`.
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
           description: Null for uncategorised rows and for the other roll-up.
         kind:
@@ -3192,7 +3300,8 @@ components:
       type: object
       properties:
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
           description: Null for uncategorised rows.
         amount:
@@ -3351,7 +3460,8 @@ components:
           type: string
           description: The most frequent original spelling.
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
           description: The counterparty's most frequent category.
         amount:
@@ -3821,14 +3931,15 @@ components:
       properties:
         id:
           type: string
-          description: '`income:<category|__none__>`, `wallet:<id>`, `expense:<category|__none__>`,
-            `savings` or `reserves`.'
+          description: '`income:<category id|__none__>`, `wallet:<id>`, `expense:<category
+            id|__none__>`, `savings` or `reserves`.'
         kind:
           $ref: '#/components/schemas/FlowNodeKindEnum'
         label:
           type: string
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
         wallet:
           allOf:
@@ -4420,6 +4531,18 @@ components:
       required:
       - data
       - meta
+    PaginatedCategory:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
     PaginatedGoalPreview:
       type: object
       properties:
@@ -4725,7 +4848,8 @@ components:
       type: object
       properties:
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
         amount:
           $ref: '#/components/schemas/Money'
@@ -4762,7 +4886,8 @@ components:
           type: string
           description: '`expense` or `income`.'
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
         wallet:
           $ref: '#/components/schemas/WalletReference'
@@ -4839,7 +4964,8 @@ components:
         wallet:
           $ref: '#/components/schemas/TransactionWallet'
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
         chain:
           allOf:
@@ -4928,7 +5054,8 @@ components:
         wallet:
           $ref: '#/components/schemas/TransactionWallet'
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
         chain:
           allOf:
@@ -4977,7 +5104,8 @@ components:
         wallet:
           $ref: '#/components/schemas/TransactionWallet'
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
         chain:
           allOf:
@@ -5045,7 +5173,9 @@ components:
           format: date-time
           nullable: true
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
         currency:
           type: string
         money:
@@ -5133,7 +5263,9 @@ components:
           format: date-time
           nullable: true
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
         currency:
           type: string
         money:
@@ -5189,7 +5321,8 @@ components:
         wallet:
           $ref: '#/components/schemas/TransactionWallet'
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
         chain:
           allOf:
@@ -5240,7 +5373,9 @@ components:
           format: date-time
           nullable: true
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
         currency:
           type: string
         money:

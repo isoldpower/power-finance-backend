@@ -1,25 +1,26 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from data_read_core.shared.analytics import AnalyticsScope, Granularity, LedgerSide, TimeBucket
+from data_read_core.shared.analytics import (
+    ZERO,
+    AnalyticsCategory,
+    Granularity,
+    LedgerSide,
+    ScopedAnalyticsQuery,
+    TimeBucket,
+)
 
 
 @dataclass(frozen=True)
-class GetAnalyticsCategoryTrendsQuery:
-    scope: AnalyticsScope
+class GetAnalyticsCategoryTrendsQuery(ScopedAnalyticsQuery):
     side: LedgerSide
     granularity: Granularity
     buckets: list[TimeBucket]
     limit: int
 
     @property
-    def user_id(self) -> int:
-        return self.scope.user_id
-
-    @property
-    def cache_signature(self) -> dict:
+    def report_parameters(self) -> dict:
         return {
-            **self.scope.cache_signature,
             "type": self.side.value,
             "granularity": self.granularity.value,
             "limit": self.limit,
@@ -29,13 +30,13 @@ class GetAnalyticsCategoryTrendsQuery:
 @dataclass(frozen=True)
 class CategorySeriesDTO:
     key: str
-    category: str | None
+    category: AnalyticsCategory | None
     is_other: bool
     points: list[Decimal]
 
     @property
     def total(self) -> Decimal:
-        return sum(self.points, Decimal(0))
+        return sum(self.points, ZERO)
 
 
 @dataclass(frozen=True)

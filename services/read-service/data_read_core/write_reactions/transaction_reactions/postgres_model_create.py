@@ -81,7 +81,7 @@ class CreateTransactionReadModel(Effect):
                 "amount": amount,
                 "currency_code": container.currency_code,
                 "name": payload.name,
-                "category": payload.category or None,
+                "category_id": payload.category_id or None,
                 "evidence_url": payload.evidence_url or None,
                 "origin": payload.origin or "manual",
                 "chain_id": chain_id,

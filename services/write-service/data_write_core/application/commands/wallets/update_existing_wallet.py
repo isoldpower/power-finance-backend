@@ -8,7 +8,7 @@ from kafka_messages import WalletUpdated
 from data_write_core.domain.aggregates import WalletAggregate
 from data_write_core.domain.entities import WalletEntity
 from data_write_core.domain.entities.wallet import UNCHANGED
-from data_write_core.domain.value_objects import WalletData
+from data_write_core.domain.value_objects import CategoryKind, WalletData
 from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 from data_write_core.infrastructure.outbox_saga import (
     FinalizedSagaCoordinator,
@@ -20,7 +20,13 @@ from data_write_core.infrastructure.outbox_saga import (
 from ..._amount_scale import ensure_amount_scale
 from ...bootstrap import get_repository_registry
 from ...dtos import WalletDTO, wallet_to_dto
-from ...interfaces import MoneyFlowRepository, OutboxRepository, WalletRepository
+from ...interfaces import (
+    CategoryRepository,
+    MoneyFlowRepository,
+    OutboxRepository,
+    WalletRepository,
+)
+from .._category_resolution import CategoryResolverMixin, category_event_fields
 from .._command_base import CommandHandlerBase
 from .._loader_mixins import LoadWalletMixin
 
@@ -31,13 +37,15 @@ class UpdateExistingWalletCommand:
     user_external_id: str
     wallet_id: UUID
     new_name: str | object = UNCHANGED
-    category: str | object = UNCHANGED
+    category_id: UUID | None | object = UNCHANGED
     color: str | object = UNCHANGED
     favorite: bool | object = UNCHANGED
     zero_balance: Decimal | object = UNCHANGED
 
 
-class UpdateExistingWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWalletMixin):
+class UpdateExistingWalletCommandHandler(
+    CommandHandlerBase[WalletDTO], LoadWalletMixin, CategoryResolverMixin
+):
     _wallet_repository: WalletRepository
     _transaction_repository: MoneyFlowRepository
     _outbox_repository: OutboxRepository
@@ -47,7 +55,9 @@ class UpdateExistingWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWall
         wallet_repository: WalletRepository | None = None,
         money_flow_repository: MoneyFlowRepository | None = None,
         outbox_repository: OutboxRepository | None = None,
+        category_repository: CategoryRepository | None = None,
     ) -> None:
+        self.use_category_repository(category_repository)
         if wallet_repository is None or money_flow_repository is None or outbox_repository is None:
             registry = get_repository_registry()
             wallet_repository = wallet_repository or registry.wallet_repository
@@ -79,12 +89,18 @@ class UpdateExistingWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWall
                 wallet_aggregate.root.currency_code,
             )
 
+        category = await self.resolve_category_change(
+            command.category_id,
+            command.user_id,
+            CategoryKind.WALLET,
+            unchanged=UNCHANGED,
+        )
         timestamp_now = datetime.now()
         previous_data = wallet_aggregate.root.snapshot()
         wallet_aggregate.update_metadata(
             now=timestamp_now,
             title=command.new_name,
-            category=command.category,
+            category=category,
             color=command.color,
             favorite=command.favorite,
             zero_balance=command.zero_balance,
@@ -134,7 +150,7 @@ class UpdateExistingWalletCommandHandler(CommandHandlerBase[WalletDTO], LoadWall
                             previous_title=previous_state.title,
                             new_title=wallet_aggregate.root.title,
                             updated_at=datetime_to_timestamp(timestamp),
-                            category=wallet_aggregate.root.category,
+                            **category_event_fields(wallet_aggregate.root.category),
                             color=wallet_aggregate.root.color,
                             favorite=wallet_aggregate.root.favorite,
                             zero_balance=str(wallet_aggregate.root.zero_balance),

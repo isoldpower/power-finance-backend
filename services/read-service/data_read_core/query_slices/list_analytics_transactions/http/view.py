@@ -1,11 +1,12 @@
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 
 from data_read_core.shared.analytics import (
     CATEGORY_PARAMETER,
     SHARED_PARAMETERS,
     ParamsList,
     bounded_integer_parameter,
+    query_parameter,
     read_analytics_scope,
     read_bounded_integer,
     read_optional_side,
@@ -39,18 +40,16 @@ from ._serializers import EnvelopedTransactionsSerializer
         *SHARED_PARAMETERS,
         side_parameter(required_default=False),
         CATEGORY_PARAMETER,
-        OpenApiParameter(
+        query_parameter(
             ParamsList.NAME,
-            type=OpenApiTypes.STR,
-            location=OpenApiParameter.QUERY,
-            description="Exact counterparty, trimmed and compared case-insensitively.",
+            OpenApiTypes.STR,
+            "Exact counterparty, trimmed and compared case-insensitively.",
         ),
-        OpenApiParameter(
+        query_parameter(
             ParamsList.ORDER,
-            type=OpenApiTypes.STR,
-            location=OpenApiParameter.QUERY,
+            OpenApiTypes.STR,
+            "Defaults to `amount_desc`.",
             enum=[order.value for order in TransactionOrder],
-            description="Defaults to `amount_desc`.",
         ),
         bounded_integer_parameter(LIMIT_BOUNDS, "How many rows to return."),
     ],

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from data_read_core.shared.analytics import LedgerWallet
+from data_read_core.shared.analytics import AnalyticsCategory, LedgerWallet
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class GetAnalyticsDimensionsQuery:
 @dataclass(frozen=True)
 class DimensionsDTO:
     wallets: list[LedgerWallet]
-    expense_categories: list[str]
-    income_categories: list[str]
+    expense_categories: list[AnalyticsCategory]
+    income_categories: list[AnalyticsCategory]
     first_transaction_at: datetime | None
     last_transaction_at: datetime | None

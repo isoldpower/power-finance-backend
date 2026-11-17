@@ -17,7 +17,7 @@ class DjangoWalletRepository(WalletRepository):
     async def get_user_wallet_by_id(self, wallet_id: UUID, user_id: int) -> WalletEntity:
         requested_wallet: WalletModel = await (
             WalletModel.objects.with_deleted()
-            .select_related("currency")
+            .select_related("currency", "category")
             .aget(id=wallet_id, user_id=user_id)
         )
 
@@ -28,7 +28,9 @@ class DjangoWalletRepository(WalletRepository):
         user_id: int,
         page: PageRequest | None = None,
     ) -> list[WalletEntity]:
-        queryset = WalletModel.objects.select_related("currency").filter(user_id=user_id)
+        queryset = WalletModel.objects.select_related("currency", "category").filter(
+            user_id=user_id
+        )
         rows = (
             apply_keyset(queryset, page)
             if page
@@ -43,8 +45,8 @@ class DjangoWalletRepository(WalletRepository):
     async def get_user_wallet_for_update(self, wallet_id: UUID, user_id: int) -> WalletEntity:
         requested_wallet: WalletModel = await (
             WalletModel.objects.with_deleted()
-            .select_for_update()
-            .select_related("currency")
+            .select_for_update(of=("self", "container"))
+            .select_related("currency", "category")
             .aget(id=wallet_id, user_id=user_id)
         )
 
@@ -55,19 +57,23 @@ class DjangoWalletRepository(WalletRepository):
         WalletMapper.apply_to_model(created_wallet, wallet)
         await created_wallet.asave()
 
-        refreshed = await WalletModel.objects.select_related("currency").aget(id=created_wallet.id)
+        refreshed = await WalletModel.objects.select_related("currency", "category").aget(
+            id=created_wallet.id
+        )
         return WalletMapper.to_domain(refreshed)
 
     async def get_wallet_by_id(self, wallet_id: UUID) -> WalletEntity:
-        requested_wallet: WalletModel = await WalletModel.objects.select_related("currency").aget(
-            id=wallet_id
-        )
+        requested_wallet: WalletModel = await WalletModel.objects.select_related(
+            "currency", "category"
+        ).aget(id=wallet_id)
 
         return WalletMapper.to_domain(requested_wallet)
 
     async def save_wallet(self, wallet: WalletEntity) -> WalletEntity:
         requested_wallet = await (
-            WalletModel.objects.with_deleted().select_related("currency").aget(id=wallet.unique_id)
+            WalletModel.objects.with_deleted()
+            .select_related("currency", "category")
+            .aget(id=wallet.unique_id)
         )
         WalletMapper.apply_to_model(requested_wallet, wallet)
         await requested_wallet.asave()

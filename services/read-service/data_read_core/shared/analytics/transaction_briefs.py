@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from .config import LedgerSide
 from .ledger import AnalyticsLedger
-from .ledger_rows import LedgerRow, LedgerWallet
+from .ledger_rows import AnalyticsCategory, LedgerRow, LedgerWallet
 
 FALLBACK_WALLET_COLOR = ""
 
@@ -15,7 +15,7 @@ class TransactionBriefDTO:
     name: str
     created_at: datetime
     side: LedgerSide
-    category: str | None
+    category: AnalyticsCategory | None
     wallet: LedgerWallet
     native_amount: Decimal
     native_currency: str

@@ -1,26 +1,16 @@
 from decimal import Decimal
-from typing import NamedTuple
 
 from data_read_core.shared.analytics import (
     ZERO,
     AnalyticsLedger,
     AnalyticsReportHandler,
     BucketLocator,
-    LedgerSide,
+    FlowTally,
     native_balance_series,
 )
 
 from .config import REPORT_NAME
 from .dtos import CashFlowBucketDTO, CashFlowDTO, GetAnalyticsCashFlowQuery
-
-
-class BucketTally(NamedTuple):
-    inflow: Decimal
-    outflow: Decimal
-    transactions_count: int
-
-
-EMPTY_TALLY = BucketTally(inflow=ZERO, outflow=ZERO, transactions_count=0)
 
 
 class GetAnalyticsCashFlowQueryHandler(AnalyticsReportHandler[GetAnalyticsCashFlowQuery]):
@@ -55,23 +45,18 @@ class GetAnalyticsCashFlowQueryHandler(AnalyticsReportHandler[GetAnalyticsCashFl
 async def _tally_buckets(
     ledger: AnalyticsLedger,
     query: GetAnalyticsCashFlowQuery,
-) -> list[BucketTally]:
+) -> list[FlowTally]:
     bucket_locator = BucketLocator(query.buckets)
-    tallies = [EMPTY_TALLY] * len(query.buckets)
+    tallies = [FlowTally()] * len(query.buckets)
 
     for row in await ledger.fetch_flows(query.scope.window):
         bucket_index = bucket_locator.index_of(row.created_at)
         if bucket_index is None:
             continue
 
-        converted_amount = ledger.converted_magnitude(row)
-        current_tally = tallies[bucket_index]
-        tallies[bucket_index] = BucketTally(
-            inflow=current_tally.inflow
-            + (converted_amount if row.side is LedgerSide.INCOME else ZERO),
-            outflow=current_tally.outflow
-            + (converted_amount if row.side is LedgerSide.EXPENSE else ZERO),
-            transactions_count=current_tally.transactions_count + 1,
+        tallies[bucket_index] = tallies[bucket_index].including(
+            row.side,
+            ledger.converted_magnitude(row),
         )
 
     return tallies

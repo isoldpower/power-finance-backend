@@ -1,21 +1,16 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from data_read_core.shared.analytics import AnalyticsScope, LedgerSide
+from data_read_core.shared.analytics import LedgerSide, ScopedAnalyticsQuery
 
 
 @dataclass(frozen=True)
-class GetAnalyticsSpendingRhythmQuery:
-    scope: AnalyticsScope
+class GetAnalyticsSpendingRhythmQuery(ScopedAnalyticsQuery):
     side: LedgerSide
 
     @property
-    def user_id(self) -> int:
-        return self.scope.user_id
-
-    @property
-    def cache_signature(self) -> dict:
-        return {**self.scope.cache_signature, "type": self.side.value}
+    def report_parameters(self) -> dict:
+        return {"type": self.side.value}
 
 
 @dataclass(frozen=True)

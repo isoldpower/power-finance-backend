@@ -1,5 +1,5 @@
-WALLET_CACHE_SCHEMA = "s2"
-TRANSACTION_CACHE_SCHEMA = "s2"
+WALLET_CACHE_SCHEMA = "s3"
+TRANSACTION_CACHE_SCHEMA = "s3"
 GOAL_CACHE_SCHEMA = "s1"
 ACCOUNT_CACHE_SCHEMA = "s1"
 
@@ -62,3 +62,7 @@ def get_webhook_list_version_key(user_id: int) -> str:
 
 def get_webhook_events_key(webhook_id: str) -> str:
     return f"read:webhook_events:{webhook_id}"
+
+
+def get_category_list_version_key(user_id: int) -> str:
+    return f"ver:categories:{user_id}"

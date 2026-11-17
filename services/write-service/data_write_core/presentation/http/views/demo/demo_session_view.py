@@ -1,30 +1,17 @@
-from datetime import timedelta
-
-from django.conf import settings
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.permissions import AllowAny
 from write_service.common.base_async_api_view import BaseAsyncAPIView
-from write_service.common.http_contract import ServiceUnavailable, ok
+from write_service.common.http_contract import ok
 
 from data_write_core.application.commands.demo import (
     StartDemoSessionCommand,
     StartDemoSessionCommandHandler,
 )
-from data_write_core.infrastructure.demo import JwtDemoTokenIssuer
+from data_write_core.infrastructure.demo import build_token_issuer, build_visit_codec
 
-
-def _build_token_issuer() -> JwtDemoTokenIssuer:
-    demo_settings = settings.DEMO_SESSIONS
-    if not demo_settings["TOKEN_SECRET"]:
-        raise ServiceUnavailable("Guest demo sessions are not enabled on this deployment")
-
-    return JwtDemoTokenIssuer(
-        secret=demo_settings["TOKEN_SECRET"],
-        issuer=demo_settings["TOKEN_ISSUER"],
-        lifetime=timedelta(seconds=demo_settings["TOKEN_TTL_SECONDS"]),
-    )
+from ._request_inputs import DEMO_SESSION_HEADER, require_demo_visit
 
 
 class DemoSessionView(BaseAsyncAPIView):
@@ -35,19 +22,37 @@ class DemoSessionView(BaseAsyncAPIView):
         operation_id="demo_sessions_create",
         summary="Start a guest demo session",
         description=(
-            "Creates a throwaway guest account seeded with sample wallets, a goal "
-            "and transactions, and returns a short-lived bearer token for it. "
-            "Used by the portfolio iframe, where a Clerk session is unavailable. "
-            "The response carries `X-Write-Version` so the gateway pins the new "
-            "account's reads to the seeded state."
+            "Returns a short-lived bearer token for the guest account of the demo "
+            "visit named by `X-Demo-Session`. The first call for a visit creates the "
+            "account and seeds it with sample wallets, a goal and transactions; later "
+            "calls return a fresh token for the same account without seeding again. A "
+            "seed that failed partway is finished by the next call for the same visit. "
+            "The token never outlives the visit. Used by the portfolio iframe, where a "
+            "Clerk session is unavailable. A seeding response carries `X-Write-Version` "
+            "so the gateway pins the new account's reads to the seeded state."
         ),
+        parameters=[
+            OpenApiParameter(
+                name=DEMO_SESSION_HEADER,
+                location=OpenApiParameter.HEADER,
+                required=True,
+                description="Demo visit id issued by `POST /api/v1/demo/visits`.",
+            )
+        ],
         request=None,
-        responses={201: None, 503: None},
+        responses={201: None, 401: None, 503: None},
     )
     async def post(self, request):
+        visit_codec = build_visit_codec()
+        token_issuer = build_token_issuer()
+        demo_visit = require_demo_visit(request, visit_codec)
         demo_session = await StartDemoSessionCommandHandler(
-            token_issuer=_build_token_issuer(),
-        ).handle(StartDemoSessionCommand())
+            token_issuer=token_issuer,
+        ).handle(StartDemoSessionCommand(visit=demo_visit))
+
+        response_headers = {"X-Demo-Subject": demo_session.external_id}
+        if demo_session.write_version is not None:
+            response_headers["X-Write-Version"] = str(demo_session.write_version)
 
         return ok(
             {
@@ -57,8 +62,5 @@ class DemoSessionView(BaseAsyncAPIView):
             },
             {},
             status_code=status.HTTP_201_CREATED,
-            headers={
-                "X-Write-Version": str(demo_session.write_version),
-                "X-Demo-Subject": demo_session.external_id,
-            },
+            headers=response_headers,
         )

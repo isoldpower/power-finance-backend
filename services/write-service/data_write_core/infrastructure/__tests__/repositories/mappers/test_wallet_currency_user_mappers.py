@@ -3,12 +3,13 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from types import SimpleNamespace
+from uuid import UUID
 
 from django.test import SimpleTestCase
 
 from data_write_core.domain.entities import InternalUserEntity, WalletEntity
 from data_write_core.domain.events import EventCollector
-from data_write_core.domain.value_objects import Currency
+from data_write_core.domain.value_objects import CategoryReference, Currency
 from data_write_core.infrastructure.repositories.mappers.currency_mapper import (
     CurrencyMapper,
 )
@@ -16,6 +17,9 @@ from data_write_core.infrastructure.repositories.mappers.user_mapper import User
 from data_write_core.infrastructure.repositories.mappers.wallet_mapper import (
     WalletMapper,
 )
+
+SAVINGS_ID = UUID("22222222-2222-2222-2222-222222222222")
+SAVINGS = CategoryReference(id=SAVINGS_ID, name="Savings", is_global=True)
 
 
 class WalletMapperToDomainTests(SimpleTestCase):
@@ -28,7 +32,7 @@ class WalletMapperToDomainTests(SimpleTestCase):
             "created_at": datetime(2026, 1, 1, 12),
             "updated_at": datetime(2026, 1, 2, 12),
             "deleted_at": None,
-            "category": "Savings",
+            "category": SimpleNamespace(id=SAVINGS_ID, name="Savings", is_global=True),
             "color": "#FF0000",
             "favorite": False,
             "zero_balance": Decimal("0"),
@@ -47,6 +51,12 @@ class WalletMapperToDomainTests(SimpleTestCase):
         self.assertEqual(entity.created_at, datetime(2026, 1, 1, 12))
         self.assertEqual(entity.updated_at, datetime(2026, 1, 2, 12))
         self.assertIsNone(entity.deleted_at)
+        self.assertEqual(entity.category, SAVINGS)
+
+    def test_a_wallet_without_a_category_maps_to_none(self) -> None:
+        entity = WalletMapper.to_domain(self._model(category=None))
+
+        self.assertIsNone(entity.category)
 
     def test_user_id_is_converted_to_string(self) -> None:
         entity = WalletMapper.to_domain(self._model(user_id=7))
@@ -85,7 +95,7 @@ class WalletMapperApplyToModelTests(SimpleTestCase):
             "created_at": datetime(2026, 1, 1, 12),
             "updated_at": datetime(2026, 1, 2, 12),
             "deleted_at": None,
-            "category": "Savings",
+            "category": SAVINGS,
             "color": "#FF0000",
             "favorite": False,
             "zero_balance": Decimal("0"),
@@ -108,6 +118,8 @@ class WalletMapperApplyToModelTests(SimpleTestCase):
         self.assertEqual(model.currency_id, "USD")
         self.assertEqual(model.user_id, 9)
         self.assertIsNone(model.deleted_at)
+        self.assertEqual(model.category.id, SAVINGS_ID)
+        self.assertEqual(model.category.name, "Savings")
 
     def test_apply_writes_deleted_at_unconditionally(self) -> None:
         model = SimpleNamespace(id=None, name="x", currency_id="x", user_id=None, deleted_at=None)

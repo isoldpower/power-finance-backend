@@ -1,5 +1,6 @@
 from data_read_core.shared.analytics import (
     AnalyticsScope,
+    present_analytics_category,
     present_scope_meta,
     present_wallet_reference,
 )
@@ -28,7 +29,7 @@ async def _present_node(node: FlowNodeDTO, currency: str) -> dict:
         "id": node.identifier,
         "kind": node.kind.value,
         "label": node.label,
-        "category": node.category,
+        "category": present_analytics_category(node.category),
         "wallet": present_wallet_reference(node.wallet) if node.wallet else None,
         "amount": await money_at_scale(node.amount, currency),
     }

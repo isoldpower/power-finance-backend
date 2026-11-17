@@ -1,7 +1,9 @@
 from rest_framework import serializers
 
 from data_read_core.shared.analytics import Granularity, enveloped, meta_with
-from data_read_core.shared.rest_framework import MoneySerializer
+from data_read_core.shared.rest_framework import CategoryReferenceSerializer, MoneySerializer
+
+from ..config import SeriesKind
 
 
 class BucketBoundsSerializer(serializers.Serializer):
@@ -10,12 +12,12 @@ class BucketBoundsSerializer(serializers.Serializer):
 
 
 class CategorySeriesSerializer(serializers.Serializer):
-    key = serializers.CharField(help_text="Category name, `__none__` or `__other__`.")
-    category = serializers.CharField(
+    key = serializers.CharField(help_text="Category id, `__none__` or `__other__`.")
+    category = CategoryReferenceSerializer(
         allow_null=True,
         help_text="Null for uncategorised rows and for the other roll-up.",
     )
-    kind = serializers.ChoiceField(choices=["category", "other"])
+    kind = serializers.ChoiceField(choices=[kind.value for kind in SeriesKind])
     total = MoneySerializer()
     points = MoneySerializer(many=True, help_text="Exactly one per bucket, in bucket order.")
 

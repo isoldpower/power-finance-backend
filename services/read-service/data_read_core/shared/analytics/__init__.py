@@ -22,8 +22,9 @@ from .config import (
 from .counterparty_names import normalised_counterparty_name
 from .currency_rates import RateTable, build_rate_table
 from .dataclass_codec import decode_from_cache, encode_for_cache
+from .flow_tallies import FlowTally
 from .ledger import AnalyticsLedger
-from .ledger_rows import LedgerRow, LedgerWallet
+from .ledger_rows import AnalyticsCategory, LedgerRow, LedgerWallet
 from .percentages import change_between, savings_rate_of, share_of
 from .postgres_requests import (
     TransactionTimeBounds,
@@ -33,6 +34,7 @@ from .postgres_requests import (
 )
 from .presentation import (
     as_percentage,
+    present_analytics_category,
     present_collection_meta,
     present_optional_transaction_brief,
     present_scope_meta,
@@ -48,11 +50,10 @@ from .report_cache import (
     get_wallet_version_key,
 )
 from .report_handler import AnalyticsReportHandler
+from .report_query import ScopedAnalyticsQuery
 from .request_params import (
     read_analytics_scope,
-    read_bounded_integer,
     read_categories,
-    read_choice,
     read_currency,
     read_granularity,
     read_optional_side,
@@ -61,6 +62,7 @@ from .request_params import (
     read_wallet_identifiers,
     read_window,
 )
+from .request_primitives import read_bounded_integer, read_choice
 from .schema import (
     CATEGORY_PARAMETER,
     CURRENCY_PARAMETER,
@@ -75,6 +77,7 @@ from .schema import (
     collection_meta_with,
     enveloped,
     meta_with,
+    query_parameter,
     side_parameter,
 )
 from .scope import AnalyticsScope, AnalyticsWindow, category_token
@@ -83,18 +86,19 @@ from .transaction_briefs import TransactionBriefDTO, brief_of
 __all__ = [
     "CATEGORY_PARAMETER",
     "CURRENCY_PARAMETER",
-    "CategoryTally",
-    "tally_by_category",
     "GRANULARITY_PARAMETER",
     "MAXIMUM_WINDOW_LENGTH",
     "SHARED_PARAMETERS",
     "ZERO",
+    "AnalyticsCategory",
     "AnalyticsLedger",
     "AnalyticsMetaSerializer",
     "AnalyticsReportHandler",
     "AnalyticsScope",
     "AnalyticsWindow",
     "BucketLocator",
+    "CategoryTally",
+    "FlowTally",
     "FlowTotalsSerializer",
     "Granularity",
     "IntegerBounds",
@@ -106,6 +110,7 @@ __all__ = [
     "ParamsList",
     "RateTable",
     "ReservedTokens",
+    "ScopedAnalyticsQuery",
     "TimeBucket",
     "TransactionBriefDTO",
     "TransactionBriefSerializer",
@@ -114,8 +119,6 @@ __all__ = [
     "WalletReferenceSerializer",
     "analytics_version",
     "as_percentage",
-    "collection_meta_with",
-    "present_collection_meta",
     "bounded_integer_parameter",
     "brief_of",
     "build_buckets",
@@ -123,6 +126,7 @@ __all__ = [
     "build_rate_table",
     "category_token",
     "change_between",
+    "collection_meta_with",
     "decode_from_cache",
     "encode_for_cache",
     "enveloped",
@@ -137,11 +141,14 @@ __all__ = [
     "meta_with",
     "native_balance_series",
     "normalised_counterparty_name",
+    "present_analytics_category",
+    "present_collection_meta",
     "present_optional_transaction_brief",
     "present_scope_meta",
     "present_transaction_brief",
     "present_wallet_option",
     "present_wallet_reference",
+    "query_parameter",
     "read_analytics_scope",
     "read_bounded_integer",
     "read_categories",
@@ -157,4 +164,5 @@ __all__ = [
     "savings_rate_of",
     "share_of",
     "side_parameter",
+    "tally_by_category",
 ]

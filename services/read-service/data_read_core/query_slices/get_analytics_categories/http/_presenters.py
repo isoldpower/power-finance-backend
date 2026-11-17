@@ -1,4 +1,9 @@
-from data_read_core.shared.analytics import AnalyticsScope, as_percentage, present_scope_meta
+from data_read_core.shared.analytics import (
+    AnalyticsScope,
+    as_percentage,
+    present_analytics_category,
+    present_scope_meta,
+)
 from data_read_core.shared.money import money_at_scale
 
 from ..dtos import CategoriesDTO, CategoryShareDTO
@@ -21,7 +26,7 @@ def present_meta(scope: AnalyticsScope, cached: bool) -> dict:
 
 async def _present_category(category_share: CategoryShareDTO, currency: str) -> dict:
     return {
-        "category": category_share.category,
+        "category": present_analytics_category(category_share.category),
         "amount": await money_at_scale(category_share.amount, currency),
         "share": as_percentage(category_share.share),
         "transactions_count": category_share.transactions_count,

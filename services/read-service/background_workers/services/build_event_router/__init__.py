@@ -36,6 +36,11 @@ from .automation_events import (
     subscribe_automation_ran,
     subscribe_automation_updated,
 )
+from .category_events import (
+    subscribe_category_created,
+    subscribe_category_deleted,
+    subscribe_category_updated,
+)
 from .goal_events import (
     subscribe_goal_created,
     subscribe_goal_deleted,
@@ -68,6 +73,9 @@ from .webhook_events import (
 
 _KNOWN_HANDLERS: list[Callable[[ProjectionRouters, ProbesDictionary], None]] = [
     subscribe_user_synced,
+    subscribe_category_created,
+    subscribe_category_updated,
+    subscribe_category_deleted,
     subscribe_account_created,
     subscribe_account_updated,
     subscribe_action_raised,

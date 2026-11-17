@@ -35,11 +35,11 @@ from data_read_core.write_reactions._cache_keys import (
 
 
 def test_single_wallet_key():
-    assert get_single_wallet_key("w1") == "read:wallet:s2:w1"
+    assert get_single_wallet_key("w1") == "read:wallet:s3:w1"
 
 
 def test_single_transaction_key():
-    assert get_single_transaction_key("t1") == "read:transaction:s2:t1"
+    assert get_single_transaction_key("t1") == "read:transaction:s3:t1"
 
 
 def test_wallet_list_version_key_is_per_user():

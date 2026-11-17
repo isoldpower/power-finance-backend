@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from typing import Unpack
 from uuid import UUID
 
 from kafka_messages import TransactionCreated
 
 from data_write_core.domain.aggregates import TransactionAggregate
 from data_write_core.domain.value_objects import (
+    CategoryKind,
     TransactionMetadata,
     TransactionOrigin,
     TransactionType,
@@ -15,18 +17,13 @@ from data_write_core.infrastructure.messaging import build_outbox_entry, datetim
 from data_write_core.infrastructure.outbox_saga import PostgresWriteStep
 
 from ..._amount_scale import ensure_amount_scale
-from ...bootstrap import get_repository_registry
 from ...dtos import TransactionDTO, container_to_dto, transaction_to_dto
 from ...interfaces import (
-    GoalRepository,
-    MoneyContainerRepository,
-    MoneyFlowRepository,
-    OutboxRepository,
+    CategoryRepository,
     TransactionRepository,
-    WalletRepository,
 )
-from .._command_base import CommandHandlerBase
-from .._loader_mixins import LoadContainerMixin
+from .._category_resolution import CategoryResolverMixin, category_event_fields
+from .._ledger_command_base import LedgerCommandHandlerBase, LedgerRepositoryOverrides
 from .transaction_factory import build_transaction
 from .transaction_saga import run_transaction_saga
 
@@ -40,49 +37,22 @@ class CreateTransactionCommand:
     name: str
     transaction_type: TransactionType
     origin: TransactionOrigin = TransactionOrigin.MANUAL
-    category: str | None = None
+    category_id: UUID | None = None
     evidence_url: str | None = None
     chain_id: UUID | None = None
+    transaction_id: UUID | None = None
 
 
-class CreateTransactionCommandHandler(CommandHandlerBase[TransactionDTO], LoadContainerMixin):
+class CreateTransactionCommandHandler(
+    LedgerCommandHandlerBase[TransactionDTO], CategoryResolverMixin
+):
     def __init__(
         self,
-        money_flow_repository: MoneyFlowRepository | None = None,
-        wallet_repository: WalletRepository | None = None,
-        outbox_repository: OutboxRepository | None = None,
-        transaction_repository: TransactionRepository | None = None,
-        goal_repository: GoalRepository | None = None,
-        container_repository: MoneyContainerRepository | None = None,
+        category_repository: CategoryRepository | None = None,
+        **repositories: Unpack[LedgerRepositoryOverrides],
     ) -> None:
-        if (
-            wallet_repository is None
-            or money_flow_repository is None
-            or outbox_repository is None
-            or transaction_repository is None
-            or goal_repository is None
-            or container_repository is None
-        ):
-            registry = get_repository_registry()
-            wallet_repository = wallet_repository or registry.wallet_repository
-            money_flow_repository = money_flow_repository or registry.money_flow_repository
-            outbox_repository = outbox_repository or registry.outbox_repository
-            transaction_repository = transaction_repository or registry.transaction_repository
-            goal_repository = goal_repository or registry.goal_repository
-            container_repository = container_repository or registry.money_container_repository
-
-        LoadContainerMixin.__init__(
-            self,
-            container_repository=container_repository,
-            wallet_repository=wallet_repository,
-            goal_repository=goal_repository,
-            money_flow_repository=money_flow_repository,
-        )
-
-        self._money_flow_repository = money_flow_repository
-        self._wallet_repository = wallet_repository
-        self._outbox_repository = outbox_repository
-        self._transaction_repository = transaction_repository
+        super().__init__(**repositories)
+        self.use_category_repository(category_repository)
 
     async def handle(self, command: CreateTransactionCommand) -> tuple[TransactionDTO, int]:
         container = await self.load_container_aggregate(
@@ -91,12 +61,17 @@ class CreateTransactionCommandHandler(CommandHandlerBase[TransactionDTO], LoadCo
         )
 
         await ensure_amount_scale(command.amount, container.currency_code)
+        category = await self.resolve_category(
+            command.category_id,
+            command.user_id,
+            CategoryKind.TRANSACTION,
+        )
         aggregate = build_transaction(
             user_id=command.user_id,
             container=container.as_reference(),
             metadata=TransactionMetadata(
                 name=command.name,
-                category=command.category,
+                category=category,
                 evidence_url=command.evidence_url,
                 origin=command.origin,
                 chain_id=command.chain_id,
@@ -104,6 +79,7 @@ class CreateTransactionCommandHandler(CommandHandlerBase[TransactionDTO], LoadCo
             amount=command.amount,
             transaction_type=command.transaction_type,
             created_at=datetime.now(),
+            transaction_id=command.transaction_id,
         )
         container.record(aggregate.origin_flow)
 
@@ -178,7 +154,7 @@ def transaction_created_entry(
             amount=str(aggregate.amount),
             created_at=datetime_to_timestamp(root.created_at),
             name=root.name,
-            category=root.category or "",
+            **category_event_fields(root.category),
             evidence_url=root.evidence_url or "",
             origin=str(root.origin),
             chain_id=str(root.chain_id) if root.chain_id else "",

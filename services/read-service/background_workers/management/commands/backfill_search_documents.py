@@ -152,6 +152,8 @@ class Command(BaseCommand):
 
     def _page(self, model, *, include_deleted: bool, offset: int) -> list:
         queryset = model.objects.all()
+        if model is TransactionReadModel:
+            queryset = queryset.select_related("category")
         if not include_deleted:
             queryset = queryset.filter(deleted_at__isnull=True)
 
@@ -203,7 +205,8 @@ def transaction_document(transaction: TransactionReadModel) -> dict:
         "amount": float(transaction.amount),
         "currency_code": transaction.currency_code,
         "name": transaction.name,
-        "category": transaction.category or None,
+        "category": transaction.category.name if transaction.category else None,
+        "category_id": str(transaction.category_id) if transaction.category_id else None,
         "evidence_url": transaction.evidence_url or None,
         "origin": transaction.origin or "manual",
         "type": "expense" if transaction.amount < 0 else "income",

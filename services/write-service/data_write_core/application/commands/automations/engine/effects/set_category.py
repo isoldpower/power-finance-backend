@@ -1,4 +1,5 @@
 from typing import Any
+from uuid import UUID
 
 from data_write_core.domain.automations import RunContext
 
@@ -16,6 +17,6 @@ class SetCategoryEffect(EffectExecutor):
                 user_id=context.user_id,
                 user_external_id=context.user_external_id,
                 transaction_id=context.subject_id,
-                category=str(params["category"]),
+                category_id=UUID(str(params["category_id"])),
             )
         )

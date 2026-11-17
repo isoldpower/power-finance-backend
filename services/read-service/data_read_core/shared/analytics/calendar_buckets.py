@@ -3,7 +3,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
-from data_read_core.shared.http_contract import DetailCode, ErrorDetail, ValidationFailed
+from data_read_core.shared.http_contract import DetailCode
 
 from .config import (
     DAY_GRANULARITY_LIMIT,
@@ -13,6 +13,7 @@ from .config import (
     Messages,
     ParamsList,
 )
+from .request_primitives import invalid_parameter
 from .scope import AnalyticsWindow
 
 ONE_DAY = timedelta(days=1)
@@ -52,14 +53,10 @@ def build_buckets(
 ) -> list[TimeBucket]:
     buckets = _walk_buckets(window, granularity, zone, MAXIMUM_BUCKET_COUNT + 1)
     if len(buckets) > MAXIMUM_BUCKET_COUNT:
-        raise ValidationFailed(
-            details=[
-                ErrorDetail(
-                    field=ParamsList.GRANULARITY.value,
-                    code=DetailCode.GRANULARITY_TOO_FINE,
-                    message=Messages.TOO_MANY_BUCKETS.format(maximum=MAXIMUM_BUCKET_COUNT),
-                )
-            ]
+        raise invalid_parameter(
+            ParamsList.GRANULARITY,
+            DetailCode.GRANULARITY_TOO_FINE,
+            Messages.TOO_MANY_BUCKETS.format(maximum=MAXIMUM_BUCKET_COUNT),
         )
 
     return buckets
