@@ -28,3 +28,19 @@ class TrackEsAppliedSeq(Effect):
 
     async def compensate(self, event: EventMessage) -> None:
         await self._inner.compensate(event)
+
+
+class AdvanceEsAppliedSeq(Effect):
+    def __init__(self, payload_type: type[Message]) -> None:
+        self._payload_type = payload_type
+
+    async def apply(self, event: EventMessage) -> None:
+        if event.outbox_seq is None:
+            warn_no_outbox_sequence(event.event_id)
+            return
+
+        decoded_payload = decode_payload(event, self._payload_type)
+        await record_es_applied_seq(decoded_payload.user_id, event.outbox_seq)
+
+    async def compensate(self, event: EventMessage) -> None:
+        return None

@@ -1,13 +1,18 @@
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from uuid import UUID
 
 from data_write_core.domain.services.config import ChainSettings
 
 from ..aggregates import TransactionAggregate
-from ..entities import MoneyFlowEntity
+from ..entities import MoneyFlowEntity, TransactionEntity
 from ..exceptions import (
+    TransactionAlreadyCancelledError,
+    TransactionAlreadyChainedError,
+    TransactionChainCancelledError,
     TransactionChainCycleError,
+    TransactionChainDuplicateMemberError,
     TransactionChainTooLongError,
     TransactionChainUnknownReferenceError,
 )
@@ -95,3 +100,32 @@ def cancel_chain(
 
 def chain_flows(transactions: list[TransactionAggregate]) -> list[MoneyFlowEntity]:
     return [flow for transaction in transactions for flow in transaction.flows]
+
+
+def ensure_chain_accepts_member(chain_id: UUID, members: list[TransactionEntity]) -> None:
+    if not any(member.deleted_at is None for member in members):
+        raise TransactionChainCancelledError(chain_id)
+
+    grown_length = len(members) + 1
+    if grown_length > ChainSettings.MAX_CHAIN_LENGTH:
+        raise TransactionChainTooLongError(
+            length=grown_length, maximum=ChainSettings.MAX_CHAIN_LENGTH
+        )
+
+
+def bind_to_chain(transaction: TransactionEntity, chain_id: UUID, now: datetime) -> None:
+    transaction_id = UUID(transaction.unique_id)
+    if transaction.deleted_at is not None:
+        raise TransactionAlreadyCancelledError(transaction_id)
+    if transaction.chain_id is not None:
+        raise TransactionAlreadyChainedError(transaction_id, transaction.chain_id)
+
+    transaction.join_chain(chain_id, now)
+
+
+def ensure_distinct_members(transaction_ids: list[UUID]) -> None:
+    seen_transaction_ids: set[UUID] = set()
+    for transaction_id in transaction_ids:
+        if transaction_id in seen_transaction_ids:
+            raise TransactionChainDuplicateMemberError(transaction_id)
+        seen_transaction_ids.add(transaction_id)

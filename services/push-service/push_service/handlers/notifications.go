@@ -39,9 +39,9 @@ func (snh *SSEStreamHandler) KafkaSink() chan<- types.OutboxEvent {
 
 // Subscribe allows to subscribe to user-based events fanout.
 func (snh *SSEStreamHandler) Subscribe(
-	externalUserID string,
+	audience types.StreamAudience,
 ) (<-chan types.OutboxEvent, func(), bool) {
-	subscription, registered := snh.poolService.Subscribe(externalUserID)
+	subscription, registered := snh.poolService.Subscribe(audience)
 	if !registered {
 		return nil, func() {}, false
 	}

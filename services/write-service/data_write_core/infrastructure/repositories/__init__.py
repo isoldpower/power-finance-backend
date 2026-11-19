@@ -1,6 +1,8 @@
 from .django_action_repository import DjangoActionRepository
 from .django_automation_repository import DjangoAutomationRepository
+from .django_category_repository import DjangoCategoryRepository
 from .django_currency_repository import DjangoCurrencyRepository
+from .django_demo_seed_repository import DjangoDemoSeedRepository
 from .django_goal_repository import DjangoGoalRepository
 from .django_money_container_repository import DjangoMoneyContainerRepository
 from .django_notification_repository import DjangoNotificationRepository
@@ -14,7 +16,9 @@ from .immudb_money_flow_repository import ImmudbMoneyFlowRepository
 __all__ = [
     "DjangoAutomationRepository",
     "DjangoActionRepository",
+    "DjangoCategoryRepository",
     "DjangoCurrencyRepository",
+    "DjangoDemoSeedRepository",
     "DjangoGoalRepository",
     "DjangoMoneyContainerRepository",
     "DjangoNotificationRepository",

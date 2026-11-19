@@ -3,7 +3,11 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from data_write_core.domain.value_objects import TransactionOrigin, TransactionType
+from data_write_core.domain.value_objects import (
+    CategoryReference,
+    TransactionOrigin,
+    TransactionType,
+)
 
 from .goal_dto import MoneyContainerDTO
 
@@ -21,7 +25,7 @@ class TransactionDTO:
     created_at: datetime
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
-    category: str | None = None
+    category: CategoryReference | None = None
     evidence_url: str | None = None
     chain_id: UUID | None = None
 

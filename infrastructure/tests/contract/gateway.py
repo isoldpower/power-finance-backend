@@ -93,3 +93,27 @@ def plugin_config(service: str, plugin: str) -> dict | None:
             return declared.get("config", {})
 
     return None
+
+
+def route_plugin_config(route: Route, plugin: str) -> dict | None:
+    """A plugin declared on the route replaces the one declared on its service."""
+
+    config = yaml.safe_load(KONG_CONFIG.read_text(encoding="utf-8"))
+    service_entry = next(item for item in config["services"] if item["name"] == route.service)
+    route_entry = next(item for item in service_entry["routes"] if item["name"] == route.name)
+
+    for declared in route_entry.get("plugins", ()):
+        if declared["name"] == plugin:
+            return declared.get("config", {})
+
+    return plugin_config(route.service, plugin)
+
+
+def global_plugin_config(plugin: str) -> dict | None:
+    config = yaml.safe_load(KONG_CONFIG.read_text(encoding="utf-8"))
+
+    for declared in config.get("plugins", ()):
+        if declared["name"] == plugin:
+            return declared.get("config", {})
+
+    return None

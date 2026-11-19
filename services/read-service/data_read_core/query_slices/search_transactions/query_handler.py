@@ -1,5 +1,6 @@
 from filter_grammar_py import TRANSACTION_FILTER_POLICY
 
+from data_read_core.shared.categories import fetch_category_references
 from data_read_core.shared.filtering import FilterTree
 from data_read_core.shared.query_results import FetchedRows
 
@@ -17,7 +18,10 @@ class SearchTransactionsQueryHandler:
             page=query.page,
         )
 
-        transactions = [TransactionDTO.from_es_hit(source) for source in sources]
+        categories = await fetch_category_references(
+            source.get("category_id") for source in sources
+        )
+        transactions = [TransactionDTO.from_es_hit(source, categories) for source in sources]
         log_search_served(query.user_id, len(transactions), total)
 
         return FetchedRows(

@@ -8,10 +8,14 @@ from data_read_core.shared.postgres_orm import TransactionReadModel, WalletReadM
 
 
 async def fetch_owned_wallet(user_id: int, wallet_id: str) -> WalletReadModel | None:
-    return await WalletReadModel.objects.filter(
-        id=wallet_id,
-        user_id=user_id,
-    ).afirst()
+    return (
+        await WalletReadModel.objects.select_related("category")
+        .filter(
+            id=wallet_id,
+            user_id=user_id,
+        )
+        .afirst()
+    )
 
 
 async def sum_wallet_flows(
@@ -51,7 +55,10 @@ async def fetch_recent_transactions(
     wallet_id: str,
     page: PageRequest,
 ) -> list[TransactionReadModel]:
-    queryset = apply_keyset(recent_transactions_queryset(wallet_id), page)
+    queryset = apply_keyset(
+        recent_transactions_queryset(wallet_id).select_related("category"),
+        page,
+    )
 
     return [transaction async for transaction in queryset]
 

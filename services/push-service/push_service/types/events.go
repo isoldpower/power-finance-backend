@@ -7,5 +7,6 @@ type OutboxEvent struct {
 	EventType     string
 	AggregateType string
 	UserID        string
+	SandboxID     string
 	Payload       []byte
 }

@@ -15,6 +15,14 @@ from .automations import (
     UpdateAutomationCommand,
     UpdateAutomationCommandHandler,
 )
+from .categories import (
+    CreateCategoryCommand,
+    CreateCategoryCommandHandler,
+    DeleteCategoryCommand,
+    DeleteCategoryCommandHandler,
+    UpdateCategoryCommand,
+    UpdateCategoryCommandHandler,
+)
 from .goals.create_new_goal import CreateNewGoalCommand, CreateNewGoalCommandHandler
 from .goals.soft_delete_goal import SoftDeleteGoalCommand, SoftDeleteGoalCommandHandler
 from .goals.update_existing_goal import (
@@ -32,6 +40,15 @@ from .notifications.create_notification import (
 from .notifications.delete_notification import (
     DeleteNotificationCommand,
     DeleteNotificationCommandHandler,
+)
+from .transaction_chains._chain_members import ChainExistingEntryCommand
+from .transaction_chains.attach_chain_transaction import (
+    AttachChainTransactionCommand,
+    AttachChainTransactionCommandHandler,
+)
+from .transaction_chains.bind_chain_transaction import (
+    BindChainTransactionCommand,
+    BindChainTransactionCommandHandler,
 )
 from .transaction_chains.create_transaction_chain import (
     ChainEntryCommand,
@@ -100,6 +117,12 @@ from .webhooks.update_webhook import (
 )
 
 __all__ = [
+    "CreateCategoryCommand",
+    "CreateCategoryCommandHandler",
+    "DeleteCategoryCommand",
+    "DeleteCategoryCommandHandler",
+    "UpdateCategoryCommand",
+    "UpdateCategoryCommandHandler",
     "CreateAutomationCommand",
     "CreateAutomationCommandHandler",
     "DeleteAutomationCommand",
@@ -137,7 +160,12 @@ __all__ = [
     "CreateNewWalletCommandHandler",
     "CreateNotificationCommand",
     "CreateNotificationCommandHandler",
+    "AttachChainTransactionCommand",
+    "AttachChainTransactionCommandHandler",
+    "BindChainTransactionCommand",
+    "BindChainTransactionCommandHandler",
     "ChainEntryCommand",
+    "ChainExistingEntryCommand",
     "CreateTransactionChainCommand",
     "CreateTransactionChainCommandHandler",
     "CreateTransactionCommand",

@@ -31,6 +31,7 @@ message TransactionCreated {
 
   string currency_code = 21;
   reserved 22;
+  string category_id = 23;
 }
 
 message TransactionDeleted {
@@ -76,4 +77,5 @@ message TransactionMetadataUpdated {
   string evidence_url = 14;
 
   google.protobuf.Timestamp updated_at = 15;
+  string category_id = 16;
 }

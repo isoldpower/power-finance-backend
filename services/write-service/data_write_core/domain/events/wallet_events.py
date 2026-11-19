@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
+from ..value_objects.category import CategoryReference
 from .domain_event import DomainEvent
 
 
@@ -20,7 +21,7 @@ class WalletUpdatedEvent(DomainEvent):
     previous_title: str
     new_title: str
     updated_at: datetime
-    category: str = ""
+    category: CategoryReference | None = None
     color: str = ""
     favorite: bool = False
     zero_balance: Decimal = Decimal("0")

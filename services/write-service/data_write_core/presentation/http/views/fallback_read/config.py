@@ -5,6 +5,7 @@ from drf_spectacular.utils import OpenApiParameter
 from write_service.common.timestamps import DEFAULT_PERIOD, Period
 
 from data_write_core.domain.entities import ActionSeverity, ActionSource, ActionStatus
+from data_write_core.domain.value_objects import CategoryKind
 
 
 class ParamsList(StrEnum):
@@ -98,3 +99,11 @@ def resource_id_parameter(name: str, description: str) -> OpenApiParameter:
 
 
 WEBHOOK_ID_PARAMETER = resource_id_parameter("id", "Webhook ID")
+
+CATEGORY_KIND_PARAMETER = OpenApiParameter(
+    "kind",
+    type=OpenApiTypes.STR,
+    location=OpenApiParameter.QUERY,
+    enum=[kind.value for kind in CategoryKind],
+    description="Restrict to transaction or wallet categories. Absent means both.",
+)

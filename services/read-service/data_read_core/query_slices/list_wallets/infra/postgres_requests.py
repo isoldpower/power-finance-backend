@@ -14,7 +14,7 @@ async def fetch_owned_wallets(
     page: PageRequest,
 ) -> list[WalletReadModel]:
     queryset = apply_keyset(
-        _owned_queryset(user_id),
+        _owned_queryset(user_id).select_related("category"),
         page,
     )
 

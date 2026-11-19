@@ -16,9 +16,11 @@ class JwtDemoTokenIssuer(DemoTokenIssuer):
         self._issuer = issuer
         self._lifetime = lifetime
 
-    def issue(self, external_id: str) -> IssuedDemoToken:
+    def issue(self, external_id: str, not_after: datetime | None = None) -> IssuedDemoToken:
         issued_at = datetime.now(UTC)
         expires_at = issued_at + self._lifetime
+        if not_after is not None:
+            expires_at = min(expires_at, not_after)
         token = jwt.encode(
             {
                 "iss": self._issuer,

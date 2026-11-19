@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from data_read_core.shared.rest_framework import (
+    CategoryReferenceSerializer,
     MoneySerializer,
     resource_response,
     transaction_preview_fields,
@@ -25,7 +26,7 @@ class WalletDetailSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField(allow_null=True)
     deleted_at = serializers.DateTimeField(allow_null=True)
-    category = serializers.CharField(allow_blank=True)
+    category = CategoryReferenceSerializer(allow_null=True)
     currency = serializers.CharField()
     money = MoneySerializer(help_text="The spendable balance, not what the user owns.")
     zero_balance = MoneySerializer()

@@ -1,11 +1,13 @@
-from secrets import token_hex
+from hashlib import sha256
 
 DEMO_EXTERNAL_ID_PREFIX = "demo_"
-DEMO_EXTERNAL_ID_RANDOM_BYTES = 16
+DEMO_EXTERNAL_ID_DIGEST_HEX_LENGTH = 32
+DEMO_VISIT_DERIVATION_DOMAIN = "power-finance-demo-visit"
 
 
-def new_demo_external_id() -> str:
-    return f"{DEMO_EXTERNAL_ID_PREFIX}{token_hex(DEMO_EXTERNAL_ID_RANDOM_BYTES)}"
+def demo_external_id_for_visit(visit_nonce: str) -> str:
+    visit_digest = sha256(f"{DEMO_VISIT_DERIVATION_DOMAIN}.{visit_nonce}".encode()).hexdigest()
+    return f"{DEMO_EXTERNAL_ID_PREFIX}{visit_digest[:DEMO_EXTERNAL_ID_DIGEST_HEX_LENGTH]}"
 
 
 def is_demo_external_id(external_id: str) -> bool:

@@ -42,10 +42,26 @@ SEARCH_WITHOUT_FALLBACK = frozenset(
 # 507 instead, so a client sees a retryable staleness signal rather than a
 # resource reported missing. These are still holes: the read is refused, not
 # served.
+ANALYTICS_HOLE = (
+    "analytics aggregates the projected ledger with currency conversion; "
+    "write-service has no counterpart"
+)
+
 MISSING_FALLBACK = {
     "/accounts": "accounts live in ai-service's database; write-service cannot answer them",
     "/accounts/{}": "accounts live in ai-service's database; write-service cannot answer them",
     "/metrics": "needs the whole aggregate, currency conversion included, on the write side",
+    "/analytics/balance-history": ANALYTICS_HOLE,
+    "/analytics/cash-flow": ANALYTICS_HOLE,
+    "/analytics/categories": ANALYTICS_HOLE,
+    "/analytics/category-trends": ANALYTICS_HOLE,
+    "/analytics/counterparties": ANALYTICS_HOLE,
+    "/analytics/dimensions": ANALYTICS_HOLE,
+    "/analytics/money-flow": ANALYTICS_HOLE,
+    "/analytics/overview": ANALYTICS_HOLE,
+    "/analytics/spending-calendar": ANALYTICS_HOLE,
+    "/analytics/spending-rhythm": ANALYTICS_HOLE,
+    "/analytics/transactions": ANALYTICS_HOLE,
 }
 
 

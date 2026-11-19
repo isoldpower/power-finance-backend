@@ -1,7 +1,9 @@
 from data_write_core.infrastructure.repositories import (
     DjangoActionRepository,
     DjangoAutomationRepository,
+    DjangoCategoryRepository,
     DjangoCurrencyRepository,
+    DjangoDemoSeedRepository,
     DjangoGoalRepository,
     DjangoMoneyContainerRepository,
     DjangoNotificationRepository,
@@ -30,4 +32,6 @@ def initialize_repositories(immudb_client: ImmudbConnection) -> RepositoryRegist
         automation_repository=DjangoAutomationRepository(),
         notification_repository=DjangoNotificationRepository(),
         webhook_repository=DjangoWebhookRepository(),
+        category_repository=DjangoCategoryRepository(),
+        demo_seed_repository=DjangoDemoSeedRepository(),
     )

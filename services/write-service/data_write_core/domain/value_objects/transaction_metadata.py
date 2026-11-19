@@ -1,6 +1,8 @@
 from enum import StrEnum
 from uuid import UUID
 
+from .category import CategoryReference
+
 
 class TransactionType(StrEnum):
     EXPENSE = "expense"
@@ -21,7 +23,7 @@ CLIENT_ORIGINS: tuple[TransactionOrigin, ...] = (
 
 class TransactionMetadata:
     name: str
-    category: str | None
+    category: CategoryReference | None
     evidence_url: str | None
     origin: TransactionOrigin
     chain_id: UUID | None
@@ -29,7 +31,7 @@ class TransactionMetadata:
     def __init__(
         self,
         name: str,
-        category: str | None = None,
+        category: CategoryReference | None = None,
         evidence_url: str | None = None,
         origin: TransactionOrigin = TransactionOrigin.MANUAL,
         chain_id: UUID | None = None,

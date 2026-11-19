@@ -33,6 +33,7 @@ from .list_automations import (
     ListFallbackAutomationsQuery,
     ListFallbackAutomationsQueryHandler,
 )
+from .list_categories import ListFallbackCategoriesQuery, ListFallbackCategoriesQueryHandler
 from .list_goals import ListFallbackGoalsQuery, ListFallbackGoalsQueryHandler
 from .list_notifications import (
     ListFallbackNotificationsQuery,
@@ -46,6 +47,8 @@ from .list_wallets import ListFallbackWalletsQuery, ListFallbackWalletsQueryHand
 from .list_webhooks import ListFallbackWebhooksQuery, ListFallbackWebhooksQueryHandler
 
 __all__ = [
+    "ListFallbackCategoriesQuery",
+    "ListFallbackCategoriesQueryHandler",
     "CountFallbackNotificationsQuery",
     "CountFallbackNotificationsQueryHandler",
     "FallbackActionFilters",

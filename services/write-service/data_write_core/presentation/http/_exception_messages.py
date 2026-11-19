@@ -9,6 +9,7 @@ MISSING_RESOURCES = (
     ObjectDoesNotExist,
     FallbackTransactionNotVisibleError,
     domain.TransactionChainNotFoundError,
+    domain.CategoryNotFoundError,
     domain.WebhookNotFoundError,
     domain.WebhookSubscriptionNotFoundError,
     domain.NotificationNotFoundError,
@@ -32,6 +33,7 @@ class FIELDS(StrEnum):
     CURRENCY = "currency"
     EVENT_TYPE = "event"
     CHAIN_ENTRY = "transactions[{index}].after"
+    CATEGORY_ID = "category_id"
 
 
 class MESSAGES(StrEnum):
@@ -42,6 +44,10 @@ class MESSAGES(StrEnum):
         "Wallet still holds a balance away from its zero point — move it out before closing"
     )
     WALLET_CLOSED = "Wallet is closed and cannot take new transactions"
+    ALREADY_CHAINED = "Transaction already belongs to a chain"
+    GLOBAL_CATEGORY_IMMUTABLE = "Global categories cannot be renamed or deleted"
+    CATEGORY_NAME_TAKEN = "A category with that name already exists"
+    CHAIN_CANCELLED = "Transaction chain is cancelled and cannot take new transactions"
     GOAL_NOT_EMPTY = "Goal still holds money — move it out with a transfer chain before closing"
     GOAL_CLOSED = "Goal is closed and cannot take new transactions"
     ACTION_ALREADY_RESOLVED = "Action has already been answered and offers no further choices"

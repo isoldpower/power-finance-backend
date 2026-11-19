@@ -12,6 +12,8 @@ class HelpText(StrEnum):
     AMOUNT = 'Decimal string, e.g. "50.00". Always a positive magnitude — direction is `type`. Fewer fraction digits than the currency\'s scale are zero-padded; more are rejected.'
     COLOR = "CSS hex colour, #RGB / #RRGGBB / #RRGGBBAA."
     ZERO_BALANCE = "The point the balance is measured from, as a flat decimal string taking its currency from the wallet. Not a floor: the balance may go below it, and what the user owns is the difference."
+    TRANSACTION_CATEGORY = "A transaction category visible to the user; null clears it."
+    WALLET_CATEGORY = "A wallet category visible to the user; null clears it."
     OPENING_BALANCE = "What the wallet already held, as a flat decimal string. Recorded as an opening transaction, not stored on the wallet, so it is never echoed back. Defaults to `zero_balance`, which opens the wallet owning nothing."
 
 

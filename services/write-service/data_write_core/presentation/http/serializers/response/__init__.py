@@ -6,6 +6,12 @@ from .automation_serializer import (
     EnvelopedAutomationResponseSerializer,
     PaginatedAutomationResponseSerializer,
 )
+from .category_serializer import (
+    CategoryReferenceSerializer,
+    CategoryResponseSerializer,
+    EnvelopedCategoryResponseSerializer,
+    PaginatedCategoryResponseSerializer,
+)
 from .envelope import (
     CollectionMetaSerializer,
     ErrorResponseSerializer,
@@ -52,6 +58,10 @@ from .webhook_serializer import (
 )
 
 __all__ = [
+    "CategoryReferenceSerializer",
+    "CategoryResponseSerializer",
+    "EnvelopedCategoryResponseSerializer",
+    "PaginatedCategoryResponseSerializer",
     "PaginatedAutomationResponseSerializer",
     "EnvelopedAutomationResponseSerializer",
     "PaginatedActionResponseSerializer",

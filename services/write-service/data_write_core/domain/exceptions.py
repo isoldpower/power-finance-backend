@@ -162,6 +162,30 @@ class TransactionChainNotFoundError(DomainError):
         super().__init__(f"Transaction chain {chain_id} not found.")
 
 
+class TransactionChainCancelledError(DomainError):
+    def __init__(self, chain_id: UUID) -> None:
+        self.chain_id = chain_id
+
+        super().__init__(
+            f"Transaction chain {chain_id} is cancelled and cannot take new transactions."
+        )
+
+
+class TransactionAlreadyChainedError(DomainError):
+    def __init__(self, transaction_id: UUID, chain_id: UUID) -> None:
+        self.transaction_id = transaction_id
+        self.chain_id = chain_id
+
+        super().__init__(f"Transaction {transaction_id} already belongs to chain {chain_id}.")
+
+
+class TransactionChainDuplicateMemberError(DomainError):
+    def __init__(self, transaction_id: UUID) -> None:
+        self.transaction_id = transaction_id
+
+        super().__init__(f"Transaction {transaction_id} is referenced more than once in the chain.")
+
+
 class WalletClosedError(DomainError):
     def __init__(self, wallet_id: UUID) -> None:
         self.wallet_id = wallet_id
@@ -257,3 +281,41 @@ class UnknownResolutionError(DomainError):
         self.resolution_id = resolution_id
 
         super().__init__(f"Resolution {resolution_id!r} is not offered by this action.")
+
+
+class CategoryNotFoundError(DomainError):
+    def __init__(self, category_id: UUID) -> None:
+        self.category_id = category_id
+
+        super().__init__(f"No category with ID {category_id}.")
+
+
+class GlobalCategoryImmutableError(DomainError):
+    def __init__(self, category_id: UUID) -> None:
+        self.category_id = category_id
+
+        super().__init__(f"Category {category_id} is a global category and cannot be changed.")
+
+
+class CategoryNameTakenError(DomainError):
+    def __init__(self, name: str, kind: str) -> None:
+        self.name = name
+        self.kind = kind
+
+        super().__init__(f"A {kind} category named {name!r} already exists.")
+
+
+class CategoryKindMismatchError(DomainError):
+    def __init__(self, category_id: UUID, expected_kind: str, actual_kind: str) -> None:
+        self.category_id = category_id
+        self.expected_kind = expected_kind
+        self.actual_kind = actual_kind
+
+        super().__init__(
+            f"Category {category_id} is a {actual_kind} category; a {expected_kind} category is required."
+        )
+
+
+class DemoSessionsDisabledError(DomainError):
+    def __init__(self) -> None:
+        super().__init__("Guest demo sessions are not enabled on this deployment")

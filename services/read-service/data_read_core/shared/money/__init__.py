@@ -19,7 +19,14 @@ from .parsing import (
     TextOnlyRule,
     parse_amount,
 )
-from .rendering import amount_at_scale, format_amount, money, money_at_scale
+from .rendering import (
+    amount_at_scale,
+    format_amount,
+    money,
+    money_at_scale,
+    smallest_unit,
+    smallest_unit_of,
+)
 
 __all__ = [
     "AMOUNT_PARSER",
@@ -43,4 +50,6 @@ __all__ = [
     "money",
     "money_at_scale",
     "parse_amount",
+    "smallest_unit",
+    "smallest_unit_of",
 ]

@@ -27,7 +27,7 @@ class TransactionResourceView(TransactionView, CommandResponseMixin):
         operation_id="transactions_partial_update",
         summary="Update a transaction's metadata",
         description=(
-            "Edits `name`, `category` and `evidence`. It never touches money: "
+            "Edits `name`, `category_id` and `evidence`. It never touches money: "
             "the amount lives in an append-only ledger this endpoint has no "
             "reach into. The response is the PREVIEW shape, so it carries no "
             "`evidence` even when the request just set one — re-read the detail "
@@ -55,7 +55,7 @@ class TransactionResourceView(TransactionView, CommandResponseMixin):
                 user_external_id=request.user.external_id,
                 transaction_id=transaction_id,
                 name=validated.get("name", UNCHANGED),
-                category=validated.get("category", UNCHANGED),
+                category_id=validated.get("category_id", UNCHANGED),
                 evidence_url=(
                     UNCHANGED if evidence is UNCHANGED else (evidence["url"] if evidence else None)
                 ),

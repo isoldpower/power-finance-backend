@@ -4,6 +4,7 @@ from uuid import UUID
 
 from ..events import EventCollector
 from ..value_objects import (
+    CategoryReference,
     MoneyContainerKind,
     TransactionMetadata,
     TransactionOrigin,
@@ -102,7 +103,7 @@ class TransactionEntity(EntityRoot, TransactionMetadata):
         self,
         now: datetime,
         name: str | object = UNCHANGED,
-        category: str | None | object = UNCHANGED,
+        category: CategoryReference | None | object = UNCHANGED,
         evidence_url: str | None | object = UNCHANGED,
     ) -> bool:
         changed = False
@@ -121,6 +122,10 @@ class TransactionEntity(EntityRoot, TransactionMetadata):
             self._updated_at = now
 
         return changed
+
+    def join_chain(self, chain_id: UUID, now: datetime) -> None:
+        self.chain_id = chain_id
+        self._updated_at = now
 
     def leave_chain(self, now: datetime) -> bool:
         if self.chain_id is None:

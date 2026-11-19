@@ -14,6 +14,7 @@ from .builders import (
     webhook_to_dto,
     webhook_to_secret_dto,
 )
+from .category_dto import CategoryDTO, category_to_dto
 from .goal_dto import GoalDTO, MoneyContainerDTO
 from .notification_dto import NotificationDTO
 from .transaction_dto import TransactionChainDTO, TransactionDTO, TransactionPlainDTO
@@ -26,6 +27,7 @@ __all__ = [
     "AutomationDTO",
     "ActionDTO",
     "ActionResolutionDTO",
+    "CategoryDTO",
     "GoalDTO",
     "MoneyContainerDTO",
     "NotificationDTO",
@@ -36,6 +38,7 @@ __all__ = [
     "WebhookDTO",
     "WebhookSubscriptionDTO",
     "WebhookWithSecretDTO",
+    "category_to_dto",
     "container_to_dto",
     "goal_to_dto",
     "action_to_dto",

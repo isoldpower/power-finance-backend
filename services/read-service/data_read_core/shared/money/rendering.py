@@ -6,8 +6,16 @@ AMOUNT_KEY = "amount"
 CURRENCY_KEY = "currency"
 
 
+def smallest_unit(decimals: int) -> Decimal:
+    return Decimal(1).scaleb(-decimals)
+
+
+async def smallest_unit_of(currency: str | None) -> Decimal:
+    return smallest_unit(await CURRENCY_CATALOG.decimals_or_default(currency))
+
+
 def format_amount(amount: Decimal, decimals: int) -> str:
-    quantized = amount.quantize(Decimal(1).scaleb(-decimals))
+    quantized = amount.quantize(smallest_unit(decimals))
     if quantized == 0:
         quantized = abs(quantized)
 

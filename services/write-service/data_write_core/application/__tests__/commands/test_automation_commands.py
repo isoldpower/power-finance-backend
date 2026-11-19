@@ -11,7 +11,10 @@ COFFEE = {
     "operator": "icontains",
     "value": "coffee",
 }
-CATEGORISE = {"type": "set_category", "params": {"category": "Dining"}}
+CATEGORISE = {
+    "type": "set_category",
+    "params": {"category_id": "dddddddd-dddd-dddd-dddd-dddddddddddd"},
+}
 NOTIFY = {"type": "notify", "params": {"severity": "info", "title": "Ran"}}
 
 
@@ -112,7 +115,15 @@ def test_notify_applies_to_either_subject():
 def test_params_must_be_exactly_what_the_effect_documents():
     refusal = refusal_of(
         lambda: validate_effects(
-            [{"type": "set_category", "params": {"category": "D", "colour": "red"}}],
+            [
+                {
+                    "type": "set_category",
+                    "params": {
+                        "category_id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+                        "colour": "red",
+                    },
+                }
+            ],
             "event",
         )
     )

@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from ..value_objects import MoneyContainerKind
+from ..value_objects import CategoryReference, MoneyContainerKind
 from .domain_event import DomainEvent
 
 
@@ -40,7 +40,7 @@ class TransactionMetadataUpdatedEvent(DomainEvent):
     transaction_id: UUID
     user_id: int
     name: str
-    category: str | None
+    category: CategoryReference | None
     evidence_url: str | None
     updated_at: datetime
 

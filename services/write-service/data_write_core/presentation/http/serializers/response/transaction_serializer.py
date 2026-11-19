@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from .category_serializer import CategoryReferenceSerializer
 from .envelope import collection_response, resource_response
 from .wallet_serializer import MoneySerializer
 
@@ -19,7 +20,7 @@ class TransactionResponseSerializer(serializers.Serializer):
     type = serializers.CharField(help_text="expense or income, derived from the money's sign.")
     origin = serializers.CharField()
     wallet = TransactionWalletSerializer()
-    category = serializers.CharField(allow_null=True)
+    category = CategoryReferenceSerializer(allow_null=True)
     chain_id = serializers.UUIDField(allow_null=True)
 
 

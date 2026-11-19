@@ -7,6 +7,7 @@ class ErrorCode(StrEnum):
     BAD_REQUEST = "bad_request"
     VALIDATION_FAILED = "validation_failed"
     UNAUTHORIZED = "unauthorized"
+    DEMO_SESSION_INVALID = "demo_session_invalid"
     FORBIDDEN = "forbidden"
     NOT_FOUND = "not_found"
     RATE_LIMITED = "rate_limited"
@@ -83,6 +84,7 @@ STATUS_FOR_ERROR_CODE: dict[ErrorCode, int] = {
     ErrorCode.BAD_REQUEST: status.HTTP_400_BAD_REQUEST,
     ErrorCode.VALIDATION_FAILED: status.HTTP_422_UNPROCESSABLE_ENTITY,
     ErrorCode.UNAUTHORIZED: status.HTTP_401_UNAUTHORIZED,
+    ErrorCode.DEMO_SESSION_INVALID: status.HTTP_401_UNAUTHORIZED,
     ErrorCode.FORBIDDEN: status.HTTP_403_FORBIDDEN,
     ErrorCode.NOT_FOUND: status.HTTP_404_NOT_FOUND,
     ErrorCode.RATE_LIMITED: status.HTTP_429_TOO_MANY_REQUESTS,

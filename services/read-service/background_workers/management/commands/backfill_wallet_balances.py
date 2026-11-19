@@ -14,7 +14,7 @@ BATCH_SIZE = 500
 
 class Command(BaseCommand):
     help = (
-        "Restate the balance and zero_balance of every wallet document in "
+        "Restate the balance, zero_balance and category of every wallet document in "
         "Elasticsearch from the Postgres read model. Use after enabling the "
         "indexed balance, or to repair drift. Idempotent."
     )
@@ -43,7 +43,7 @@ class Command(BaseCommand):
 
         try:
             async for wallet in self._wallets(include_deleted=include_deleted):
-                identifier, balance, zero_balance = wallet
+                identifier, balance, zero_balance, category_id, category_name = wallet
                 try:
                     await client.update(
                         index=WALLETS_INDEX,
@@ -51,6 +51,8 @@ class Command(BaseCommand):
                         doc={
                             "balance": float(balance),
                             "zero_balance": float(zero_balance),
+                            "category_id": str(category_id) if category_id else None,
+                            "category": category_name,
                         },
                     )
                 except NotFoundError:
@@ -87,7 +89,11 @@ class Command(BaseCommand):
             queryset = queryset.filter(deleted_at__isnull=True)
 
         return list(
-            queryset.order_by("id").values_list("id", "balance", "zero_balance")[
-                offset : offset + BATCH_SIZE
-            ]
+            queryset.order_by("id").values_list(
+                "id",
+                "balance",
+                "zero_balance",
+                "category_id",
+                "category__name",
+            )[offset : offset + BATCH_SIZE]
         )

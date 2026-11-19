@@ -2,6 +2,8 @@ from data_write_core.domain.entities import WalletEntity
 from data_write_core.domain.events import EventCollector
 from data_write_core.infrastructure.orm import WalletModel
 
+from .category_mapper import reference_from_model, wallet_category_model
+
 
 class WalletMapper:
     @staticmethod
@@ -14,7 +16,7 @@ class WalletMapper:
             created_at=model.created_at,
             updated_at=model.updated_at,
             deleted_at=model.deleted_at,
-            category=model.category,
+            category=reference_from_model(model.category),
             color=model.color,
             favorite=model.favorite,
             zero_balance=model.zero_balance,
@@ -30,7 +32,7 @@ class WalletMapper:
         model.created_at = entity.created_at
         model.updated_at = entity.updated_at
         model.deleted_at = entity.deleted_at
-        model.category = entity.category
+        model.category = wallet_category_model(entity.category)
         model.color = entity.color
         model.favorite = entity.favorite
         model.zero_balance = entity.zero_balance

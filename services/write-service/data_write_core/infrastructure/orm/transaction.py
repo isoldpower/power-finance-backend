@@ -3,6 +3,7 @@ from uuid import uuid4
 from django.contrib.auth.models import User
 from django.db import models
 
+from .category import TransactionCategoryModel
 from .money_container import MoneyContainerModel
 
 
@@ -39,7 +40,13 @@ class TransactionModel(models.Model):
     )
 
     name = models.CharField(max_length=255)
-    category = models.CharField(max_length=255, blank=True, null=True)
+    category = models.ForeignKey(
+        TransactionCategoryModel,
+        on_delete=models.PROTECT,
+        related_name="transactions",
+        blank=True,
+        null=True,
+    )
     evidence_url = models.URLField(max_length=2048, blank=True, null=True)
     origin = models.CharField(max_length=16, default="manual")
 

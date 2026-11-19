@@ -28,7 +28,11 @@ class TransactionFieldsMixin(serializers.Serializer):
         required=False,
         default=TransactionOrigin.MANUAL.value,
     )
-    category = serializers.CharField(max_length=255, required=False, allow_null=True)
+    category_id = serializers.UUIDField(
+        required=False,
+        allow_null=True,
+        help_text=HelpText.TRANSACTION_CATEGORY,
+    )
     evidence = EvidenceSerializer(required=False, allow_null=True)
 
 
@@ -36,7 +40,70 @@ class CreateTransactionRequestSerializer(TransactionFieldsMixin):
     pass
 
 
-class ChainEntryRequestSerializer(TransactionFieldsMixin):
+NEW_MEMBER_REQUIRED_FIELDS = ("name", "wallet_id", "currency", "amount", "type")
+NEW_MEMBER_OPTIONAL_FIELDS = ("origin", "category_id", "evidence")
+BOUND_MEMBER_CONFLICT_MESSAGE = "Not allowed together with transaction_id."
+REQUIRED_FIELD_MESSAGE = "This field is required."
+REQUIRED_FIELD_CODE = "required"
+
+
+class ChainMemberFieldsMixin(serializers.Serializer):
+    transaction_id = serializers.UUIDField(
+        required=False,
+        help_text=(
+            "Bind this existing transaction instead of creating a new one. When set, "
+            "the new-transaction fields must be left out."
+        ),
+    )
+    name = serializers.CharField(max_length=255, required=False)
+    wallet_id = serializers.UUIDField(required=False)
+    currency = serializers.CharField(max_length=8, required=False)
+    amount = MoneyAmountField(required=False, help_text=HelpText.AMOUNT)
+    type = serializers.ChoiceField(
+        choices=[transaction_type.value for transaction_type in TransactionType],
+        required=False,
+    )
+    origin = serializers.ChoiceField(
+        choices=[origin.value for origin in CLIENT_ORIGINS],
+        required=False,
+    )
+    category_id = serializers.UUIDField(
+        required=False,
+        allow_null=True,
+        help_text=HelpText.TRANSACTION_CATEGORY,
+    )
+    evidence = EvidenceSerializer(required=False, allow_null=True)
+
+    def validate(self, attrs: dict) -> dict:
+        if "transaction_id" in attrs:
+            conflicting_fields = [
+                field
+                for field in (*NEW_MEMBER_REQUIRED_FIELDS, *NEW_MEMBER_OPTIONAL_FIELDS)
+                if field in attrs
+            ]
+            if conflicting_fields:
+                raise serializers.ValidationError(
+                    {field: BOUND_MEMBER_CONFLICT_MESSAGE for field in conflicting_fields}
+                )
+            return attrs
+
+        missing_fields = [field for field in NEW_MEMBER_REQUIRED_FIELDS if field not in attrs]
+        if missing_fields:
+            raise serializers.ValidationError(
+                {
+                    field: serializers.ErrorDetail(REQUIRED_FIELD_MESSAGE, code=REQUIRED_FIELD_CODE)
+                    for field in missing_fields
+                }
+            )
+
+        return attrs
+
+
+class AttachChainTransactionRequestSerializer(ChainMemberFieldsMixin):
+    pass
+
+
+class ChainEntryRequestSerializer(ChainMemberFieldsMixin):
     temporary_id = serializers.CharField(max_length=64)
     after = serializers.CharField(max_length=64, required=False, allow_null=True)
 
@@ -58,7 +125,11 @@ class PatchTransactionRequestSerializer(serializers.Serializer):
     in this API can reach."""
 
     name = serializers.CharField(max_length=255, required=False)
-    category = serializers.CharField(max_length=255, required=False, allow_null=True)
+    category_id = serializers.UUIDField(
+        required=False,
+        allow_null=True,
+        help_text=HelpText.TRANSACTION_CATEGORY,
+    )
     evidence = EvidenceSerializer(required=False, allow_null=True)
 
 

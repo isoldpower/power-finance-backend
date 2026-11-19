@@ -183,6 +183,190 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/v1/categories:
+    post:
+      operationId: categories_create
+      description: Create a user-owned category for transactions or wallets. Names
+        are unique per kind, case-insensitively, across the user's own categories
+        and the global ones every user sees.
+      summary: Create a category
+      tags:
+      - categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+        required: true
+      security:
+      - clerkBearer: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedCategoryResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/categories/{category_id}:
+    patch:
+      operationId: categories_update
+      description: Rename one of the user's own categories. Wallets and transactions
+        that use it show the new name. Global categories cannot be renamed (409).
+      summary: Rename a category
+      parameters:
+      - in: path
+        name: category_id
+        schema:
+          type: string
+          format: uuid
+        description: Category ID
+        required: true
+      tags:
+      - categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateCategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateCategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateCategoryRequest'
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedCategoryResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+    delete:
+      operationId: categories_delete
+      description: Soft-delete one of the user's own categories. It disappears from
+        category lists and can no longer be assigned, but wallets and transactions
+        that already use it keep it. Global categories cannot be deleted (409).
+      summary: Delete a category
+      parameters:
+      - in: path
+        name: category_id
+        schema:
+          type: string
+          format: uuid
+        description: Category ID
+        required: true
+      tags:
+      - categories
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedCategoryResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/demo/sessions:
+    post:
+      operationId: demo_sessions_create
+      description: Returns a short-lived bearer token for the guest account of the
+        demo visit named by `X-Demo-Session`. The first call for a visit creates the
+        account and seeds it with sample wallets, a goal and transactions; later calls
+        return a fresh token for the same account without seeding again. A seed that
+        failed partway is finished by the next call for the same visit. The token
+        never outlives the visit. Used by the portfolio iframe, where a Clerk session
+        is unavailable. A seeding response carries `X-Write-Version` so the gateway
+        pins the new account's reads to the seeded state.
+      summary: Start a guest demo session
+      parameters:
+      - in: header
+        name: X-Demo-Session
+        schema:
+          type: string
+        description: Demo visit id issued by `POST /api/v1/demo/visits`.
+        required: true
+      tags:
+      - demo
+      security:
+      - {}
+      responses:
+        '201':
+          description: No response body
+        '401':
+          description: No response body
+        '503':
+          description: No response body
+  /api/v1/demo/visits:
+    post:
+      operationId: demo_visits_create
+      description: 'Issues a signed, expiring demo visit id for the portfolio iframe.
+        The client sends it as `X-Demo-Session` on every API call and as `?demo_session=`
+        on the assistant WebSocket; the portfolio page streams the visit''s traces
+        with `?session=`. The gateway verifies the signature and expiry and rejects
+        forged or expired ids with `401 demo_session_invalid`. A client (one IP, or
+        one IPv6 /64) holds one active visit: asking again returns the same id until
+        it is within the rotation window of its expiry, and only then is a fresh one
+        issued.'
+      summary: Issue a demo visit id
+      tags:
+      - demo
+      security:
+      - {}
+      responses:
+        '201':
+          description: No response body
+        '503':
+          description: No response body
   /api/v1/fallback-reads/actions:
     get:
       operationId: fallback_actions_list
@@ -318,6 +502,50 @@ paths:
                 $ref: '#/components/schemas/EnvelopedAutomationResponse'
           description: ''
         '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/v1/fallback-reads/categories:
+    get:
+      operationId: fallback_categories_list
+      description: 'Always-consistent category list served from the write side: the
+        global categories followed by the user''s own, alphabetically. The gateway
+        routes here when the Read Service is not caught up.'
+      summary: List categories (consistent fallback)
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+        description: Opaque cursor from a previous response's `meta.next_cursor` or
+          `meta.prev_cursor`.
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - transaction
+          - wallet
+        description: Restrict to transaction or wallet categories. Absent means both.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Page size. Defaults to 25, clamped to 1..100.
+      tags:
+      - fallback-reads
+      security:
+      - clerkBearer: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCategoryResponse'
+          description: ''
+        '422':
           content:
             application/json:
               schema:
@@ -1050,7 +1278,7 @@ paths:
   /api/v1/transactions/{transaction_id}:
     patch:
       operationId: transactions_partial_update
-      description: 'Edits `name`, `category` and `evidence`. It never touches money:
+      description: 'Edits `name`, `category_id` and `evidence`. It never touches money:
         the amount lives in an append-only ledger this endpoint has no reach into.
         The response is the PREVIEW shape, so it carries no `evidence` even when the
         request just set one — re-read the detail endpoint for that.'
@@ -1212,7 +1440,8 @@ paths:
         are expressed: a transaction carries one money flow, so moving money between
         wallets is an expense on one and an income on the other, submitted together.
         Because the chain is all-or-nothing, money is never observed as having left
-        one wallet without arriving in the other.'
+        one wallet without arriving in the other. An entry may instead carry `transaction_id`
+        to bind an existing, unchained and uncancelled transaction into the new chain.'
       summary: Create a chain of transactions
       tags:
       - transactions
@@ -1256,6 +1485,70 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
   /api/v1/transactions/chains/{chain_id}:
+    post:
+      operationId: transaction_chains_attach
+      description: Add one more member to an existing chain. Either send the same
+        body as POST /transactions to create a new transaction inside the chain, or
+        send only `transaction_id` to bind an existing transaction. A bound transaction
+        must be uncancelled and not already in a chain (409). The response is the
+        whole chain. A chain whose members are all cancelled takes no new members
+        (409), and a chain already at its length limit rejects the request (422).
+        Requires an Idempotency-Key header.
+      summary: Attach a transaction to a chain
+      parameters:
+      - in: path
+        name: chain_id
+        schema:
+          type: string
+          format: uuid
+        description: Chain ID
+        required: true
+      tags:
+      - transactions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttachChainTransactionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AttachChainTransactionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AttachChainTransactionRequest'
+      security:
+      - clerkBearer: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopedTransactionChainResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
     delete:
       operationId: transaction_chains_delete
       description: Cancels every transaction in the chain. Each one is soft-cancelled
@@ -1951,6 +2244,41 @@ components:
             zero-padded; more are rejected.
       required:
       - amount
+    AttachChainTransactionRequest:
+      type: object
+      properties:
+        transaction_id:
+          type: string
+          format: uuid
+          description: Bind this existing transaction instead of creating a new one.
+            When set, the new-transaction fields must be left out.
+        name:
+          type: string
+          maxLength: 255
+        wallet_id:
+          type: string
+          format: uuid
+        currency:
+          type: string
+          maxLength: 8
+        amount:
+          type: string
+          description: Decimal string, e.g. "50.00". Always a positive magnitude —
+            direction is `type`. Fewer fraction digits than the currency's scale are
+            zero-padded; more are rejected.
+        type:
+          $ref: '#/components/schemas/TransactionType'
+        origin:
+          $ref: '#/components/schemas/OriginEnum'
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: A transaction category visible to the user; null clears it.
+        evidence:
+          allOf:
+          - $ref: '#/components/schemas/Evidence'
+          nullable: true
     AutomationEffect:
       type: object
       properties:
@@ -2081,9 +2409,62 @@ components:
           description: Notification IDs to mark as read
       required:
       - batch
+    CategoryReference:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        is_global:
+          type: boolean
+      required:
+      - id
+      - is_global
+      - name
+    CategoryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Category ID
+        kind:
+          $ref: '#/components/schemas/KindEnum'
+        name:
+          type: string
+        is_global:
+          type: boolean
+          description: Built-in category every user sees. It cannot be renamed or
+            deleted.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - created_at
+      - deleted_at
+      - id
+      - is_global
+      - kind
+      - name
+      - updated_at
     ChainEntryRequest:
       type: object
       properties:
+        transaction_id:
+          type: string
+          format: uuid
+          description: Bind this existing transaction instead of creating a new one.
+            When set, the new-transaction fields must be left out.
         name:
           type: string
           maxLength: 255
@@ -2101,13 +2482,12 @@ components:
         type:
           $ref: '#/components/schemas/TransactionType'
         origin:
-          allOf:
-          - $ref: '#/components/schemas/OriginEnum'
-          default: manual
-        category:
+          $ref: '#/components/schemas/OriginEnum'
+        category_id:
           type: string
+          format: uuid
           nullable: true
-          maxLength: 255
+          description: A transaction category visible to the user; null clears it.
         evidence:
           allOf:
           - $ref: '#/components/schemas/Evidence'
@@ -2120,12 +2500,7 @@ components:
           nullable: true
           maxLength: 64
       required:
-      - amount
-      - currency
-      - name
       - temporary_id
-      - type
-      - wallet_id
     CollectionMeta:
       type: object
       properties:
@@ -2183,6 +2558,23 @@ components:
       - effects
       - name
       - trigger
+    CreateCategoryRequest:
+      type: object
+      properties:
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/KindEnum'
+          description: |-
+            Which resource the category labels. It cannot change later.
+
+            * `transaction` - transaction
+            * `wallet` - wallet
+        name:
+          type: string
+          maxLength: 120
+      required:
+      - kind
+      - name
     CreateGoalRequest:
       type: object
       properties:
@@ -2241,10 +2633,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/OriginEnum'
           default: manual
-        category:
+        category_id:
           type: string
+          format: uuid
           nullable: true
-          maxLength: 255
+          description: A transaction category visible to the user; null clears it.
         evidence:
           allOf:
           - $ref: '#/components/schemas/Evidence'
@@ -2264,9 +2657,11 @@ components:
         currency:
           type: string
           maxLength: 8
-        category:
+        category_id:
           type: string
-          maxLength: 120
+          format: uuid
+          nullable: true
+          description: A wallet category visible to the user; null clears it.
         color:
           type: string
           description: 'CSS hex colour, #RGB / #RRGGBB / #RRGGBBAA.'
@@ -2314,6 +2709,16 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/AutomationResponse'
+        meta:
+          $ref: '#/components/schemas/MutationMeta'
+      required:
+      - data
+      - meta
+    EnvelopedCategoryResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CategoryResponse'
         meta:
           $ref: '#/components/schemas/MutationMeta'
       required:
@@ -2546,6 +2951,14 @@ components:
         * `primary` - primary
         * `secondary` - secondary
         * `danger` - danger
+    KindEnum:
+      enum:
+      - transaction
+      - wallet
+      type: string
+      description: |-
+        * `transaction` - transaction
+        * `wallet` - wallet
     LivenessDegradedResponse:
       type: object
       properties:
@@ -2693,6 +3106,18 @@ components:
       required:
       - data
       - meta
+    PaginatedCategoryResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryResponse'
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
+      required:
+      - data
+      - meta
     PaginatedGoalResponse:
       type: object
       properties:
@@ -2774,10 +3199,11 @@ components:
         name:
           type: string
           maxLength: 255
-        category:
+        category_id:
           type: string
+          format: uuid
           nullable: true
-          maxLength: 255
+          description: A transaction category visible to the user; null clears it.
         evidence:
           allOf:
           - $ref: '#/components/schemas/Evidence'
@@ -2804,6 +3230,12 @@ components:
           items:
             type: object
             additionalProperties: {}
+    PatchedUpdateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 120
     PatchedUpdateGoalRequest:
       type: object
       description: |-
@@ -2837,9 +3269,11 @@ components:
         name:
           type: string
           maxLength: 120
-        category:
+        category_id:
           type: string
-          maxLength: 120
+          format: uuid
+          nullable: true
+          description: A wallet category visible to the user; null clears it.
         color:
           type: string
           description: 'CSS hex colour, #RGB / #RRGGBB / #RRGGBBAA.'
@@ -2901,10 +3335,12 @@ components:
         currency:
           type: string
           maxLength: 8
-        category:
+        category_id:
           type: string
-          default: ''
-          maxLength: 120
+          format: uuid
+          nullable: true
+          description: A wallet category visible to the user; omitted or null means
+            none.
         color:
           type: string
           default: ''
@@ -3054,7 +3490,8 @@ components:
         wallet:
           $ref: '#/components/schemas/TransactionWallet'
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
           nullable: true
         chain_id:
           type: string
@@ -3112,7 +3549,9 @@ components:
           format: date-time
           nullable: true
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
         currency:
           type: string
         money:
@@ -3177,7 +3616,9 @@ components:
           format: date-time
           nullable: true
         category:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/CategoryReference'
+          nullable: true
         currency:
           type: string
         money:

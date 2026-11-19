@@ -7,6 +7,7 @@ import pytest
 
 from data_write_core.application.dtos import MoneyContainerDTO, TransactionDTO, WalletDTO
 from data_write_core.domain.value_objects import (
+    CategoryReference,
     MoneyContainerKind,
     TransactionOrigin,
     TransactionType,
@@ -18,6 +19,12 @@ from data_write_core.presentation.http.views.fallback_read._presenters import (
 
 WALLET_ID = UUID("11111111-1111-1111-1111-111111111111")
 TX_ID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+SAVINGS = CategoryReference(
+    id=UUID("22222222-2222-2222-2222-222222222222"), name="Savings", is_global=True
+)
+FOOD = CategoryReference(
+    id=UUID("33333333-3333-3333-3333-333333333333"), name="Food", is_global=False
+)
 
 SCALES = {"USD": 2, "EUR": 2, "JPY": 0}
 
@@ -40,7 +47,7 @@ async def test_present_wallet_matches_read_service_shape():
         currency="USD",
         created_at=datetime(2026, 1, 1, 12, 0, 0),
         updated_at=datetime(2026, 1, 2, 12, 0, 0),
-        category="Savings",
+        category=SAVINGS,
         color="#FF0000",
         favorite=True,
         zero_balance=Decimal("100.00"),
@@ -52,7 +59,7 @@ async def test_present_wallet_matches_read_service_shape():
         "created_at": "2026-01-01T12:00:00+00:00",
         "updated_at": "2026-01-02T12:00:00+00:00",
         "deleted_at": None,
-        "category": "Savings",
+        "category": {"id": str(SAVINGS.id), "name": "Savings", "is_global": True},
         "currency": "USD",
         "money": {"amount": "130.00", "currency": "USD"},
         "zero_balance": {"amount": "100.00", "currency": "USD"},
@@ -77,7 +84,7 @@ def _transaction(amount: str, currency: str = "EUR") -> TransactionDTO:
             kind=MoneyContainerKind.WALLET,
         ),
         created_at=datetime(2026, 1, 1, 9, 30, 0),
-        category="Food",
+        category=FOOD,
     )
 
 
@@ -92,7 +99,7 @@ async def test_present_transaction_matches_read_service_shape():
         "type": "expense",
         "origin": "manual",
         "wallet": {"id": str(WALLET_ID), "name": "Random Credit Card"},
-        "category": "Food",
+        "category": {"id": str(FOOD.id), "name": "Food", "is_global": False},
         "chain_id": None,
     }
 

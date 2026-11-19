@@ -10,18 +10,8 @@ from data_write_core.domain.entities import TransactionEntity
 from data_write_core.infrastructure.messaging import build_outbox_entry, datetime_to_timestamp
 
 from ..._amount_scale import ensure_amount_scale
-from ...bootstrap import get_repository_registry
 from ...dtos import TransactionDTO, transaction_to_dto
-from ...interfaces import (
-    GoalRepository,
-    MoneyContainerRepository,
-    MoneyFlowRepository,
-    OutboxRepository,
-    TransactionRepository,
-    WalletRepository,
-)
-from .._command_base import CommandHandlerBase
-from .._loader_mixins import LoadContainerMixin, LoadTransactionMixin
+from .._ledger_command_base import LoadedTransactionCommandHandlerBase
 from .transaction_saga import run_transaction_saga
 
 
@@ -33,40 +23,7 @@ class UpdateTransactionCommand:
     new_amount: Decimal
 
 
-class UpdateTransactionCommandHandler(
-    CommandHandlerBase[TransactionDTO], LoadContainerMixin, LoadTransactionMixin
-):
-    def __init__(
-        self,
-        transaction_repository: TransactionRepository | None = None,
-        money_flow_repository: MoneyFlowRepository | None = None,
-        wallet_repository: WalletRepository | None = None,
-        outbox_repository: OutboxRepository | None = None,
-        goal_repository: GoalRepository | None = None,
-        container_repository: MoneyContainerRepository | None = None,
-    ) -> None:
-        registry = get_repository_registry()
-        transaction_repository = transaction_repository or registry.transaction_repository
-        money_flow_repository = money_flow_repository or registry.money_flow_repository
-        wallet_repository = wallet_repository or registry.wallet_repository
-        outbox_repository = outbox_repository or registry.outbox_repository
-        goal_repository = goal_repository or registry.goal_repository
-        container_repository = container_repository or registry.money_container_repository
-
-        LoadContainerMixin.__init__(
-            self,
-            container_repository=container_repository,
-            wallet_repository=wallet_repository,
-            goal_repository=goal_repository,
-            money_flow_repository=money_flow_repository,
-        )
-        LoadTransactionMixin.__init__(self, transaction_repository, money_flow_repository)
-
-        self._transaction_repository = transaction_repository
-        self._money_flow_repository = money_flow_repository
-        self._wallet_repository = wallet_repository
-        self._outbox_repository = outbox_repository
-
+class UpdateTransactionCommandHandler(LoadedTransactionCommandHandlerBase[TransactionDTO]):
     async def handle(self, command: UpdateTransactionCommand) -> tuple[TransactionDTO, int]:
         aggregate = await self.load_transaction_aggregate(
             transaction_id=command.transaction_id,

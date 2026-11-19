@@ -1,28 +1,20 @@
 local plugin_config = require "kong.plugins.demo-session.config"
 
 
-local is_valid_demo_session_identifier = function(candidate_identifier)
-    if type(candidate_identifier) ~= "string" then
-        return false
+local read_presented_identifiers = function(header_name, query_parameter_name)
+    local presented_identifiers = {}
+
+    local header_identifier = header_name and kong.request.get_header(header_name)
+    if header_identifier ~= nil and header_identifier ~= "" then
+        presented_identifiers[#presented_identifiers + 1] = header_identifier
     end
 
-    local identifier_length = #candidate_identifier
-    if identifier_length < plugin_config.DemoSessionIdentifierMinimumSize
-        or identifier_length > plugin_config.DemoSessionIdentifierMaximumSize then
-        return false
+    local query_identifier = query_parameter_name and kong.request.get_query_arg(query_parameter_name)
+    if query_identifier ~= nil and query_identifier ~= "" then
+        presented_identifiers[#presented_identifiers + 1] = query_identifier
     end
 
-    return candidate_identifier:match("^[%w_%-]+$") ~= nil
-end
-
-
-local read_demo_session_identifier = function(header_name)
-    local candidate_identifier = kong.request.get_header(header_name)
-    if not is_valid_demo_session_identifier(candidate_identifier) then
-        return nil
-    end
-
-    return candidate_identifier
+    return presented_identifiers
 end
 
 
@@ -56,8 +48,7 @@ end
 
 
 return {
-    is_valid_demo_session_identifier = is_valid_demo_session_identifier,
-    read_demo_session_identifier     = read_demo_session_identifier,
-    replace_baggage_entry            = replace_baggage_entry,
-    propagate_demo_session           = propagate_demo_session,
+    read_presented_identifiers = read_presented_identifiers,
+    replace_baggage_entry      = replace_baggage_entry,
+    propagate_demo_session     = propagate_demo_session,
 }

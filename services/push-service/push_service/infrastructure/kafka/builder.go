@@ -10,6 +10,7 @@ import (
 	"github.com/power-finance/kafka-client-go/envelope"
 	"github.com/power-finance/kafka-client-go/headers"
 	"github.com/power-finance/observability-go/messaging"
+	"github.com/power-finance/observability-go/sandbox"
 	"github.com/power-finance/observability-go/tracing"
 	"github.com/twmb/franz-go/pkg/kgo"
 
@@ -91,7 +92,7 @@ func newEventsSinkHandler(eventsSink chan<- types.OutboxEvent) MessageHandlerFun
 	return func(ctx context.Context, message kafkaclient.ConsumedMessage) error {
 		ctx = messageContext.ContextBinder.Bind(ctx, message.Headers)
 		messageSandboxID := messageContext.ContextBinder.ReadSandboxID(message.Headers)
-		if !messageContext.TrafficPolicy.IsOwnedTraffic(messageSandboxID) {
+		if !acceptsTraffic(messageContext.TrafficPolicy, messageSandboxID) {
 			logForeignSandboxMessageSkipped(
 				messageSandboxID,
 				messageContext.TrafficPolicy.OwnSandboxID(),
@@ -103,7 +104,7 @@ func newEventsSinkHandler(eventsSink chan<- types.OutboxEvent) MessageHandlerFun
 		defer endSpan()
 
 		select {
-		case eventsSink <- outboxEventFromMessage(message):
+		case eventsSink <- outboxEventFromMessage(message, messageSandboxID):
 			return nil
 		case <-ctx.Done():
 			return ctx.Err()
@@ -122,6 +123,10 @@ func newDemoSpansSinkHandler(spansSink chan<- types.OutboxEvent) MessageHandlerF
 	}
 }
 
+func acceptsTraffic(trafficPolicy sandbox.TrafficMatcher, messageSandboxID string) bool {
+	return trafficPolicy.IsBaseline() || trafficPolicy.IsOwnedTraffic(messageSandboxID)
+}
+
 func logForeignSandboxMessageSkipped(messageSandboxID string, ownSandboxID string) {
 	slog.Debug(
 		"kafka message belongs to another sandbox, skipping",
@@ -130,7 +135,10 @@ func logForeignSandboxMessageSkipped(messageSandboxID string, ownSandboxID strin
 	)
 }
 
-func outboxEventFromMessage(message kafkaclient.ConsumedMessage) types.OutboxEvent {
+func outboxEventFromMessage(
+	message kafkaclient.ConsumedMessage,
+	messageSandboxID string,
+) types.OutboxEvent {
 	eventID, _ := headers.Get(message.Headers, envelope.EventID)
 	eventType, _ := headers.Get(message.Headers, envelope.EventType)
 	aggregateType, _ := headers.Get(message.Headers, envelope.AggregateType)
@@ -140,6 +148,7 @@ func outboxEventFromMessage(message kafkaclient.ConsumedMessage) types.OutboxEve
 		EventType:     eventType,
 		AggregateType: aggregateType,
 		UserID:        string(message.Key),
+		SandboxID:     messageSandboxID,
 		Payload:       message.Value,
 	}
 }

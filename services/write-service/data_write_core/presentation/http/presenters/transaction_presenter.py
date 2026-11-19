@@ -7,6 +7,8 @@ from data_write_core.application.dtos import (
 )
 from data_write_core.application.money_scales import amount_at_scale, money_at_scale
 
+from .category_presenter import present_category_reference
+
 
 class TransactionHttpPresenter:
     @staticmethod
@@ -24,7 +26,7 @@ class TransactionHttpPresenter:
                 "id": str(transaction.container.id),
                 "name": transaction.container.name,
             },
-            "category": transaction.category,
+            "category": present_category_reference(transaction.category),
             "chain_id": str(transaction.chain_id) if transaction.chain_id else None,
         }
 

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
+from data_read_core.shared.categories import CategoryReferencePayload
 from data_read_core.shared.pagination import PageRequest
 
 
@@ -22,12 +23,16 @@ class WalletDTO:
     created_at: str
     updated_at: str | None
     deleted_at: str | None
-    category: str
+    category: CategoryReferencePayload | None
     color: str
     favorite: bool
 
     @classmethod
-    def from_es_hit(cls, source: dict[str, Any]) -> "WalletDTO":
+    def from_es_hit(
+        cls,
+        source: dict[str, Any],
+        categories: dict[str, CategoryReferencePayload],
+    ) -> "WalletDTO":
         return cls(
             id=source["id"],
             user_id=source["user_id"],
@@ -38,7 +43,7 @@ class WalletDTO:
             created_at=source["created_at"],
             updated_at=source.get("updated_at"),
             deleted_at=source.get("deleted_at"),
-            category=source.get("category", ""),
+            category=categories.get(source.get("category_id") or ""),
             color=source.get("color", ""),
             favorite=bool(source.get("favorite", False)),
         )

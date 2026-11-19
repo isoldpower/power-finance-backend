@@ -38,6 +38,12 @@ TRANSACTION_FILTER_POLICY: FilterPolicy = {
         value_type=TypeVariant.STRING,
         es_field="category.keyword",
     ),
+    "category_id": FilterFieldPolicy(
+        request_name="category_id",
+        allowed_operators={"eq", "neq", "in"},
+        value_type=TypeVariant.UUID,
+        es_field="category_id",
+    ),
     "type": FilterFieldPolicy(
         request_name="type",
         allowed_operators={"eq", "neq", "in"},

@@ -54,7 +54,7 @@ class TransactionListView(TransactionView, CommandResponseMixin):
                 name=validated["name"],
                 transaction_type=transaction_type_of(validated),
                 origin=origin_of(validated),
-                category=validated.get("category"),
+                category_id=validated.get("category_id"),
                 evidence_url=evidence_url_of(validated),
             )
         )

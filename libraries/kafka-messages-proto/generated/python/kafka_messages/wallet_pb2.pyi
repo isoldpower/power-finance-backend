@@ -6,7 +6,7 @@ from typing import ClassVar as _ClassVar, Mapping as _Mapping, Optional as _Opti
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class WalletCreated(_message.Message):
-    __slots__ = ("event_id", "occurred_at", "schema_version", "wallet_id", "user_id", "title", "currency_code", "created_at", "category", "color", "favorite", "zero_balance")
+    __slots__ = ("event_id", "occurred_at", "schema_version", "wallet_id", "user_id", "title", "currency_code", "created_at", "category", "color", "favorite", "zero_balance", "category_id")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
     SCHEMA_VERSION_FIELD_NUMBER: _ClassVar[int]
@@ -19,6 +19,7 @@ class WalletCreated(_message.Message):
     COLOR_FIELD_NUMBER: _ClassVar[int]
     FAVORITE_FIELD_NUMBER: _ClassVar[int]
     ZERO_BALANCE_FIELD_NUMBER: _ClassVar[int]
+    CATEGORY_ID_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     occurred_at: _timestamp_pb2.Timestamp
     schema_version: int
@@ -31,7 +32,8 @@ class WalletCreated(_message.Message):
     color: str
     favorite: bool
     zero_balance: str
-    def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., wallet_id: _Optional[str] = ..., user_id: _Optional[int] = ..., title: _Optional[str] = ..., currency_code: _Optional[str] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., category: _Optional[str] = ..., color: _Optional[str] = ..., favorite: bool = ..., zero_balance: _Optional[str] = ...) -> None: ...
+    category_id: str
+    def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., wallet_id: _Optional[str] = ..., user_id: _Optional[int] = ..., title: _Optional[str] = ..., currency_code: _Optional[str] = ..., created_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., category: _Optional[str] = ..., color: _Optional[str] = ..., favorite: bool = ..., zero_balance: _Optional[str] = ..., category_id: _Optional[str] = ...) -> None: ...
 
 class WalletDeleted(_message.Message):
     __slots__ = ("event_id", "occurred_at", "schema_version", "wallet_id", "user_id", "deleted_at")
@@ -50,7 +52,7 @@ class WalletDeleted(_message.Message):
     def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., wallet_id: _Optional[str] = ..., user_id: _Optional[int] = ..., deleted_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class WalletUpdated(_message.Message):
-    __slots__ = ("event_id", "occurred_at", "schema_version", "wallet_id", "user_id", "previous_title", "new_title", "updated_at", "category", "color", "favorite", "zero_balance")
+    __slots__ = ("event_id", "occurred_at", "schema_version", "wallet_id", "user_id", "previous_title", "new_title", "updated_at", "category", "color", "favorite", "zero_balance", "category_id")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
     SCHEMA_VERSION_FIELD_NUMBER: _ClassVar[int]
@@ -63,6 +65,7 @@ class WalletUpdated(_message.Message):
     COLOR_FIELD_NUMBER: _ClassVar[int]
     FAVORITE_FIELD_NUMBER: _ClassVar[int]
     ZERO_BALANCE_FIELD_NUMBER: _ClassVar[int]
+    CATEGORY_ID_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     occurred_at: _timestamp_pb2.Timestamp
     schema_version: int
@@ -75,4 +78,5 @@ class WalletUpdated(_message.Message):
     color: str
     favorite: bool
     zero_balance: str
-    def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., wallet_id: _Optional[str] = ..., user_id: _Optional[int] = ..., previous_title: _Optional[str] = ..., new_title: _Optional[str] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., category: _Optional[str] = ..., color: _Optional[str] = ..., favorite: bool = ..., zero_balance: _Optional[str] = ...) -> None: ...
+    category_id: str
+    def __init__(self, event_id: _Optional[str] = ..., occurred_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., schema_version: _Optional[int] = ..., wallet_id: _Optional[str] = ..., user_id: _Optional[int] = ..., previous_title: _Optional[str] = ..., new_title: _Optional[str] = ..., updated_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., category: _Optional[str] = ..., color: _Optional[str] = ..., favorite: bool = ..., zero_balance: _Optional[str] = ..., category_id: _Optional[str] = ...) -> None: ...

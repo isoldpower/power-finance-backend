@@ -38,6 +38,7 @@ class CreateNewGoalCommand:
     currency: str
     target: Decimal
     finish_at: datetime | None = None
+    goal_id: UUID | None = None
 
 
 class CreateNewGoalCommandHandler(CommandHandlerBase[GoalDTO]):
@@ -66,7 +67,7 @@ class CreateNewGoalCommandHandler(CommandHandlerBase[GoalDTO]):
 
         timestamp_now = datetime.now()
         new_goal = GoalEntity.create(
-            id=str(uuid4()),
+            id=str(command.goal_id or uuid4()),
             data=GoalData(
                 title=command.name,
                 currency_code=currency_code,
